@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Nullable>enable</Nullable>
+    <Description>Interfaces and Implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.2.1--0000-develop" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.2.1--0000-develop" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CK.MQTT.Client.Abstractions\CK.MQTT.Client.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

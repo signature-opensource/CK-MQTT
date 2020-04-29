@@ -1,0 +1,24 @@
+
+environment:
+  CODECAKEBUILDER_SECRET_KEY:
+    secure: 8VAzdXgUQaJyFoU3WLf2iPFV/8zPDm9qV4TfOpx8/rg=
+install: []
+version: build{build}
+image: Visual Studio 2019
+clone_folder: C:\CKli-World\IoT\CK-MQTT
+branches:
+  only:
+    - master
+    - develop
+build_script:
+  - dotnet run --project CodeCakeBuilder -nointeraction
+test: off
+artifacts:
+  - path: '**\*.log'
+    name: Log file
+  - path: '**\*.trx'
+    name: Visual studio test results file
+  - path: '**\Tests\**\TestResult*.xml'
+    name: NUnit tests result files
+  - path: '**Tests\**\Logs\**\*'
+    name: Log files
