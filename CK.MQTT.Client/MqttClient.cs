@@ -224,10 +224,10 @@ namespace CK.MQTT.Client.Sdk
         }
         #endregion Connection
 
-        public async ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, QualityOfService qos, bool retain = false )
+        public async ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
         {
             await EnsureConnected( m );
-            return await PublishSenderProcesses.Publish( m, _channel!, _store!, topic, payload, payloadHandle, qos, retain, _configuration.WaitTimeoutSecs );
+            return await PublishSenderProcesses.Publish( m, _channel!, _store!, topic, payload, qos, retain, _configuration.WaitTimeoutSecs );
         }
 
         public async Task<Task<IReadOnlyCollection<SubscribeReturnCode>?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )

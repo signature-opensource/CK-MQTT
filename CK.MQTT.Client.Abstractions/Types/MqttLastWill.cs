@@ -8,7 +8,7 @@ namespace CK.MQTT
     /// gets disconnected unexpectedely
     /// Any disconnection except the protocol disconnection is considered unexpected
     /// </summary>
-	public class LastWill : IDisposable
+	public class LastWill
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="LastWill" /> class,
@@ -45,7 +45,5 @@ namespace CK.MQTT
         /// section for more information about retained messages
         /// </summary>
 		public bool Retain { get; }
-
-        public void Dispose() => Message.Dispose();
     }
 }

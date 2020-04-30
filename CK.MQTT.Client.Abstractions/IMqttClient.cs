@@ -148,7 +148,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180850">MQTT Publish</a>
         /// for more details about the protocol publish
         /// </remarks>
-        ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, QualityOfService qos, bool retain = false );
+        ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false );
 
         /// <summary>
         /// Represents the protocol unsubscription, which consists of sending an UNSUBSCRIBE packet

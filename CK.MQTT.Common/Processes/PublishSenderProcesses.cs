@@ -30,50 +30,50 @@ namespace CK.MQTT.Common.Processes
             IActivityMonitor m,
             IMqttChannel<IPacket> channel,
             IPacketStore messageStore,
-            string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, QualityOfService qos, bool retain,
+            string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain,
             int waitTimeoutMs )
             => qos switch
             {
-                QualityOfService.AtMostOnce => new ValueTask<ValueTask>( PublishQoS0( m, channel, topic, payload, payloadHandle, retain ) ),
-                QualityOfService.AtLeastOnce => PublishQoS1( m, channel, messageStore, topic, payload, payloadHandle, retain, waitTimeoutMs ),
-                QualityOfService.ExactlyOnce => PublishQoS2( m, channel, messageStore, topic, payload, payloadHandle, retain, waitTimeoutMs ),
+                QualityOfService.AtMostOnce => new ValueTask<ValueTask>( PublishQoS0( m, channel, topic, payload, retain ) ),
+                QualityOfService.AtLeastOnce => PublishQoS1( m, channel, messageStore, topic, payload, retain, waitTimeoutMs ),
+                QualityOfService.ExactlyOnce => PublishQoS2( m, channel, messageStore, topic, payload, retain, waitTimeoutMs ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
         public static ValueTask PublishQoS0( IActivityMonitor m, IMqttChannel<IPacket> channel,
-            string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, bool retain )//payload args.
+            string topic, ReadOnlyMemory<byte> payload, bool retain )//payload args.
         {
             using( m.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
-                return channel.SendAsync( m, new Publish( topic, payload, retain, false, payloadHandle ), default );
+                return channel.SendAsync( m, new Publish( topic, payload, retain, false ), default );
             }
         }
 
         public static async ValueTask<ValueTask> PublishQoS1( IActivityMonitor m, IMqttChannel<IPacket> channel, IPacketStore messageStore,
-            string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, bool retain, //payload args.
+            string topic, ReadOnlyMemory<byte> payload, bool retain, //payload args.
             int waitTimeoutMs )
         {
             using( m.OpenTrace( "Executing Publish protocol with QoS 1." ) )
             {
                 // TODO: we got an useless allocation there. The stored object could be the same than the sent one.
                 // The issue is that the state of the object should change (packetID, dup flag)
-                ApplicationMessage packet = new ApplicationMessage( topic, payload, payloadHandle );
+                ApplicationMessage packet = new ApplicationMessage( topic, payload );
                 ushort pacektId = await messageStore.StoreMessageAsync( m, packet, QualityOfService.AtLeastOnce );//store the message
                 //Now we can guarantee the At Least Once, the message have been stored.
                 //We return the Task representing the rest of the protocol.
-                return PublishQoS1SendPub( m, channel, messageStore, topic, payload, payloadHandle, retain, pacektId, waitTimeoutMs );
+                return PublishQoS1SendPub( m, channel, messageStore, topic, payload, retain, pacektId, waitTimeoutMs );
             }
         }
 
         public static async ValueTask PublishQoS1SendPub(
             IActivityMonitor m, IMqttChannel<IPacket> channel, IPacketStore messageStore,
-            string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, bool retain, ushort packetId,  //payload args.
+            string topic, ReadOnlyMemory<byte> payload, bool retain, ushort packetId,  //payload args.
             int waitTimeoutMs )
         {
             PublishAck ack;
             using( m.OpenTrace( "Sending Publish packet to Receiver." ) )
             {
-                Publish publish = new PublishWithId( topic, payload, QualityOfService.AtLeastOnce, retain, false, packetId, payloadHandle );
+                Publish publish = new PublishWithId( topic, payload, QualityOfService.AtLeastOnce, retain, false, packetId );
                 ack = await channel.SendAndWaitResponseWithRetries<IPacket, PublishAck, Publish>( m, publish,
                     //match packet of same type, with same packetId.
                     ( p ) => p.PacketId == packetId, waitTimeoutMs,
@@ -91,23 +91,23 @@ namespace CK.MQTT.Common.Processes
         }
 
         public static async ValueTask<ValueTask> PublishQoS2( IActivityMonitor m, IMqttChannel<IPacket> channel, IPacketStore messageStore,
-            string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, bool retain, //payload args.
+            string topic, ReadOnlyMemory<byte> payload, bool retain, //payload args.
             int waitTimeoutMs )
         {
             // TODO: we got an useless allocation there. The stored object could be the same than the sent one.
             // The issue is that the state of the object should change (packetID, dup flag)
-            ApplicationMessage packet = new ApplicationMessage( topic, payload, payloadHandle );
+            ApplicationMessage packet = new ApplicationMessage( topic, payload );
             ushort packetId = await messageStore.StoreMessageAsync( m, packet, QualityOfService.ExactlyOnce );//store the message
             //Now we can guarantee the At Least Once, the message have been stored.
             //We return the Task representing the rest of the protocol.
-            return PublishQoS2SendPub( m, channel, messageStore, topic, payload, payloadHandle, retain, packetId, waitTimeoutMs );
+            return PublishQoS2SendPub( m, channel, messageStore, topic, payload, retain, packetId, waitTimeoutMs );
         }
 
         public static async ValueTask PublishQoS2SendPub( IActivityMonitor m, IMqttChannel<IPacket> channel, IPacketStore messageStore,
-            string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, bool retain, ushort packetId,  //payload args.
+            string topic, ReadOnlyMemory<byte> payload, bool retain, ushort packetId,  //payload args.
             int waitTimeoutMs )
         {
-            Publish publish = new PublishWithId( topic, payload, QualityOfService.ExactlyOnce, retain, false, packetId, payloadHandle );
+            Publish publish = new PublishWithId( topic, payload, QualityOfService.ExactlyOnce, retain, false, packetId );
             PublishReceived ack = await channel.SendAndWaitResponseWithRetries<IPacket, PublishReceived, Publish>( m, publish,
                 //match packet of same type, with same packetId.
                 ( p ) => p is PublishReceived a && a.PacketId == packetId, waitTimeoutMs,

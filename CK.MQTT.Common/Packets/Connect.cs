@@ -6,7 +6,7 @@ using System.Text;
 
 namespace CK.MQTT.Common.Packets
 {
-    public class Connect : IPacket, IDisposable
+    public class Connect : IPacket
     {
         readonly ushort _size;
         public Connect(
@@ -112,7 +112,7 @@ namespace CK.MQTT.Common.Packets
 
         const byte _shiftedPacketId = (byte)PacketType.Connect >> 4;
 
-        public static Connect? Deserialize( IActivityMonitor m, ReadOnlyMemory<byte> memory, bool allowInvalidMagic, IDisposable memoryHandle )
+        public static Connect? Deserialize( IActivityMonitor m, ReadOnlyMemory<byte> memory, bool allowInvalidMagic )
         {
             const string notEnoughBytes = "Malformed packet: Not enough bytes in the Connect packet.";
             ReadOnlySpan<byte> buffer;
@@ -187,7 +187,7 @@ namespace CK.MQTT.Common.Packets
                     m.Error( notEnoughBytes + "5" );
                     return null;
                 }
-                will = new LastWill( new ApplicationMessage( topic, payload.Value, memoryHandle ), qos, retain );
+                will = new LastWill( new ApplicationMessage( topic, payload.Value ), qos, retain );
             }
             bool usernamePresent = (flags & _usernameFlag) > 0;
             bool passwordPresent = (flags & _passwordFlag) > 0;
@@ -210,7 +210,5 @@ namespace CK.MQTT.Common.Packets
             bool clean = (flags & _cleanSessionFlag) > 0;
             return new Connect( clientId, clean, keepAlive, will, username, password, protocolName );
         }
-
-        public void Dispose() => Will?.Dispose();
     }
 }
