@@ -1,6 +1,3 @@
-using System;
-using System.Linq;
-
 namespace CK.MQTT
 {
     /// <summary>
@@ -23,7 +20,7 @@ namespace CK.MQTT
         /// </param>
         /// <param name="retain">Specifies if the message should be retained or not</param>
         /// <param name="payload">Payload of the will message to publish</param>
-        public LastWill( ApplicationMessage message,QualityOfService qualityOfService, bool retain)
+        public LastWill( ApplicationMessage message, QualityOfService qualityOfService, bool retain )
         {
             Message = message;
             QualityOfService = qualityOfService;

@@ -1,10 +1,6 @@
-using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using FluentAssertions;
-
+using NUnit.Framework;
+using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 namespace CK.MQTT.Client.Abstractions.Tests
 {
@@ -13,7 +9,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
         class Unit
         {
         }
-        
+
         [Test]
         public async Task simple_await_work()
         {

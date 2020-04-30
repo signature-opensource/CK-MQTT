@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Client.Processes;
-using CK.MQTT.Common;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Packets;
 using CK.MQTT.Common.Processes;

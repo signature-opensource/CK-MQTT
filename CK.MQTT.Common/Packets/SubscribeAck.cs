@@ -2,7 +2,6 @@ using CK.Core;
 using CK.MQTT.Common.Serialisation;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace CK.MQTT.Common.Packets
 {
@@ -46,7 +45,7 @@ namespace CK.MQTT.Common.Packets
             SubscribeReturnCode[] codes = new SubscribeReturnCode[buffer.Length];
             for( int i = 0; i < buffer.Length; i++ )
             {
-                codes[i] = (SubscribeReturnCode) buffer[i];
+                codes[i] = (SubscribeReturnCode)buffer[i];
             }
             return new SubscribeAck( packetId, codes );
         }

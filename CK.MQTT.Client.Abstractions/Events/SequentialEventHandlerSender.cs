@@ -2,8 +2,6 @@ using CK.Core;
 
 using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -14,7 +12,7 @@ namespace CK.MQTT
     /// <param name="monitor">The monitor to use.</param>
     /// <param name="sender">The source of the event.</param>
     /// <param name="e">An object that contains no event data (<see cref="EventArgs.Empty"/> should be used).</param>
-    public delegate void SequentialEventHandler<TSender,TArg>( IActivityMonitor monitor, TSender sender, TArg e );
+    public delegate void SequentialEventHandler<TSender, TArg>( IActivityMonitor monitor, TSender sender, TArg e );
 
     /// <summary>
     /// Implements a host for <see cref="SequentialEventHandler{TSender,TArg}"/> delegates.

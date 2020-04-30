@@ -192,7 +192,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
         public async Task event_async_and_sync_look_the_same()
         {
             var impl = new TestImpl( TestHelper.Monitor );
-            
+
             var consumer1 = new MqttCientConsumer( "Consumer1" );
             var consumer2 = new MqttCientConsumer( "Consumer2" );
             var consumer3 = new MqttCientConsumer( "Consumer3" );

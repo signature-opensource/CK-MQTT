@@ -1,9 +1,9 @@
 using CK.Core;
+using CK.MQTT.Common.Channels;
+using CK.MQTT.Common.Packets;
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Channels;
 
 namespace CK.MQTT.Client.Processes
 {
@@ -17,7 +17,7 @@ namespace CK.MQTT.Client.Processes
         {
             using( m.OpenInfo( "Executing connect protocol..." ) )
             {
-                Connect connect = new Connect( clientId, cleanSession, keepAliveSecs, will, userName, password, protocolName);
+                Connect connect = new Connect( clientId, cleanSession, keepAliveSecs, will, userName, password, protocolName );
 
                 ConnectAck? ack = await await channel.SendAndWaitResponseAndLog<IPacket, ConnectAck>( m, connect, null, waitTimeoutSecs * 1000 );
                 if( ack == null )

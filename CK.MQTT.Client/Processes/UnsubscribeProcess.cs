@@ -2,16 +2,14 @@ using CK.Core;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Packets;
 using CK.MQTT.Common.Stores;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Processes
 {
     static class UnsubscribeProcess
     {
-        public static async Task<Task<bool>> ExecuteUnsubscribeProtocol(IActivityMonitor m, IMqttChannel<IPacket> channel, IPacketStore store, IEnumerable<string> topics, int waitTimeoutMs )
+        public static async Task<Task<bool>> ExecuteUnsubscribeProtocol( IActivityMonitor m, IMqttChannel<IPacket> channel, IPacketStore store, IEnumerable<string> topics, int waitTimeoutMs )
         {
             ushort id = await store.GetNewPacketId( m );
             Unsubscribe unsub = new Unsubscribe( id, topics );

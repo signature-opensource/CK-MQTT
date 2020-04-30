@@ -1,8 +1,3 @@
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Resources;
-
 namespace CK.MQTT
 {
     public static class Properties

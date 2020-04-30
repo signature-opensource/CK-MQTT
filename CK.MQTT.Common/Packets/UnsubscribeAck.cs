@@ -1,7 +1,6 @@
 using CK.Core;
 using CK.MQTT.Common.Serialisation;
 using System;
-using System.Collections.Generic;
 
 namespace CK.MQTT.Common.Packets
 {

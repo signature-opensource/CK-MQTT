@@ -16,7 +16,7 @@ namespace CK.MQTT
         /// <param name="predicate"></param>
         /// <param name="timeoutMillisecond">When -1, waits indefinitely, When 0, the message must be already be available.</param>
         /// <returns></returns>
-        public static Task<TArg?> WaitAsync<TSender, TArg>( this SequentialEventHandlerSender<TSender, TArg> eventHandler, Func<TArg,bool>? predicate = null, int timeoutMillisecond = -1 )
+        public static Task<TArg?> WaitAsync<TSender, TArg>( this SequentialEventHandlerSender<TSender, TArg> eventHandler, Func<TArg, bool>? predicate = null, int timeoutMillisecond = -1 )
           where TArg : class
         {
             TaskCompletionSource<TArg?> taskCompletionSource = new TaskCompletionSource<TArg?>();
@@ -27,7 +27,7 @@ namespace CK.MQTT
                 eventHandler.Remove( SetResult );
             }
             eventHandler.Add( SetResult );
-            
+
             if( timeoutMillisecond < 0 )
             {
                 return taskCompletionSource.Task;

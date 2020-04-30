@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Text;
 
 namespace CK.MQTT.Common.Channels
 {
@@ -9,7 +6,7 @@ namespace CK.MQTT.Common.Channels
     {
         readonly TcpClient _client;
 
-        public TcpStreamClient(TcpClient client)
+        public TcpStreamClient( TcpClient client )
         {
             _client = client;
         }
