@@ -19,7 +19,7 @@ namespace CK.MQTT.Client.Processes
             {
                 Connect connect = new Connect( clientId, cleanSession, keepAliveSecs, will, userName, password, protocolName );
 
-                ConnectAck? ack = await await channel.SendAndWaitResponseAndLog<IPacket, ConnectAck>( m, connect, null, waitTimeoutSecs * 1000 );
+                ConnectAck? ack = await await channel.SendAndWaitResponse<IPacket, ConnectAck>( m, connect, null, waitTimeoutSecs * 1000 );
                 if( ack == null )
                 {
                     throw new TimeoutException( $"While connecting, the server did not replied a CONNACK packet in {waitTimeoutSecs} secs." );

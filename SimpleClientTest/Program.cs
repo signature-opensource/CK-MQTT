@@ -5,7 +5,6 @@ using CK.MQTT;
 using CK.MQTT.Client.Sdk;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Stores;
-using System;
 using System.Threading.Tasks;
 
 namespace SimpleClientTest

@@ -13,7 +13,7 @@ namespace CK.MQTT.Client.Processes
         {
             ushort id = await store.GetNewPacketId( m );
             Unsubscribe unsub = new Unsubscribe( id, topics );
-            Task<UnsubscribeAck?> task = await channel.SendAndWaitResponseAndLog<IPacket, UnsubscribeAck>(
+            Task<UnsubscribeAck?> task = await channel.SendAndWaitResponse<IPacket, UnsubscribeAck>(
                 m, unsub, ( p ) => p.PacketId == id, waitTimeoutMs
             );
             return TaskContinuation( m, store, id, task );

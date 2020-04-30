@@ -14,7 +14,7 @@ namespace CK.MQTT.Client.Processes
         {
             ushort id = await store.GetNewPacketId( m );
             var subscribe = new Subscribe( id, subscriptions );
-            Task<SubscribeAck?> task = await channel.SendAndWaitResponseAndLog<IPacket, SubscribeAck>(
+            Task<SubscribeAck?> task = await channel.SendAndWaitResponse<IPacket, SubscribeAck>(
                 m, subscribe, ( p ) => p.PacketId == id, timeoutMs
             );
             return TaskContinuation( m, store, id, task );

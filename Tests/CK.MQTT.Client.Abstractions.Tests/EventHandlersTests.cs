@@ -11,11 +11,6 @@ namespace CK.MQTT.Client.Abstractions.Tests
 {
     class TestImpl : IMqttClient
     {
-        class EmptyDisposable : IDisposable
-        {
-            public void Dispose() { }
-            public static IDisposable Default => new EmptyDisposable();
-        }
         SequentialEventHandlerSender<IMqttClient, ApplicationMessage> _eSeqMessage;
         SequentialEventHandlerAsyncSender<IMqttClient, ApplicationMessage> _eSeqMessageAsync;
         ParallelEventHandlerAsyncSender<IMqttClient, ApplicationMessage> _eParMessageAsync;
@@ -47,7 +42,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
         /// <returns></returns>
         public Task DoReceiveMessageAsync( string topic, byte[] payload )
         {
-            var msg = new ApplicationMessage( topic, payload, EmptyDisposable.Default );
+            var msg = new ApplicationMessage( topic, payload );
             var taskParallel = _eParMessageAsync.RaiseAsync( Monitor, this, msg );
             _eSeqMessage.Raise( Monitor, this, msg );
             return Task.WhenAll( _eSeqMessageAsync.RaiseAsync( Monitor, this, msg ), taskParallel );
@@ -57,7 +52,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
         {
             try
             {
-                var msg = new ApplicationMessage( topic, payload, EmptyDisposable.Default );
+                var msg = new ApplicationMessage( topic, payload );
                 var taskParallel = _eParMessageAsync.RaiseAsync( Monitor, this, msg );
                 _eSeqMessage.Raise( Monitor, this, msg );
                 await _eSeqMessageAsync.RaiseAsync( Monitor, this, msg );
@@ -137,7 +132,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
             throw new NotImplementedException();
         }
 
-        public ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, IDisposable payloadHandle, QualityOfService qos, bool retain = false )
+        public ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
         {
             throw new NotImplementedException();
         }
