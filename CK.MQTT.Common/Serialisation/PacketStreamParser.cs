@@ -192,7 +192,7 @@ namespace CK.MQTT.Common.Serialisation
                 {
                     packet = DeserialiseCopyOnlyPacket( m, packetType, packetMemory.Span );
                     rentedMemory.Dispose();//Here we copy only, no handle on the stream are kept.
-                    return (packet, nextPacketBuffer, rentedMemory);
+                    return (packet, nextPacketBuffer, null);
                 }
                 packet = DeserialisePacketRequiringAlloc( m, packetType, header, packetMemory );
                 return (packet, nextPacketBuffer, rentedMemory);
