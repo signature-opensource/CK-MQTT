@@ -1,6 +1,7 @@
 using CK.Core;
 using CK.MQTT.Common.Serialisation;
 using System;
+using System.Buffers;
 using System.Diagnostics;
 
 namespace CK.MQTT.Common.Packets
@@ -24,19 +25,21 @@ namespace CK.MQTT.Common.Packets
             buffer.WriteUInt16( PacketId );
         }
 
-        public static PublishAck? Deserialize( IActivityMonitor m, ReadOnlySpan<byte> buffer )
+        public static PublishAck? Deserialize( IActivityMonitor m, ReadOnlySequence<byte> buffer )
         {
-            if( buffer.Length < 2 )
+            SequenceParser<byte> reader = new SequenceParser<byte>( buffer );
+            if(
+                !reader.TryReadBigEndian( out ushort packedId )
+              )
             {
                 m.Error( "Malformed Packet: Packet too small." );
                 return null;
             }
-            ushort packetId = buffer.ReadUInt16();
-            if( buffer.Length > 2 )
+            if( reader.Remaining > 0 )
             {
                 m.Warn( "Malformed Packet: Unread bytes in the packets." );
             }
-            return new PublishAck( packetId );
+            return new PublishAck( packedId );
         }
     }
 }

@@ -1,8 +1,15 @@
+using CK.Core;
 using System;
+using System.Buffers;
+using System.IO.Pipelines;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Serialisation
 {
+    
+
     static class MqttBinaryReader
     {
         public static ReadOnlySpan<byte> ReadString( this ReadOnlySpan<byte> buffer, out string? str )
@@ -24,48 +31,13 @@ namespace CK.MQTT.Common.Serialisation
             return memory;
         }
 
-        /// <summary>
-        /// Buffer must contain packet type.
-        /// </summary>
-        /// <param name="buffer"></param>
-        /// <param name="n">The Remaining Length, -1 if there is no enough bytes to read, -2 if the stream is corrupted.</param>
-        /// <returns></returns>
-        public static byte ReadRemainingLength( this ReadOnlySpan<byte> buffer, out int n )
-        {
-            // Read out an Int32 7 bits at a time.  The high bit
-            // of the byte when on means to continue reading more bytes.
-            n = 0;
-            int shift = 0;
-            byte i = 0;
-            byte b;
-            int bufferLength = buffer.Length;
-            do
-            {
-                // Check for a corrupted stream.  Read a max of 5 bytes.
-                // In a future version, add a DataFormatException.
-                if( shift == 5 * 7 )  // 5 bytes max per Int32, shift += 7
-                {
-                    n = -2;
-                    return i;
-                }
-                if( i == bufferLength )
-                {
-                    n = -1;
-                    return i;
-                }
-                // ReadByte handles end of stream cases for us.
-                b = buffer[i];
-                i++;
-                n |= (b & 0x7F) << shift;
-                shift += 7;
-            } while( (b & 0x80) != 0 );
-            return i;
-        }
+        
+
+        
 
 
-        public static ReadOnlyMemory<byte> ReadString( this ReadOnlyMemory<byte> memory, out string? str )
+        public static string? ReadString( this ref SequenceParser<byte> reader )
         {
-            ReadOnlySpan<byte> buffer = memory.Span;
             ushort size = ReadUInt16( buffer );
             if( memory.Length < size )
             {

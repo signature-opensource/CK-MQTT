@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
     <Description>Interfaces and Implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +13,7 @@
   
   <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.2.1--0000-develop" />
+    <PackageReference Include="System.IO.Pipelines" Version="4.7.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Client.Abstractions\CK.MQTT.Client.Abstractions.csproj" />

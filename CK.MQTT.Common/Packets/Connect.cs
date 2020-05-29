@@ -1,6 +1,8 @@
 using CK.Core;
 using CK.MQTT.Common.Serialisation;
+using CK.MQTT.Serialization;
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 
@@ -112,8 +114,12 @@ namespace CK.MQTT.Common.Packets
 
         const byte _shiftedPacketId = (byte)PacketType.Connect >> 4;
 
-        public static Connect? Deserialize( IActivityMonitor m, ReadOnlyMemory<byte> memory, bool allowInvalidMagic )
+        public static Connect? Deserialize( IActivityMonitor m, ReadOnlySequence<byte> memory, bool allowInvalidMagic )
         {
+            SequenceParser<byte> reader = new SequenceParser<byte>();
+            if(
+                !reader.TryRead
+            )
             const string notEnoughBytes = "Malformed packet: Not enough bytes in the Connect packet.";
             ReadOnlySpan<byte> buffer;
             string? protocolName;

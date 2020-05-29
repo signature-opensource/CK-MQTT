@@ -1,4 +1,5 @@
 using System;
+using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,9 +9,7 @@ namespace CK.MQTT.Common.Channels
     {
         bool IsConnected { get; }
 
-        public void Close();
-
-        public ValueTask<int> ReadAsync( Memory<byte> buffer, CancellationToken cancellationToken );
+        public PipeReader Pipe { get; }
 
         public ValueTask WriteAsync( ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken );
     }
