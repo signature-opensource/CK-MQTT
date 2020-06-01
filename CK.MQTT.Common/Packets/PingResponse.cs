@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Buffers;
 using System.Diagnostics;
 
 namespace CK.MQTT.Common.Packets
@@ -15,7 +16,7 @@ namespace CK.MQTT.Common.Packets
             Debug.Assert( buffer.Length == 0 );
         }
 
-        public static PingResponse? Deserialize( IActivityMonitor m, ReadOnlySpan<byte> buffer )
+        public static PingResponse? Deserialize( IActivityMonitor m, ReadOnlySequence<byte> buffer )
         {
             if( buffer.Length > 0 )
             {

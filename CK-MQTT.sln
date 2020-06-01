@@ -27,7 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client.Abstractions
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Common", "CK.MQTT.Common\CK.MQTT.Common.csproj", "{C1C6D60D-7667-4E3A-8607-627B00D2E451}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleClientTest", "SimpleClientTest\SimpleClientTest.csproj", "{94C70015-DF05-4353-B7B6-3E88A226CC84}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleClientTest", "SimpleClientTest\SimpleClientTest.csproj", "{94C70015-DF05-4353-B7B6-3E88A226CC84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,4 +1,7 @@
 using System;
+using System.Buffers;
+using System.Diagnostics;
+using System.Text;
 
 namespace CK.MQTT
 {
@@ -8,7 +11,7 @@ namespace CK.MQTT
     /// </summary>
     public class ApplicationMessage
     {
-        readonly ReadOnlyMemory<byte> _payload;
+        readonly ReadOnlySequence<byte> _payload;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ApplicationMessage" /> class,
@@ -19,8 +22,9 @@ namespace CK.MQTT
         /// Any subscriber of this topic should receive the corresponding messages
         /// </param>
         /// <param name="payload">Content of the message, as a byte array</param>
-        public ApplicationMessage( string topic, ReadOnlyMemory<byte> payload )
+        public ApplicationMessage( string topic, ReadOnlySequence<byte> payload )
         {
+            Debug.Assert( Encoding.UTF8.GetByteCount(topic) <= 65535 );
             Topic = topic;
             _payload = payload;
         }
@@ -34,6 +38,11 @@ namespace CK.MQTT
         /// <summary>
         /// Content of the message. This must be accessed only during the handling of the message.
         /// </summary>
-        public ReadOnlySpan<byte> Payload => _payload.Span;
+        public ReadOnlySequence<byte> Payload => _payload;
+
+        /// <summary>
+        /// The size in byte of the application message. The topic byte count is included.
+        /// </summary>
+        public int Size => (int)_payload.Length + Encoding.UTF8.GetByteCount( Topic );
     }
 }

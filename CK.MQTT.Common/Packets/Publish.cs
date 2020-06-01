@@ -1,6 +1,7 @@
 using CK.Core;
 using CK.MQTT.Common.Serialisation;
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 
@@ -9,9 +10,8 @@ namespace CK.MQTT.Common.Packets
     public class PublishWithId : Publish, IPacketWithId
     {
         public PublishWithId(
-            string topic, ReadOnlyMemory<byte> payload,
-            QualityOfService qualityOfService, bool retain, bool duplicated, ushort packetId )
-            : base( topic, payload, retain, duplicated )
+            ApplicationMessage message, QualityOfService qualityOfService, bool retain, bool duplicated, ushort packetId )
+            : base( message, retain, duplicated )
         {
             QualityOfService = qualityOfService;
             PacketId = packetId;
@@ -23,9 +23,9 @@ namespace CK.MQTT.Common.Packets
 
         public override void Serialize( Span<byte> buffer )
         {
-            buffer = buffer.WriteString( Topic );
+            buffer = buffer.WriteString( Message.Topic );
             buffer.WriteUInt16( PacketId );
-            buffer = buffer[2..].WritePayload( Payload );
+            buffer = buffer[2..].WritePayload( Message.Payload );
             Debug.Assert( buffer.Length == 0 );
         }
     }
@@ -35,17 +35,12 @@ namespace CK.MQTT.Common.Packets
         protected const string _notEnoughBytes = "Malformed packet: Not enough bytes in the Publish packet.";
 
         protected uint _size;
-        readonly ReadOnlyMemory<byte> _payload;
 
-        public Publish( string topic, ReadOnlyMemory<byte> payload, bool retain, bool duplicated )
+        public Publish( ApplicationMessage message, bool retain, bool duplicated )
         {
-            int topicLength = Encoding.UTF8.GetByteCount( topic );
-            Debug.Assert( topicLength <= 65535 );
+            Message = message;
             Duplicated = duplicated;
             Retain = retain;
-            Topic = topic;
-            _payload = payload;
-            _size = (uint)(topicLength + payload.Length);
         }
 
         public virtual QualityOfService QualityOfService => QualityOfService.AtMostOnce;
@@ -54,9 +49,7 @@ namespace CK.MQTT.Common.Packets
 
         public bool Retain { get; }
 
-        public string Topic { get; }
-
-        public ReadOnlySpan<byte> Payload => _payload.Span;
+        public ApplicationMessage Message { get; }
 
         protected const byte dupFlag = 1 << 4;
         protected const byte retainFlag = 1;
@@ -72,8 +65,8 @@ namespace CK.MQTT.Common.Packets
 
         public virtual void Serialize( Span<byte> buffer )
         {
-            buffer = buffer.WriteString( Topic )
-                .WritePayload( Payload );
+            buffer = buffer.WriteString( Message.Topic )
+                .WritePayload( Message.Payload );
             Debug.Assert( buffer.Length == 0 );
         }
 
@@ -129,32 +122,31 @@ namespace CK.MQTT.Common.Packets
             return new Publish( topic, payload.Value, retain, dup );
         }
 
-        static PublishWithId? DeserialiseWithQos1or2( IActivityMonitor m, byte header, ReadOnlyMemory<byte> memory )
+        static PublishWithId? DeserialiseWithQos1or2( IActivityMonitor m, byte header, ReadOnlySequence<byte> buffer )
         {
-            if( memory.Length < 6 )
+            if( buffer.Length < 6 )
             {
                 m.Error( _notEnoughBytes + "1" );
                 return null;
             }
-            memory = memory.ReadString( out string? topic );
-            if( topic == null )
+            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            if( !reader.TryReadMQTTString( out string? topic ) )
             {
                 m.Error( "Topic string is bigger than the buffer or the max allowed string size." );
                 return null;
             }
-            if( memory.Length < 4 )
+            if( buffer.Length < 4 )
             {
                 m.Error( _notEnoughBytes + "2" );
                 return null;
             }
-            ushort packetId = memory.Span.ReadUInt16();
-            memory = memory[2..].ReadPayload( out ReadOnlyMemory<byte>? payload );
-            if( !payload.HasValue )
+            ushort packetId = reader.ReadUInt16();
+            if( !reader.TryReadMQTTPayload( out ReadOnlySequence<byte> payload ) )
             {
                 m.Error( _notEnoughBytes + "3" );
                 return null;
             }
-            if( memory.Length > 0 )
+            if( buffer.Length > 0 )
             {
                 m.Warn( "Malformed Packet: Unread bytes in the packets." );
                 return null;
@@ -164,7 +156,7 @@ namespace CK.MQTT.Common.Packets
             QualityOfService qos = (QualityOfService)((header << 5) >> 6);
             Debug.Assert( qos == QualityOfService.AtLeastOnce || qos == QualityOfService.ExactlyOnce );
             bool retain = (retainFlag & header) == retainFlag;
-            return new PublishWithId( topic, payload.Value, qos, retain, dup, packetId );
+            return new PublishWithId( topic, payload, qos, retain, dup, packetId );
         }
     }
 }

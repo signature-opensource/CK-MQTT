@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Common.Serialisation;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -7,7 +8,7 @@ namespace CK.MQTT.Common.Packets
 {
     public class ConnectAck : IPacket
     {
-        public ConnectAck( ConnectReturnCode status, SessionState existingSession )
+        public ConnectAck( SessionState existingSession, ConnectReturnCode status )
         {
             ConnectReturnCode = status;
             SessionState = existingSession;
@@ -30,20 +31,21 @@ namespace CK.MQTT.Common.Packets
 
         public static ConnectAck? Deserialize( IActivityMonitor m, ReadOnlySequence<byte> buffer )
         {
-            var reader = new SequenceParser<byte>( buffer );
-            if(
-                !reader.TryRead( out byte sessionState ) ||
-                !reader.TryRead( out byte code )
-            )
+            if( buffer.Length < 2 )
             {
                 m.Error( "Malformed Packet: Not enoughs bytes in the ConnectAck packet." );
                 return null;
             }
+            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            ConnectAck output = new ConnectAck(
+                (SessionState)reader.Read(),
+                (ConnectReturnCode)reader.Read()
+            );
             if( reader.Remaining > 0 )
             {
                 m.Warn( "Malformed Packet: Didn't read all the bytes in the ConnectAck packet." );
             }
-            return new ConnectAck( (ConnectReturnCode)code, (SessionState)sessionState );
+            return output;
         }
     }
 }

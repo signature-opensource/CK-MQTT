@@ -97,11 +97,7 @@ namespace CK.MQTT.Common.Serialisation
         /// <param name="stream">The channel stream to use.</param>
         /// <param name="cancellationToken">The cancellation token to cancel IO operations.</param>
         /// <returns><see langword="null"/> on error, the packet otherwise.</returns>
-        public static async ValueTask<IPacket?> ReadPacket(
-            IActivityMonitor m,
-            PipeReader pipeReader,
-            long giveUpToStreamTreshold,
-            CancellationToken cancellationToken )
+        public static async ValueTask<IPacket?> ReadPacket( IActivityMonitor m, PipeReader pipeReader,  long giveUpToStreamTreshold, CancellationToken cancellationToken )
         {
             var res = await TryReadPacketFixedHeaderAsync( m, pipeReader, cancellationToken );
             if( res == null ) return null;

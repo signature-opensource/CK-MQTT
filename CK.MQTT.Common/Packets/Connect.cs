@@ -114,104 +114,69 @@ namespace CK.MQTT.Common.Packets
 
         const byte _shiftedPacketId = (byte)PacketType.Connect >> 4;
 
-        public static Connect? Deserialize( IActivityMonitor m, ReadOnlySequence<byte> memory, bool allowInvalidMagic )
+        public static Connect? Deserialize( IActivityMonitor m, ReadOnlySequence<byte> sequence, bool allowInvalidMagic )
         {
-            SequenceParser<byte> reader = new SequenceParser<byte>();
-            if(
-                !reader.TryRead
-            )
             const string notEnoughBytes = "Malformed packet: Not enough bytes in the Connect packet.";
-            ReadOnlySpan<byte> buffer;
-            string? protocolName;
-            if( memory.Length < 8 )
+            if( sequence.Length < 8 )
             {
                 //Even by changing the magic string to an empty string, we should get 8 bytes.
-                m.Error( notEnoughBytes + "0" );
+                m.Error( notEnoughBytes, 123 );
                 return null;
             }
-            if( !allowInvalidMagic )
+            SequenceReader<byte> reader = new SequenceReader<byte>();
+            if( !reader.TryReadMQTTString( out string? protocolName ) || (!allowInvalidMagic && protocolName != "MQTT") ) return null;
+            if( reader.Remaining < 6 )//We must get at least 6 bytes here. 
             {
-                buffer = memory.Span;
-                if(
-                    buffer[0] != 0b0000_0000 || //Length MSB
-                    buffer[1] != 0b0000_0100 || //Length LSB
-                    buffer[2] != 0b0100_1101 || //M
-                    buffer[3] != 0b0101_0001 || //Q
-                    buffer[4] != 0b0101_0100 || //T
-                    buffer[5] != 0b0101_0100    //T
-                )
-                {
-                    m.Error( "Malformed packet: Invalid magic string." );
-                    return null;
-                }
-                protocolName = "MQTT";
-                memory = memory[6..];
-            }
-            else
-            {
-                memory = memory.ReadString( out protocolName );
-                if( protocolName == null )
-                {
-                    m.Error( notEnoughBytes + "1" );
-                    return null;
-                }
-            }
-            buffer = memory.Span;
-            if( buffer.Length < 6 )//We must get at least 6 bytes here. 
-            {
-                m.Error( notEnoughBytes + "2" );
+                m.Error( notEnoughBytes );
                 return null;
             }
-            byte protocolLevel = buffer[0];
+            byte protocolLevel = reader.Read();
             if( protocolLevel != 4 )
             {
                 m.Error( $"Unsupported protocol level: '{protocolLevel}'." );
                 return null;
             }
-            byte flags = buffer[1];
-            buffer[2..].ReadUInt16( out ushort keepAlive );
-            memory = memory[2..].ReadString( out string? clientId );
-            if( clientId == null )
+            byte flags = reader.Read();
+            ushort keepAlive = reader.ReadUInt16();
+            if( !reader.TryReadMQTTString( out string? clientId ) )
             {
-                m.Error( notEnoughBytes + "3" );
+                m.Error( notEnoughBytes );
                 return null;
             }
             LastWill? will = null;
             if( (flags & _willFlag) > 0 )
             {
-                if( memory.Length < 4 ) //If will flag is present, there should be at least 4 bytes available.
+                if( reader.Remaining < 4 ) //If will flag is present, there should be at least 4 bytes available.
                 {
-                    m.Error( notEnoughBytes + "4" );
+                    m.Error( notEnoughBytes );
                     return null;
                 }
                 var qos = (QualityOfService)((flags & ((byte)QualityOfService.Mask << 3)) >> 3);
                 bool retain = (flags & _willRetainFlag) > 0;
-                memory = memory.ReadString( out string? topic )
-                    .ReadPayload( out ReadOnlyMemory<byte>? payload );
-                if( topic == null || !payload.HasValue )
+                if( !reader.TryReadMQTTString( out string? topic )
+                    || !reader.TryReadMQTTPayload( out ReadOnlySequence<byte> payload )
+                    )
                 {
-                    m.Error( notEnoughBytes + "5" );
+                    m.Error( notEnoughBytes );
                     return null;
                 }
-                will = new LastWill( new ApplicationMessage( topic, payload.Value ), qos, retain );
+                will = new LastWill( new ApplicationMessage( topic, payload ), qos, retain );
             }
-            bool usernamePresent = (flags & _usernameFlag) > 0;
-            bool passwordPresent = (flags & _passwordFlag) > 0;
-            memory = memory.ConditionallyReadString( out string? username, usernamePresent );
-            if( usernamePresent && username == null )
+            string? username = null;
+            string? password = null;
+            if( (flags & _usernameFlag) > 0 && !reader.TryReadMQTTString( out username ) )
             {
-                m.Error( notEnoughBytes + "6" );
+                m.Error( notEnoughBytes );
                 return null;
             }
-            memory = memory.ConditionallyReadString( out string? password, passwordPresent );
-            if( passwordPresent && password == null )
+            if( (flags & _passwordFlag) > 0 && !reader.TryReadMQTTString( out password ) )
             {
-                m.Error( notEnoughBytes + "7" );
+                m.Error( notEnoughBytes );
                 return null;
             }
-            if( memory.Length != 0 )
+            if( reader.Remaining != 0 )
             {
-                m.Warn( $"Malformed Packet: There is {memory.Length} unparsed bytes in the Connect packet !" );
+                m.Warn( $"Malformed Packet: There is {sequence.Length} unparsed bytes in the Connect packet !" );
             }
             bool clean = (flags & _cleanSessionFlag) > 0;
             return new Connect( clientId, clean, keepAlive, will, username, password, protocolName );

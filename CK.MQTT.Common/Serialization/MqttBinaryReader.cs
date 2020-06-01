@@ -1,64 +1,41 @@
 using CK.Core;
 using System;
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Serialisation
 {
-    
+
 
     static class MqttBinaryReader
     {
-        public static ReadOnlySpan<byte> ReadString( this ReadOnlySpan<byte> buffer, out string? str )
+        public static bool TryReadMQTTString( this ref SequenceReader<byte> reader, [NotNullWhen( true )] out string? output )
         {
-            ushort size = ReadUInt16( buffer );
-            if( size > 65535 || size > buffer.Length )
+            ushort size = reader.ReadUInt16();
+            if( size > reader.Remaining )
             {
-                str = null;
-                return buffer[2..];
+                output = null;
+                return false;
             }
-            str = Encoding.UTF8.GetString( buffer[2..size] );
-            return buffer[(2 + size)..];
+            output = reader.ReadString( size, Encoding.UTF8 );
+            return true;
         }
 
-        public static ReadOnlyMemory<byte> ConditionallyReadString( this ReadOnlyMemory<byte> memory, out string? str, bool condition )
+        public static bool TryReadMQTTPayload( this ref SequenceReader<byte> reader, out ReadOnlySequence<byte> output )
         {
-            if( condition ) return ReadString( memory, out str );
-            str = null;
-            return memory;
-        }
-
-        
-
-        
-
-
-        public static string? ReadString( this ref SequenceParser<byte> reader )
-        {
-            ushort size = ReadUInt16( buffer );
-            if( memory.Length < size )
+            ushort size = reader.ReadUInt16();
+            if( size > reader.Remaining )
             {
-                str = null;
-                return memory[2..];
+                output = ReadOnlySequence<byte>.Empty;
+                return false;
             }
-            str = Encoding.UTF8.GetString( buffer[2..size] );
-            return memory[(2 + size)..];
-        }
-
-        public static ReadOnlyMemory<byte> ReadPayload( this ReadOnlyMemory<byte> memory, out ReadOnlyMemory<byte>? payload )
-        {
-            ReadOnlySpan<byte> buffer = memory.Span;
-            ushort size = ReadUInt16( buffer );
-            if( size > buffer.Length )
-            {
-                payload = null;
-                return memory[2..];
-            }
-            payload = memory[2..size];
-            return memory[(size + 2)..];
+            output = reader.Sequence.Slice( reader.Position );
+            return true;
         }
 
         public static ushort ReadUInt16( this ReadOnlySpan<byte> buffer )
