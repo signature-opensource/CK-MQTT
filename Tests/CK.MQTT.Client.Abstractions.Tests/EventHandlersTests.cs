@@ -11,9 +11,9 @@ namespace CK.MQTT.Client.Abstractions.Tests
 {
     class TestImpl : IMqttClient
     {
-        SequentialEventHandlerSender<IMqttClient, ApplicationMessage> _eSeqMessage;
-        SequentialEventHandlerAsyncSender<IMqttClient, ApplicationMessage> _eSeqMessageAsync;
-        ParallelEventHandlerAsyncSender<IMqttClient, ApplicationMessage> _eParMessageAsync;
+        SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessage;
+        SequentialEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessageAsync;
+        ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eParMessageAsync;
 
         SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected> _eSeqDisconnect;
         SequentialEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected> _eSeqDisconnectAsync;
@@ -21,9 +21,9 @@ namespace CK.MQTT.Client.Abstractions.Tests
 
         public TestImpl( IActivityMonitor monitor )
         {
-            _eSeqMessage = new SequentialEventHandlerSender<IMqttClient, ApplicationMessage>();
-            _eSeqMessageAsync = new SequentialEventHandlerAsyncSender<IMqttClient, ApplicationMessage>();
-            _eParMessageAsync = new ParallelEventHandlerAsyncSender<IMqttClient, ApplicationMessage>();
+            _eSeqMessage = new SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage>();
+            _eSeqMessageAsync = new SequentialEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage>();
+            _eParMessageAsync = new ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage>();
 
             _eSeqDisconnect = new SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected>();
             _eSeqDisconnectAsync = new SequentialEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected>();
@@ -42,7 +42,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
         /// <returns></returns>
         public Task DoReceiveMessageAsync( string topic, byte[] payload )
         {
-            var msg = new ApplicationMessage( topic, payload );
+            var msg = new OutgoingApplicationMessage( topic, payload );
             var taskParallel = _eParMessageAsync.RaiseAsync( Monitor, this, msg );
             _eSeqMessage.Raise( Monitor, this, msg );
             return Task.WhenAll( _eSeqMessageAsync.RaiseAsync( Monitor, this, msg ), taskParallel );
@@ -52,7 +52,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
         {
             try
             {
-                var msg = new ApplicationMessage( topic, payload );
+                var msg = new OutgoingApplicationMessage( topic, payload );
                 var taskParallel = _eParMessageAsync.RaiseAsync( Monitor, this, msg );
                 _eSeqMessage.Raise( Monitor, this, msg );
                 await _eSeqMessageAsync.RaiseAsync( Monitor, this, msg );
@@ -64,19 +64,19 @@ namespace CK.MQTT.Client.Abstractions.Tests
             }
         }
 
-        public event SequentialEventHandler<IMqttClient, ApplicationMessage> MessageReceived
+        public event SequentialEventHandler<IMqttClient, OutgoingApplicationMessage> MessageReceived
         {
             add { _eSeqMessage.Add( value ); }
             remove { _eSeqMessage.Remove( value ); }
         }
 
-        public event SequentialEventHandlerAsync<IMqttClient, ApplicationMessage> MessageReceivedAsync
+        public event SequentialEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> MessageReceivedAsync
         {
             add { _eSeqMessageAsync.Add( value ); }
             remove { _eSeqMessageAsync.Remove( value ); }
         }
 
-        public event ParallelEventHandlerAsync<IMqttClient, ApplicationMessage> ParallelMessageReceivedAsync
+        public event ParallelEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> ParallelMessageReceivedAsync
         {
             add { _eParMessageAsync.Add( value ); }
             remove { _eParMessageAsync.Remove( value ); }
@@ -112,7 +112,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
             throw new NotImplementedException();
         }
 
-        public Task<ApplicationMessage> WaitMessageReceivedAsync( Func<ApplicationMessage, bool> predicate = null, int timeoutMillisecond = -1 )
+        public Task<OutgoingApplicationMessage> WaitMessageReceivedAsync( Func<OutgoingApplicationMessage, bool> predicate = null, int timeoutMillisecond = -1 )
         {
             throw new NotImplementedException();
         }
@@ -161,7 +161,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
 
             public string LastTopic { get; private set; }
 
-            public async Task OnMessage( ActivityMonitor.DependentToken token, IMqttClient client, ApplicationMessage m )
+            public async Task OnMessage( ActivityMonitor.DependentToken token, IMqttClient client, OutgoingApplicationMessage m )
             {
                 using( _monitor.StartDependentActivity( token ) )
                 {
@@ -232,13 +232,13 @@ namespace CK.MQTT.Client.Abstractions.Tests
         static string LastTopicSync;
         static string LastTopicASync;
 
-        private static void SyncReceiving( IActivityMonitor monitor, IMqttClient sender, ApplicationMessage e )
+        private static void SyncReceiving( IActivityMonitor monitor, IMqttClient sender, OutgoingApplicationMessage e )
         {
             LastTopicSync = e.Topic;
             monitor.Info( "Synchronous Reception." );
         }
 
-        static Task SequentialAsyncReceiving( IActivityMonitor monitor, IMqttClient sender, ApplicationMessage e )
+        static Task SequentialAsyncReceiving( IActivityMonitor monitor, IMqttClient sender, OutgoingApplicationMessage e )
         {
             LastTopicASync = e.Topic;
             monitor.Info( "Asynchronous Reception (but sequential)." );

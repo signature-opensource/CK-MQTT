@@ -57,12 +57,12 @@ namespace CK.MQTT
         /// Event raised for each received message in asynchronous way, each async handler being called in parallel
         /// with the other ones.
         /// </summary>
-        event ParallelEventHandlerAsync<IMqttClient, ApplicationMessage> ParallelMessageReceivedAsync;
+        event ParallelEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> ParallelMessageReceivedAsync;
 
         /// <summary>
         /// Event raised for each received message, synchronously.
         /// </summary>
-        event SequentialEventHandler<IMqttClient, ApplicationMessage> MessageReceived;
+        event SequentialEventHandler<IMqttClient, OutgoingApplicationMessage> MessageReceived;
 
         /// <summary>
         /// Asynchronously waits for the next <see cref="MessageReceived"/> that matches an optional <paramref name="predicate"/>
@@ -71,13 +71,13 @@ namespace CK.MQTT
         /// <param name="predicate">The predicate that received message must satisfy.</param>
         /// <param name="timeoutMillisecond">The timeout in milliseconds.</param>
         /// <returns>The message or null if the timeout expired before the message has been received.</returns>
-        Task<ApplicationMessage?> WaitMessageReceivedAsync( Func<ApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 );
+        Task<OutgoingApplicationMessage?> WaitMessageReceivedAsync( Func<OutgoingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 );
 
         /// <summary>
         /// Event raised for each received message in asynchronous way, each async handler being called
         /// one after the other.
         /// </summary>
-        event SequentialEventHandlerAsync<IMqttClient, ApplicationMessage> MessageReceivedAsync;
+        event SequentialEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> MessageReceivedAsync;
 
         /// <summary>
         /// Represents the protocol connection, which consists of sending a CONNECT packet
@@ -133,7 +133,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="message">
         /// The application message to publish to the Server.
-        /// See <see cref="ApplicationMessage" /> for more details about the application messages
+        /// See <see cref="OutgoingApplicationMessage" /> for more details about the application messages
         /// </param>
         /// <param name="qos">
         /// The Quality Of Service (QoS) associated to the application message, which determines 

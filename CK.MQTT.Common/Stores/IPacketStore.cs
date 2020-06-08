@@ -1,5 +1,7 @@
 using CK.Core;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Stores
@@ -11,17 +13,15 @@ namespace CK.MQTT.Common.Stores
         /// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180912
         /// </summary>
         /// <returns>An unused packet identifier</returns>
-        ValueTask<ushort> StoreMessageAsync( IActivityMonitor m, ApplicationMessage message, QualityOfService qos );
+        ValueTask<ushort> StoreMessageAsync( IActivityMonitor m, string topic, int payloadLength, Func<Stream, Task> payload, QualityOfService qos );
 
         /// <summary>
         /// Discard a message. The packet ID will be freed if the QoS of the stored message is <see cref="QualityOfService.AtMostOnce"/>.
         /// </summary>
         /// <param name="packetId">The packet ID of the message to discard.</param>
-        /// <param name="freePacketId"></param>
-        /// <returns><see langword="true"/> if the packet ID have been freed (QoS at least once).</returns>
-        ValueTask<QualityOfService> DiscardMessageFromIdAsync( IActivityMonitor m, ushort packetId );
+        ValueTask<QualityOfService> DiscardMessageByIdAsync( IActivityMonitor m, ushort packetId );
 
-        IEnumerable<StoredApplicationMessage> AllStoredMessages { get; }
+        IDictionary<ushort, bool> AllStoredId { get; }
 
         IEnumerable<ushort> OrphansPacketsId { get; }
 
@@ -38,13 +38,13 @@ namespace CK.MQTT.Common.Stores
 
     public readonly struct StoredApplicationMessage
     {
-        public StoredApplicationMessage( ApplicationMessage applicationMessage, QualityOfService qualityOfService, ushort packetId )
+        public StoredApplicationMessage( OutgoingApplicationMessage applicationMessage, QualityOfService qualityOfService, ushort packetId )
         {
             ApplicationMessage = applicationMessage;
             QualityOfService = qualityOfService;
             PacketId = packetId;
         }
-        public readonly ApplicationMessage ApplicationMessage;
+        public readonly OutgoingApplicationMessage ApplicationMessage;
         public readonly QualityOfService QualityOfService;
         public readonly ushort PacketId;
     }

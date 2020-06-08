@@ -52,7 +52,7 @@ namespace CK.MQTT.Common.Processes
             {
                 // TODO: we got an useless allocation there. The stored object could be the same than the sent one.
                 // The issue is that the state of the object should change (packetID, dup flag)
-                ApplicationMessage packet = new ApplicationMessage( topic, payload );
+                OutgoingApplicationMessage packet = new OutgoingApplicationMessage( topic, payload );
                 ushort pacektId = await messageStore.StoreMessageAsync( m, packet, QualityOfService.AtLeastOnce );//store the message
                 //Now we can guarantee the At Least Once, the message have been stored.
                 //We return the Task representing the rest of the protocol.
@@ -81,7 +81,7 @@ namespace CK.MQTT.Common.Processes
         public static async ValueTask OnPubAckReceived( IActivityMonitor m, PublishAck ack, IPacketStore messageStore )
         {
             //We can discard the stored ID.
-            QualityOfService qos = await messageStore.DiscardMessageFromIdAsync( m, ack.PacketId );
+            QualityOfService qos = await messageStore.DiscardMessageByIdAsync( m, ack.PacketId );
             if( qos != QualityOfService.AtLeastOnce ) throw new InvalidOperationException( $"Stored message had QoS of {qos} but was expecting {QualityOfService.AtLeastOnce}" );
         }
 
@@ -91,7 +91,7 @@ namespace CK.MQTT.Common.Processes
         {
             // TODO: we got an useless allocation there. The stored object could be the same than the sent one.
             // The issue is that the state of the object should change (packetID, dup flag)
-            ApplicationMessage packet = new ApplicationMessage( topic, payload );
+            OutgoingApplicationMessage packet = new OutgoingApplicationMessage( topic, payload );
             ushort packetId = await messageStore.StoreMessageAsync( m, packet, QualityOfService.ExactlyOnce );//store the message
             //Now we can guarantee the At Least Once, the message have been stored.
             //We return the Task representing the rest of the protocol.
@@ -115,7 +115,7 @@ namespace CK.MQTT.Common.Processes
             PublishReceived publishReceived,
             int waitTimeoutMs )
         {
-            QualityOfService qos = await messageStore.DiscardMessageFromIdAsync( m, publishReceived.PacketId );
+            QualityOfService qos = await messageStore.DiscardMessageByIdAsync( m, publishReceived.PacketId );
             if( qos != QualityOfService.ExactlyOnce ) throw new InvalidOperationException( $"Stored message had QoS of {qos} but was expecting {QualityOfService.ExactlyOnce}" );
             await PublishQoS2SendPubRel( m, channel, messageStore, publishReceived.PacketId, waitTimeoutMs );
         }

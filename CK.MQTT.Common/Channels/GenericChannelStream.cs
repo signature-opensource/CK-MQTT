@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Channels
 {
-    class GenericChannelStream : IGenericChannelStream
+    class GenericChannelStream : IChannel
     {
         readonly IStreamClient _client;
         readonly Stream _stream;

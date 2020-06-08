@@ -2,9 +2,9 @@
 	<Import Project="..\Common\Shared.props" />
 	<PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
     <Description>Interfaces and Implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

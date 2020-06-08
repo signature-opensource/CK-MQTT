@@ -10,20 +10,20 @@ namespace CK.MQTT.Common.Channels
 {
     public class GenericChannel : IMqttChannel<IPacket>
     {
-        readonly IGenericChannelStream _channelStream;
+        readonly IChannel _channelStream;
         ValueTask? _backgroundListening;
         readonly CancellationToken _cancellationToken;
         readonly CancellationTokenSource _cancellationTokenSource;
         bool _running;
         GenericChannel(
-            IGenericChannelStream channelStream )
+            IChannel channelStream )
         {
             _channelStream = channelStream;
             _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
         }
 
-        public static GenericChannel Create( IGenericChannelStream channelStream, Memory<byte> workBuffer )
+        public static GenericChannel Create( IChannel channelStream, Memory<byte> workBuffer )
         {
             var channel = new GenericChannel( channelStream );
             channel.Start( workBuffer );

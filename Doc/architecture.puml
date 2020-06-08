@@ -1,0 +1,53 @@
+@startuml
+package IChannel {
+    interface NetworkStream
+}
+package ChannelHandler {
+    queue PipeWriterOutput
+    control PullLoop
+    queue InputPipe
+    control ReadLoopAsync
+    control ChannelLoop
+    queue OutPipeline [
+        Channel<OutgoingMessage> OutPipeline
+    ]
+
+    queue ReflexOutPipeline [
+        Channel<OutgoingMessage> ReflexOutPipeline
+    ]
+
+    entity OutgoinPacket [
+        OutgoinPacket.Write(PipeWriter)
+    ]
+
+    entity Reflexes
+
+}
+
+package MqttClient {
+    entity MqttEvents
+    entity MqttActions
+}
+
+MqttActions --> OutPipeline
+
+PipeWriterOutput --> NetworkStream
+
+OutgoinPacket --> PipeWriterOutput
+OutPipeline --> ChannelLoop : pull
+ReflexOutPipeline --> ChannelLoop : pull in priority
+ChannelLoop --> OutgoinPacket
+
+
+PullLoop <-- NetworkStream
+InputPipe <-- PullLoop
+ReadLoopAsync <-- InputPipe
+Reflexes --> MqttEvents
+ReadLoopAsync --> Reflexes
+MqttEvents <-- ReadLoopAsync
+Reflexes --> ReflexOutPipeline
+cloud UserProcess
+UserProcess <-- MqttEvents
+cloud UserAction
+UserAction --> MqttActions
+@enduml

@@ -69,25 +69,25 @@ namespace CK.MQTT.Client.Sdk
             return Task.WhenAll( task, _eSeqDisconnectAsync.RaiseAsync( m, this, disconnect ) );
         }
 
-        readonly ParallelEventHandlerAsyncSender<IMqttClient, ApplicationMessage> _eParMessageAsync = new ParallelEventHandlerAsyncSender<IMqttClient, ApplicationMessage>();
-        public event ParallelEventHandlerAsync<IMqttClient, ApplicationMessage> ParallelMessageReceivedAsync
+        readonly ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eParMessageAsync = new ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage>();
+        public event ParallelEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> ParallelMessageReceivedAsync
         {
             add => _eParMessageAsync.Add( value );
             remove => _eParMessageAsync.Remove( value );
         }
 
-        readonly SequentialEventHandlerSender<IMqttClient, ApplicationMessage> _eSeqMessage = new SequentialEventHandlerSender<IMqttClient, ApplicationMessage>();
-        public event SequentialEventHandler<IMqttClient, ApplicationMessage> MessageReceived
+        readonly SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessage = new SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage>();
+        public event SequentialEventHandler<IMqttClient, OutgoingApplicationMessage> MessageReceived
         {
             add => _eSeqMessage.Add( value );
             remove => _eSeqMessage.Remove( value );
         }
 
-        public Task<ApplicationMessage?> WaitMessageReceivedAsync( Func<ApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 )
+        public Task<OutgoingApplicationMessage?> WaitMessageReceivedAsync( Func<OutgoingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 )
             => _eSeqMessage.WaitAsync( predicate, timeoutMillisecond );
 
-        readonly SequentialEventHandlerAsyncSender<IMqttClient, ApplicationMessage> _eSeqMessageAsync = new SequentialEventHandlerAsyncSender<IMqttClient, ApplicationMessage>();
-        public event SequentialEventHandlerAsync<IMqttClient, ApplicationMessage> MessageReceivedAsync
+        readonly SequentialEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessageAsync = new SequentialEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage>();
+        public event SequentialEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> MessageReceivedAsync
         {
             add => _eSeqMessageAsync.Add( value );
             remove => _eSeqMessageAsync.Remove( value );
@@ -99,7 +99,7 @@ namespace CK.MQTT.Client.Sdk
         /// <param name="m">The monitor.</param>
         /// <param name="message">The message to raise.</param>
         /// <returns></returns>
-        Task RaiseMessageAsync( IActivityMonitor m, ApplicationMessage message )
+        Task RaiseMessageAsync( IActivityMonitor m, OutgoingApplicationMessage message )
         {
             Task task = _eParMessageAsync.RaiseAsync( m, this, message );
             _eSeqMessage.Raise( m, this, message );

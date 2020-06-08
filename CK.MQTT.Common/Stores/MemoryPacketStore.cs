@@ -14,7 +14,7 @@ namespace CK.MQTT.Common.Stores
 
 		public Task CloseAsync( IActivityMonitor m ) => Task.CompletedTask;
 
-		public ValueTask<QualityOfService> DiscardMessageFromIdAsync( IActivityMonitor m, ushort packetId )
+		public ValueTask<QualityOfService> DiscardMessageByIdAsync( IActivityMonitor m, ushort packetId )
 		{
 			QualityOfService qos = _storedApplicationMessages[packetId].QualityOfService;
 			if( !_storedApplicationMessages.Remove( packetId ) ) throw new KeyNotFoundException();//TODO: change api so it return a not found.
@@ -33,7 +33,7 @@ namespace CK.MQTT.Common.Stores
 			return new ValueTask<ushort>( _i++ );
 		}
 
-		public async ValueTask<ushort> StoreMessageAsync( IActivityMonitor m, ApplicationMessage message, QualityOfService qos )
+		public async ValueTask<ushort> StoreMessageAsync( IActivityMonitor m, OutgoingApplicationMessage message, QualityOfService qos )
 		{
 			ushort id = await GetNewPacketId( m );
 			_storedApplicationMessages.Add( id, new StoredApplicationMessage( message, qos, id ) );
