@@ -14,22 +14,16 @@ namespace CK.MQTT.Client.Sdk
     public class MqttClient : IMqttClient
     {
         readonly MqttConfiguration _configuration;
-
-        //Factories
-        readonly IPacketChannelFactory _channelFactory;
         readonly IPacketStoreManager _storeFactory;
         public MqttClient(
-            IPacketChannelFactory channelFactory,
             IPacketStoreManager packetStoreManager,
             MqttConfiguration configuration )
         {
-            _channelFactory = channelFactory;
             _storeFactory = packetStoreManager;
             _configuration = configuration;
         }
 
         IPacketStore? _store;
-        IMqttChannel<IPacket>? _channel;
 
         /// <summary>
         /// The ClientId of the <see cref="MqttClient"/>. <see cref="null"/> until connected.
@@ -55,32 +49,11 @@ namespace CK.MQTT.Client.Sdk
             remove => _eSeqDisconnectAsync.Remove( value );
         }
 
-        readonly ParallelEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected> _eParDisconnectAsync = new ParallelEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected>();
-        public event ParallelEventHandlerAsync<IMqttClient, MqttEndpointDisconnected> ParallelDisconnectedAsync
-        {
-            add => _eParDisconnectAsync.Add( value );
-            remove => _eParDisconnectAsync.Add( value );
-        }
-
         public Task RaiseDisconnectAsync( IActivityMonitor m, MqttEndpointDisconnected disconnect )
         {
             Task task = _eParDisconnectAsync.RaiseAsync( m, this, disconnect );
             _eSeqDisconnect.Raise( m, this, disconnect );
             return Task.WhenAll( task, _eSeqDisconnectAsync.RaiseAsync( m, this, disconnect ) );
-        }
-
-        readonly ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eParMessageAsync = new ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage>();
-        public event ParallelEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> ParallelMessageReceivedAsync
-        {
-            add => _eParMessageAsync.Add( value );
-            remove => _eParMessageAsync.Remove( value );
-        }
-
-        readonly SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessage = new SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage>();
-        public event SequentialEventHandler<IMqttClient, OutgoingApplicationMessage> MessageReceived
-        {
-            add => _eSeqMessage.Add( value );
-            remove => _eSeqMessage.Remove( value );
         }
 
         public Task<OutgoingApplicationMessage?> WaitMessageReceivedAsync( Func<OutgoingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 )
@@ -139,7 +112,7 @@ namespace CK.MQTT.Client.Sdk
         {
             using( m.OpenError( e ) )
             {
-                return CloseAsync( m, DisconnectedReason.Error, e.Message );
+                return CloseAsync( m, DisconnectedReason.UnspecifiedError, e.Message );
             }
         }
 

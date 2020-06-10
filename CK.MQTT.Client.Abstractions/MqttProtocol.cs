@@ -1,5 +1,3 @@
-using CK.MQTT.Sdk;
-
 namespace CK.MQTT
 {
     /// <summary>
@@ -51,7 +49,5 @@ namespace CK.MQTT
         public const int StringPrefixLength = 2;
 
         public const int PacketTypeLength = 1;
-
-        public static MqttEncoder Encoding => MqttEncoder.Default;
     }
 }

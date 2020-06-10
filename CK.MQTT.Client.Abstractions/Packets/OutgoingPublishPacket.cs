@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.OutgoingPackets
 {
-    public class OutgoingPublishPacket : ComplexOutgoingPacket
+    public class OutgoingApplicationMessage : ComplexOutgoingPacket
     {
         readonly bool _dup;
         readonly bool _retain;
@@ -19,7 +19,7 @@ namespace CK.MQTT.Common.OutgoingPackets
         readonly Func<int> _getPayloadSize;
         readonly Func<PipeWriter, CancellationToken, ValueTask> _payloadWriter;
         readonly bool _packetIdPresent;
-        public OutgoingPublishPacket(
+        public OutgoingApplicationMessage(
             bool dup,
             bool retain,
             string topic,

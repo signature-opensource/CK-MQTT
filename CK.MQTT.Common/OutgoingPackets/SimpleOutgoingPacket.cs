@@ -12,7 +12,7 @@ namespace CK.MQTT.Common
     {
         protected abstract void Write( PipeWriter pw );
 
-        protected override ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public override ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             Write( pw );
             return pw.FlushAsync( cancellationToken ).AsNonGenericValueTask();

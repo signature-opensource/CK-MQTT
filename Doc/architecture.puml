@@ -4,7 +4,6 @@ package IChannel {
 }
 package ChannelHandler {
     queue PipeWriterOutput
-    control PullLoop
     queue InputPipe
     control ReadLoopAsync
     control ChannelLoop
@@ -30,7 +29,7 @@ package MqttClient {
 }
 
 MqttActions --> OutPipeline
-
+NetworkStrweam --> InputPipe
 PipeWriterOutput --> NetworkStream
 
 OutgoinPacket --> PipeWriterOutput
@@ -39,12 +38,9 @@ ReflexOutPipeline --> ChannelLoop : pull in priority
 ChannelLoop --> OutgoinPacket
 
 
-PullLoop <-- NetworkStream
-InputPipe <-- PullLoop
 ReadLoopAsync <-- InputPipe
-Reflexes --> MqttEvents
 ReadLoopAsync --> Reflexes
-MqttEvents <-- ReadLoopAsync
+MqttEvents <-- ReadLoopAsync : IncomingMessage
 Reflexes --> ReflexOutPipeline
 cloud UserProcess
 UserProcess <-- MqttEvents

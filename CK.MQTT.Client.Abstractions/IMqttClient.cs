@@ -1,7 +1,11 @@
 using CK.Core;
+using CK.MQTT.Abstractions.Packets;
+using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Common.Packets;
 using System;
 using System.Collections.Generic;
+using System.IO.Pipelines;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -54,30 +58,19 @@ namespace CK.MQTT
         ValueTask<bool> CheckConnectionAsync( IActivityMonitor m );
 
         /// <summary>
-        /// Event raised for each received message in asynchronous way, each async handler being called in parallel
-        /// with the other ones.
-        /// </summary>
-        event ParallelEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> ParallelMessageReceivedAsync;
-
-        /// <summary>
-        /// Event raised for each received message, synchronously.
-        /// </summary>
-        event SequentialEventHandler<IMqttClient, OutgoingApplicationMessage> MessageReceived;
-
-        /// <summary>
         /// Asynchronously waits for the next <see cref="MessageReceived"/> that matches an optional <paramref name="predicate"/>
         /// during an optional <paramref name="timeoutMillisecond"/> time span.
         /// </summary>
         /// <param name="predicate">The predicate that received message must satisfy.</param>
         /// <param name="timeoutMillisecond">The timeout in milliseconds.</param>
         /// <returns>The message or null if the timeout expired before the message has been received.</returns>
-        Task<OutgoingApplicationMessage?> WaitMessageReceivedAsync( Func<OutgoingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 );
+        Task<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 );
 
         /// <summary>
         /// Event raised for each received message in asynchronous way, each async handler being called
         /// one after the other.
         /// </summary>
-        event SequentialEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> MessageReceivedAsync;
+        event SequentialEventHandlerAsync<IMqttClient, IncomingApplicationMessage> MessageReceivedAsync;
 
         /// <summary>
         /// Represents the protocol connection, which consists of sending a CONNECT packet
@@ -103,9 +96,13 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the protocol connection
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, LastWill? will = null, bool cleanSession = false );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, bool cleanSession = false );
 
-        Task<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, LastWill? will = null );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, string topic, Func<PipeWriter, Task> payloadWriter );
+
+        Task<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m );
+
+        Task<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, string topic, Func<PipeWriter, Task> payloadWriter );
 
         /// <summary>
         /// Represents the protocol subscription, which consists of sending a SUBSCRIBE packet
@@ -148,7 +145,13 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180850">MQTT Publish</a>
         /// for more details about the protocol publish
         /// </remarks>
-        ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false );
+        ValueTask<ValueTask> PublishAsync(
+            IActivityMonitor m,
+            OutgoingApplicationMessage message,
+            string topic,
+            ReadOnlyMemory<byte> payload,
+            QualityOfService qos,
+            bool retain = false );
 
         /// <summary>
         /// Represents the protocol unsubscription, which consists of sending an UNSUBSCRIBE packet
