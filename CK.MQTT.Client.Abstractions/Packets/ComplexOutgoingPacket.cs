@@ -1,4 +1,5 @@
 using CK.MQTT.Common.Packets;
+using CK.MQTT.Common.Serialisation;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -44,7 +45,7 @@ namespace CK.MQTT.Common.OutgoingPackets
 
         protected abstract ValueTask WriteRestOfThePacketAsync( PipeWriter pw, CancellationToken cancellationToken );
 
-        protected internal override ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public override ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( pw );
             return WriteRestOfThePacketAsync( pw, cancellationToken );

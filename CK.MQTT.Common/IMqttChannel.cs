@@ -1,9 +1,7 @@
+using CK.Core;
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.IO.Pipelines;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Channels
 {
@@ -15,7 +13,14 @@ namespace CK.MQTT.Common.Channels
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the disconnection.
         /// The <see cref="IMqttChannel"/> should not be connected if canceled, it should only stop a "clean" disconnect <see cref="IMqttChannel"/>.</param>
         /// <returns></returns>
-        void Close();
+        void Close( IActivityMonitor m  );
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="m"></param>
+        /// <returns></returns>
+        public bool IsConnected( IActivityMonitor m );
 
         /// <summary>
         /// Gets the stream.

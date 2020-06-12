@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Stores
 {
+    /// <summary>
+    /// This interface have no way to be closed by design.
+    /// The implementation should guarantee the persitence when store methods are completed.
+    /// If not, it WILL result in data loss.
+    /// </summary>
     public interface IPacketStore
     {
         /// <summary>
@@ -30,8 +35,5 @@ namespace CK.MQTT.Common.Stores
         ValueTask<bool> StorePacketIdAsync( IActivityMonitor m, ushort packetId );
 
         ValueTask<bool> FreePacketIdAsync( IActivityMonitor m, ushort packetId );
-
-        Task CloseAsync( IActivityMonitor m );
-
     }
 }

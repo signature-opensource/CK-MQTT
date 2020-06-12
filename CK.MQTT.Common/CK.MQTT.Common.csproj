@@ -16,7 +16,11 @@
     <PackageReference Include="System.IO.Pipelines" Version="4.7.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.Client.Abstractions\CK.MQTT.Client.Abstractions.csproj" />
+    <ProjectReference Include="..\CK.MQTT.Client.Abstractions\CK.MQTT.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Channels\" />
+    <Folder Include="PacketWriter\" />
   </ItemGroup>
 
 </Project>

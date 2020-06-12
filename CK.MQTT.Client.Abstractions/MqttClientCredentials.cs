@@ -27,7 +27,7 @@ namespace CK.MQTT
         /// /// <param name="password">Password for authentication</param>
         public MqttClientCredentials( string clientId, string userName, string password )
         {
-            ClientId = clientId ?? String.Empty;
+            ClientId = clientId ?? string.Empty;
             UserName = userName;
             Password = password;
         }
@@ -37,7 +37,7 @@ namespace CK.MQTT
         /// without any <see cref="ClientId"/>: the server will provide one.
 		/// </summary>
 		public MqttClientCredentials()
-            : this( clientId: String.Empty )
+            : this( clientId: string.Empty )
         {
         }
 

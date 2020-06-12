@@ -1,11 +1,11 @@
-using System;
+//using System;
 
-namespace CK.MQTT.Common.Packets
-{
-    public interface IPacket
-    {
-        byte HeaderByte { get; }
+//namespace CK.MQTT.Common.Packets
+//{
+//    public interface IPacket
+//    {
+//        byte HeaderByte { get; }
 
-        uint RemainingLength { get; }
-    }
-}
+//        uint RemainingLength { get; }
+//    }
+//}

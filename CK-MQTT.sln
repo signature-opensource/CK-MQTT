@@ -21,7 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{25AD6D5E
 		TestHelper.config = TestHelper.config
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client.Abstractions", "CK.MQTT.Client.Abstractions\CK.MQTT.Client.Abstractions.csproj", "{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Abstractions", "CK.MQTT.Client.Abstractions\CK.MQTT.Abstractions.csproj", "{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client.Abstractions.Tests", "Tests\CK.MQTT.Client.Abstractions.Tests\CK.MQTT.Client.Abstractions.Tests.csproj", "{55BA9E7A-BFB0-429E-A424-D9FE187936CC}"
 EndProject
@@ -29,7 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Common", "CK.MQTT.C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleClientTest", "SimpleClientTest\SimpleClientTest.csproj", "{94C70015-DF05-4353-B7B6-3E88A226CC84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.MQTT.Server", "CK.MQTT.Server\CK.MQTT.Server.csproj", "{7A3BC93E-96A9-426D-8458-9DEEF7FB6978}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Server", "CK.MQTT.Server\CK.MQTT.Server.csproj", "{7A3BC93E-96A9-426D-8458-9DEEF7FB6978}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

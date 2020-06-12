@@ -11,56 +11,73 @@ namespace CK.MQTT.Client.OutgoingPackets
 {
     class OutgoingConnect : ComplexOutgoingPacket
     {
-        readonly string _protocolName;
-        readonly byte _protocolLevel;
+        readonly MqttConfiguration _mConf;
+        readonly MqttClientCredentials _creds;
+        readonly ProtocolConfiguration _pConf;
         readonly byte _flags;
-        readonly string _clientId;
-        readonly bool _cleanSession;
-        readonly ushort _keepAlive;
-        readonly string? _username;
-        readonly string? _password;
         readonly string? _willTopic;
         readonly Func<int>? _getPayloadSize;
         readonly Func<PipeWriter, CancellationToken, ValueTask>? _payloadWriter;
         readonly int _sizePostPayload;
 
+        public bool CleanSession { get; }
+
+        const byte _usernameFlag = 0b1000_0000;
+        const byte _passwordFlag = 0b0100_0000;
+        const byte _willRetainFlag = 0b0010_0000;
+        const byte _willFlag = 0b0000_0100;
+        const byte _cleanSessionFlag = 0b0000_0010;
+        static byte ByteFlag( bool cleanSession, MqttClientCredentials creds )
+        {
+            byte flags = 0;
+            if( creds.UserName != null ) flags |= _usernameFlag;
+            if( creds.Password != null ) flags |= _passwordFlag;
+            if( cleanSession ) flags |= _cleanSessionFlag;
+            return flags;
+        }
+
+        static byte ByteFlag( bool cleanSession, MqttClientCredentials creds, bool retain, QualityOfService qos )
+        {
+            byte flags = 0;
+            if( creds.UserName != null ) flags |= _usernameFlag;
+            if( creds.Password != null ) flags |= _passwordFlag;
+            if( retain ) flags |= _willRetainFlag;
+            flags |= (byte)((byte)qos << 3);
+            flags |= _willFlag;
+            if( cleanSession ) flags |= _cleanSessionFlag;
+            return flags;
+        }
+
         public OutgoingConnect(
-            string protocolName,
-            byte protocolLevel,
-            byte flags,
-            string clientId,
+            ProtocolConfiguration pConf,
+            MqttConfiguration mConf,
+            MqttClientCredentials creds,
             bool cleanSession,
-            ushort keepAlive,
             string willTopic,
             Func<int>? getPayloadSize,
-            Func<PipeWriter, CancellationToken, ValueTask> payloadWriter,
-            string? username,
-            string? password ) : this( protocolName, protocolLevel, flags, clientId, cleanSession, keepAlive, username, password )
+            QualityOfService qos,
+            bool retain,
+            Func<PipeWriter, CancellationToken, ValueTask> payloadWriter ) : this( pConf, mConf, creds, cleanSession )
         {
+            _flags = ByteFlag( cleanSession, creds, retain, qos );
             _willTopic = willTopic;
             _getPayloadSize = getPayloadSize;
             _payloadWriter = payloadWriter;
         }
 
+
         public OutgoingConnect(
-            string protocolName,
-            byte protocolLevel,
-            byte flags,
-            string clientId,
-            bool cleanSession,
-            ushort keepAlive,
-            string? username,
-            string? password )
+            ProtocolConfiguration pConf,
+            MqttConfiguration mConf,
+            MqttClientCredentials creds,
+            bool cleanSession )
         {
-            _protocolName = protocolName;
-            _protocolLevel = protocolLevel;
-            _flags = flags;
-            _clientId = clientId;
-            _cleanSession = cleanSession;
-            _keepAlive = keepAlive;
-            _username = username;
-            _password = password;
-            _sizePostPayload = _username?.MQTTSize() ?? 0 + _password?.MQTTSize() ?? 0;
+            _pConf = pConf;
+            _mConf = mConf;
+            _creds = creds;
+            _flags = ByteFlag( cleanSession, creds );
+            CleanSession = cleanSession;
+            _sizePostPayload = creds.UserName?.MQTTSize() ?? 0 + creds.Password?.MQTTSize() ?? 0;
         }
 
         protected override PacketType PacketType => PacketType.Connect;
@@ -69,25 +86,25 @@ namespace CK.MQTT.Client.OutgoingPackets
 
         protected override int RemainingSize => _sizePostPayload + _getPayloadSize?.Invoke() ?? 0 + HeaderSize;
 
-        protected override int HeaderSize => _protocolName.MQTTSize()
+        protected override int HeaderSize => _pConf.ProtocolName.MQTTSize()
                                                 + 1 //_protocolLevel
                                                 + 1 //_flag
                                                 + 2 //_keepAlive
-                                                + _clientId.MQTTSize()
+                                                + _creds.ClientId.MQTTSize()
                                                 + _willTopic?.MQTTSize() ?? 0;
 
         protected override void WriteHeaderContent( Span<byte> span )
         {
             //protocol name: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349225
-            span = span.WriteString( _protocolName );
+            span = span.WriteString( _pConf.ProtocolName );
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349228
-            span[0] = _protocolLevel;
+            span[0] = _pConf.ProtocolLevel;
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
             span[1] = _flags;
             span = span[2..]
                 //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
-                .WriteUInt16( _keepAlive )
-                .WriteString( _clientId );
+                .WriteUInt16( _mConf.KeepAliveSecs )
+                .WriteString( _creds.ClientId );
             if( _willTopic != null )
             {
                 span.WriteString( _willTopic );
@@ -107,8 +124,10 @@ namespace CK.MQTT.Client.OutgoingPackets
         void WriteEndOfPayload( PipeWriter pw )
         {
             Span<byte> span = pw.GetSpan( _sizePostPayload );
-            if( _username != null ) span = span.WriteString( _username );
-            if( _password != null ) span.WriteString( _password );
+            string? username = _creds.UserName;
+            string? password = _creds.Password;
+            if( username != null ) span = span.WriteString( username );
+            if( password != null ) span.WriteString( password );
             pw.Advance( _sizePostPayload );
         }
     }

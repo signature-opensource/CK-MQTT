@@ -16,6 +16,7 @@ namespace CK.MQTT
         /// <summary>
         /// The client session has been re used, including any existing subscriptions.
         /// </summary>
-        SessionPresent
+        SessionPresent,
+        Error
     }
 }

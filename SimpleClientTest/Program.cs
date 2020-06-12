@@ -17,7 +17,7 @@ namespace SimpleClientTest
             config.Handlers.Add( new ConsoleConfiguration() );
             GrandOutput.EnsureActiveDefault( config );
             var m = new ActivityMonitor();
-            var mqtt = new MqttClient( new TcpChannelFactory(), new VolatilePacketStoreManager(),
+            var mqtt = new MqttClientOld( new TcpChannelFactory(), new VolatilePacketStoreManager(),
                 new MqttConfiguration( "broker.mqttdashboard.com:8000" ) );
             await mqtt.ConnectAsync( m, new MqttClientCredentials( "testCkMqtt" ), cleanSession: true );
             await Task.Delay( 50000 );

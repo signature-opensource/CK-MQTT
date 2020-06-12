@@ -12,7 +12,7 @@ namespace CK.MQTT.Common.Stores
 
 		public IEnumerable<ushort> OrphansPacketsId => _orphansId;
 
-		public Task CloseAsync( IActivityMonitor m ) => Task.CompletedTask;
+		public Task Close( IActivityMonitor m ) => Task.CompletedTask;
 
 		public ValueTask<QualityOfService> DiscardMessageByIdAsync( IActivityMonitor m, ushort packetId )
 		{

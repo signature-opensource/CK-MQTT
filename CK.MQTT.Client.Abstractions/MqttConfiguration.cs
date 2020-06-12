@@ -16,6 +16,7 @@ namespace CK.MQTT
             bool allowWildcardsInTopicFilters = true
             )
         {
+            Credentials = credentials;
             ConnectionString = connectionString;
             MaximumQoS = maximumQoS;
             KeepAliveSecs = keepAliveSecs;

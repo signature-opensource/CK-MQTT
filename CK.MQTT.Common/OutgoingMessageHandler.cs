@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Channels
 {
-    class OutgoingMessageHandler
+    public class OutgoingMessageHandler
     {
         public delegate OutgoingPacket OutputTransformer( IActivityMonitor m, OutgoingPacket outgoingPacket );
 
@@ -36,6 +36,12 @@ namespace CK.MQTT.Common.Channels
             _reflexIn = internalMessageChannel;
             _reflexOut = internalMessageChannel;
             _writeLoop = WriteLoop();
+        }
+
+        public bool QueueMessage( OutgoingPacket item, bool reflex )
+        {
+            if( reflex ) return _reflexIn.TryWrite( item );
+            return _messageIn.TryWrite( item );
         }
 
         void FlushChannels()

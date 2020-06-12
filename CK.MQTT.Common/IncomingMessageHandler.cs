@@ -20,14 +20,19 @@ namespace CK.MQTT.Common.Channels
         public delegate ValueTask Reflex( IActivityMonitor m, byte header, int packetSize, PipeReader reader );
         readonly PipeReader _pipeReader;
         readonly Task _readLoop;
-        readonly Reflex _reflex;
 
         public IncomingMessageHandler( Reflex reflex, PipeReader pipeReader )
         {
             _pipeReader = pipeReader;
-            _reflex = reflex;
+            CurrentReflex = reflex;
             _readLoop = ReadLoop();
         }
+
+        /// <summary>
+        /// Current <see cref="Reflex"/> that will be run on the incoming messages.
+        /// </summary>
+        public Reflex CurrentReflex { get; set; }
+
 
         readonly SequentialEventHandlerSender<IncomingMessageHandler, DisconnectedReason> _eSeqDisconnect
             = new SequentialEventHandlerSender<IncomingMessageHandler, DisconnectedReason>();
@@ -66,7 +71,7 @@ namespace CK.MQTT.Common.Channels
                         return;
                     }
                     if( res == SequenceReadResult.NotEnoughBytes ) continue;
-                    await _reflex( m, header, length, _pipeReader );
+                    await CurrentReflex( m, header, length, _pipeReader );
                 }
             }
             catch( Exception e )

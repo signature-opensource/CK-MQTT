@@ -17,8 +17,6 @@ namespace CK.MQTT.Common.Serialisation
     }
     public static class SequenceReaderExtension
     {
-
-
         public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out ushort value )
         {
             bool status = sequenceReader.TryReadBigEndian( out short toCast );
@@ -27,7 +25,7 @@ namespace CK.MQTT.Common.Serialisation
         }
 
         /// <summary>
-        /// https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
+        /// Copy&Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
         /// </summary>
         /// <param name="reader"></param>
         /// <param name="length"></param>
