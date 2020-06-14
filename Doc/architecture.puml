@@ -2,11 +2,15 @@
 package IChannel {
     interface NetworkStream
 }
-package ChannelHandler {
-    queue PipeWriterOutput
+package IncomingMessageHandler {
     queue InputPipe
     control ReadLoopAsync
+    entity Reflexes
+}
+
+package OutgoingMessageHandler {
     control ChannelLoop
+    queue PipeWriterOutput
     queue OutPipeline [
         Channel<OutgoingMessage> OutPipeline
     ]
@@ -18,9 +22,6 @@ package ChannelHandler {
     entity OutgoinPacket [
         OutgoinPacket.Write(PipeWriter)
     ]
-
-    entity Reflexes
-
 }
 
 package MqttClient {
@@ -29,7 +30,7 @@ package MqttClient {
 }
 
 MqttActions --> OutPipeline
-NetworkStrweam --> InputPipe
+NetworkStream --> InputPipe
 PipeWriterOutput --> NetworkStream
 
 OutgoinPacket --> PipeWriterOutput
@@ -39,8 +40,8 @@ ChannelLoop --> OutgoinPacket
 
 
 ReadLoopAsync <-- InputPipe
-ReadLoopAsync --> Reflexes
-MqttEvents <-- ReadLoopAsync : IncomingMessage
+Reflexes <-- ReadLoopAsync
+MqttEvents <-- Reflexes : IncomingMessage
 Reflexes --> ReflexOutPipeline
 cloud UserProcess
 UserProcess <-- MqttEvents

@@ -32,7 +32,7 @@ namespace CK.MQTT.Common.Serialisation
         /// <param name="value"></param>
         /// <returns></returns>
         public static bool TryReadUtf8String(
-    ref this SequenceReader<byte> reader, int length, out string? value )
+    ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
             ReadOnlySpan<byte> span = reader.UnreadSpan;
             if( span.Length < length )
@@ -45,7 +45,7 @@ namespace CK.MQTT.Common.Serialisation
         }
 
         private static bool TryReadMultisegmentUtf8String(
-            ref SequenceReader<byte> reader, int length, out string? value )
+            ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
             Debug.Assert( reader.UnreadSpan.Length < length );
 

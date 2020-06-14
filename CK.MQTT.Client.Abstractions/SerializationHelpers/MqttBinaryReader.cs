@@ -1,5 +1,9 @@
+using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.IO.Pipelines;
+using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Serialisation
 {
@@ -23,12 +27,9 @@ namespace CK.MQTT.Common.Serialisation
                 // Check for a corrupted stream.  Read a max of 5 bytes.
                 // In a future version, add a DataFormatException.
                 if( shift == 5 * 7 ) return SequenceReadResult.CorruptedStream; // 5 bytes max per Int32, shift += 7
-                                                                                // ReadByte handles end of stream cases for us.
-                if( !sequenceReader.TryRead( out b ) )
-                {
-                    sequenceReader.Rewind( 1 + shift / 7 );
-                    return SequenceReadResult.NotEnoughBytes;
-                }
+                // ReadByte handles end of stream cases for us.
+
+                if( !sequenceReader.TryRead( out b ) ) return SequenceReadResult.NotEnoughBytes;
                 length |= (b & 0x7F) << shift;
                 shift += 7;
             } while( (b & 0x80) != 0 );
@@ -47,6 +48,30 @@ namespace CK.MQTT.Common.Serialisation
             return reader.TryReadUtf8String( size, out output );
         }
 
+        static bool TryReadMQTTString( ReadOnlySequence<byte> buffer,
+            [NotNullWhen( true )] out string? output, out SequencePosition sequencePosition )
+        {
+            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            bool result = reader.TryReadMQTTString( out output );
+            sequencePosition = reader.Position;
+            return result;
+        }
+
+        public static async ValueTask<string> ReadMQTTString( this PipeReader pipeReader )
+        {
+            Beginning:
+            ReadResult result = await pipeReader.ReadAsync();
+            if( result.IsCanceled ) throw new OperationCanceledException();
+            if( !TryReadMQTTString( result.Buffer, out string? output, out SequencePosition sequencePosition ) )
+            {
+                pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
+                if( result.IsCompleted ) throw new EndOfStreamException();
+                goto Beginning;
+            }
+            pipeReader.AdvanceTo( sequencePosition );
+            return output;
+        }
+
         public static bool TryReadMQTTPayload( this ref SequenceReader<byte> reader, out ReadOnlySequence<byte> output )
         {
             if( !reader.TryReadBigEndian( out ushort size ) || size > reader.Remaining )
@@ -58,6 +83,6 @@ namespace CK.MQTT.Common.Serialisation
             return true;
         }
 
-        
+
     }
 }

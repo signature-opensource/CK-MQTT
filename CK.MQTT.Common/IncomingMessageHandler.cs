@@ -8,16 +8,17 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Channels
 {
+    /// </summary>
+    /// <param name="m">The monitor to log activity in a reflex.</param>
+    /// <param name="header">The byte header of the incoming packet.</param>
+    /// <param name="packetSize">The packet size of the incoming packet.</param>
+    /// <param name="reader">The PipeReader of the incoming transmission.</param>
+    /// <param name="currentBuffer">The buffer</param>
+    /// <returns></returns>
+    public delegate ValueTask Reflex( IActivityMonitor m, byte header, int packetSize, PipeReader reader );
+
     public class IncomingMessageHandler
     {
-        /// </summary>
-        /// <param name="m">The monitor to log activity in a reflex.</param>
-        /// <param name="header">The byte header of the incoming packet.</param>
-        /// <param name="packetSize">The packet size of the incoming packet.</param>
-        /// <param name="reader">The PipeReader of the incoming transmission.</param>
-        /// <param name="currentBuffer">The buffer</param>
-        /// <returns></returns>
-        public delegate ValueTask Reflex( IActivityMonitor m, byte header, int packetSize, PipeReader reader );
         readonly PipeReader _pipeReader;
         readonly Task _readLoop;
 
@@ -64,14 +65,21 @@ namespace CK.MQTT.Common.Channels
                 {
                     ReadResult read = await _pipeReader.ReadAsync();
                     if( read.IsCanceled ) return;
-                    SequenceReadResult res = TryParsePacketHeader( read.Buffer, out byte header, out int length );
+                    SequenceReadResult res = TryParsePacketHeader( read.Buffer, out byte header, out int length ); //this guy require 2-5 bytes
                     if( res == SequenceReadResult.CorruptedStream )
                     {
                         OnProtocolError( m );
                         return;
                     }
-                    if( res == SequenceReadResult.NotEnoughBytes ) continue;
-                    await CurrentReflex( m, header, length, _pipeReader );
+                    if( res == SequenceReadResult.NotEnoughBytes )
+                    {
+                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                        continue;
+                    }
+                    else
+                    {
+                        await CurrentReflex( m, header, length, _pipeReader );
+                    }
                 }
             }
             catch( Exception e )

@@ -16,11 +16,11 @@ namespace CK.MQTT.Common.Channels
         void Close( IActivityMonitor m  );
 
         /// <summary>
-        /// 
+        /// <see langword="true"/> if the channel was connected in the last operation on the <see cref="Stream"/>.
         /// </summary>
         /// <param name="m"></param>
         /// <returns></returns>
-        public bool IsConnected( IActivityMonitor m );
+        public bool IsConnected { get; }
 
         /// <summary>
         /// Gets the stream.

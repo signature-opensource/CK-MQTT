@@ -12,6 +12,7 @@ using System.IO.Pipelines;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using static CK.MQTT.Common.Channels.IncomingMessageHandler;
 
 namespace CK.MQTT.Client
 {
@@ -79,22 +80,17 @@ namespace CK.MQTT.Client
             _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( disconnectedReason );
         }
 
-        ValueTask<bool> CheckConnectionAsync( IActivityMonitor m )
-        {
-            bool isConnected = _channel.IsConnected( m );
-            if( !isConnected && _channelWasConnected )
-            {
-                Close( m, DisconnectedReason.RemoteDisconnected );
-            }
-            return new ValueTask<bool>( isConnected );
-        }
+        public bool IsConnected => _channel.IsConnected;
 
         public ValueTask<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m )
             => ConnectProcess.ExecuteConnectProtocol(
                 m,
                 _outgoingHandler,
-                new OutgoingConnect( ProtocolConfiguration.Mqtt3, _mqttConfiguration, true  )
-                , _waitTimeoutSecs );
+                _incomingHandler,
+                new OutgoingConnect( ProtocolConfiguration.Mqtt3, _mqttConfiguration, new MqttClientCredentials(), true ),
+                _waitTimeoutSecs,
+                ProtocolConfiguration.Mqtt3,
+                );
 
         public ValueTask<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, string topic, Func<PipeWriter, ValueTask> payloadWriter )
         {

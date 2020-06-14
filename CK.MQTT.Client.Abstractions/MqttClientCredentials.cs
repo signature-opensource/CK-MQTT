@@ -13,8 +13,8 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="clientId">Id of the client to connect. Can be null or empty.</param>
         public MqttClientCredentials( string clientId )
-            : this( clientId, userName: string.Empty, password: string.Empty )
         {
+            ClientId = clientId;
         }
 
         /// <summary>
@@ -25,9 +25,8 @@ namespace CK.MQTT
         /// <param name="clientId">Id of the client to connect</param>
         /// <param name="userName">Username for authentication</param>
         /// /// <param name="password">Password for authentication</param>
-        public MqttClientCredentials( string clientId, string userName, string password )
+        public MqttClientCredentials( string clientId, string? userName, string? password ) : this( clientId )
         {
-            ClientId = clientId ?? string.Empty;
             UserName = userName;
             Password = password;
         }
@@ -36,8 +35,7 @@ namespace CK.MQTT
 		/// Initializes a new instance of the <see cref="MqttClientCredentials" /> class
         /// without any <see cref="ClientId"/>: the server will provide one.
 		/// </summary>
-		public MqttClientCredentials()
-            : this( clientId: string.Empty )
+		public MqttClientCredentials() : this( clientId: string.Empty )
         {
         }
 
@@ -52,12 +50,12 @@ namespace CK.MQTT
         /// User Name used for authentication.
         /// Authentication is not mandatory on MQTT and is up to the consumer of the API.
         /// </summary>
-		public string UserName { get; }
+		public string? UserName { get; }
 
         /// <summary>
         /// Password used for authentication.
         /// Authentication is not mandatory on MQTT and is up to the consumer of the API.
         /// </summary>
-		public string Password { get; }
+		public string? Password { get; }
     }
 }

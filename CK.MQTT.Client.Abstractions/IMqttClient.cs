@@ -27,7 +27,7 @@ namespace CK.MQTT
         /// <see cref="ConnectAsync(IActivityMonitor, MqttClientCredentials, LastWill?, bool)"/> method or
         /// has been provided by the server.
         /// </summary>
-        string ClientId { get; }
+        string? ClientId { get; }
 
         /// <summary>
         /// Return <see langword="true"/> if the last packet was sent successfully

@@ -6,6 +6,14 @@
     <Nullable>enable</Nullable>
     <Description>Interfaces and Implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
   </PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="Channels\**" />
+	  <Compile Remove="PacketWriter\**" />
+	  <EmbeddedResource Remove="Channels\**" />
+	  <EmbeddedResource Remove="PacketWriter\**" />
+	  <None Remove="Channels\**" />
+	  <None Remove="PacketWriter\**" />
+	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.2.1--0000-develop" />
@@ -17,10 +25,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Client.Abstractions\CK.MQTT.Abstractions.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Channels\" />
-    <Folder Include="PacketWriter\" />
   </ItemGroup>
 
 </Project>

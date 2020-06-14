@@ -51,8 +51,7 @@
 
 //        public OutgoingApplicationMessage Message { get; }
 
-//        protected const byte dupFlag = 1 << 4;
-//        protected const byte retainFlag = 1;
+//        
 //        public byte HeaderByte => (byte)
 //        (
 //            (byte)PacketType.Publish |
@@ -70,42 +69,28 @@
 //            Debug.Assert( buffer.Length == 0 );
 //        }
 
-//        static QualityOfService QoSFromHeader( byte header )
-//            => (QualityOfService)((header << 5) >> 6);
 
-//        public static IPacket? Deserialise( IActivityMonitor m, byte header, ReadOnlySequence<byte> sequence )
-//        {
-//            QualityOfService qos = QoSFromHeader( header );
-//            if( qos == QualityOfService.AtMostOnce ) return DeserialiseQoS0( m, header, sequence );
-//            if( qos == QualityOfService.AtLeastOnce || qos == QualityOfService.ExactlyOnce )
-//            {
-//                return DeserialiseWithQos1or2( m, header, sequence );
-//            }
-//            m.Error( "Unknown QualityOfService." );
-//            return null;
-//        }
-
-//        static Publish? DeserialiseQoS0( IActivityMonitor m, byte header, ReadOnlySequence<byte> sequence )
-//        {
-//            SequenceReader<byte> reader = new SequenceReader<byte>( sequence );
-//            if( !reader.TryReadMQTTString( out string? topic )
-//             || !reader.TryReadMQTTPayload( out ReadOnlySequence<byte> payload ) )
-//            {
-//                m.Error( _notEnoughBytes );
-//                return null;
-//            }
-//            if( reader.Remaining > 0 )
-//            {
-//                m.Warn( "Malformed Packet: Unread bytes in the packets." );
-//                return null;
-//            }
-//            // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref383984666
-//            bool dup = (dupFlag & header) == retainFlag;
-//            QualityOfService qos = (QualityOfService)((header << 5) >> 6);
-//            Debug.Assert( qos == QualityOfService.AtMostOnce );
-//            bool retain = (retainFlag & header) == retainFlag;
-//            return new Publish( new OutgoingApplicationMessage( topic, payload ), retain, dup );
-//        }
+static Publish? DeserialiseQoS0( IActivityMonitor m, byte header, ReadOnlySequence<byte> sequence )
+{
+    SequenceReader<byte> reader = new SequenceReader<byte>( sequence );
+    if( !reader.TryReadMQTTString( out string? topic )
+     || !reader.TryReadMQTTPayload( out ReadOnlySequence<byte> payload ) )
+    {
+        m.Error( _notEnoughBytes );
+        return null;
+    }
+    if( reader.Remaining > 0 )
+    {
+        m.Warn( "Malformed Packet: Unread bytes in the packets." );
+        return null;
+    }
+    // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref383984666
+    bool dup = (dupFlag & header) == retainFlag;
+    QualityOfService qos = (QualityOfService)((header << 5) >> 6);
+    Debug.Assert( qos == QualityOfService.AtMostOnce );
+    bool retain = (retainFlag & header) == retainFlag;
+    return new Publish( new OutgoingApplicationMessage( topic, payload ), retain, dup );
+}
 
 //        static PublishWithId? DeserialiseWithQos1or2( IActivityMonitor m, byte header, ReadOnlySequence<byte> sequence )
 //        {
