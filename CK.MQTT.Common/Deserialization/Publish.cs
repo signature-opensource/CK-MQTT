@@ -9,16 +9,16 @@ namespace CK.MQTT.Client.Deserialization
 {
     static class Publish
     {
-        internal static SequenceReadResult ParsePublishWithPacketId( ReadOnlySequence<byte> buffer, [NotNullWhen( SequenceReadResult.Ok )] out string? topic, out ushort packetId )
+        internal static OperationStatus ParsePublishWithPacketId( ReadOnlySequence<byte> buffer, out string? topic, out ushort packetId )
         {
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
             if( !reader.TryReadMQTTString( out topic ) )
             {
                 packetId = 0;
-                return SequenceReadResult.NotEnoughBytes;
+                return OperationStatus.NeedMoreData;
             }
-            if( !reader.TryReadBigEndian( out packetId ) ) return SequenceReadResult.NotEnoughBytes;
-            return SequenceReadResult.Ok;
+            if( !reader.TryReadBigEndian( out packetId ) ) return OperationStatus.NeedMoreData;
+            return OperationStatus.Done;
         }
     }
 }

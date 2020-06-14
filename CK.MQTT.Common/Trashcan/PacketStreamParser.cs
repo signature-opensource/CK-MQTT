@@ -12,15 +12,15 @@
 //{
 //    public static class PacketStreamParser
 //    {
-//        static SequenceReadResult TryReadPacketFixedHeader( ref ReadResult readResult, out byte header, out int length, out SequencePosition consumed )
+//        static OperationStatus TryReadPacketFixedHeader( ref ReadResult readResult, out byte header, out int length, out SequencePosition consumed )
 //        {
 //            SequenceParser<byte> reader = new SequenceParser<byte>( readResult.Buffer );
 //            bool headerSuccess = reader.TryRead( out header );
-//            SequenceReadResult result = reader.TryReadRemainingLength( out length );
+//            OperationStatus result = reader.TryReadRemainingLength( out length );
 //            consumed = reader.Position;
-//            if( headerSuccess && result == SequenceReadResult.Ok ) return SequenceReadResult.Ok;
-//            if( !headerSuccess || result == SequenceReadResult.NotEnoughBytes ) return SequenceReadResult.NotEnoughBytes;
-//            return SequenceReadResult.CorruptedStream;
+//            if( headerSuccess && result == OperationStatus.Done ) return OperationStatus.Done;
+//            if( !headerSuccess || result == OperationStatus.NeedMoreData ) return OperationStatus.NeedMoreData;
+//            return OperationStatus.InvalidData;
 //        }
 
 //        static async ValueTask<(byte header, int length)?> TryReadPacketFixedHeaderAsync( IActivityMonitor m, PipeReader pipeReader, CancellationToken cancellationToken )
@@ -33,14 +33,14 @@
 //                    m.Error( "Read cancelled." );
 //                    return (0, 0);
 //                }
-//                SequenceReadResult sequenceRead = TryReadPacketFixedHeader( ref readResult, out byte header, out int length, out SequencePosition consumed );
-//                if( sequenceRead == SequenceReadResult.Ok )
+//                OperationStatus sequenceRead = TryReadPacketFixedHeader( ref readResult, out byte header, out int length, out SequencePosition consumed );
+//                if( sequenceRead == OperationStatus.Done )
 //                {
 //                    pipeReader.AdvanceTo( consumed );
 //                    return (header, length);
 //                }
-//                if( sequenceRead == SequenceReadResult.CorruptedStream ) return null;
-//                if( sequenceRead != SequenceReadResult.NotEnoughBytes ) throw new InvalidOperationException();
+//                if( sequenceRead == OperationStatus.InvalidData ) return null;
+//                if( sequenceRead != OperationStatus.NeedMoreData ) throw new InvalidOperationException();
 //                if( readResult.IsCompleted )
 //                {
 //                    if( readResult.Buffer.Length != 0 )

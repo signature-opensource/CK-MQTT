@@ -9,12 +9,6 @@ using System.Text;
 
 namespace CK.MQTT.Common.Serialisation
 {
-    public enum SequenceReadResult
-    {
-        Ok = 1,
-        NotEnoughBytes = 2,
-        CorruptedStream = 4,
-    }
     public static class SequenceReaderExtension
     {
         public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out ushort value )

@@ -3,6 +3,7 @@ using CK.MQTT.Client.Deserialization;
 using CK.MQTT.Common.Packets;
 using CK.MQTT.Common.Serialisation;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
@@ -46,8 +47,8 @@ namespace CK.MQTT.Common.Processes
                 await _payloadProcessor( pipeReader, theTopic, packetLength - theTopic.MQTTSize() );
                 return;
             }
-            SequenceReadResult result = Publish.ParsePublishWithPacketId( read.Buffer, out string? topic, out ushort packetId );
-            if( result == SequenceReadResult.NotEnoughBytes )
+            OperationStatus result = Publish.ParsePublishWithPacketId( read.Buffer, out string? topic, out ushort packetId );
+            if( result == OperationStatus.NeedMoreData )
             {
                 pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
                 goto Parse;

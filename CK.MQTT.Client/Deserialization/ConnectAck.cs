@@ -9,7 +9,7 @@ namespace CK.MQTT.Client.Deserialization
 {
     static class ConnectAck
     {
-        internal static SequenceReadResult Deserialize(
+        internal static OperationStatus Deserialize(
             IActivityMonitor m, ReadOnlySequence<byte> buffer,
             out byte state, out byte code, out int length, out SequencePosition position )
         {
@@ -20,10 +20,10 @@ namespace CK.MQTT.Client.Deserialization
             {
                 length = state = code = 0;
                 position = reader.Position;
-                return SequenceReadResult.CorruptedStream;
+                return OperationStatus.InvalidData;
             }
-            SequenceReadResult result = reader.TryReadMQTTRemainingLength( out length );
-            if( result != SequenceReadResult.Ok )
+            OperationStatus result = reader.TryReadMQTTRemainingLength( out length );
+            if( result != OperationStatus.Done )
             {
                 state = code = 0;
                 position = reader.Position;
@@ -33,11 +33,11 @@ namespace CK.MQTT.Client.Deserialization
             {
                 code = 0;
                 position = reader.Position;
-                return SequenceReadResult.NotEnoughBytes;
+                return OperationStatus.NeedMoreData;
             }
             if( reader.Remaining > 0 ) m.Warn( "Unread data in Connect packet." );
             position = reader.Position;
-            return SequenceReadResult.Ok;
+            return OperationStatus.Done;
         }
     }
 }

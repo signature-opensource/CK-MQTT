@@ -43,11 +43,11 @@ namespace CK.MQTT.Common.Channels
             remove => _eSeqDisconnect.Remove( value );
         }
 
-        SequenceReadResult TryParsePacketHeader( ReadOnlySequence<byte> sequence, out byte header, out int length )
+        OperationStatus TryParsePacketHeader( ReadOnlySequence<byte> sequence, out byte header, out int length )
         {
             SequenceReader<byte> reader = new SequenceReader<byte>( sequence );
             length = 0;
-            if( !reader.TryRead( out header ) ) return SequenceReadResult.NotEnoughBytes;
+            if( !reader.TryRead( out header ) ) return OperationStatus.NeedMoreData;
             return reader.TryReadMQTTRemainingLength( out length );
         }
 
@@ -65,13 +65,13 @@ namespace CK.MQTT.Common.Channels
                 {
                     ReadResult read = await _pipeReader.ReadAsync();
                     if( read.IsCanceled ) return;
-                    SequenceReadResult res = TryParsePacketHeader( read.Buffer, out byte header, out int length ); //this guy require 2-5 bytes
-                    if( res == SequenceReadResult.CorruptedStream )
+                    OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length ); //this guy require 2-5 bytes
+                    if( res == OperationStatus.InvalidData )
                     {
                         OnProtocolError( m );
                         return;
                     }
-                    if( res == SequenceReadResult.NotEnoughBytes )
+                    if( res == OperationStatus.NeedMoreData )
                     {
                         _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                         continue;

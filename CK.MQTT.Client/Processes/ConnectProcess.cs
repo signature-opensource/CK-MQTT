@@ -5,6 +5,7 @@ using CK.MQTT.Common;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Serialisation;
 using System;
+using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
 using System.Net;
@@ -32,12 +33,12 @@ namespace CK.MQTT.Client.Processes
                 input.CurrentReflex = async ( m, header, size, reader ) =>
                 {
                     int headerPartSize = pConf.ProtocolName.MQTTSize() + 4;
-                    SequenceReadResult result = SequenceReadResult.NotEnoughBytes;
+                    OperationStatus result = OperationStatus.NeedMoreData;
                     StartParse://We can avoid the goto, at the price of needing to work around the while scope, and variable declaration.
                     ReadResult read = await reader.ReadAsync();
                     if( read.IsCanceled ) return;
                     result = ConnectAck.Deserialize( m, read.Buffer, out byte state, out byte code, out int lenght, out SequencePosition position );
-                    if( result == SequenceReadResult.NotEnoughBytes )
+                    if( result == OperationStatus.NeedMoreData )
                     {
                         //if the stream was completed, there is no point to restart reading.
                         if( read.IsCompleted ) throw e = new EndOfStreamException();
@@ -45,7 +46,7 @@ namespace CK.MQTT.Client.Processes
                         reader.AdvanceTo( read.Buffer.Start, position );
                         goto StartParse;
                     }
-                    if( result != SequenceReadResult.Ok ) throw e = new ProtocolViolationException();
+                    if( result != OperationStatus.Done ) throw e = new ProtocolViolationException();
                     input.CurrentReflex = reflexPostConnect;
                     waitAck.Release();
                 };

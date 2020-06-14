@@ -15,7 +15,7 @@ namespace CK.MQTT.Common.Serialisation
         /// <param name="buffer"></param>
         /// <param name="length">The Remaining Length, -1 if there is no enough bytes to read, -2 if the stream is corrupted.</param>
         /// <returns></returns>
-        public static SequenceReadResult TryReadMQTTRemainingLength( this ref SequenceReader<byte> sequenceReader, out int length )
+        public static OperationStatus TryReadMQTTRemainingLength( this ref SequenceReader<byte> sequenceReader, out int length )
         {
             length = 0;
             // Read out an Int32 7 bits at a time.  The high bit
@@ -26,14 +26,14 @@ namespace CK.MQTT.Common.Serialisation
             {
                 // Check for a corrupted stream.  Read a max of 5 bytes.
                 // In a future version, add a DataFormatException.
-                if( shift == 5 * 7 ) return SequenceReadResult.CorruptedStream; // 5 bytes max per Int32, shift += 7
+                if( shift == 5 * 7 ) return OperationStatus.InvalidData; // 5 bytes max per Int32, shift += 7
                 // ReadByte handles end of stream cases for us.
 
-                if( !sequenceReader.TryRead( out b ) ) return SequenceReadResult.NotEnoughBytes;
+                if( !sequenceReader.TryRead( out b ) ) return OperationStatus.NeedMoreData;
                 length |= (b & 0x7F) << shift;
                 shift += 7;
             } while( (b & 0x80) != 0 );
-            return SequenceReadResult.Ok;
+            return OperationStatus.Done;
         }
 
         public static bool TryReadMQTTString(
