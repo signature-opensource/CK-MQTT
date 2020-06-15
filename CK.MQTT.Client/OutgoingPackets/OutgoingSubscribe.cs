@@ -3,12 +3,7 @@ using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Common.Packets;
 using CK.MQTT.Common.Serialisation;
 using System;
-using System.Buffers;
-using System.IO;
-using System.IO.Pipelines;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.OutgoingPackets
 {

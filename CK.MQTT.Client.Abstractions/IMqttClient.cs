@@ -22,12 +22,12 @@ namespace CK.MQTT
         event SequentialEventHandler<IMqttClient, MqttEndpointDisconnected> Disconnected;
 
         /// <summary>
-        /// Id of the connected Client. <see cref="null"/> until connected.
+        /// Id of the connected Client. "" until connected.
         /// This Id correspond to the <see cref="MqttClientCredentials.ClientId"/> parameter passed to 
         /// <see cref="ConnectAsync(IActivityMonitor, MqttClientCredentials, LastWill?, bool)"/> method or
         /// has been provided by the server.
         /// </summary>
-        string? ClientId { get; }
+        string ClientId { get; }
 
         /// <summary>
         /// Return <see langword="true"/> if the last packet was sent successfully
@@ -41,7 +41,7 @@ namespace CK.MQTT
         /// <param name="predicate">The predicate that received message must satisfy.</param>
         /// <param name="timeoutMillisecond">The timeout in milliseconds.</param>
         /// <returns>The message or null if the timeout expired before the message has been received.</returns>
-        ValueTask<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 );
+        Task<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 );
 
         /// <summary>
         /// Event raised for each received message in asynchronous way, each async handler being called
@@ -73,13 +73,13 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the protocol connection
         /// </remarks>
-        ValueTask<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, bool cleanSession = false );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, bool cleanSession = false );
 
-        ValueTask<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, string topic, Func<PipeWriter, ValueTask> payloadWriter );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, string topic, Func<PipeWriter, ValueTask> payloadWriter );
 
-        ValueTask<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m );
+        Task<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m );
 
-        ValueTask<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, string topic, Func<PipeWriter, ValueTask> payloadWriter );
+        Task<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, string topic, Func<PipeWriter, ValueTask> payloadWriter );
 
         /// <summary>
         /// Represents the protocol subscription, which consists of sending a SUBSCRIBE packet

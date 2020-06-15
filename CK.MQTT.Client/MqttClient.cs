@@ -2,61 +2,87 @@ using CK.Core;
 using CK.MQTT.Abstractions.Packets;
 using CK.MQTT.Client.OutgoingPackets;
 using CK.MQTT.Client.Processes;
+using CK.MQTT.Client.Reflexes;
 using CK.MQTT.Common;
 using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Common.Packets;
+using CK.MQTT.Common.Reflexes;
+using CK.MQTT.Common.Stores;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Text;
+using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using static CK.MQTT.Common.Channels.IncomingMessageHandler;
-
+using System.Diagnostics.CodeAnalysis;
 namespace CK.MQTT.Client
 {
     class MqttClient : IMqttClient
     {
         bool _channelWasConnected;
+        readonly IPacketStore _store;
         readonly MqttConfiguration _mqttConfiguration;
         readonly IMqttChannel _channel;
-        readonly OutgoingMessageHandler _outgoingHandler;
+        readonly OutgoingMessageHandler? _outgoingHandler;
         readonly IncomingMessageHandler _incomingHandler;
         readonly PipeWriter _pipeWriter;
         readonly PipeReader _pipeReader;
-        readonly Channel<OutgoingPacket> _regularChannel;
-        readonly Channel<OutgoingPacket> _reflexChannel;
-        readonly OutgoingMessageHandler.OutputTransformer _outputTransformer;
         readonly int _waitTimeoutSecs;
-        public MqttClient(
+        Reflex? _postConnectReflex;
+        MqttClient(
+            IPacketStore store,
             MqttConfiguration mqttConfiguration,
-            string clientId,
             IMqttChannel channel,
-            OutgoingMessageHandler outgoingHandler,
             IncomingMessageHandler incomingHandler,
-            PipeWriter pipeWriter,
-            PipeReader pipeReader,
-            Channel<OutgoingPacket> regularChannel,
-            Channel<OutgoingPacket> reflexChannel,
-            Reflex inputReflex,
-            OutgoingMessageHandler.OutputTransformer outputTransformer,
-            int waitTimeoutSecs )
+            Reflex postConnectReflex,
+            int waitTimeoutSecs,
+            string clientId)
         {
+            _store = store;
             _mqttConfiguration = mqttConfiguration;
             ClientId = clientId;
             _channel = channel;
             _outgoingHandler = outgoingHandler;
             _incomingHandler = incomingHandler;
-            _pipeWriter = pipeWriter;
-            _pipeReader = pipeReader;
-            _regularChannel = regularChannel;
-            _reflexChannel = reflexChannel;
-            _outputTransformer = outputTransformer;
+            _postConnectReflex = postConnectReflex;
             _waitTimeoutSecs = waitTimeoutSecs;
         }
+        [MemberNotNull(nameof(_postConnectReflex))]
+        public static IMqttClient Create( IPacketStore store,
+            MqttConfiguration mqttConfiguration,
+            IMqttChannel channel,
+            PipeWriter pipeWriter,
+            Channel<OutgoingPacket> externalMessageChannel,
+            Channel<OutgoingPacket> internalMessageChannel,
+            IncomingMessageHandler incomingHandler,
+            int waitTimeoutSecs,
+            string clientId = "")
+        {
+            ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder();
+            var output = new OutgoingMessageHandler(pipeWriter, o);
+            new MqttClient( store, mqttConfiguration, channel, output, incomingHandler, postConnectReflex, waitTimeoutSecs, clientId );
+            builder.UseMiddleware( new PublishReflex( store, ( m, msg ) => _eMessage.RaiseAsync( m, this, msg ), _outgoingHandler ) );
+            builder.UseMiddleware( new PubackReflex( store ) );
+            builder.UseMiddleware( new PubReceivedReflex( store, output ) );
+            builder.UseMiddleware( new PubRelReflex( store, output ) );
+            builder.UseMiddleware( new PingRespReflex(PingCalled) );
+            var postConnectReflex = builder.Build( InvalidPacket );
 
-        public string? ClientId { get; private set; }
+            return
+        }
+
+        void PingCalled()
+        {
+
+        }
+
+        ValueTask InvalidPacket( IActivityMonitor m, byte header, int packetSize, PipeReader reader )
+        {
+            Close( m, DisconnectedReason.ProtocolError );
+            throw new ProtocolViolationException();
+        }
+
+        public string ClientId { get; private set; }
 
         readonly SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected> _eDisconnected
             = new SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected>();
@@ -77,7 +103,7 @@ namespace CK.MQTT.Client
         {
             _channelWasConnected = false;
             _channel.Close( m );
-            _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( disconnectedReason );
+            _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( disconnectedReason ) );
         }
 
         public bool IsConnected => _channel.IsConnected;
@@ -88,8 +114,7 @@ namespace CK.MQTT.Client
                 _outgoingHandler,
                 _incomingHandler,
                 new OutgoingConnect( ProtocolConfiguration.Mqtt3, _mqttConfiguration, new MqttClientCredentials(), true ),
-                _waitTimeoutSecs,
-                ProtocolConfiguration.Mqtt3,
+                _waitTimeoutSecs, _postConnectReflex
                 );
 
         public ValueTask<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, string topic, Func<PipeWriter, ValueTask> payloadWriter )

@@ -1,14 +1,15 @@
 using System;
 using System.Buffers;
-using System.Buffers.Text;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace CK.MQTT.Common.Serialisation
+namespace CK.MQTT.Abstractions.Serialisation
 {
+    /// <summary>
+    /// Simple helper class on <see cref="SequenceReader{T}"/>.
+    /// I expect that a more efficient/less buggy version of these functions will be part of SequenceReader API someday.
+    /// </summary>
     public static class SequenceReaderExtension
     {
         public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out ushort value )
@@ -26,7 +27,7 @@ namespace CK.MQTT.Common.Serialisation
         /// <param name="value"></param>
         /// <returns></returns>
         public static bool TryReadUtf8String(
-    ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
+            ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
             ReadOnlySpan<byte> span = reader.UnreadSpan;
             if( span.Length < length )

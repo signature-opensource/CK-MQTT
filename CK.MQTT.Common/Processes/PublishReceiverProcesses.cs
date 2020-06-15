@@ -1,6 +1,4 @@
 using CK.Core;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.Packets;
 using CK.MQTT.Common.Stores;
 using System;
 using System.Threading.Tasks;

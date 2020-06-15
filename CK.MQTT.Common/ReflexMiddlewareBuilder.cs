@@ -1,11 +1,10 @@
 using CK.Core;
+using CK.MQTT.Common.Channels;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using static CK.MQTT.Common.Channels.IncomingMessageHandler;
 
 namespace CK.MQTT.Common
 {
@@ -16,7 +15,7 @@ namespace CK.MQTT.Common
 
     public interface IReflexMiddleware
     {
-        ValueTask ProcessIncomingPacket(
+        ValueTask ProcessIncomingPacketAsync(
             IActivityMonitor m,
         byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
     }
@@ -31,7 +30,7 @@ namespace CK.MQTT.Common
             return this;
         }
 
-        public ReflexMiddlewareBuilder UseMiddleware( IReflexMiddleware reflex ) => Use( reflex.ProcessIncomingPacket );
+        public ReflexMiddlewareBuilder UseMiddleware( IReflexMiddleware reflex ) => Use( reflex.ProcessIncomingPacketAsync );
 
         public ReflexMiddlewareBuilder UseMiddleware( ReflexMiddleware reflex ) => Use( reflex );
 

@@ -2,8 +2,6 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
-using CK.MQTT.Client.Sdk;
-using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Stores;
 using System.Threading.Tasks;
 

@@ -1,7 +1,4 @@
 using CK.Core;
-using CK.MQTT.Common.Packets;
-using System;
-using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;

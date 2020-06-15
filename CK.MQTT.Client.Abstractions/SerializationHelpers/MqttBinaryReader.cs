@@ -5,7 +5,7 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.Serialisation
+namespace CK.MQTT.Abstractions.Serialisation
 {
     public static class MqttBinaryReader
     {
@@ -54,7 +54,7 @@ namespace CK.MQTT.Common.Serialisation
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
             bool result = reader.TryReadMQTTString( out output );
             sequencePosition = reader.Position;
-            return result;
+            return result;//wtf
         }
 
         public static async ValueTask<string> ReadMQTTString( this PipeReader pipeReader )
@@ -64,6 +64,35 @@ namespace CK.MQTT.Common.Serialisation
             if( result.IsCanceled ) throw new OperationCanceledException();
             if( !TryReadMQTTString( result.Buffer, out string? output, out SequencePosition sequencePosition ) )
             {
+                pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
+                if( result.IsCompleted ) throw new EndOfStreamException();
+                goto Beginning;
+            }
+            pipeReader.AdvanceTo( sequencePosition );
+            return output;
+        }
+
+        static bool TryReadUInt16( ReadOnlySequence<byte> buffer, out ushort val, out SequencePosition sequencePosition )
+        {
+            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            bool result = reader.TryReadBigEndian( out val );
+            sequencePosition = reader.Position;
+            return result;
+        }
+
+        /// <summary>
+        /// Don't use this if you have to parse multiples fields in a row.
+        /// </summary>
+        /// <param name="pipeReader"></param>
+        /// <returns></returns>
+        public static async ValueTask<ushort> ReadUInt16( this PipeReader pipeReader )
+        {
+            Beginning:
+            ReadResult result = await pipeReader.ReadAsync();
+            if( result.IsCanceled ) throw new OperationCanceledException();
+            if( !TryReadUInt16( result.Buffer, out ushort output, out SequencePosition sequencePosition ) )
+            {
+                //We are really not lucky, we needed only TWO bytes.
                 pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
                 if( result.IsCompleted ) throw new EndOfStreamException();
                 goto Beginning;

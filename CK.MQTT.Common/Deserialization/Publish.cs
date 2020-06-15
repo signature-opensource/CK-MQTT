@@ -1,24 +1,30 @@
-using CK.MQTT.Common.Serialisation;
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
+using CK.MQTT.Abstractions.Serialisation;
 
-namespace CK.MQTT.Client.Deserialization
+namespace CK.MQTT.Common.Deserialization
 {
-    static class Publish
+    public static class Publish
     {
-        internal static OperationStatus ParsePublishWithPacketId( ReadOnlySequence<byte> buffer, out string? topic, out ushort packetId )
+        public static bool ParsePublishWithPacketId(
+            ReadOnlySequence<byte> buffer,
+            [NotNullWhen( true )] out string? topic, out ushort packetId, out SequencePosition position )
         {
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
             if( !reader.TryReadMQTTString( out topic ) )
             {
                 packetId = 0;
-                return OperationStatus.NeedMoreData;
+                position = reader.Position;
+                return false;
             }
-            if( !reader.TryReadBigEndian( out packetId ) ) return OperationStatus.NeedMoreData;
-            return OperationStatus.Done;
+            if( !reader.TryReadBigEndian( out packetId ) )
+            {
+                position = reader.Position;
+                return false;
+            }
+            position = reader.Position;
+            return true;
         }
     }
 }

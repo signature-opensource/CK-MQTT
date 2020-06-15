@@ -5,7 +5,6 @@ using CK.MQTT.Common.Serialisation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace CK.MQTT.Client.OutgoingPackets
 {

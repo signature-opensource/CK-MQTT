@@ -38,11 +38,9 @@ namespace CK.MQTT.Common.Channels
             _writeLoop = WriteLoop();
         }
 
-        public bool QueueMessage( OutgoingPacket item, bool reflex )
-        {
-            if( reflex ) return _reflexIn.TryWrite( item );
-            return _messageIn.TryWrite( item );
-        }
+        public bool QueueMessage( OutgoingPacket item ) => _messageIn.TryWrite( item );
+
+        public bool QueueReflexMessage( OutgoingPacket item ) => _reflexIn.TryWrite( item );
 
         void FlushChannels()
         {

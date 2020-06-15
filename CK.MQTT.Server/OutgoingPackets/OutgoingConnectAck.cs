@@ -1,11 +1,7 @@
-using CK.Core;
 using CK.MQTT.Common;
 using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using System;
 using System.IO.Pipelines;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
