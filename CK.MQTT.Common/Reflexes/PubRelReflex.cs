@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Abstractions.Serialisation;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Common.Packets;
@@ -32,7 +33,7 @@ namespace CK.MQTT.Common.Reflexes
             }
             ushort packetId = await pipeReader.ReadUInt16();
             await _store.FreePacketIdAsync( m, packetId );
-            _output.QueueMessage( new OutgoingPubcomp( packetId ) ); 
+            _output.QueueReflexMessage( new OutgoingPubcomp( packetId ) ); 
         }
     }
 }

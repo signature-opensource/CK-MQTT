@@ -1,14 +1,12 @@
 using CK.Core;
+using CK.MQTT.Abstractions.Serialisation;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using CK.MQTT.Common.Stores;
 using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Reflexes
@@ -37,7 +35,7 @@ namespace CK.MQTT.Common.Reflexes
                 throw new ProtocolViolationException( $"This packet was stored with a qos '{qos}'," +
                     $"but received a '{ PacketType.PublishReceived }' that should be sent in a protocol flow of QOS 2." );
             }
-            _output.QueueMessage( new OutgoingPubrel( packetId ) );
+            _output.QueueReflexMessage( new OutgoingPubrel( packetId ) );
         }
     }
 }

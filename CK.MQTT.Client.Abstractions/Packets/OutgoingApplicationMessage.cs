@@ -11,26 +11,25 @@ namespace CK.MQTT.Abstractions.Packets
         readonly bool _dup;
         readonly bool _retain;
         readonly string _topic;
-        readonly QualityOfService _qos;
-        readonly ushort _packetId;
         readonly bool _packetIdPresent;
-        protected sealed override PacketType PacketType => PacketType.Publish;
 
         protected OutgoingApplicationMessage(
             bool dup,
             bool retain,
             string topic,
-            QualityOfService qos,
-            ushort packetId = 0
+            QualityOfService qos
             )
         {
             _dup = dup;
             _retain = retain;
             _topic = topic;
-            _qos = qos;
-            _packetIdPresent = _qos > QualityOfService.AtMostOnce;
-            _packetId = packetId;
+            Qos = qos;
+            _packetIdPresent = Qos > QualityOfService.AtMostOnce;
         }
+
+        public ushort? PacketId { get; set; }
+
+        public QualityOfService Qos { get; }
 
         protected sealed override int HeaderSize => _topic.MQTTSize() + (_packetIdPresent ? 2 : 0);
 
@@ -39,9 +38,9 @@ namespace CK.MQTT.Abstractions.Packets
 
         protected sealed override byte Header =>
             (byte)(
-                (byte)PacketType |
+                (byte)PacketType.Publish |
                 (byte)(_dup ? _dupFlag : 0) |
-                (byte)_qos << 1 |
+                (byte)Qos << 1 |
                 (byte)(_retain ? _retainFlag : 0)
             );
 
@@ -50,7 +49,8 @@ namespace CK.MQTT.Abstractions.Packets
             span = span.WriteString( _topic );
             if( _packetIdPresent )
             {
-                span.WriteUInt16( _packetId );
+                if( !PacketId.HasValue ) throw new InvalidOperationException( "PacketId not set !" );
+                span.WriteUInt16( PacketId.Value );
             }
         }
     }

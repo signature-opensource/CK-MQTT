@@ -13,9 +13,9 @@ namespace CK.MQTT.Client.Reflexes
 {
     class PingRespReflex : IReflexMiddleware
     {
-        readonly Action _callback;
+        readonly Action? _callback;
 
-        public PingRespReflex( Action callback )
+        public PingRespReflex( Action? callback )
         {
             _callback = callback;
         }
@@ -25,7 +25,7 @@ namespace CK.MQTT.Client.Reflexes
             {
                 return next();
             }
-            _callback();
+            _callback?.Invoke();
             return new ValueTask();
         }
     }

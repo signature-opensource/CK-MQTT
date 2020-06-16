@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Abstractions.Packets;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,7 +19,7 @@ namespace CK.MQTT.Common.Stores
         /// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180912
         /// </summary>
         /// <returns>An unused packet identifier</returns>
-        ValueTask<ushort> StoreMessageAsync( IActivityMonitor m, string topic, int payloadLength, Func<Stream, ValueTask> payload, QualityOfService qos );
+        ValueTask StoreMessageAsync( IActivityMonitor m, OutgoingApplicationMessage msg );
 
         /// <summary>
         /// Discard a message. The packet ID will be freed if the QoS of the stored message is <see cref="QualityOfService.AtMostOnce"/>.

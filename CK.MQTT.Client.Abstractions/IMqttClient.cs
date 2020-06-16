@@ -73,13 +73,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the protocol connection
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, bool cleanSession = false );
-
-        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, string topic, Func<PipeWriter, ValueTask> payloadWriter );
-
-        Task<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m );
-
-        Task<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, string topic, Func<PipeWriter, ValueTask> payloadWriter );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 
         /// <summary>
         /// Represents the protocol subscription, which consists of sending a SUBSCRIBE packet
@@ -143,7 +137,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180885">MQTT Unsubscribe</a>
         /// for more details about the protocol unsubscription
         /// </remarks>
-        ValueTask<ValueTask<bool>> UnsubscribeAsync( IActivityMonitor m, IEnumerable<string> topics );
+        ValueTask<ValueTask<bool>> UnsubscribeAsync( IActivityMonitor m, params string[] topics );
 
         /// <summary>
         /// Represents the protocol disconnection, which consists of sending a DISCONNECT packet to the Server

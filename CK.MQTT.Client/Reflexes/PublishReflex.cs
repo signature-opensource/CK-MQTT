@@ -1,13 +1,11 @@
 using CK.Core;
 using CK.MQTT.Abstractions.Packets;
 using CK.MQTT.Abstractions.Serialisation;
-using CK.MQTT.Client.Deserialization;
 using CK.MQTT.Common;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Deserialization;
 using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using CK.MQTT.Common.Stores;
 using System;
 using System.IO.Pipelines;
@@ -65,7 +63,7 @@ namespace CK.MQTT.Client.Reflexes
             if( qos == QualityOfService.AtLeastOnce )
             {
                 await _deliverMessage( m, incomingMessage );
-                if( !_output.QueueMessage( new OutgoingPuback( packetId ) ) )
+                if( !_output.QueueReflexMessage( new OutgoingPuback( packetId ) ) )
                 {
                     m.Warn( "Could not queue PubAck. Message Queue is full !!!" );
                 }

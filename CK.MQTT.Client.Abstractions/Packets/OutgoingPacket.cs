@@ -7,7 +7,6 @@ namespace CK.MQTT.Common
 {
     public abstract class OutgoingPacket
     {
-        protected abstract PacketType PacketType { get; }
         public abstract ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken );
     }
 }

@@ -1,4 +1,6 @@
 using CK.Core;
+using CK.MQTT.Abstractions.Packets;
+using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Stores;
 using System;
 using System.Threading.Tasks;
@@ -19,39 +21,35 @@ namespace CK.MQTT.Common.Processes
         /// <param name="retain">The retain flag that we will send in the packet.</param>
         /// <returns>A <see cref="Task{Task}"/> that complete when the guarantee of the QoS is fulfilled.
         /// The result of this <see cref="Task"/> that complete when the publish process is completed. </returns>
-        public static ValueTask<ValueTask> Publish(
+        public static ValueTask<Task> Publish(
             IActivityMonitor m,
-            IMqttChannel<IPacket> channel,
             IPacketStore messageStore,
-            string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain,
+            OutgoingMessageHandler output,
+            OutgoingApplicationMessage message,
             int waitTimeoutMs )
-            => qos switch
+            => message.Qos switch
             {
-                QualityOfService.AtMostOnce => new ValueTask<ValueTask>( PublishQoS0( m, channel, topic, payload, retain ) ),
+                QualityOfService.AtMostOnce => PublishQoS0(m, output, message),
                 QualityOfService.AtLeastOnce => PublishQoS1( m, channel, messageStore, topic, payload, retain, waitTimeoutMs ),
                 QualityOfService.ExactlyOnce => PublishQoS2( m, channel, messageStore, topic, payload, retain, waitTimeoutMs ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        public static ValueTask PublishQoS0( IActivityMonitor m, IMqttChannel<IPacket> channel,
-            string topic, ReadOnlyMemory<byte> payload, bool retain )//payload args.
+        public static async ValueTask<Task> PublishQoS0( IActivityMonitor m, OutgoingMessageHandler output, OutgoingApplicationMessage msg )
         {
             using( m.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
-                return channel.SendAsync( m, new Publish( topic, payload, retain, false ), default );
+                await output.SendMessageAsync( msg );
+                return Task.CompletedTask;
             }
         }
 
-        public static async ValueTask<ValueTask> PublishQoS1( IActivityMonitor m, IMqttChannel<IPacket> channel, IPacketStore messageStore,
-            string topic, ReadOnlyMemory<byte> payload, bool retain, //payload args.
-            int waitTimeoutMs )
+        public static async ValueTask<Task> PublishQoS1( IActivityMonitor m, OutgoingMessageHandler output, IPacketStore messageStore,
+            OutgoingApplicationMessage msg, int waitTimeoutMs )
         {
             using( m.OpenTrace( "Executing Publish protocol with QoS 1." ) )
             {
-                // TODO: we got an useless allocation there. The stored object could be the same than the sent one.
-                // The issue is that the state of the object should change (packetID, dup flag)
-                OutgoingApplicationMessage packet = new OutgoingApplicationMessage( topic, payload );
-                ushort pacektId = await messageStore.StoreMessageAsync( m, packet, QualityOfService.AtLeastOnce );//store the message
+                await messageStore.StoreMessageAsync( m, msg., QualityOfService.AtLeastOnce );//store the message
                 //Now we can guarantee the At Least Once, the message have been stored.
                 //We return the Task representing the rest of the protocol.
                 return PublishQoS1SendPub( m, channel, messageStore, topic, payload, retain, pacektId, waitTimeoutMs );

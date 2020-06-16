@@ -1,0 +1,45 @@
+using CK.MQTT.Common;
+using CK.MQTT.Common.OutgoingPackets;
+using CK.MQTT.Common.Packets;
+using CK.MQTT.Common.Serialisation;
+using System;
+using System.IO.Pipelines;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace CK.MQTT.Abstractions.Packets
+{
+    public abstract class OutgoingLastWill : OutgoingPacket
+    {
+        public bool Dup { get; }
+        public bool Retain { get; }
+        public QualityOfService Qos { get; }
+
+        readonly string _topic;
+        protected OutgoingLastWill(
+            bool dup,
+            bool retain,
+            string topic,
+            QualityOfService qos
+            )
+        {
+            Dup = dup;
+            Retain = retain;
+            Qos = qos;
+            _topic = topic;
+        }
+
+        public abstract int WillSize { get; }
+
+        protected abstract ValueTask WritePayload( PipeWriter writer, CancellationToken cancellationToken );
+
+        public override async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+        {
+            int stringSize = _topic.MQTTSize();
+            writer.GetSpan( stringSize ).WriteString( _topic );
+            writer.Advance( stringSize );
+            var res = await writer.FlushAsync(cancellationToken);
+            await WritePayload( writer, cancellationToken );
+        }
+    }
+}

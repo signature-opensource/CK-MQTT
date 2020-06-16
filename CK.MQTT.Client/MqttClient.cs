@@ -15,18 +15,18 @@ using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
+using CK.MQTT.Common.Processes;
+
 namespace CK.MQTT.Client
 {
     class MqttClient : IMqttClient
     {
         bool _channelWasConnected;
         readonly IPacketStore _store;
-        readonly MqttConfiguration _mqttConfiguration;
+        readonly MqttConfiguration _config;
         readonly IMqttChannel _channel;
-        readonly OutgoingMessageHandler? _outgoingHandler;
-        readonly IncomingMessageHandler _incomingHandler;
-        readonly PipeWriter _pipeWriter;
-        readonly PipeReader _pipeReader;
+        readonly OutgoingMessageHandler _output;
+        readonly IncomingMessageHandler _input;
         readonly int _waitTimeoutSecs;
         Reflex? _postConnectReflex;
         MqttClient(
@@ -34,20 +34,18 @@ namespace CK.MQTT.Client
             MqttConfiguration mqttConfiguration,
             IMqttChannel channel,
             IncomingMessageHandler incomingHandler,
-            Reflex postConnectReflex,
+            OutgoingMessageHandler outgoingHandler,
             int waitTimeoutSecs,
-            string clientId)
+            string clientId )
         {
             _store = store;
-            _mqttConfiguration = mqttConfiguration;
+            _config = mqttConfiguration;
             ClientId = clientId;
             _channel = channel;
-            _outgoingHandler = outgoingHandler;
-            _incomingHandler = incomingHandler;
-            _postConnectReflex = postConnectReflex;
+            _output = outgoingHandler;
+            _input = incomingHandler;
             _waitTimeoutSecs = waitTimeoutSecs;
         }
-        [MemberNotNull(nameof(_postConnectReflex))]
         public static IMqttClient Create( IPacketStore store,
             MqttConfiguration mqttConfiguration,
             IMqttChannel channel,
@@ -56,25 +54,42 @@ namespace CK.MQTT.Client
             Channel<OutgoingPacket> internalMessageChannel,
             IncomingMessageHandler incomingHandler,
             int waitTimeoutSecs,
-            string clientId = "")
+            string clientId = "" )
         {
-            ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder();
-            var output = new OutgoingMessageHandler(pipeWriter, o);
-            new MqttClient( store, mqttConfiguration, channel, output, incomingHandler, postConnectReflex, waitTimeoutSecs, clientId );
-            builder.UseMiddleware( new PublishReflex( store, ( m, msg ) => _eMessage.RaiseAsync( m, this, msg ), _outgoingHandler ) );
+            ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder();//I think there is a code smell there, object referencing each other make the instantiation complex.
+            ushort keepAlive = mqttConfiguration.KeepAliveSecs;
+            bool useKeepAlive = keepAlive != 0;
+            KeepAliveTimer? timer = useKeepAlive ? new KeepAliveTimer( TimeSpan.FromSeconds( keepAlive ), TimeSpan.FromSeconds( mqttConfiguration.WaitTimeoutSecs ) ) : null;
+            var output = new OutgoingMessageHandler( pipeWriter, useKeepAlive ? timer!.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null, externalMessageChannel, internalMessageChannel );
+            if( useKeepAlive ) timer.OutgoingMessageHandler = output;
+            var client = new MqttClient( store, mqttConfiguration, channel, incomingHandler, output, waitTimeoutSecs, clientId );
+            if( useKeepAlive ) timer.TimeoutCallback = client.PingReqTimeout;
+            builder.UseMiddleware( new PublishReflex( store, client.RaiseMessage, output ) );
             builder.UseMiddleware( new PubackReflex( store ) );
             builder.UseMiddleware( new PubReceivedReflex( store, output ) );
             builder.UseMiddleware( new PubRelReflex( store, output ) );
-            builder.UseMiddleware( new PingRespReflex(PingCalled) );
-            var postConnectReflex = builder.Build( InvalidPacket );
-
-            return
+            builder.UseMiddleware( new SubackReflex( client.OnSuback ) );
+            builder.UseMiddleware( new UnsubackReflex( client.OnUnsuback ) );
+            builder.UseMiddleware( new PingRespReflex( useKeepAlive ? timer.ResetTimer : (Action?)null ) );
+            var postConnectReflex = builder.Build( client.InvalidPacket );
+            return client;
         }
 
-        void PingCalled()
+        Dictionary<ushort, TaskCompletionSource<QualityOfService[]>> _subackTasks = new Dictionary<ushort, TaskCompletionSource<QualityOfService[]>>();
+        void OnSuback( ushort packetId, QualityOfService[] qos )
         {
 
         }
+
+        Dictionary<ushort, TaskCompletionSource<object>> _unsubackTask = new Dictionary<ushort, TaskCompletionSource<object>>();
+        void OnUnsuback( ushort packetId )
+        {
+
+        }
+
+        void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );
+
+        Task RaiseMessage( IActivityMonitor m, IncomingApplicationMessage msg ) => _eMessage.RaiseAsync( m, this, msg );
 
         ValueTask InvalidPacket( IActivityMonitor m, byte header, int packetSize, PipeReader reader )
         {
@@ -108,38 +123,18 @@ namespace CK.MQTT.Client
 
         public bool IsConnected => _channel.IsConnected;
 
-        public ValueTask<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m )
-            => ConnectProcess.ExecuteConnectProtocol(
-                m,
-                _outgoingHandler,
-                _incomingHandler,
-                new OutgoingConnect( ProtocolConfiguration.Mqtt3, _mqttConfiguration, new MqttClientCredentials(), true ),
-                _waitTimeoutSecs, _postConnectReflex
-                );
+        public Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
+            => ConnectProcess.ExecuteConnectProtocol( m, _output, _input,
+                new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill), _config.WaitTimeoutSecs, _postConnectReflex! );
 
-        public ValueTask<ConnectResult> ConnectAnonymousAsync( IActivityMonitor m, string topic, Func<PipeWriter, ValueTask> payloadWriter )
+
+        public async ValueTask DisconnectAsync( IActivityMonitor m )
         {
-            throw new NotImplementedException();
+            await _output.SendMessageAsync( new OutgoingDisconnect() );
         }
 
-        public ValueTask<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, bool cleanSession = false )
-        {
-            throw new NotImplementedException();
-        }
-
-        public ValueTask<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials, string topic, Func<PipeWriter, ValueTask> payloadWriter )
-        {
-            throw new NotImplementedException();
-        }
-
-        public ValueTask DisconnectAsync( IActivityMonitor m )
-        {
-            throw new NotImplementedException();
-        }
-
-        public ValueTask<ValueTask> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
-        {
-            throw new NotImplementedException();
+        public Task<ValueTask> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
+            => PublishSenderProcesses.Publish()
         }
 
         public ValueTask<ValueTask<IReadOnlyCollection<SubscribeReturnCode>?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
@@ -147,12 +142,12 @@ namespace CK.MQTT.Client
             throw new NotImplementedException();
         }
 
-        public ValueTask<ValueTask<bool>> UnsubscribeAsync( IActivityMonitor m, IEnumerable<string> topics )
+        public ValueTask<ValueTask<bool>> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
         {
             throw new NotImplementedException();
         }
 
-        public ValueTask<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 )
+        public Task<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 )
         {
             throw new NotImplementedException();
         }

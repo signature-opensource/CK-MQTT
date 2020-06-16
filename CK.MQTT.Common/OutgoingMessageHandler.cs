@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Common.OutgoingPackets;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
@@ -16,7 +17,7 @@ namespace CK.MQTT.Common.Channels
         readonly ChannelWriter<OutgoingPacket> _messageIn;
         readonly ChannelWriter<OutgoingPacket> _reflexIn;
         readonly ChannelReader<OutgoingPacket> _reflexOut;
-        readonly OutputTransformer _outputMiddleware;
+        readonly OutputTransformer? _outputMiddleware;
         readonly CancellationToken _dirtyStop;
         readonly PipeWriter _pipeWriter;
         readonly Task _writeLoop;
@@ -24,7 +25,7 @@ namespace CK.MQTT.Common.Channels
         bool _stopping;
         public OutgoingMessageHandler(
             PipeWriter pipeWriter,
-            OutputTransformer outputMiddleware,
+            OutputTransformer? outputMiddleware,
             Channel<OutgoingPacket> externalMessageChannel,
             Channel<OutgoingPacket> internalMessageChannel )
         {
@@ -41,6 +42,18 @@ namespace CK.MQTT.Common.Channels
         public bool QueueMessage( OutgoingPacket item ) => _messageIn.TryWrite( item );
 
         public bool QueueReflexMessage( OutgoingPacket item ) => _reflexIn.TryWrite( item );
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns>A <see cref="ValueTask"/> that complete when the packet is sent.</returns>
+        public async ValueTask SendMessageAsync( OutgoingPacket item )
+        {
+            var wrapper = new OutgoingPacketWrapper( item );
+            await _messageIn.WriteAsync( wrapper );//ValueTask, will almost always return synchronously
+            await wrapper.Sent;//TaskCompletionSource.Task, on some machine will often return synchronously, most of the time, asyncrounously.
+        }
 
         void FlushChannels()
         {
@@ -93,8 +106,8 @@ namespace CK.MQTT.Common.Channels
             }
         }
 
-        ValueTask ProcessOutgoingPacket( IActivityMonitor m, OutgoingPacket outgoingPacket )
-            => _outputMiddleware( m, outgoingPacket ).WriteAsync( _pipeWriter, _dirtyStop );
+        ValueTask ProcessOutgoingPacket( IActivityMonitor m, OutgoingPacket outgoingPacket ) =>
+            (_outputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStop );
 
         public Task Stop( CancellationToken dirtyStop )
         {
