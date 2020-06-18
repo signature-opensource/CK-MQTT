@@ -8,5 +8,7 @@ namespace CK.MQTT.Common
     public interface IOutgoingPacket
     {
         ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken );
+
+        int GetSize();
     }
 }

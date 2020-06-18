@@ -16,9 +16,7 @@ namespace CK.MQTT.Server.OutgoingPackets
             _returnCodes = returnCodes;
         }
 
-        protected override PacketType PacketType => PacketType.SubscribeAck;
-
-        protected override byte Header => (byte)PacketType;
+        protected override byte Header => (byte)PacketType.SubscribeAck;
 
         protected override int RemainingSize => 2 + _returnCodes.Length;
 

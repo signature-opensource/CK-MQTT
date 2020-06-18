@@ -5,6 +5,7 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using CK.MQTT.Abstractions.Serialisation;
 
 namespace CK.MQTT.Common.Channels
 {

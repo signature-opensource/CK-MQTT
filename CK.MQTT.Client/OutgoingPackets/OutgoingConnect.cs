@@ -61,7 +61,7 @@ namespace CK.MQTT.Client.OutgoingPackets
 
         protected override byte Header => (byte)PacketType.Connect;
 
-        protected override int RemainingSize => _sizePostPayload + _outgoingLastWill?.WillSize ?? 0 + HeaderSize;
+        protected override int GetSize => _sizePostPayload + _outgoingLastWill?.WillSize ?? 0 + HeaderSize;
 
         protected override int HeaderSize => _pConf.ProtocolName.MQTTSize()
                                                 + 1 //_protocolLevel

@@ -13,13 +13,15 @@ namespace CK.MQTT.Common.OutgoingPackets
 
         protected abstract int RemainingSize { get; }
 
+        public override int GetSize() => RemainingSize.CompactByteCount() + 1 + RemainingSize;
+
         protected abstract void WriteContent( Span<byte> buffer );
 
         protected override void Write( PipeWriter pw )
         {
             int remainingSize = RemainingSize;
             int sizeOfSize = remainingSize.CompactByteCount();
-            int bytesToWrite = RemainingSize + sizeOfSize + 1;
+            int bytesToWrite = GetSize();
             Span<byte> span = pw.GetSpan( bytesToWrite );
             span[0] = Header;
             span = span[1..].WriteRemainingSize( remainingSize );

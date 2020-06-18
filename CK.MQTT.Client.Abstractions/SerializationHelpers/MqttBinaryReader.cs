@@ -54,7 +54,7 @@ namespace CK.MQTT.Abstractions.Serialisation
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
             bool result = reader.TryReadMQTTString( out output );
             sequencePosition = reader.Position;
-            return result;//wtf
+            return result;//TODO: wtf, why there is a warning ?
         }
 
         public static async ValueTask<string> ReadMQTTString( this PipeReader pipeReader )

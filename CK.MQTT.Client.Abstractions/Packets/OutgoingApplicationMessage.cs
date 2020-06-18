@@ -27,7 +27,7 @@ namespace CK.MQTT.Abstractions.Packets
             _packetIdPresent = Qos > QualityOfService.AtMostOnce;
         }
 
-        public ushort PacketId { get; set; }
+        public int PacketId { get; set; }
 
         public QualityOfService Qos { get; }
 
@@ -48,7 +48,7 @@ namespace CK.MQTT.Abstractions.Packets
         protected sealed override void WriteHeaderContent( Span<byte> span )
         {
             span = span.WriteString( _topic );
-            if( _packetIdPresent ) span.WriteUInt16( PacketId );
+            if( _packetIdPresent ) span.WriteUInt16( (ushort)PacketId );
         }
     }
 }

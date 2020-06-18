@@ -1,40 +1,61 @@
 using CK.Core;
+using CK.MQTT.Abstractions.Packets;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Stores
 {
-	public class MemoryPacketStore : PacketStore
-	{
-		readonly Dictionary<ushort, Memory<byte>> _storedApplicationMessages = new Dictionary<ushort, Memory<byte>>();
-		readonly HashSet<ushort> _orphansId = new HashSet<ushort>();
-		public ValueTask<QualityOfService> DiscardMessageByIdAsync( IActivityMonitor m, ushort packetId )
-		{
-			QualityOfService qos = _storedApplicationMessages[packetId].QualityOfService;
-			if( !_storedApplicationMessages.Remove( packetId ) ) throw new KeyNotFoundException();//TODO: change api so it return a not found.
-			return new ValueTask<QualityOfService>( qos );
-		}
+    public class MemoryPacketStore : PacketStore
+    {
+        class OutgoingStoredPacket : IOutgoingPacketWithId
+        {
+            readonly ReadOnlyMemory<byte> _memory;
 
-		public ValueTask<bool> DiscardPacketIdAsync( IActivityMonitor m, ushort packetId ) => new ValueTask<bool>( _orphansId.Remove( packetId ) );
+            public OutgoingStoredPacket( int packetId, QualityOfService qos, ReadOnlyMemory<byte> stream )
+            {
+                PacketId = packetId;
+                Qos = qos;
+                _memory = stream;
+            }
+            public int PacketId { get; set; }
 
-		ushort _i = 0;
-		public ValueTask<ushort> GetNewPacketId( IActivityMonitor m )
-		{
-			while( _storedApplicationMessages.ContainsKey( _i ) && _orphansId.Contains( _i ) )
-			{
-				_i++;
-			}
-			return new ValueTask<ushort>( _i++ );
-		}
+            public QualityOfService Qos { get; set; }
 
-		public async ValueTask<ushort> StoreMessageAsync( IActivityMonitor m, OutgoingApplicationMessage message, QualityOfService qos )
-		{
-			ushort id = await GetNewPacketId( m );
-			_storedApplicationMessages.Add( id, new StoredApplicationMessage( message, qos, id ) );
-			return id;
-		}
+            public int GetSize() => _memory.Length;
 
-		public ValueTask<bool> StorePacketIdAsync( IActivityMonitor m, ushort packetId ) => new ValueTask<bool>( _orphansId.Add( packetId ) );
-	}
+            public ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+                => writer.WriteAsync( _memory ).AsNonGenericValueTask();
+        }
+
+        readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
+
+        public MemoryPacketStore( int packetIdMaxValue ) : base( packetIdMaxValue )
+        {
+        }
+
+        protected override ValueTask<QualityOfService> DoDiscardMessage( IActivityMonitor m, int packetId )
+        {
+            QualityOfService qos = _packets[packetId].Qos;
+            _packets.Remove( packetId );
+            return new ValueTask<QualityOfService>( qos );
+        }
+
+        protected override ValueTask DoDiscardPacketIdAsync( IActivityMonitor m, int packetId )
+        {
+            //nothing to do, the packet id is not persisted.
+            return new ValueTask();
+        }
+
+        protected override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
+        {
+            Debug.Assert( !_packets.ContainsKey( packet.PacketId ) );
+            Memory<byte> memory = new Memory<byte>( new byte[packet.GetSize()] );
+            _packets.Add( packet.PacketId, new OutgoingStoredPacket( packet.PacketId, packet.Qos, memory ) );
+            return new ValueTask<IOutgoingPacketWithId>( new OutgoingStoredPacket( packet.PacketId, packet.Qos, memory ) );
+        }
+    }
 }

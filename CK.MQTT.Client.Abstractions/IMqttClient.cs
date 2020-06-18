@@ -131,7 +131,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180885">MQTT Unsubscribe</a>
         /// for more details about the protocol unsubscription
         /// </remarks>
-        ValueTask<Task<bool>> UnsubscribeAsync( IActivityMonitor m, params string[] topics );
+        ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics );
 
         /// <summary>
         /// Represents the protocol disconnection, which consists of sending a DISCONNECT packet to the Server

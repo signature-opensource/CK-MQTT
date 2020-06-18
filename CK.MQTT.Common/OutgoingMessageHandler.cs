@@ -10,13 +10,13 @@ namespace CK.MQTT.Common.Channels
 {
     public class OutgoingMessageHandler
     {
-        public delegate OutgoingPacket OutputTransformer( IActivityMonitor m, OutgoingPacket outgoingPacket );
+        public delegate IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket );
 
         readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
-        readonly ChannelReader<OutgoingPacket> _messageOut;
-        readonly ChannelWriter<OutgoingPacket> _messageIn;
-        readonly ChannelWriter<OutgoingPacket> _reflexIn;
-        readonly ChannelReader<OutgoingPacket> _reflexOut;
+        readonly ChannelReader<IOutgoingPacket> _messageOut;
+        readonly ChannelWriter<IOutgoingPacket> _messageIn;
+        readonly ChannelWriter<IOutgoingPacket> _reflexIn;
+        readonly ChannelReader<IOutgoingPacket> _reflexOut;
         readonly OutputTransformer? _outputMiddleware;
         readonly CancellationToken _dirtyStop;
         readonly PipeWriter _pipeWriter;
@@ -26,8 +26,8 @@ namespace CK.MQTT.Common.Channels
         public OutgoingMessageHandler(
             PipeWriter pipeWriter,
             OutputTransformer? outputMiddleware,
-            Channel<OutgoingPacket> externalMessageChannel,
-            Channel<OutgoingPacket> internalMessageChannel )
+            Channel<IOutgoingPacket> externalMessageChannel,
+            Channel<IOutgoingPacket> internalMessageChannel )
         {
             _dirtyStop = _dirtyStopSource.Token;
             _pipeWriter = pipeWriter;
@@ -39,16 +39,16 @@ namespace CK.MQTT.Common.Channels
             _writeLoop = WriteLoop();
         }
 
-        public bool QueueMessage( OutgoingPacket item ) => _messageIn.TryWrite( item );
+        public bool QueueMessage( IOutgoingPacket item ) => _messageIn.TryWrite( item );
 
-        public bool QueueReflexMessage( OutgoingPacket item ) => _reflexIn.TryWrite( item );
+        public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexIn.TryWrite( item );
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="item"></param>
         /// <returns>A <see cref="ValueTask"/> that complete when the packet is sent.</returns>
-        public async ValueTask SendMessageAsync( OutgoingPacket item )
+        public async ValueTask SendMessageAsync( IOutgoingPacket item )
         {
             var wrapper = new OutgoingPacketWrapper( item );
             await _messageIn.WriteAsync( wrapper );//ValueTask, will almost always return synchronously
@@ -68,7 +68,7 @@ namespace CK.MQTT.Common.Channels
 
                 while( true )
                 {
-                    if( _reflexOut.TryRead( out OutgoingPacket packet ) )
+                    if( _reflexOut.TryRead( out IOutgoingPacket packet ) )
                     {
                         await ProcessOutgoingPacket( m, packet );
                         continue;
@@ -90,7 +90,7 @@ namespace CK.MQTT.Common.Channels
                         bool messageDone = _messageOut.Completion.IsCompleted;
                         if( !reflexDone && !messageDone ) throw new InvalidOperationException();
                         //We are now sure we are in a normal stop.
-                        ChannelReader<OutgoingPacket> channel = reflexDone ? _reflexOut : _messageOut;
+                        ChannelReader<IOutgoingPacket> channel = reflexDone ? _reflexOut : _messageOut;
                         while( channel.TryRead( out packet ) )
                         {
                             await ProcessOutgoingPacket( m, packet );
@@ -106,7 +106,7 @@ namespace CK.MQTT.Common.Channels
             }
         }
 
-        ValueTask ProcessOutgoingPacket( IActivityMonitor m, OutgoingPacket outgoingPacket ) =>
+        ValueTask ProcessOutgoingPacket( IActivityMonitor m, IOutgoingPacket outgoingPacket ) =>
             (_outputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStop );
 
         public Task Stop( CancellationToken dirtyStop )

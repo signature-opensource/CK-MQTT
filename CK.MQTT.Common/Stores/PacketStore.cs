@@ -43,8 +43,7 @@ namespace CK.MQTT.Common.Stores
 
         public Task<object?>? GetAwaiterById( int index ) => _packetStore.GetAwaiterById( index );
 
-        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacket packet );
-
+        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
 
         public async ValueTask<QualityOfService> DiscardMessageByIdAsync( IActivityMonitor m, int packetId, object? packet = null )
         {

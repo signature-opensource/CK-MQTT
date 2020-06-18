@@ -12,5 +12,6 @@ namespace CK.MQTT.Common.OutgoingPackets
         }
 
         public override byte Header => (byte)PacketType.PublishAck;
+        public override QualityOfService Qos => QualityOfService.AtLeastOnce;
     }
 }

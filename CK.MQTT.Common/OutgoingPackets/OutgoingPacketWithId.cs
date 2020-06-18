@@ -9,11 +9,14 @@ namespace CK.MQTT.Common.OutgoingPackets
     {
         public abstract byte Header { get; }
         public int PacketId { get; set; }
-
+        public abstract QualityOfService Qos { get; }
+        
         protected OutgoingPacketWithId( ushort packetId )
         {
             PacketId = packetId;
         }
+
+        public override int GetSize() => 4;
 
         protected override void Write( PipeWriter pw )
         {

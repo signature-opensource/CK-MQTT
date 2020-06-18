@@ -29,7 +29,7 @@ namespace CK.MQTT.Abstractions.Packets
             _topic = topic;
         }
 
-        public abstract int WillSize { get; }
+        public abstract int GetSize();
 
         protected abstract ValueTask WritePayload( PipeWriter writer, CancellationToken cancellationToken );
 
@@ -38,7 +38,7 @@ namespace CK.MQTT.Abstractions.Packets
             int stringSize = _topic.MQTTSize();
             writer.GetSpan( stringSize ).WriteString( _topic );
             writer.Advance( stringSize );
-            var res = await writer.FlushAsync(cancellationToken);
+            var res = await writer.FlushAsync( cancellationToken );
             await WritePayload( writer, cancellationToken );
         }
     }

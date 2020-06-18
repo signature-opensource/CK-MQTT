@@ -7,12 +7,12 @@ namespace CK.MQTT.Client.OutgoingPackets
 {
     class OutgoingPingReq : SimpleOutgoingPacket
     {
-        protected override PacketType PacketType => PacketType.PingRequest;
+        public override int GetSize() => 2;
 
         protected override void Write( PipeWriter pw )
         {
             Span<byte> span = pw.GetSpan( 2 );
-            span[0] = (byte)PacketType;
+            span[0] = (byte)PacketType.PingRequest;
             span[1] = 0;
             pw.Advance( 2 );
         }

@@ -16,17 +16,16 @@ namespace CK.MQTT.Common.OutgoingPackets
             string topic,
             QualityOfService qos,
             Func<int> getPayloadSize,
-            Func<PipeWriter, CancellationToken, ValueTask> payloadWriter,
-            ushort packetId = 0
-            ) : base(dup, retain, topic, qos, packetId)
+            Func<PipeWriter, CancellationToken, ValueTask> payloadWriter
+            ) : base( dup, retain, topic, qos )
         {
             _getPayloadSize = getPayloadSize;
             _payloadWriter = payloadWriter;
         }
 
-        protected override int RemainingSize => HeaderSize + _getPayloadSize();
+        public override int GetSize() => HeaderSize + _getPayloadSize();
 
-        protected override async ValueTask WriteRestOfThePacketAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             await _payloadWriter( pw, cancellationToken );
             await pw.FlushAsync( cancellationToken );
