@@ -1,19 +1,14 @@
 using CK.Core;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Stores
 {
-	public class MemoryPacketStore : IPacketStore
+	public class MemoryPacketStore : PacketStore
 	{
-		readonly Dictionary<ushort, StoredApplicationMessage> _storedApplicationMessages = new Dictionary<ushort, StoredApplicationMessage>();
+		readonly Dictionary<ushort, Memory<byte>> _storedApplicationMessages = new Dictionary<ushort, Memory<byte>>();
 		readonly HashSet<ushort> _orphansId = new HashSet<ushort>();
-		public IEnumerable<StoredApplicationMessage> AllStoredMessages => _storedApplicationMessages.Values;
-
-		public IEnumerable<ushort> OrphansPacketsId => _orphansId;
-
-		public Task Close( IActivityMonitor m ) => Task.CompletedTask;
-
 		public ValueTask<QualityOfService> DiscardMessageByIdAsync( IActivityMonitor m, ushort packetId )
 		{
 			QualityOfService qos = _storedApplicationMessages[packetId].QualityOfService;
@@ -21,7 +16,7 @@ namespace CK.MQTT.Common.Stores
 			return new ValueTask<QualityOfService>( qos );
 		}
 
-		public ValueTask<bool> FreePacketIdAsync( IActivityMonitor m, ushort packetId ) => new ValueTask<bool>( _orphansId.Remove( packetId ) );
+		public ValueTask<bool> DiscardPacketIdAsync( IActivityMonitor m, ushort packetId ) => new ValueTask<bool>( _orphansId.Remove( packetId ) );
 
 		ushort _i = 0;
 		public ValueTask<ushort> GetNewPacketId( IActivityMonitor m )

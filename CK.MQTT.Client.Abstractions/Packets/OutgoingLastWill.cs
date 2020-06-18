@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Abstractions.Packets
 {
-    public abstract class OutgoingLastWill : OutgoingPacket
+    public abstract class OutgoingLastWill : IOutgoingPacket
     {
         public bool Dup { get; }
         public bool Retain { get; }
@@ -33,7 +33,7 @@ namespace CK.MQTT.Abstractions.Packets
 
         protected abstract ValueTask WritePayload( PipeWriter writer, CancellationToken cancellationToken );
 
-        public override async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
         {
             int stringSize = _topic.MQTTSize();
             writer.GetSpan( stringSize ).WriteString( _topic );

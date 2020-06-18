@@ -2,39 +2,46 @@ using CK.Core;
 using CK.MQTT.Client.Deserialization;
 using CK.MQTT.Common;
 using CK.MQTT.Common.Packets;
+using CK.MQTT.Common.Stores;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Reflexes
 {
     class SubackReflex : IReflexMiddleware
     {
-        readonly Action<ushort, QualityOfService[]> _callback;
+        readonly PacketStore _store;
 
-        public SubackReflex(Action<ushort, QualityOfService[]> callback)
+        public SubackReflex( PacketStore store )
         {
-            _callback = callback;
+            _store = store;
         }
-        public async ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync(
+            IActivityMonitor m, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             if( PacketType.SubscribeAck != (PacketType)header )
             {
                 await next();
                 return;
             }
-            Parse:
-            ReadResult read = await pipeReader.ReadAsync();
-            if( read.IsCanceled ) return;
-            if( !Suback.TryParse( read.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position ) )
+            ushort packetId;
+            QualityOfService[]? qos;
+            SequencePosition position;
+            while( true )
             {
+                ReadResult read = await pipeReader.ReadAsync();
+                if( read.IsCanceled ) return;
+                if( Suback.TryParse( read.Buffer, packetLength, out packetId, out qos, out position ) )
+                {
+                    break;
+                }
                 pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
-                goto Parse;
-            }
+            };
             pipeReader.AdvanceTo( position );
-            _callback( packetId, qos );
+            QualityOfService debugQos = await _store.DiscardMessageByIdAsync( m, packetId, qos );
+            Debug.Assert( debugQos == QualityOfService.AtLeastOnce );
         }
     }
 }

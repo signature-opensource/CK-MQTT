@@ -7,7 +7,6 @@ Variable naming does not follow the specs naming, making it harder to read
 Use JS, not TS.
 There is a type definition file. It contain a lot of "any".
 When type are defined, it still use fields not defined in the interface.
-I think there is other good idea in this codebase, prominently displayed as "middleware" but i can't wrap my head about what is their use.
 I think I may have lost now 30 minutes because someone tought "hey this object does not care about a client, does not need a client, but my callback need my client so i will put it here..."
 Still cant wrap my head around what does the mqtt emitter.
 
@@ -47,7 +46,8 @@ Why is it called middleware ?
 The persistence is not a middleware, it's simply an implementation of an imaginary interface.
 It's also not plugins, it's simply different implementations that you can use for the persistence.
 *** mqemitter
-mqemitter does not depend on Aedes, but Aedes depends on it... What ?
+Various way to implement a queue, because all their packets are in memory, they can use redis/sql to store them.
+We dont need them because we use PipeWriter...
 
 
 ** Overflow Strategy:
@@ -63,3 +63,14 @@ What is this for ?
     - https://github.com/chkr1011/MQTTnet/blob/master/Source/MQTTnet/Server/IMqttServerStartedHandler.cs
 So the payload is a byte array ?
     - https://github.com/chkr1011/MQTTnet/blob/c22b6033e3eb9195bea9fbd8088a9e551cb75ad6/Source/MQTTnet/MqttApplicationMessage.cs#L11
+
+
+
+RabbitMQ:
+They got "clustering", what is this ?
+
+About dataloss:
+> froderick 26 days ago [–]
+ Rabbit's federation is a good way to bridge point-to-point connections between geographically distributed systems. I'm not sure that's a great scaling pattern for throughput though.
+The clustering might look tempting but it hasn't been resilient for me in the face of janky networks. Split brains and data loss can result.
+https://news.ycombinator.com/item?id=23259567

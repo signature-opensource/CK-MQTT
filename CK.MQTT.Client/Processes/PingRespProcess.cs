@@ -21,7 +21,7 @@ namespace CK.MQTT.Client.Processes
 
         void TimerCallback( object? state ) => _timeoutCallback();
 
-        OutgoingPacket OutputTransformer( IActivityMonitor m, OutgoingPacket outgoingPacket )
+        IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket )
         {
             _timer.Change( _timeSpan, TimeSpan.FromMilliseconds( -1 ) );
             return outgoingPacket;

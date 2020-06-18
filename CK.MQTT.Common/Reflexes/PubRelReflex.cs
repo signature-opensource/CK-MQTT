@@ -16,10 +16,10 @@ namespace CK.MQTT.Common.Reflexes
 {
     public class PubRelReflex : IReflexMiddleware
     {
-        readonly IPacketStore _store;
+        readonly PacketStore _store;
         readonly OutgoingMessageHandler _output;
 
-        public PubRelReflex( IPacketStore store, OutgoingMessageHandler output )
+        public PubRelReflex( PacketStore store, OutgoingMessageHandler output )
         {
             _store = store;
             _output = output;
@@ -32,7 +32,7 @@ namespace CK.MQTT.Common.Reflexes
                 return;
             }
             ushort packetId = await pipeReader.ReadUInt16();
-            await _store.FreePacketIdAsync( m, packetId );
+            await _store.DiscardPacketIdAsync( m, packetId );
             _output.QueueReflexMessage( new OutgoingPubcomp( packetId ) ); 
         }
     }

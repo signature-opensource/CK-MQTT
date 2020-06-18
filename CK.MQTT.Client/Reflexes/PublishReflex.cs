@@ -16,11 +16,11 @@ namespace CK.MQTT.Client.Reflexes
 {
     class PublishReflex : IReflexMiddleware
     {
-        readonly IPacketStore _store;
+        readonly IPacketIdStore _store;
         readonly Func<IActivityMonitor, IncomingApplicationMessage, Task> _deliverMessage;
         readonly OutgoingMessageHandler _output;
 
-        public PublishReflex( IPacketStore store, Func<IActivityMonitor, IncomingApplicationMessage, Task> payloadProcessor, OutgoingMessageHandler output )
+        public PublishReflex( IPacketIdStore store, Func<IActivityMonitor, IncomingApplicationMessage, Task> payloadProcessor, OutgoingMessageHandler output )
         {
             _store = store;
             _deliverMessage = payloadProcessor;
@@ -70,8 +70,12 @@ namespace CK.MQTT.Client.Reflexes
             }
             if( qos == QualityOfService.ExactlyOnce )
             {
-                await _store.StorePacketIdAsync( m, packetId );
+                await _store.StoreId( m, packetId );
                 await _deliverMessage( m, incomingMessage );
+                if( !_output.QueueReflexMessage( new OutgoingPubrec( packetId ) ) )
+                {
+                    m.Warn( "Could not queue PubAck. Message Queue is full !!!" );
+                }
             }
             else
             {

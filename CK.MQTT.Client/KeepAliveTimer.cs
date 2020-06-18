@@ -35,7 +35,7 @@ namespace CK.MQTT.Client
             OutgoingMessageHandler!.QueueReflexMessage( new OutgoingPingReq() );
         }
 
-        public OutgoingPacket OutputTransformer( IActivityMonitor m, OutgoingPacket outgoingPacket )
+        public IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket )
         {
             ResetTimer();
             return outgoingPacket;

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common
 {
-    public abstract class SimpleOutgoingPacket : OutgoingPacket
+    public abstract class SimpleOutgoingPacket : IOutgoingPacket
     {
         protected abstract void Write( PipeWriter pw );
 

@@ -13,10 +13,10 @@ namespace CK.MQTT.Common.Reflexes
 {
     public class PubReceivedReflex : IReflexMiddleware
     {
-        readonly IPacketStore _store;
+        readonly PacketStore _store;
         readonly OutgoingMessageHandler _output;
 
-        public PubReceivedReflex( IPacketStore store, OutgoingMessageHandler output )
+        public PubReceivedReflex( PacketStore store, OutgoingMessageHandler output )
         {
             _store = store;
             _output = output;

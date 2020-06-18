@@ -5,7 +5,7 @@ namespace CK.MQTT.Common.Stores
 {
     public interface IPacketStoreManager
     {
-        Task<IPacketStore> CreateAsync( IActivityMonitor m, string storeId, bool cleanSession );
+        Task<PacketStore> CreateAsync( IActivityMonitor m, string storeId, bool cleanSession );
 
         Task<bool> DeleteAsync( IActivityMonitor m, string storeId );
     }

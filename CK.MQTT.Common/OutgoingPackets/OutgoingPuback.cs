@@ -12,7 +12,5 @@ namespace CK.MQTT.Common.OutgoingPackets
         }
 
         public override byte Header => (byte)PacketType.PublishAck;
-
-        protected override PacketType PacketType => PacketType.PublishAck;
     }
 }

@@ -6,7 +6,7 @@ using System;
 
 namespace CK.MQTT.Abstractions.Packets
 {
-    public abstract class OutgoingApplicationMessage : ComplexOutgoingPacket
+    public abstract class OutgoingApplicationMessage : ComplexOutgoingPacket, IOutgoingPacketWithId
     {
         readonly bool _dup;
         readonly bool _retain;
@@ -27,7 +27,7 @@ namespace CK.MQTT.Abstractions.Packets
             _packetIdPresent = Qos > QualityOfService.AtMostOnce;
         }
 
-        public ushort? PacketId { get; set; }
+        public ushort PacketId { get; set; }
 
         public QualityOfService Qos { get; }
 
@@ -44,14 +44,11 @@ namespace CK.MQTT.Abstractions.Packets
                 (byte)(_retain ? _retainFlag : 0)
             );
 
+
         protected sealed override void WriteHeaderContent( Span<byte> span )
         {
             span = span.WriteString( _topic );
-            if( _packetIdPresent )
-            {
-                if( !PacketId.HasValue ) throw new InvalidOperationException( "PacketId not set !" );
-                span.WriteUInt16( PacketId.Value );
-            }
+            if( _packetIdPresent ) span.WriteUInt16( PacketId );
         }
     }
 }

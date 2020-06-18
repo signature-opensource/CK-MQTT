@@ -93,7 +93,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180876">MQTT Subscribe</a>
         /// for more details about the protocol subscription
         /// </remarks>
-        ValueTask<ValueTask<IReadOnlyCollection<SubscribeReturnCode>?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions );
+        ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions );
 
         /// <summary>
         /// Represents the protocol publish, which consists of sending a PUBLISH packet
@@ -116,13 +116,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180850">MQTT Publish</a>
         /// for more details about the protocol publish
         /// </remarks>
-        ValueTask<ValueTask> PublishAsync(
-            IActivityMonitor m,
-            OutgoingApplicationMessage message,
-            string topic,
-            ReadOnlyMemory<byte> payload,
-            QualityOfService qos,
-            bool retain = false );
+        ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message );
 
         /// <summary>
         /// Represents the protocol unsubscription, which consists of sending an UNSUBSCRIBE packet
@@ -137,7 +131,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180885">MQTT Unsubscribe</a>
         /// for more details about the protocol unsubscription
         /// </remarks>
-        ValueTask<ValueTask<bool>> UnsubscribeAsync( IActivityMonitor m, params string[] topics );
+        ValueTask<Task<bool>> UnsubscribeAsync( IActivityMonitor m, params string[] topics );
 
         /// <summary>
         /// Represents the protocol disconnection, which consists of sending a DISCONNECT packet to the Server

@@ -3,6 +3,7 @@ using CK.MQTT.Abstractions.Serialisation;
 using CK.MQTT.Client.Deserialization;
 using CK.MQTT.Common;
 using CK.MQTT.Common.Packets;
+using CK.MQTT.Common.Stores;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -13,11 +14,11 @@ namespace CK.MQTT.Client.Reflexes
 {
     class UnsubackReflex : IReflexMiddleware
     {
-        readonly Action<ushort> _callback;
+        readonly PacketStore _store;
 
-        public UnsubackReflex( Action<ushort> callback )
+        public UnsubackReflex( PacketStore store )
         {
-            _callback = callback;
+            _store = store;
         }
         public async ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
@@ -27,7 +28,7 @@ namespace CK.MQTT.Client.Reflexes
                 return;
             }
             ushort packetId = await pipeReader.ReadUInt16();
-            _callback( packetId );
+            await _store.DiscardMessageByIdAsync( m, packetId );
         }
     }
 }

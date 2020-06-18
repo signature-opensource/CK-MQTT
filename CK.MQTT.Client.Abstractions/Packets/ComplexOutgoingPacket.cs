@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.OutgoingPackets
 {
-    public abstract class ComplexOutgoingPacket : OutgoingPacket
+    public abstract class ComplexOutgoingPacket : IOutgoingPacket
     {
         /// <summary>
         /// The first byte of the packet, most of the time there is only the packet type written.
@@ -42,7 +42,7 @@ namespace CK.MQTT.Common.OutgoingPackets
 
         protected abstract ValueTask WriteRestOfThePacketAsync( PipeWriter pw, CancellationToken cancellationToken );
 
-        public override ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( pw );
             return WriteRestOfThePacketAsync( pw, cancellationToken );

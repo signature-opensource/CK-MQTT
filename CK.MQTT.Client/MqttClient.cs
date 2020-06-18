@@ -14,15 +14,14 @@ using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using System.Diagnostics.CodeAnalysis;
 using CK.MQTT.Common.Processes;
 
 namespace CK.MQTT.Client
 {
     class MqttClient : IMqttClient
     {
-        bool _channelWasConnected;
-        readonly IPacketStore _store;
+        readonly IPacketIdStore _packetIdStore;
+        readonly PacketStore _store;
         readonly MqttConfiguration _config;
         readonly IMqttChannel _channel;
         readonly OutgoingMessageHandler _output;
@@ -30,7 +29,8 @@ namespace CK.MQTT.Client
         readonly int _waitTimeoutSecs;
         Reflex? _postConnectReflex;
         MqttClient(
-            IPacketStore store,
+            IPacketIdStore packetIdStore,
+            PacketStore store,
             MqttConfiguration mqttConfiguration,
             IMqttChannel channel,
             IncomingMessageHandler incomingHandler,
@@ -38,6 +38,7 @@ namespace CK.MQTT.Client
             int waitTimeoutSecs,
             string clientId )
         {
+            _packetIdStore = packetIdStore;
             _store = store;
             _config = mqttConfiguration;
             ClientId = clientId;
@@ -46,12 +47,14 @@ namespace CK.MQTT.Client
             _input = incomingHandler;
             _waitTimeoutSecs = waitTimeoutSecs;
         }
-        public static IMqttClient Create( IPacketStore store,
+        public static IMqttClient Create(
+            IPacketIdStore packetIdStore,
+            PacketStore store,
             MqttConfiguration mqttConfiguration,
             IMqttChannel channel,
             PipeWriter pipeWriter,
-            Channel<OutgoingPacket> externalMessageChannel,
-            Channel<OutgoingPacket> internalMessageChannel,
+            Channel<IOutgoingPacket> externalMessageChannel,
+            Channel<IOutgoingPacket> internalMessageChannel,
             IncomingMessageHandler incomingHandler,
             int waitTimeoutSecs,
             string clientId = "" )
@@ -62,29 +65,17 @@ namespace CK.MQTT.Client
             KeepAliveTimer? timer = useKeepAlive ? new KeepAliveTimer( TimeSpan.FromSeconds( keepAlive ), TimeSpan.FromSeconds( mqttConfiguration.WaitTimeoutSecs ) ) : null;
             var output = new OutgoingMessageHandler( pipeWriter, useKeepAlive ? timer!.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null, externalMessageChannel, internalMessageChannel );
             if( useKeepAlive ) timer.OutgoingMessageHandler = output;
-            var client = new MqttClient( store, mqttConfiguration, channel, incomingHandler, output, waitTimeoutSecs, clientId );
+            var client = new MqttClient( packetIdStore, store, mqttConfiguration, channel, incomingHandler, output, waitTimeoutSecs, clientId );
             if( useKeepAlive ) timer.TimeoutCallback = client.PingReqTimeout;
-            builder.UseMiddleware( new PublishReflex( store, client.RaiseMessage, output ) );
+            builder.UseMiddleware( new PublishReflex( packetIdStore, client.RaiseMessage, output ) );
             builder.UseMiddleware( new PubackReflex( store ) );
             builder.UseMiddleware( new PubReceivedReflex( store, output ) );
             builder.UseMiddleware( new PubRelReflex( store, output ) );
-            builder.UseMiddleware( new SubackReflex( client.OnSuback ) );
-            builder.UseMiddleware( new UnsubackReflex( client.OnUnsuback ) );
+            builder.UseMiddleware( new SubackReflex( store ) );
+            builder.UseMiddleware( new UnsubackReflex( store ) );
             builder.UseMiddleware( new PingRespReflex( useKeepAlive ? timer.ResetTimer : (Action?)null ) );
             var postConnectReflex = builder.Build( client.InvalidPacket );
             return client;
-        }
-
-        Dictionary<ushort, TaskCompletionSource<QualityOfService[]>> _subackTasks = new Dictionary<ushort, TaskCompletionSource<QualityOfService[]>>();
-        void OnSuback( ushort packetId, QualityOfService[] qos )
-        {
-
-        }
-
-        Dictionary<ushort, TaskCompletionSource<object>> _unsubackTask = new Dictionary<ushort, TaskCompletionSource<object>>();
-        void OnUnsuback( ushort packetId )
-        {
-
         }
 
         void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );
@@ -116,7 +107,6 @@ namespace CK.MQTT.Client
 
         void Close( IActivityMonitor m, DisconnectedReason disconnectedReason )
         {
-            _channelWasConnected = false;
             _channel.Close( m );
             _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( disconnectedReason ) );
         }
@@ -125,26 +115,24 @@ namespace CK.MQTT.Client
 
         public Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
             => ConnectProcess.ExecuteConnectProtocol( m, _output, _input,
-                new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill), _config.WaitTimeoutSecs, _postConnectReflex! );
+                new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ), _config.WaitTimeoutSecs, _postConnectReflex! );
 
 
-        public async ValueTask DisconnectAsync( IActivityMonitor m )
+        public async ValueTask DisconnectAsync( IActivityMonitor m ) => await _output.SendMessageAsync( new OutgoingDisconnect() );
+
+        public async ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message )
+            => await SendQoSPacketProcess.SendPacket<object>( m, _store, _output, message, _config.WaitTimeoutSecs );
+        //await required to cast the Task<object> to Task
+        public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
         {
-            await _output.SendMessageAsync( new OutgoingDisconnect() );
+            OutgoingSubscribe packet = new OutgoingSubscribe( subscriptions );
+            return SendQoSPacketProcess.SendPacket<SubscribeReturnCode[]>( m, _store, _output, packet, _config.WaitTimeoutSecs );
         }
 
-        public Task<ValueTask> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
-            => PublishSenderProcesses.Publish()
-        }
-
-        public ValueTask<ValueTask<IReadOnlyCollection<SubscribeReturnCode>?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
+        public async ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
         {
-            throw new NotImplementedException();
-        }
-
-        public ValueTask<ValueTask<bool>> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
-        {
-            throw new NotImplementedException();
+            OutgoingUnsubscribe packet = new OutgoingUnsubscribe( topics );
+            return await SendQoSPacketProcess.SendPacket<object>( m, _store, _output, packet, _config.WaitTimeoutSecs );
         }
 
         public Task<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 )

@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common
 {
-    public abstract class OutgoingPacket
+    public interface IOutgoingPacket
     {
-        public abstract ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken );
+        ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken );
     }
 }

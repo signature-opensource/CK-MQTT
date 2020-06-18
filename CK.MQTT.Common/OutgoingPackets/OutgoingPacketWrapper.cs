@@ -7,16 +7,16 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.OutgoingPackets
 {
-    public class OutgoingPacketWrapper : OutgoingPacket
+    public class OutgoingPacketWrapper : IOutgoingPacket
     {
-        readonly OutgoingPacket _outgoingPacket;
+        readonly IOutgoingPacket _outgoingPacket;
         readonly TaskCompletionSource<object?> _taskCompletionSource = new TaskCompletionSource<object?>();
-        public OutgoingPacketWrapper( OutgoingPacket outgoingPacket )
+        public OutgoingPacketWrapper( IOutgoingPacket outgoingPacket )
         {
             _outgoingPacket = outgoingPacket;
         }
         public Task Sent => _taskCompletionSource.Task;
-        public override async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
         {
             await _outgoingPacket.WriteAsync( writer, cancellationToken );
             _taskCompletionSource.SetResult( null );

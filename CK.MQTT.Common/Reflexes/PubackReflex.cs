@@ -11,9 +11,9 @@ namespace CK.MQTT.Common.Reflexes
 {
     public class PubackReflex : IReflexMiddleware
     {
-        readonly IPacketStore _store;
+        readonly PacketStore _store;
 
-        public PubackReflex( IPacketStore store )
+        public PubackReflex( PacketStore store )
         {
             _store = store;
         }
@@ -25,7 +25,7 @@ namespace CK.MQTT.Common.Reflexes
                 return;
             }
             ushort packetId = await pipeReader.ReadUInt16();
-            await _store.FreePacketIdAsync( m, packetId );
+            await _store.DiscardPacketIdAsync( m, packetId );
         }
     }
 }
