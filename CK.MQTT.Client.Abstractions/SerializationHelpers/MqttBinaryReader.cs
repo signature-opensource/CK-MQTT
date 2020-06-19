@@ -1,8 +1,10 @@
+using CK.Core;
 using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Abstractions.Serialisation
@@ -15,7 +17,7 @@ namespace CK.MQTT.Abstractions.Serialisation
         /// <param name="buffer"></param>
         /// <param name="length">The Remaining Length, -1 if there is no enough bytes to read, -2 if the stream is corrupted.</param>
         /// <returns></returns>
-        public static OperationStatus TryReadMQTTRemainingLength( this ref SequenceReader<byte> sequenceReader, out int length )
+        public static OperationStatus TryReadMQTTRemainingLength( this ref SequenceReader<byte> reader, out int length, out SequencePosition position )
         {
             length = 0;
             // Read out an Int32 7 bits at a time.  The high bit
@@ -26,13 +28,22 @@ namespace CK.MQTT.Abstractions.Serialisation
             {
                 // Check for a corrupted stream.  Read a max of 5 bytes.
                 // In a future version, add a DataFormatException.
-                if( shift == 5 * 7 ) return OperationStatus.InvalidData; // 5 bytes max per Int32, shift += 7
+                if( shift == 5 * 7 )
+                {
+                    position = reader.Position;
+                    return OperationStatus.InvalidData; // 5 bytes max per Int32, shift += 7
+                }
                 // ReadByte handles end of stream cases for us.
 
-                if( !sequenceReader.TryRead( out b ) ) return OperationStatus.NeedMoreData;
+                if( !reader.TryRead( out b ) )
+                {
+                    position = reader.Position;
+                    return OperationStatus.NeedMoreData;
+                }
                 length |= (b & 0x7F) << shift;
                 shift += 7;
             } while( (b & 0x80) != 0 );
+            position = reader.Position;
             return OperationStatus.Done;
         }
 
@@ -54,7 +65,9 @@ namespace CK.MQTT.Abstractions.Serialisation
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
             bool result = reader.TryReadMQTTString( out output );
             sequencePosition = reader.Position;
-            return result;//TODO: wtf, why there is a warning ?
+#pragma warning disable CS8762 // Parameter must have a non-null value when exiting in some condition.
+            return result; // https://github.com/dotnet/roslyn/issues/44080
+#pragma warning restore CS8762 // Parameter must have a non-null value when exiting in some condition.
         }
 
         public static async ValueTask<string> ReadMQTTString( this PipeReader pipeReader )
@@ -80,25 +93,69 @@ namespace CK.MQTT.Abstractions.Serialisation
             return result;
         }
 
+        public static async ValueTask BurnBytes( this PipeReader reader, int byteCountToBurn )
+        {
+            while( byteCountToBurn > 0 ) //"simply" burn the bytes of the packet.
+            {
+
+                ReadResult read = await reader.ReadAsync();
+                int bufferLength = (int)read.Buffer.Length;
+                if( bufferLength > byteCountToBurn )
+                {
+                    reader.AdvanceTo( read.Buffer.Slice( bufferLength ).Start );
+                    break;
+                }
+                reader.AdvanceTo( read.Buffer.End );
+                byteCountToBurn -= bufferLength;
+            };
+        }
+
+        public static async ValueTask<ReadResult?> ReadAsync( this PipeReader pipeReader, IActivityMonitor m, int minimumByteCount, CancellationToken cancellationToken = default )
+        {
+            while( true )
+            {
+                ReadResult result = await pipeReader.ReadAsync( cancellationToken );
+                if( result.Buffer.Length >= minimumByteCount ) return result;
+                if( result.IsCanceled )
+                {
+                    m.Error( "Connect reading canceled." );
+                    return null;
+                }
+                if( result.IsCompleted )
+                {
+                    m.Error( "Unexpected End Of Stream" );
+                    return null;
+                }
+                pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
+            }
+        }
+
         /// <summary>
         /// Don't use this if you have to parse multiples fields in a row.
         /// </summary>
         /// <param name="pipeReader"></param>
         /// <returns></returns>
-        public static async ValueTask<ushort> ReadUInt16( this PipeReader pipeReader )
+        public static async ValueTask<ushort> ReadPacketIdPacket( this PipeReader pipeReader, IActivityMonitor m, int packetSize )
         {
-            Beginning:
-            ReadResult result = await pipeReader.ReadAsync();
-            if( result.IsCanceled ) throw new OperationCanceledException();
-            if( !TryReadUInt16( result.Buffer, out ushort output, out SequencePosition sequencePosition ) )
+            while( true )
             {
-                //We are really not lucky, we needed only TWO bytes.
-                pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
+                ReadResult result = await pipeReader.ReadAsync();
+                if( result.IsCanceled ) throw new OperationCanceledException();
+                if( TryReadUInt16( result.Buffer, out ushort output, out SequencePosition sequencePosition ) )
+                {
+                    pipeReader.AdvanceTo( sequencePosition );
+                    packetSize -= 2;
+                    if( packetSize > 0 )
+                    {
+                        m.Warn( $"Packet bigger than expected, skipping {packetSize} bytes." );
+                        await pipeReader.BurnBytes( packetSize );
+                    }
+                    return output;
+                }
+                pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );//We are really not lucky, we needed only TWO bytes.
                 if( result.IsCompleted ) throw new EndOfStreamException();
-                goto Beginning;
+                continue;
             }
-            pipeReader.AdvanceTo( sequencePosition );
-            return output;
         }
 
         public static bool TryReadMQTTPayload( this ref SequenceReader<byte> reader, out ReadOnlySequence<byte> output )

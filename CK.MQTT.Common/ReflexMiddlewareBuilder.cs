@@ -9,14 +9,13 @@ using System.Threading.Tasks;
 namespace CK.MQTT.Common
 {
     public delegate ValueTask ReflexMiddleware(
-        IActivityMonitor m,
-        byte header, int packetLength, PipeReader pipeReader,
-        Func<ValueTask> next );
+        IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next
+    );
 
     public interface IReflexMiddleware
     {
         ValueTask ProcessIncomingPacketAsync(
-            IActivityMonitor m,
+            IActivityMonitor m, IncomingMessageHandler sender,
         byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
     }
 
@@ -24,7 +23,7 @@ namespace CK.MQTT.Common
     {
         readonly List<ReflexMiddleware> _reflexes = new List<ReflexMiddleware>();
 
-        ReflexMiddlewareBuilder Use( ReflexMiddleware reflex)
+        ReflexMiddlewareBuilder Use( ReflexMiddleware reflex )
         {
             _reflexes.Add( reflex );
             return this;
@@ -38,7 +37,8 @@ namespace CK.MQTT.Common
         {
             foreach( var curr in _reflexes.Reverse<ReflexMiddleware>() )
             {
-                lastReflex = ( IActivityMonitor m, byte h, int l, PipeReader p ) => curr( m, h, l, p, () => lastReflex( m, h, l, p ) );
+                lastReflex = ( IActivityMonitor m, IncomingMessageHandler s, byte h, int l, PipeReader p )
+                    => curr( m, s, h, l, p, () => lastReflex( m, s, h, l, p ) );
             }
             return lastReflex;
         }

@@ -46,11 +46,11 @@ namespace CK.MQTT.Common.Processes
             }
         }
 
-        public static async ValueTask<Task<T?>> StoreAndPublishQoS1Or2<T>( IActivityMonitor m, OutgoingMessageHandler output, PacketStore messageStore,
-            IOutgoingPacketWithId msg, int waitTimeoutMs )
+        public static async ValueTask<Task<T?>> StoreAndPublishQoS1Or2<T>( IActivityMonitor m, OutgoingMessageHandler output,
+            PacketStore messageStore, IOutgoingPacketWithId msg, int waitTimeoutMs )
             where T : class
         {
-            using( m.OpenTrace( "Executing Publish protocol with QoS 1 or 2." ) )
+            using( m.OpenTrace( "Sending a packet with QoS 1 or 2." ) )
             {
                 IOutgoingPacketWithId newPacket = await messageStore.StoreMessageAsync( m, msg );//store the message
                 //Now we can guarantee the At Least Once, the message have been stored.

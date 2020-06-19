@@ -2,7 +2,12 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
+using CK.MQTT.Client;
+using CK.MQTT.Common.Channels;
+using CK.MQTT.Common.Packets;
 using CK.MQTT.Common.Stores;
+using System.IO.Pipelines;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace SimpleClientTest
@@ -15,9 +20,18 @@ namespace SimpleClientTest
             config.Handlers.Add( new ConsoleConfiguration() );
             GrandOutput.EnsureActiveDefault( config );
             var m = new ActivityMonitor();
-            var mqtt = new MqttClientOld( new TcpChannelFactory(), new VolatilePacketStoreManager(),
-                new MqttConfiguration( "broker.mqttdashboard.com:8000" ) );
-            await mqtt.ConnectAsync( m, new MqttClientCredentials( "testCkMqtt" ), cleanSession: true );
+            var client = MqttClient.Create(
+                new InMemoryPacketIdStore(),
+                new MemoryPacketStore( ushort.MaxValue ),
+                new MqttConfiguration( "broker.hivemq.com:1883" ),
+                new TcpChannelFactory() );
+            var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
+            if( result.ConnectionStatus != ConnectReturnCode.Accepted )
+            {
+
+            }
+            var returnSub = await await client.SubscribeAsync( m, new Subscription( "#", QualityOfService.ExactlyOnce ) );
+
             await Task.Delay( 50000 );
         }
     }

@@ -35,7 +35,7 @@ namespace CK.MQTT.Common.Serialisation
                 packetLength >>= 7;
             }
             buffer[i] = (byte)packetLength;
-            return buffer[i..];
+            return buffer[(i + 1)..];
         }
 
         public static Span<byte> WriteString( this Span<byte> buffer, string str )

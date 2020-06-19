@@ -19,7 +19,7 @@ namespace CK.MQTT.Common
                 i++;
                 packetLength >>= 7;
             }
-            return i;
+            return i + 1;
         }
     }
 }

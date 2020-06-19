@@ -36,5 +36,6 @@ namespace CK.MQTT
         /// The Client is not authorized to connect
         /// </summary>
         NotAuthorized = 0x05,
+        Unknown
     }
 }

@@ -8,12 +8,10 @@ namespace CK.MQTT.Common
     {
         public override int GetSize() => 2;
 
-        protected override void Write( PipeWriter pw )
+        protected override void Write( Span<byte> span )
         {
-            Span<byte> span = pw.GetSpan( 2 );
             span[0] = (byte)PacketType.Disconnect;
             span[1] = 0;
-            pw.Advance( 2 );
         }
     }
 }

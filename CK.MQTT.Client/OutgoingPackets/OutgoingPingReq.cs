@@ -9,12 +9,10 @@ namespace CK.MQTT.Client.OutgoingPackets
     {
         public override int GetSize() => 2;
 
-        protected override void Write( PipeWriter pw )
+        protected override void Write( Span<byte> span )
         {
-            Span<byte> span = pw.GetSpan( 2 );
             span[0] = (byte)PacketType.PingRequest;
             span[1] = 0;
-            pw.Advance( 2 );
         }
     }
 }

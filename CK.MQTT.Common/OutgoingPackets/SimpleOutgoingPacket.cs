@@ -1,4 +1,5 @@
 using CK.Core;
+using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,7 +8,14 @@ namespace CK.MQTT.Common
 {
     public abstract class SimpleOutgoingPacket : IOutgoingPacket
     {
-        protected abstract void Write( PipeWriter pw );
+        protected abstract void Write( Span<byte> buffer );
+
+        void Write( PipeWriter pw )
+        {
+            int size = GetSize();
+            Write( pw.GetSpan( size ) );
+            pw.Advance( size );
+        }
 
         public ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {

@@ -21,14 +21,15 @@ namespace CK.MQTT.Common.Reflexes
             _store = store;
             _output = output;
         }
-        public async ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, IncomingMessageHandler sender,
+            byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             if( PacketType.PublishReceived != (PacketType)header )
             {
                 await next();
                 return;
             }
-            ushort packetId = await pipeReader.ReadUInt16();
+            ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
             QualityOfService qos = await _store.DiscardMessageByIdAsync( m, packetId );
             if( qos != QualityOfService.ExactlyOnce )
             {

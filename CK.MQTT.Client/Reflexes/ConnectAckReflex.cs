@@ -1,58 +1,43 @@
 using CK.Core;
 using CK.MQTT.Client.Deserialization;
-using CK.MQTT.Common;
 using CK.MQTT.Common.Channels;
+using CK.MQTT.Common.Packets;
 using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Pipelines;
-using System.Net;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using CK.MQTT.Abstractions.Serialisation;
 
 namespace CK.MQTT.Client.Reflexes
 {
     class ConnectAckReflex
     {
-        readonly IncomingMessageHandler _input;
-        readonly Reflex _reflexPostConnect;
-        readonly SemaphoreSlim _waitAck;
-
-        public ConnectAckReflex( IncomingMessageHandler input, Reflex reflexPostConnect, SemaphoreSlim waitAck )
+        readonly TaskCompletionSource<ConnectResult> _tcs = new TaskCompletionSource<ConnectResult>();
+        readonly Reflex _reflex;
+        public ConnectAckReflex(Reflex reflex)
         {
-            _input = input;
-            _reflexPostConnect = reflexPostConnect;
-            _waitAck = waitAck;
+            _reflex = reflex;
         }
+        
 
-        public Exception? Exception { get; private set; }
-
-        public async ValueTask ProcessIncomingPacket( IActivityMonitor m, byte header, int packetSize, PipeReader reader )
+        public Task<ConnectResult> Task => _tcs.Task;
+        public async ValueTask ProcessIncomingPacket( IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {
-            try
+            if( header != (byte)PacketType.ConnectAck )
             {
-                StartParse://We can avoid the goto, at the price of needing to work around the while scope, and variable declaration.
-                ReadResult read = await reader.ReadAsync();
-                if( read.IsCanceled ) return;
-                OperationStatus result = ConnectAck.Deserialize( m, read.Buffer, out byte state, out byte code, out int lenght, out SequencePosition position );
-                if( result == OperationStatus.NeedMoreData )
-                {
-                    //if the stream was completed, there is no point to restart reading.
-                    if( read.IsCompleted ) throw Exception = new EndOfStreamException();
-                    //Here, we mark we observed the data, the next PipeReader.ReadAsync will return with more data.
-                    reader.AdvanceTo( read.Buffer.Start, position );
-                    goto StartParse;
-                }
-                reader.AdvanceTo( position );
-                if( result != OperationStatus.Done ) throw Exception = new ProtocolViolationException();
-                _input.CurrentReflex = _reflexPostConnect;
+                _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError, SessionState.Unknown, ConnectReturnCode.Unknown ) );
             }
-            finally
+            ReadResult? read = await reader.ReadAsync( m, 2, default );
+            if( !read.HasValue ) return;
+            ConnectAck.Deserialize( m, read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
+            reader.AdvanceTo( position );
+            packetSize -= 2;
+            if( packetSize > 0 )
             {
-                _waitAck.Release();
+                await reader.BurnBytes( packetSize );
+                m.Warn( "Remaining bytes at the end of the packet. Ignoring them !" );
             }
+            sender.CurrentReflex = _reflex;
+            _tcs.SetResult( new ConnectResult( ConnectError.Ok, (SessionState)state, (ConnectReturnCode)code ) );
         }
     }
 }

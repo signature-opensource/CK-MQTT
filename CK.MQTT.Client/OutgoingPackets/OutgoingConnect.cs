@@ -14,7 +14,7 @@ namespace CK.MQTT.Client.OutgoingPackets
     {
         readonly MqttConfiguration _mConf;
         readonly MqttClientCredentials? _creds;
-        private readonly OutgoingLastWill? _outgoingLastWill;
+        private readonly OutgoingLastWill? _lastWill;
         readonly ProtocolConfiguration _pConf;
         readonly byte _flags;
         readonly int _sizePostPayload;
@@ -24,15 +24,6 @@ namespace CK.MQTT.Client.OutgoingPackets
         const byte _willRetainFlag = 0b0010_0000;
         const byte _willFlag = 0b0000_0100;
         const byte _cleanSessionFlag = 0b0000_0010;
-        static byte ByteFlag( MqttClientCredentials? creds )
-        {
-            byte flags = 0;
-            if( creds?.UserName != null ) flags |= _usernameFlag;
-            if( creds?.Password != null ) flags |= _passwordFlag;
-            if( creds?.CleanSession ?? true ) flags |= _cleanSessionFlag;
-            return flags;
-        }
-
         static byte ByteFlag( MqttClientCredentials? creds, OutgoingLastWill? lastWill )
         {
             byte flags = 0;
@@ -40,7 +31,7 @@ namespace CK.MQTT.Client.OutgoingPackets
             if( creds?.Password != null ) flags |= _passwordFlag;
             if( lastWill?.Retain ?? false ) flags |= _willRetainFlag;
             flags |= (byte)((byte)(lastWill?.Qos ?? 0) << 3);
-            flags |= _willFlag;
+            if( lastWill != null ) flags |= _willFlag;
             if( creds?.CleanSession ?? true ) flags |= _cleanSessionFlag;
             return flags;
         }
@@ -49,19 +40,19 @@ namespace CK.MQTT.Client.OutgoingPackets
             ProtocolConfiguration pConf,
             MqttConfiguration mConf,
             MqttClientCredentials? creds,
-            OutgoingLastWill? outgoingLastWill = null )
+            OutgoingLastWill? lastWill = null )
         {
             _pConf = pConf;
             _mConf = mConf;
             _creds = creds;
-            _outgoingLastWill = outgoingLastWill;
-            _flags = ByteFlag( creds );
+            _lastWill = lastWill;
+            _flags = ByteFlag( creds, lastWill );
             _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
         }
 
         protected override byte Header => (byte)PacketType.Connect;
 
-        protected override int GetSize => _sizePostPayload + _outgoingLastWill?.WillSize ?? 0 + HeaderSize;
+        public override int GetSize() => _sizePostPayload + _lastWill?.GetSize() ?? 0 + HeaderSize;
 
         protected override int HeaderSize => _pConf.ProtocolName.MQTTSize()
                                                 + 1 //_protocolLevel
@@ -83,11 +74,11 @@ namespace CK.MQTT.Client.OutgoingPackets
                 .WriteString( _creds?.ClientId ?? "" );
         }
 
-        protected override async ValueTask WriteRestOfThePacketAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
-            if( _outgoingLastWill != null )
+            if( _lastWill != null )
             {
-                await _outgoingLastWill.WriteAsync( pw, cancellationToken );
+                await _lastWill.WriteAsync( pw, cancellationToken );
             }
             WriteEndOfPayload( pw );
             await pw.FlushAsync( cancellationToken );

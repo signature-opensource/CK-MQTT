@@ -14,22 +14,21 @@ namespace CK.MQTT.Common.Reflexes
     public class PubCompReflex : IReflexMiddleware
     {
         readonly PacketStore _store;
-        readonly OutgoingMessageHandler _output;
 
-        public PubCompReflex( PacketStore store, OutgoingMessageHandler output )
+        public PubCompReflex( PacketStore store )
         {
             _store = store;
-            _output = output;
         }
 
-        public async ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, IncomingMessageHandler sender,
+            byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             if( PacketType.PublishComplete != (PacketType)header )
             {
                 await next();
                 return;
             }
-            ushort packetId = await pipeReader.ReadUInt16();
+            ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
             await _store.DiscardPacketIdAsync( m, packetId );
         }
     }

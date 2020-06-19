@@ -30,36 +30,38 @@ namespace CK.MQTT.Client.Reflexes
         const byte _retainFlag = 1;
 
         public async ValueTask ProcessIncomingPacketAsync(
-            IActivityMonitor m,
-            byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+            IActivityMonitor m, IncomingMessageHandler sender,
+            byte header, int packetLength, PipeReader reader, Func<ValueTask> next )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )
             {
                 await next();
                 return;
             }
-
             byte qosByte = (byte)((header << 5) >> 6);
             if( qosByte > 2 ) throw new ProtocolViolationException();
             QualityOfService qos = (QualityOfService)qosByte;
             bool dup = (header & _dupFlag) > 0;
             bool retain = (header & _retainFlag) > 0;
-            Parse:
-            ReadResult read = await pipeReader.ReadAsync();
-            if( read.IsCanceled ) return;
-            if( qos == QualityOfService.AtMostOnce )
+            string? topic;
+            ushort packetId;
+            SequencePosition position;
+            while( true )
             {
-                string theTopic = await pipeReader.ReadMQTTString();
-                await _deliverMessage( m, new IncomingApplicationMessage( theTopic, pipeReader, dup, retain, packetLength - theTopic.MQTTSize() ) );
-                return;
+
+                ReadResult read = await reader.ReadAsync();
+                if( read.IsCanceled ) return;
+                if( qos == QualityOfService.AtMostOnce )
+                {
+                    string theTopic = await reader.ReadMQTTString();
+                    await _deliverMessage( m, new IncomingApplicationMessage( theTopic, reader, dup, retain, packetLength - theTopic.MQTTSize() ) );
+                    return;
+                }
+                if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out position ) ) break;
+                reader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
             }
-            if( !Publish.ParsePublishWithPacketId( read.Buffer, out string? topic, out ushort packetId, out SequencePosition position ) )
-            {
-                pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
-                goto Parse;
-            }
-            pipeReader.AdvanceTo( position );
-            var incomingMessage = new IncomingApplicationMessage( topic, pipeReader, dup, retain, packetLength - 2 - topic.MQTTSize() );
+            reader.AdvanceTo( position );
+            var incomingMessage = new IncomingApplicationMessage( topic, reader, dup, retain, packetLength - 2 - topic.MQTTSize() );
             if( qos == QualityOfService.AtLeastOnce )
             {
                 await _deliverMessage( m, incomingMessage );

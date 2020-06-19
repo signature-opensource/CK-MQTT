@@ -15,16 +15,14 @@ namespace CK.MQTT.Server
             _sessionState = existingSession;
         }
 
-        protected override PacketType PacketType => PacketType.ConnectAck;
+        public override int GetSize() => 4;
 
-        protected override void Write( PipeWriter pw )
+        protected override void Write( Span<byte> span )
         {
-            Span<byte> buffer = pw.GetSpan( 4 );
-            buffer[0] = (byte)PacketType;
-            buffer[1] = 2;
-            buffer[2] = (byte)_sessionState;
-            buffer[3] = (byte)_connectReturnCode;
-            pw.Advance( 4 );
+            span[0] = (byte)PacketType.ConnectAck;
+            span[1] = 2;
+            span[2] = (byte)_sessionState;
+            span[3] = (byte)_connectReturnCode;
         }
     }
 }

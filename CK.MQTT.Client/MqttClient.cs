@@ -15,80 +15,85 @@ using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using CK.MQTT.Common.Processes;
+using System.IO;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CK.MQTT.Client
 {
-    class MqttClient : IMqttClient
+    public class MqttClient : IMqttClient
     {
         readonly IPacketIdStore _packetIdStore;
         readonly PacketStore _store;
         readonly MqttConfiguration _config;
-        readonly IMqttChannel _channel;
+        IMqttChannel? _channel;
+        readonly IMqttChannelFactory _channelFactory;
         readonly OutgoingMessageHandler _output;
-        readonly IncomingMessageHandler _input;
-        readonly int _waitTimeoutSecs;
+        private readonly StreamPipeReaderOptions? _readerOptions;
+        private readonly StreamPipeWriterOptions? _writerOptions;
+        IncomingMessageHandler? _input;
+        [NotNull]
         Reflex? _postConnectReflex;
+        PipeWriter? _pipeWriter;
+        PipeReader? _pipeReader;
         MqttClient(
             IPacketIdStore packetIdStore,
             PacketStore store,
             MqttConfiguration mqttConfiguration,
-            IMqttChannel channel,
-            IncomingMessageHandler incomingHandler,
+            IMqttChannelFactory channelFactory,
             OutgoingMessageHandler outgoingHandler,
-            int waitTimeoutSecs,
-            string clientId )
+            StreamPipeReaderOptions? readerOptions = null,
+            StreamPipeWriterOptions? writerOptions = null )
         {
             _packetIdStore = packetIdStore;
             _store = store;
             _config = mqttConfiguration;
-            ClientId = clientId;
-            _channel = channel;
+            _readerOptions = readerOptions;
+            _writerOptions = writerOptions;
+            _channelFactory = channelFactory;
             _output = outgoingHandler;
-            _input = incomingHandler;
-            _waitTimeoutSecs = waitTimeoutSecs;
         }
         public static IMqttClient Create(
             IPacketIdStore packetIdStore,
             PacketStore store,
             MqttConfiguration mqttConfiguration,
-            IMqttChannel channel,
-            PipeWriter pipeWriter,
-            Channel<IOutgoingPacket> externalMessageChannel,
-            Channel<IOutgoingPacket> internalMessageChannel,
-            IncomingMessageHandler incomingHandler,
-            int waitTimeoutSecs,
-            string clientId = "" )
+            IMqttChannelFactory channelFactory,
+            int channelCapacity = 32,
+            StreamPipeReaderOptions? readerOptions = null,
+            StreamPipeWriterOptions? writerOptions = null )
         {
+            var messageChannel = Channel.CreateBounded<IOutgoingPacket>( channelCapacity );
+            var reflexChannel = Channel.CreateBounded<IOutgoingPacket>( channelCapacity );
             ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder();//I think there is a code smell there, object referencing each other make the instantiation complex.
             ushort keepAlive = mqttConfiguration.KeepAliveSecs;
-            bool useKeepAlive = keepAlive != 0;
-            KeepAliveTimer? timer = useKeepAlive ? new KeepAliveTimer( TimeSpan.FromSeconds( keepAlive ), TimeSpan.FromSeconds( mqttConfiguration.WaitTimeoutSecs ) ) : null;
-            var output = new OutgoingMessageHandler( pipeWriter, useKeepAlive ? timer!.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null, externalMessageChannel, internalMessageChannel );
-            if( useKeepAlive ) timer.OutgoingMessageHandler = output;
-            var client = new MqttClient( packetIdStore, store, mqttConfiguration, channel, incomingHandler, output, waitTimeoutSecs, clientId );
-            if( useKeepAlive ) timer.TimeoutCallback = client.PingReqTimeout;
+            var output = new OutgoingMessageHandler( messageChannel, reflexChannel );
+            KeepAliveTimer? timer = null;
+            if( keepAlive != 0 )
+            {
+                timer = new KeepAliveTimer( TimeSpan.FromSeconds( keepAlive ), TimeSpan.FromMilliseconds( mqttConfiguration.KeepAliveSecs ), output );
+                output.OutputMiddleware = timer!.OutputTransformer;
+            }
+            var client = new MqttClient( packetIdStore, store, mqttConfiguration, channelFactory, output, readerOptions, writerOptions );
+            if( timer != null ) timer.TimeoutCallback = client.PingReqTimeout;
             builder.UseMiddleware( new PublishReflex( packetIdStore, client.RaiseMessage, output ) );
             builder.UseMiddleware( new PubackReflex( store ) );
             builder.UseMiddleware( new PubReceivedReflex( store, output ) );
             builder.UseMiddleware( new PubRelReflex( store, output ) );
             builder.UseMiddleware( new SubackReflex( store ) );
             builder.UseMiddleware( new UnsubackReflex( store ) );
-            builder.UseMiddleware( new PingRespReflex( useKeepAlive ? timer.ResetTimer : (Action?)null ) );
-            var postConnectReflex = builder.Build( client.InvalidPacket );
+            builder.UseMiddleware( new PingRespReflex( timer is null ? (Action?)null : timer.ResetTimer ) );
+            client._postConnectReflex = builder.Build( client.InvalidPacket );
             return client;
         }
 
-        void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );
+        void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.
 
         Task RaiseMessage( IActivityMonitor m, IncomingApplicationMessage msg ) => _eMessage.RaiseAsync( m, this, msg );
 
-        ValueTask InvalidPacket( IActivityMonitor m, byte header, int packetSize, PipeReader reader )
+        ValueTask InvalidPacket( IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {
             Close( m, DisconnectedReason.ProtocolError );
             throw new ProtocolViolationException();
         }
-
-        public string ClientId { get; private set; }
 
         readonly SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected> _eDisconnected
             = new SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected>();
@@ -111,28 +116,47 @@ namespace CK.MQTT.Client
             _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( disconnectedReason ) );
         }
 
-        public bool IsConnected => _channel.IsConnected;
+        public bool IsConnected => _channel?.IsConnected ?? false;
 
-        public Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
-            => ConnectProcess.ExecuteConnectProtocol( m, _output, _input,
-                new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ), _config.WaitTimeoutSecs, _postConnectReflex! );
-
+        public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
+        {
+            _channel = _channelFactory.Create( _config.ConnectionString );
+            if( !_channel.IsConnected )
+            {
+                m.Error( "Channel Factory Created an unconnected channel !" );
+                return new ConnectResult( ConnectError.ChannelNotConnected, SessionState.Unknown, ConnectReturnCode.Unknown );
+            }
+            _pipeReader = PipeReader.Create( _channel.Stream, _readerOptions );
+            _pipeWriter = PipeWriter.Create( _channel.Stream, _writerOptions );
+            ConnectAckReflex connectReflex = new ConnectAckReflex( _postConnectReflex );
+            Task<ConnectResult> connectedTask = connectReflex.Task;
+            _input = new IncomingMessageHandler( _pipeReader, connectReflex.ProcessIncomingPacket );
+            _output.SetPipeWriter( _pipeWriter );
+            var outgoingConnect = new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill );
+            await _output.SendMessageAsync( outgoingConnect );
+            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMiliseconds ) );
+            if( !connectedTask.IsCompleted )
+            {
+                return new ConnectResult( ConnectError.Timeout, SessionState.Unknown, ConnectReturnCode.Unknown );
+            }
+            return await connectedTask;
+        }
 
         public async ValueTask DisconnectAsync( IActivityMonitor m ) => await _output.SendMessageAsync( new OutgoingDisconnect() );
 
         public async ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message )
-            => await SendQoSPacketProcess.SendPacket<object>( m, _store, _output, message, _config.WaitTimeoutSecs );
+            => await SendQoSPacketProcess.SendPacket<object>( m, _store, _output, message, _config.WaitTimeoutMiliseconds );
         //await required to cast the Task<object> to Task
         public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
         {
             OutgoingSubscribe packet = new OutgoingSubscribe( subscriptions );
-            return SendQoSPacketProcess.SendPacket<SubscribeReturnCode[]>( m, _store, _output, packet, _config.WaitTimeoutSecs );
+            return SendQoSPacketProcess.SendPacket<SubscribeReturnCode[]>( m, _store, _output, packet, _config.WaitTimeoutMiliseconds );
         }
 
         public async ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
         {
             OutgoingUnsubscribe packet = new OutgoingUnsubscribe( topics );
-            return await SendQoSPacketProcess.SendPacket<object>( m, _store, _output, packet, _config.WaitTimeoutSecs );
+            return await SendQoSPacketProcess.SendPacket<object>( m, _store, _output, packet, _config.WaitTimeoutMiliseconds );
         }
 
         public Task<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 )

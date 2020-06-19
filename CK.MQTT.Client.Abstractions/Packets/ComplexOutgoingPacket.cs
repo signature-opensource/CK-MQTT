@@ -34,7 +34,7 @@ namespace CK.MQTT.Common.OutgoingPackets
             Span<byte> span = pw.GetSpan( bytesToWrite );
             span[0] = Header;
             span = span[1..].WriteRemainingSize( remainingSize );
-            WriteHeaderContent( span );
+            WriteHeaderContent( span[..HeaderSize] );
             pw.Advance( bytesToWrite );
         }
 

@@ -3,6 +3,7 @@ using CK.MQTT.Abstractions.Packets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,22 +14,22 @@ namespace CK.MQTT.Common.Stores
     {
         class OutgoingStoredPacket : IOutgoingPacketWithId
         {
-            readonly ReadOnlyMemory<byte> _memory;
+            readonly byte[] _buffer;
 
-            public OutgoingStoredPacket( int packetId, QualityOfService qos, ReadOnlyMemory<byte> stream )
+            public OutgoingStoredPacket( int packetId, QualityOfService qos, byte[] buffer )
             {
                 PacketId = packetId;
                 Qos = qos;
-                _memory = stream;
+                _buffer = buffer;
             }
             public int PacketId { get; set; }
 
             public QualityOfService Qos { get; set; }
 
-            public int GetSize() => _memory.Length;
+            public int GetSize() => _buffer.Length;
 
             public ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
-                => writer.WriteAsync( _memory ).AsNonGenericValueTask();
+                => writer.WriteAsync( _buffer ).AsNonGenericValueTask();
         }
 
         readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
@@ -53,9 +54,12 @@ namespace CK.MQTT.Common.Stores
         protected override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
         {
             Debug.Assert( !_packets.ContainsKey( packet.PacketId ) );
-            Memory<byte> memory = new Memory<byte>( new byte[packet.GetSize()] );
-            _packets.Add( packet.PacketId, new OutgoingStoredPacket( packet.PacketId, packet.Qos, memory ) );
-            return new ValueTask<IOutgoingPacketWithId>( new OutgoingStoredPacket( packet.PacketId, packet.Qos, memory ) );
+            var arr = new byte[packet.GetSize()];
+            var pipe = PipeWriter.Create( new MemoryStream( arr ) );
+            packet.WriteAsync( pipe, default );
+            var newPacket = new OutgoingStoredPacket( packet.PacketId, packet.Qos, arr );
+            _packets.Add( packet.PacketId, newPacket );
+            return new ValueTask<IOutgoingPacketWithId>( newPacket );
         }
     }
 }

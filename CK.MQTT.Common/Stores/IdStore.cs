@@ -15,7 +15,7 @@ namespace CK.MQTT.Common.Stores
 
         Entry[] _entries;
         int _nextFreeId = 1;
-        int _count;
+        int _count = 0;
         readonly int _maxPacketId;
 
         public IdStore( int packetIdMaxValue )
@@ -35,13 +35,13 @@ namespace CK.MQTT.Common.Stores
                     if( _count == _maxPacketId ) return 0;
                     EnsureSlotsAvailable( ++_count );
                     packetId = _count;
-                    _entries[packetId - 1].TaskCS = new TaskCompletionSource<object?>();
                 }
                 else
                 {
                     packetId = _nextFreeId;
                     _nextFreeId = _entries[packetId - 1].NextFreeId;
                 }
+                _entries[packetId - 1].TaskCS = new TaskCompletionSource<object?>();
                 return packetId;
             }
         }
@@ -50,11 +50,11 @@ namespace CK.MQTT.Common.Stores
         {
             lock( _entries )
             {
-                return _entries[packetId].TaskCS?.Task;
+                return _entries[packetId - 1].TaskCS?.Task;
             }
         }
 
-        public bool SetResultById(int packetId, object? result)
+        public bool SetResultById( int packetId, object? result )
         {
             var tcs = _entries[packetId].TaskCS;
             if( tcs == null ) return false;

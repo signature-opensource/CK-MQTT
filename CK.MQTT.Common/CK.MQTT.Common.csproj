@@ -7,20 +7,12 @@
     <Description>Interfaces and Implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
   </PropertyGroup>
 	<ItemGroup>
-	  <Compile Remove="Channels\**" />
 	  <Compile Remove="PacketWriter\**" />
-	  <EmbeddedResource Remove="Channels\**" />
 	  <EmbeddedResource Remove="PacketWriter\**" />
-	  <None Remove="Channels\**" />
 	  <None Remove="PacketWriter\**" />
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.2.1--0000-develop" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.2.1--0000-develop" />
     <PackageReference Include="System.IO.Pipelines" Version="4.7.2" />
   </ItemGroup>
   <ItemGroup>

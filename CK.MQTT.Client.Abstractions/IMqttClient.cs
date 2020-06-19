@@ -22,14 +22,6 @@ namespace CK.MQTT
         event SequentialEventHandler<IMqttClient, MqttEndpointDisconnected> Disconnected;
 
         /// <summary>
-        /// Id of the connected Client. "" until connected.
-        /// This Id correspond to the <see cref="MqttClientCredentials.ClientId"/> parameter passed to 
-        /// <see cref="ConnectAsync(IActivityMonitor, MqttClientCredentials, LastWill?, bool)"/> method or
-        /// has been provided by the server.
-        /// </summary>
-        string ClientId { get; }
-
-        /// <summary>
         /// Return <see langword="true"/> if the last packet was sent successfully
         /// </summary>
         bool IsConnected { get; }

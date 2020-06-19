@@ -17,26 +17,27 @@ namespace CK.MQTT.Common.Channels
         readonly ChannelWriter<IOutgoingPacket> _messageIn;
         readonly ChannelWriter<IOutgoingPacket> _reflexIn;
         readonly ChannelReader<IOutgoingPacket> _reflexOut;
-        readonly OutputTransformer? _outputMiddleware;
+        public OutputTransformer? OutputMiddleware { get; set; }
         readonly CancellationToken _dirtyStop;
-        readonly PipeWriter _pipeWriter;
+        PipeWriter? _pipeWriter;
         readonly Task _writeLoop;
-
+        bool _running;
         bool _stopping;
         public OutgoingMessageHandler(
-            PipeWriter pipeWriter,
-            OutputTransformer? outputMiddleware,
-            Channel<IOutgoingPacket> externalMessageChannel,
-            Channel<IOutgoingPacket> internalMessageChannel )
+            Channel<IOutgoingPacket> messageChannel,
+            Channel<IOutgoingPacket> reflexChannel )
         {
             _dirtyStop = _dirtyStopSource.Token;
-            _pipeWriter = pipeWriter;
-            _outputMiddleware = outputMiddleware;
-            _messageOut = externalMessageChannel;
-            _messageIn = externalMessageChannel;
-            _reflexIn = internalMessageChannel;
-            _reflexOut = internalMessageChannel;
+            _messageOut = messageChannel;
+            _messageIn = messageChannel;
+            _reflexIn = reflexChannel;
+            _reflexOut = reflexChannel;
             _writeLoop = WriteLoop();
+        }
+
+        public void SetPipeWriter( PipeWriter writer )
+        {
+            _pipeWriter = writer;
         }
 
         public bool QueueMessage( IOutgoingPacket item ) => _messageIn.TryWrite( item );
@@ -62,6 +63,7 @@ namespace CK.MQTT.Common.Channels
         }
         async Task WriteLoop()
         {
+            _running = true;
             ActivityMonitor m = new ActivityMonitor();
             try
             {
@@ -96,6 +98,7 @@ namespace CK.MQTT.Common.Channels
                             await ProcessOutgoingPacket( m, packet );
                         }
                         _pipeWriter.Complete();
+                        _running = false;
                         return;
                     }
                 }
@@ -103,14 +106,20 @@ namespace CK.MQTT.Common.Channels
             catch( Exception e )
             {
                 _pipeWriter.Complete( e );
+                _running = false;
             }
+            _running = false;
         }
 
-        ValueTask ProcessOutgoingPacket( IActivityMonitor m, IOutgoingPacket outgoingPacket ) =>
-            (_outputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStop );
+        ValueTask ProcessOutgoingPacket( IActivityMonitor m, IOutgoingPacket outgoingPacket )
+        {
+            m.Info( $"Sending message of size {outgoingPacket.GetSize()}." );
+            return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStop );
+        }
 
         public Task Stop( CancellationToken dirtyStop )
         {
+            return Task.CompletedTask;
             dirtyStop.Register( () =>
             {
                 FlushChannels();

@@ -9,8 +9,6 @@ namespace CK.MQTT.Server.OutgoingPackets
         {
         }
 
-        public override byte Header => (byte)PacketType;
-
-        protected override PacketType PacketType => PacketType.UnsubscribeAck;
+        public override byte Header => (byte)PacketType.UnsubscribeAck;
     }
 }
