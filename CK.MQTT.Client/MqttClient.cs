@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using CK.MQTT.Common.Processes;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Buffers;
+using System.IO;
 
 namespace CK.MQTT.Client
 {
@@ -94,8 +96,25 @@ namespace CK.MQTT.Client
             }
             else
             {
-                msg.PipeReader.
-                m.Info( $"Received message: Topic'{msg.Topic}' Payload:'{Encoding.UTF8.GetString(}'" );
+                int toRead = msg.PayloadLenght;
+                using( m.OpenInfo( $"Received message: Topic'{msg.Topic}'" ) )
+                {
+                    MemoryStream stream = new MemoryStream();
+                    while( toRead > 0 )
+                    {
+                        var result = await msg.PipeReader.ReadAsync();
+                        var buffer = result.Buffer;
+                        if( buffer.Length > toRead )
+                        {
+                            buffer = buffer.Slice( 0, toRead );
+                        }
+                        toRead -= (int)buffer.Length;
+                        stream.Write( buffer.ToArray() );
+                        msg.PipeReader.AdvanceTo( buffer.End );
+                    }
+                    stream.Position = 0;
+                    m.Info( Encoding.UTF8.GetString( stream.ToArray() ) );
+                }
             }
         }
 
