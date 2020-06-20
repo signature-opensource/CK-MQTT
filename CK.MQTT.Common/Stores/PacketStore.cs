@@ -1,9 +1,5 @@
 using CK.Core;
 using CK.MQTT.Abstractions.Packets;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Stores
@@ -26,22 +22,20 @@ namespace CK.MQTT.Common.Stores
         /// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180912
         /// </summary>
         /// <returns>A <see cref="IOutgoingPacket"/> that can be sent on the wire.</returns>
-        public async ValueTask<IOutgoingPacketWithId> StoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
+        public async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
         {
-            int id = _packetStore.GetId();
+            bool success = _packetStore.TryGetId( out int packetId, out Task<object?>? idFreedAwaiter );
             int waitTime = 500;
-            while( id == 0 )
+            while( !success )
             {
                 m.Warn( "No PacketID available, awaiting until one is free." );
                 await Task.Delay( waitTime );
                 if( waitTime < 5000 ) waitTime += 500;
-                id = _packetStore.GetId();
+                success = _packetStore.TryGetId( out packetId, out idFreedAwaiter );
             }
-            packet.PacketId = (ushort)id;
-            return await DoStoreMessageAsync( m, packet );
+            packet.PacketId = (ushort)packetId;
+            return (await DoStoreMessageAsync( m, packet ), idFreedAwaiter!);
         }
-
-        public Task<object?>? GetAwaiterById( int index ) => _packetStore.GetAwaiterById( index );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
 

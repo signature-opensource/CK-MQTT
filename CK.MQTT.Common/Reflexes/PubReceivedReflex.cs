@@ -29,6 +29,7 @@ namespace CK.MQTT.Common.Reflexes
                 await next();
                 return;
             }
+            m.Trace( $"Handling incoming packet as {PacketType.PublishReceived}." );
             ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
             QualityOfService qos = await _store.DiscardMessageByIdAsync( m, packetId );
             if( qos != QualityOfService.ExactlyOnce )

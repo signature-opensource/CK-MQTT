@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Abstractions.Packets;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;

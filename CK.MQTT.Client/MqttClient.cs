@@ -1,7 +1,6 @@
 using CK.Core;
 using CK.MQTT.Abstractions.Packets;
 using CK.MQTT.Client.OutgoingPackets;
-using CK.MQTT.Client.Processes;
 using CK.MQTT.Client.Reflexes;
 using CK.MQTT.Common;
 using CK.MQTT.Common.Channels;
@@ -9,14 +8,13 @@ using CK.MQTT.Common.Packets;
 using CK.MQTT.Common.Reflexes;
 using CK.MQTT.Common.Stores;
 using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using CK.MQTT.Common.Processes;
-using System.IO;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace CK.MQTT.Client
 {
@@ -74,7 +72,7 @@ namespace CK.MQTT.Client
             }
             var client = new MqttClient( packetIdStore, store, mqttConfiguration, channelFactory, output, readerOptions, writerOptions );
             if( timer != null ) timer.TimeoutCallback = client.PingReqTimeout;
-            builder.UseMiddleware( new PublishReflex( packetIdStore, client.RaiseMessage, output ) );
+            builder.UseMiddleware( new PublishReflex( packetIdStore, client.OnMessage, output ) );
             builder.UseMiddleware( new PubackReflex( store ) );
             builder.UseMiddleware( new PubReceivedReflex( store, output ) );
             builder.UseMiddleware( new PubRelReflex( store, output ) );
@@ -87,7 +85,19 @@ namespace CK.MQTT.Client
 
         void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.
 
-        Task RaiseMessage( IActivityMonitor m, IncomingApplicationMessage msg ) => _eMessage.RaiseAsync( m, this, msg );
+        async Task OnMessage( IActivityMonitor m, IncomingApplicationMessage msg )
+        {
+            if( _eMessage.HasHandlers )
+            {
+                await _eMessage.RaiseAsync( m, this, msg );
+                return;
+            }
+            else
+            {
+                msg.PipeReader.
+                m.Info( $"Received message: Topic'{msg.Topic}' Payload:'{Encoding.UTF8.GetString(}'" );
+            }
+        }
 
         ValueTask InvalidPacket( IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {

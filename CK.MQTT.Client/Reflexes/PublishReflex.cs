@@ -38,14 +38,14 @@ namespace CK.MQTT.Client.Reflexes
                 await next();
                 return;
             }
-            byte qosByte = (byte)((header << 5) >> 6);
+            m.Trace( $"Handling incoming packet as {PacketType.Publish}." );
+            byte qosByte = (byte)((header >> 1) & 3);
             if( qosByte > 2 ) throw new ProtocolViolationException();
             QualityOfService qos = (QualityOfService)qosByte;
             bool dup = (header & _dupFlag) > 0;
             bool retain = (header & _retainFlag) > 0;
             string? topic;
             ushort packetId;
-            SequencePosition position;
             while( true )
             {
 
@@ -57,10 +57,13 @@ namespace CK.MQTT.Client.Reflexes
                     await _deliverMessage( m, new IncomingApplicationMessage( theTopic, reader, dup, retain, packetLength - theTopic.MQTTSize() ) );
                     return;
                 }
-                if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out position ) ) break;
+                if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
+                {
+                    reader.AdvanceTo( position );
+                    break;
+                }
                 reader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
             }
-            reader.AdvanceTo( position );
             var incomingMessage = new IncomingApplicationMessage( topic, reader, dup, retain, packetLength - 2 - topic.MQTTSize() );
             if( qos == QualityOfService.AtLeastOnce )
             {

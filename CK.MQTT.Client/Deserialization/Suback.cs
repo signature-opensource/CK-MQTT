@@ -1,10 +1,7 @@
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using CK.MQTT.Abstractions.Serialisation;
 
 namespace CK.MQTT.Client.Deserialization

@@ -1,13 +1,10 @@
 using CK.Core;
-using CK.MQTT.Common.Serialisation;
 using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using CK.MQTT.Abstractions.Serialisation;
-using CK.MQTT.Common.Reflexes;
-using System.IO;
 
 namespace CK.MQTT.Common.Channels
 {
@@ -73,25 +70,28 @@ namespace CK.MQTT.Common.Channels
                     ReadResult read = await _pipeReader.ReadAsync();
                     if( read.IsCanceled ) return;
                     OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
-                    if( res == OperationStatus.InvalidData )
+                    using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
                     {
-                        m.Error( "Corrupted Stream." );
-                        return;
-                    }
-                    if( res == OperationStatus.NeedMoreData )
-                    {
-                        if( read.IsCompleted )
+                        if( res == OperationStatus.InvalidData )
                         {
-                            m.Error( "Unexpected End Of Stream." );
+                            m.Error( "Corrupted Stream." );
                             return;
                         }
-                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
-                        continue;
-                    }
-                    else
-                    {
-                        _pipeReader.AdvanceTo( position );
-                        await CurrentReflex( m, this, header, length, _pipeReader );
+                        if( res == OperationStatus.NeedMoreData )
+                        {
+                            if( read.IsCompleted )
+                            {
+                                m.Error( "Unexpected End Of Stream." );
+                                return;
+                            }
+                            _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                            continue;
+                        }
+                        else
+                        {
+                            _pipeReader.AdvanceTo( position );
+                            await CurrentReflex( m, this, header, length, _pipeReader );
+                        }
                     }
                 }
             }

@@ -1,7 +1,6 @@
 using CK.MQTT.Common;
 using CK.MQTT.Common.Packets;
 using System;
-using System.IO.Pipelines;
 
 namespace CK.MQTT.Client.OutgoingPackets
 {

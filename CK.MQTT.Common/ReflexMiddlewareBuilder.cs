@@ -34,11 +34,20 @@ namespace CK.MQTT.Common
         public ReflexMiddlewareBuilder UseMiddleware( ReflexMiddleware reflex ) => Use( reflex );
 
         public Reflex Build( Reflex lastReflex )
-        {
+       {
             foreach( var curr in _reflexes.Reverse<ReflexMiddleware>() )
             {
-                lastReflex = ( IActivityMonitor m, IncomingMessageHandler s, byte h, int l, PipeReader p )
-                    => curr( m, s, h, l, p, () => lastReflex( m, s, h, l, p ) );
+                Reflex previousReflex = lastReflex;
+                Reflex newMiddleware = ( IActivityMonitor m, IncomingMessageHandler s, byte h, int l, PipeReader p ) //We create a lambda that...
+                    =>
+                {
+                    return curr( m, s, h, l, p, // Call current the middleware
+                    () => //With the previous previous middleware to call.
+                    {
+                        return previousReflex( m, s, h, l, p );
+                    } );
+                };
+                lastReflex = newMiddleware;
             }
             return lastReflex;
         }

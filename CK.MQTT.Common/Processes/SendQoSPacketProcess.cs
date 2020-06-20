@@ -52,24 +52,23 @@ namespace CK.MQTT.Common.Processes
         {
             using( m.OpenTrace( "Sending a packet with QoS 1 or 2." ) )
             {
-                IOutgoingPacketWithId newPacket = await messageStore.StoreMessageAsync( m, msg );//store the message
+                (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );//store the message
                 //Now we can guarantee the At Least Once, the message have been stored.
                 //We return the Task representing the rest of the protocol.
-                return PublishQoS1Or2<T>( m, output, messageStore, newPacket, waitTimeoutMs );
+                return PublishQoS1Or2<T>( m, output, messageStore, newPacket, ackReceived, waitTimeoutMs );
             }
         }
 
         public static async Task<T?> PublishQoS1Or2<T>( IActivityMonitor m,
-            OutgoingMessageHandler output, PacketStore store, IOutgoingPacketWithId packet, int waitTimeoutMs )
+            OutgoingMessageHandler output, PacketStore store, IOutgoingPacketWithId packet, Task<object?> ackReceived, int waitTimeoutMs )
             where T : class
         {
-            Task<object?> task = store.GetAwaiterById( packet.PacketId )!;
             do
             {
                 await output.SendMessageAsync( packet );//We await that the message is actually sent on the wire.
-                await Task.WhenAny( Task.Delay( waitTimeoutMs ), task );
-            } while( !task.IsCompleted );
-            return (T?)await task;
+                await Task.WhenAny( Task.Delay( waitTimeoutMs ), ackReceived );
+            } while( !ackReceived.IsCompleted );
+            return (T?)await ackReceived;
         }
     }
 }

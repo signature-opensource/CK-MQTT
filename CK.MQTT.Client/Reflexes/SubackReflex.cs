@@ -8,6 +8,7 @@ using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
+using CK.MQTT.Abstractions.Serialisation;
 
 namespace CK.MQTT.Client.Reflexes
 {
@@ -27,19 +28,11 @@ namespace CK.MQTT.Client.Reflexes
                 await next();
                 return;
             }
-            ushort packetId;
-            QualityOfService[]? qos;
-            SequencePosition position;
-            while( true )
-            {
-                ReadResult read = await pipeReader.ReadAsync();
-                if( read.IsCanceled ) return;
-                if( Suback.TryParse( read.Buffer, packetLength, out packetId, out qos, out position ) )
-                {
-                    break;
-                }
-                pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
-            };
+            m.Trace( $"Handling incoming packet as {PacketType.SubscribeAck}." );
+            ReadResult? read = await pipeReader.ReadAsync( m, packetLength );
+            if( !read.HasValue ) return;
+            bool result = Suback.TryParse( read.Value.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
+            Debug.Assert( result );
             pipeReader.AdvanceTo( position );
             QualityOfService debugQos = await _store.DiscardMessageByIdAsync( m, packetId, qos );
             Debug.Assert( debugQos == QualityOfService.AtLeastOnce );

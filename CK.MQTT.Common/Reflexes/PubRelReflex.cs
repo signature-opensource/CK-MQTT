@@ -28,6 +28,7 @@ namespace CK.MQTT.Common.Reflexes
                 await next();
                 return;
             }
+            m.Trace( $"Handling incoming packet as {PacketType.PublishRelease}." );
             ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
             await _store.DiscardPacketIdAsync( m, packetId );
             _output.QueueReflexMessage( new OutgoingPubcomp( packetId ) );

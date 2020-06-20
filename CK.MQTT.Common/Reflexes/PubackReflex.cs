@@ -2,7 +2,6 @@ using CK.Core;
 using CK.MQTT.Abstractions.Serialisation;
 using CK.MQTT.Common.Channels;
 using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using CK.MQTT.Common.Stores;
 using System;
 using System.IO.Pipelines;
@@ -25,6 +24,7 @@ namespace CK.MQTT.Common.Reflexes
                 await next();
                 return;
             }
+            m.Trace( $"Handling incoming packet as {PacketType.PublishAck}." );
             ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
             await _store.DiscardPacketIdAsync( m, packetId );
         }

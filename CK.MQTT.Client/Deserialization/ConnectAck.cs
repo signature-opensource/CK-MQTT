@@ -1,6 +1,4 @@
 using CK.Core;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Abstractions.Serialisation;
 using System;
 using System.Buffers;
 using System.Diagnostics;

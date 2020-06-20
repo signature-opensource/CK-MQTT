@@ -1,7 +1,6 @@
 using CK.MQTT.Abstractions.Packets;
 using CK.MQTT.Common.Serialisation;
 using System;
-using System.IO.Pipelines;
 
 namespace CK.MQTT.Common.OutgoingPackets
 {

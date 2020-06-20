@@ -2,8 +2,6 @@ using CK.Core;
 using CK.MQTT.Abstractions.Packets;
 using CK.MQTT.Common.Packets;
 using System;
-using System.Collections.Generic;
-using System.IO.Pipelines;
 using System.Threading.Tasks;
 
 namespace CK.MQTT

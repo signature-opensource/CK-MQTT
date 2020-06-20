@@ -1,4 +1,3 @@
-using CK.MQTT.Common.Packets;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;

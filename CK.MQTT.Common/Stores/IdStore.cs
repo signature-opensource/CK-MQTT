@@ -1,6 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
+using CK.Core;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Stores
@@ -24,15 +23,18 @@ namespace CK.MQTT.Common.Stores
             _maxPacketId = packetIdMaxValue;
         }
 
-        public int GetId()
+        public bool TryGetId( out int packetId, [NotNullWhen( true )] out Task<object?>? idFreedAwaiter )
         {
             lock( _entries )
             {
-
-                int packetId;
                 if( _nextFreeId == 0 )
                 {
-                    if( _count == _maxPacketId ) return 0;
+                    if( _count == _maxPacketId )
+                    {
+                        packetId = 0;
+                        idFreedAwaiter = null;
+                        return false;
+                    }
                     EnsureSlotsAvailable( ++_count );
                     packetId = _count;
                 }
@@ -41,37 +43,23 @@ namespace CK.MQTT.Common.Stores
                     packetId = _nextFreeId;
                     _nextFreeId = _entries[packetId - 1].NextFreeId;
                 }
-                _entries[packetId - 1].TaskCS = new TaskCompletionSource<object?>();
-                return packetId;
+                var tcs = new TaskCompletionSource<object?>();
+                _entries[packetId - 1].TaskCS = tcs;
+                idFreedAwaiter = tcs.Task;
+                return true;
             }
-        }
-
-        public Task<object?>? GetAwaiterById( int packetId )
-        {
-            lock( _entries )
-            {
-                return _entries[packetId - 1].TaskCS?.Task;
-            }
-        }
-
-        public bool SetResultById( int packetId, object? result )
-        {
-            var tcs = _entries[packetId].TaskCS;
-            if( tcs == null ) return false;
-            tcs.SetResult( result );
-            return true;
         }
 
         public bool FreeId( int packetId, object? result = null )
         {
             lock( _entries )
             {
-                _entries[packetId].NextFreeId = _nextFreeId;
+                _entries[packetId - 1].NextFreeId = _nextFreeId;
                 _nextFreeId = packetId;
-                var tcs = _entries[packetId].TaskCS;
+                var tcs = _entries[packetId - 1].TaskCS;
                 if( tcs == null ) return false;
                 tcs.SetResult( result );
-                _entries[packetId].TaskCS = null;
+                _entries[packetId - 1].TaskCS = null;
                 return true;
             }
         }
