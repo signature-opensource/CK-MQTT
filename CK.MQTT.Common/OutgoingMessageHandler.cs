@@ -11,34 +11,24 @@ namespace CK.MQTT.Common.Channels
     public class OutgoingMessageHandler
     {
         public delegate IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket );
-
-        readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
         readonly ChannelReader<IOutgoingPacket> _messageOut;
         readonly ChannelWriter<IOutgoingPacket> _messageIn;
         readonly ChannelWriter<IOutgoingPacket> _reflexIn;
         readonly ChannelReader<IOutgoingPacket> _reflexOut;
-        public OutputTransformer? OutputMiddleware { get; set; }
-        readonly CancellationToken _dirtyStop;
-        PipeWriter? _pipeWriter;
+        readonly PipeWriter _pipeWriter;
         readonly Task _writeLoop;
-        bool _running;
-        bool _stopping;
-        public OutgoingMessageHandler(
-            Channel<IOutgoingPacket> messageChannel,
-            Channel<IOutgoingPacket> reflexChannel )
+        readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
+        public OutgoingMessageHandler( PipeWriter writer, Channel<IOutgoingPacket> messageChannel, Channel<IOutgoingPacket> reflexChannel )
         {
-            _dirtyStop = _dirtyStopSource.Token;
             _messageOut = messageChannel;
             _messageIn = messageChannel;
             _reflexIn = reflexChannel;
             _reflexOut = reflexChannel;
+            _pipeWriter = writer;
             _writeLoop = WriteLoop();
         }
 
-        public void SetPipeWriter( PipeWriter writer )
-        {
-            _pipeWriter = writer;
-        }
+        public OutputTransformer? OutputMiddleware { get; set; }
 
         public bool QueueMessage( IOutgoingPacket item ) => _messageIn.TryWrite( item );
 
@@ -53,87 +43,65 @@ namespace CK.MQTT.Common.Channels
         {
             var wrapper = new OutgoingPacketWrapper( item );
             await _messageIn.WriteAsync( wrapper );//ValueTask, will almost always return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some machine will often return synchronously, most of the time, asyncrounously.
+            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
 
-        void FlushChannels()
-        {
-            while( _reflexOut.TryRead( out _ ) ) ; //We are just flushing the channel !
-            while( _messageOut.TryRead( out _ ) ) ;
-        }
         async Task WriteLoop()
         {
-            _running = true;
             ActivityMonitor m = new ActivityMonitor();
             try
             {
-
-                while( true )
+                bool mainLoop = true;
+                while( mainLoop )
                 {
-                    if( _reflexOut.TryRead( out IOutgoingPacket packet ) )
+                    if( _reflexOut.TryRead( out IOutgoingPacket packet ) || _messageOut.TryRead( out packet ) )
                     {
                         await ProcessOutgoingPacket( m, packet );
                         continue;
                     }
-                    if( _messageOut.TryRead( out packet ) )
-                    {
-                        await ProcessOutgoingPacket( m, packet );
-                        continue;
-                    }
-
-                    Task<bool> result = await Task.WhenAny(
-                        _reflexOut.WaitToReadAsync( _dirtyStop ).AsTask(),
-                        _messageOut.WaitToReadAsync( _dirtyStop ).AsTask()
-                    );
-                    if( !await result )
-                    {
-                        if( !_stopping ) throw new InvalidOperationException();
-                        bool reflexDone = _reflexOut.Completion.IsCompleted;
-                        bool messageDone = _messageOut.Completion.IsCompleted;
-                        if( !reflexDone && !messageDone ) throw new InvalidOperationException();
-                        //We are now sure we are in a normal stop.
-                        ChannelReader<IOutgoingPacket> channel = reflexDone ? _reflexOut : _messageOut;
-                        while( channel.TryRead( out packet ) )
-                        {
-                            await ProcessOutgoingPacket( m, packet );
-                        }
-                        _pipeWriter.Complete();
-                        _running = false;
-                        return;
-                    }
+                    mainLoop = await await Task.WhenAny( _reflexOut.WaitToReadAsync().AsTask(), _messageOut.WaitToReadAsync().AsTask() );
                 }
+                using( m.OpenTrace( "Sending remaining messages..." ) )
+                {
+                    while( _reflexOut.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
+                    while( _messageOut.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
+                }
+                _pipeWriter.Complete();
             }
             catch( Exception e )
             {
-                _pipeWriter.Complete( e );
-                _running = false;
+                _stopEvent.Raise( m, this, e );
             }
-            _running = false;
+            _stopEvent.Raise( m, this, null );
         }
 
         ValueTask ProcessOutgoingPacket( IActivityMonitor m, IOutgoingPacket outgoingPacket )
         {
             m.Info( $"Sending message of size {outgoingPacket.GetSize()}." );
-            return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStop );
+            return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
         }
+
+        void DirtyStop()
+        {
+            _dirtyStopSource.Cancel();
+            _pipeWriter.Complete();
+            _pipeWriter.CancelPendingFlush();
+        }
+
+        public event SequentialEventHandler<OutgoingMessageHandler, Exception?> Stopped
+        {
+            add => _stopEvent.Add( value );
+            remove => _stopEvent.Remove( value );
+        }
+
+        readonly SequentialEventHandlerSender<OutgoingMessageHandler, Exception?> _stopEvent = new SequentialEventHandlerSender<OutgoingMessageHandler, Exception?>();
 
         public Task Stop( CancellationToken dirtyStop )
         {
+            dirtyStop.Register( () => DirtyStop() );
+            if( !dirtyStop.IsCancellationRequested ) return _writeLoop;
+            DirtyStop();
             return Task.CompletedTask;
-            dirtyStop.Register( () =>
-            {
-                FlushChannels();
-                _dirtyStopSource.Cancel();
-            } );
-            if( dirtyStop.IsCancellationRequested )
-            {
-                FlushChannels();
-                _dirtyStopSource.Cancel();
-            }
-            _stopping = true;
-            _messageIn.Complete();
-            _reflexIn.Complete();
-            return Task.WhenAll( _messageOut.Completion, _reflexOut.Completion, _writeLoop );
         }
     }
 }

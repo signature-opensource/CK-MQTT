@@ -31,5 +31,7 @@ namespace CK.MQTT
         /// </summary>
 		public int WaitTimeoutMiliseconds { get; }
 
+        public bool WaitConnectAckToSendMessages { get; }
+
     }
 }

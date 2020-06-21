@@ -25,15 +25,6 @@ namespace CK.MQTT
         bool IsConnected { get; }
 
         /// <summary>
-        /// Asynchronously waits for the next <see cref="MessageReceived"/> that matches an optional <paramref name="predicate"/>
-        /// during an optional <paramref name="timeoutMillisecond"/> time span.
-        /// </summary>
-        /// <param name="predicate">The predicate that received message must satisfy.</param>
-        /// <param name="timeoutMillisecond">The timeout in milliseconds.</param>
-        /// <returns>The message or null if the timeout expired before the message has been received.</returns>
-        Task<IncomingApplicationMessage?> WaitMessageReceivedAsync( Func<IncomingApplicationMessage, bool>? predicate = null, int timeoutMillisecond = -1 );
-
-        /// <summary>
         /// Event raised for each received message in asynchronous way, each async handler being called
         /// one after the other.
         /// </summary>

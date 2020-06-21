@@ -21,7 +21,7 @@ namespace CK.MQTT.Common.Channels
     {
         readonly PipeReader _pipeReader;
         readonly Task _readLoop;
-
+        readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
         public IncomingMessageHandler( PipeReader pipeReader, Reflex reflex )
         {
             _pipeReader = pipeReader;
@@ -33,7 +33,6 @@ namespace CK.MQTT.Common.Channels
         /// Current <see cref="Reflex"/> that will be run on the incoming messages.
         /// </summary>
         public Reflex CurrentReflex { get; set; }
-
 
         readonly SequentialEventHandlerSender<IncomingMessageHandler, DisconnectedReason> _eSeqDisconnect
             = new SequentialEventHandlerSender<IncomingMessageHandler, DisconnectedReason>();
@@ -55,59 +54,64 @@ namespace CK.MQTT.Common.Channels
             return reader.TryReadMQTTRemainingLength( out length, out position );
         }
 
-        void OnProtocolError( IActivityMonitor m )
-        {
-            _eSeqDisconnect.Raise( m, this, DisconnectedReason.ProtocolError );
-        }
-
         async Task ReadLoop()
         {
             ActivityMonitor m = new ActivityMonitor();
-            try
+            while( !_cleanStop.IsCancellationRequested )
             {
-                while( true )
+                ReadResult read = await _pipeReader.ReadAsync( _cleanStop.Token );
+                if( read.IsCanceled )
                 {
-                    ReadResult read = await _pipeReader.ReadAsync();
-                    if( read.IsCanceled ) return;
-                    OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
-                    using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
+                    _eSeqDisconnect.Raise( m, this, DisconnectedReason.SelfDisconnected );
+                    _pipeReader.Complete();
+                    return;
+                }
+                OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
+                using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
+                {
+                    if( res == OperationStatus.InvalidData )
                     {
-                        if( res == OperationStatus.InvalidData )
+                        m.Error( "Corrupted Stream." );
+                        _pipeReader.Complete();
+                        _eSeqDisconnect.Raise( m, this, DisconnectedReason.ProtocolError );
+                        return;
+                    }
+                    if( res == OperationStatus.NeedMoreData )
+                    {
+                        if( read.IsCompleted )
                         {
-                            m.Error( "Corrupted Stream." );
+                            m.Error( "Unexpected End Of Stream." );
+                            _eSeqDisconnect.Raise( m, this, DisconnectedReason.UnspecifiedError );
                             return;
                         }
-                        if( res == OperationStatus.NeedMoreData )
+                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                        continue;
+                    }
+                    else
+                    {
+                        _pipeReader.AdvanceTo( position );
+                        try
                         {
-                            if( read.IsCompleted )
-                            {
-                                m.Error( "Unexpected End Of Stream." );
-                                return;
-                            }
-                            _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
-                            continue;
-                        }
-                        else
-                        {
-                            _pipeReader.AdvanceTo( position );
                             await CurrentReflex( m, this, header, length, _pipeReader );
+                        }
+                        catch( Exception e )
+                        {
+                            m.Error( e );
+                            _eSeqDisconnect.Raise( m, this, DisconnectedReason.UnspecifiedError );
+                            _pipeReader.Complete();
+                            return;
                         }
                     }
                 }
             }
-            catch( Exception e )
-            {
-                m.Error( e );
-                _pipeReader.Complete( e );
-                OnProtocolError( m );
-            }
+            _eSeqDisconnect.Raise( m, this, DisconnectedReason.SelfDisconnected );
         }
 
         public Task Stop( CancellationToken cancellationToken )
         {
             cancellationToken.Register( () => _pipeReader.CancelPendingRead() );
             if( cancellationToken.IsCancellationRequested ) _pipeReader.CancelPendingRead();
-            _pipeReader.Complete();
+            _cleanStop.Cancel();
             return _readLoop;
         }
     }
