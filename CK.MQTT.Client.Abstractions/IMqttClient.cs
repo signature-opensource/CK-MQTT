@@ -54,7 +54,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the protocol connection
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
+        ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 
         /// <summary>
         /// Represents the protocol subscription, which consists of sending a SUBSCRIBE packet

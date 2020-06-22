@@ -16,11 +16,11 @@ namespace CK.MQTT.Client
         readonly Timer _timer;
         bool _timeoutMode;
         readonly Action<IActivityMonitor> _timeoutCallback;
-        public KeepAliveTimer( TimeSpan keepAlive, TimeSpan pingRespTimeout, OutgoingMessageHandler output, Action<IActivityMonitor>? timeoutCallback )
+        public KeepAliveTimer( MqttConfiguration config, OutgoingMessageHandler output, Action<IActivityMonitor> timeoutCallback )
         {
             _m = new ActivityMonitor();
-            _keepAlive = keepAlive;
-            _pingRespTimeout = pingRespTimeout;
+            _keepAlive = TimeSpan.FromSeconds( config.KeepAliveSecs );
+            _pingRespTimeout = TimeSpan.FromMilliseconds( config.WaitTimeoutMs );
             _output = output;
             _timeoutCallback = timeoutCallback;
             _timer = new Timer( TimerDone );
@@ -30,7 +30,7 @@ namespace CK.MQTT.Client
         {
             if( _timeoutMode )
             {
-                _timeoutCallback!(_m);
+                _timeoutCallback!( _m );
             }
             _timer.Change( _pingRespTimeout, TimeSpan.FromMilliseconds( -1 ) );
             _timeoutMode = true;

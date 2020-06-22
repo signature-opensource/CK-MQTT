@@ -11,9 +11,16 @@ namespace CK.MQTT
     }
     public readonly struct ConnectResult
     {
-        public ConnectResult( ConnectError connectError, SessionState sessionState, ConnectReturnCode connectionStatus )
+        public ConnectResult( ConnectError connectError )
         {
             ConnectError = connectError;
+            SessionState = SessionState.Unknown;
+            ConnectionStatus = ConnectReturnCode.Unknown;
+        }
+
+        public ConnectResult( SessionState sessionState, ConnectReturnCode connectionStatus )
+        {
+            ConnectError = ConnectError.Ok;
             SessionState = sessionState;
             ConnectionStatus = connectionStatus;
         }

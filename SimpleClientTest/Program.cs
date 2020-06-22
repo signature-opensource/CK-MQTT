@@ -23,16 +23,16 @@ namespace SimpleClientTest
             go.ExternalLogLevelFilter = LogLevelFilter.Trace;
             var m = new ActivityMonitor();
             m.Info( "letsgo" );
-            var client = MqttClient.Create(
+            var client = new MqttClient(
                 new InMemoryPacketIdStore(),
                 new MemoryPacketStore( ushort.MaxValue ),
                 //new MqttConfiguration( "broker.hivemq.com:1883" ),
                 new MqttConfiguration( "test.mosquitto.org:1883" ),
                 new TcpChannelFactory() );
-            var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
+            var result = await await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
             if( result.ConnectionStatus != ConnectReturnCode.Accepted )
             {
-
+                return;
             }
             var returnSub = await await client.SubscribeAsync( m, new Subscription( "#", QualityOfService.AtMostOnce ) );
 

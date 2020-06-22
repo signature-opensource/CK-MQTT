@@ -12,7 +12,7 @@ namespace CK.MQTT
         {
             ConnectionString = connectionString;
             KeepAliveSecs = keepAliveSecs;
-            WaitTimeoutMiliseconds = waitTimeoutSecs;
+            WaitTimeoutMs = waitTimeoutSecs;
         }
 
         public string ConnectionString { get; }
@@ -29,9 +29,8 @@ namespace CK.MQTT
         /// This value is generally used to wait for Server or Client acknowledgements
         /// Default value is 5 seconds
         /// </summary>
-		public int WaitTimeoutMiliseconds { get; }
+		public int WaitTimeoutMs { get; }
 
-        public bool WaitConnectAckToSendMessages { get; }
-
+        public int ChannelsPacketCount { get; }
     }
 }

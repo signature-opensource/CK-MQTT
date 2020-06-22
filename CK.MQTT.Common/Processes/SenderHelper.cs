@@ -19,8 +19,8 @@ namespace CK.MQTT.Common.Processes
             => packet.Qos switch
             {
                 QualityOfService.AtMostOnce => PublishQoS0<T>( m, output, packet ),
-                QualityOfService.AtLeastOnce => StoreAndSend<T>( m, output, messageStore, packet, config.WaitTimeoutMiliseconds ),
-                QualityOfService.ExactlyOnce => StoreAndSend<T>( m, output, messageStore, packet, config.WaitTimeoutMiliseconds ),
+                QualityOfService.AtLeastOnce => StoreAndSend<T>( m, output, messageStore, packet, config.WaitTimeoutMs ),
+                QualityOfService.ExactlyOnce => StoreAndSend<T>( m, output, messageStore, packet, config.WaitTimeoutMs ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
