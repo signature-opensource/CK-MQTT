@@ -13,13 +13,16 @@ namespace CK.MQTT.Common.Channels
         public delegate IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket );
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
+        readonly Action<DisconnectedReason> _clientClose;
         readonly PipeWriter _pipeWriter;
         readonly Task _writeLoop;
+        bool _stopped;
         readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
-        public OutgoingMessageHandler( PipeWriter writer, MqttConfiguration config )
+        public OutgoingMessageHandler( Action<DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
+            _clientClose = clientClose;
             _pipeWriter = writer;
             _writeLoop = WriteLoop();
         }
@@ -50,6 +53,7 @@ namespace CK.MQTT.Common.Channels
                 bool mainLoop = true;
                 while( mainLoop )
                 {
+                    if( _dirtyStopSource.IsCancellationRequested ) break;
                     if( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) || _messages.Reader.TryRead( out packet ) )
                     {
                         await ProcessOutgoingPacket( m, packet );
@@ -62,42 +66,32 @@ namespace CK.MQTT.Common.Channels
                     while( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
                     while( _messages.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
                 }
-                _pipeWriter.Complete();
             }
             catch( Exception e )
             {
-                _stopEvent.Raise( m, this, e );
+                m.Error( e );
+                Close( DisconnectedReason.UnspecifiedError );
+                return;
             }
-            _stopEvent.Raise( m, this, null );
+            Close( DisconnectedReason.SelfDisconnected );
         }
 
         ValueTask ProcessOutgoingPacket( IActivityMonitor m, IOutgoingPacket outgoingPacket )
         {
+            if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask();
             m.Info( $"Sending message of size {outgoingPacket.GetSize()}." );
             return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
         }
 
-        void DirtyStop()
+        public void Close( DisconnectedReason disconnectedReason )
         {
+            if( _stopped ) return;
+            _stopped = true;
+            _messages.Writer.Complete();
+            _reflexes.Writer.Complete();
             _dirtyStopSource.Cancel();
             _pipeWriter.Complete();
-            _pipeWriter.CancelPendingFlush();
-        }
-
-        public event SequentialEventHandler<OutgoingMessageHandler, Exception?> Stopped
-        {
-            add => _stopEvent.Add( value );
-            remove => _stopEvent.Remove( value );
-        }
-
-        readonly SequentialEventHandlerSender<OutgoingMessageHandler, Exception?> _stopEvent = new SequentialEventHandlerSender<OutgoingMessageHandler, Exception?>();
-
-        public Task Stop( CancellationToken dirtyStop )
-        {
-            dirtyStop.Register( () => DirtyStop() );
-            if( !dirtyStop.IsCancellationRequested ) return _writeLoop;
-            DirtyStop();
-            return Task.CompletedTask;
+            _clientClose( disconnectedReason );
         }
     }
 }

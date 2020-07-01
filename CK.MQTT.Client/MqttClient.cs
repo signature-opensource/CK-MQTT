@@ -31,7 +31,7 @@ namespace CK.MQTT.Client
         readonly StreamPipeWriterOptions? _writerOptions;
 
         //change between lifecycles
-        bool _connected;
+        bool _closed;
         IMqttChannel? _channel;
         IncomingMessageHandler? _input;
         OutgoingMessageHandler? _output;
@@ -54,7 +54,7 @@ namespace CK.MQTT.Client
         public async ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             _channel = _channelFactory.Create( _config.ConnectionString );
-            _output = new OutgoingMessageHandler( PipeWriter.Create( _channel.Stream, _writerOptions ), _config );
+            _output = new OutgoingMessageHandler( () => Close( PipeWriter.Create( _channel.Stream, _writerOptions ), _config );
             _output.Stopped += OnWriterDisconnected;
             KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config, _output, PingReqTimeout ) : null;
             _output.OutputMiddleware = timer != null ? timer.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null;
@@ -69,7 +69,7 @@ namespace CK.MQTT.Client
                 .Build( InvalidPacket ) );
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
             _input = new IncomingMessageHandler( PipeReader.Create( _channel.Stream, _readerOptions ), connectAckReflex.ProcessIncomingPacket );
-            _connected = true;
+            _closed = true;
             await _output.SendMessageAsync( new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ) );
             return Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs ).ContinueWith( ( t ) => new ConnectResult( ConnectError.Timeout ) ) ).Unwrap();
         }
@@ -132,19 +132,14 @@ namespace CK.MQTT.Client
             remove => _eMessage.Remove( value );
         }
 
-        async Task StopIO( IActivityMonitor m, CancellationToken dirtyStop )
+        void Close( IActivityMonitor m, DisconnectedReason reason, string? message = null )
         {
-            var task = Task.WhenAll( _input.Stop( dirtyStop ), _output.Stop( dirtyStop ) );
-            dirtyStop.Register( () => Close( m ) );
-            await task;
-            Close( m );
-        }
-
-        void Close( IActivityMonitor m )
-        {
-            _output.Stopped -= OnWriterDisconnected;
-            _input.Disconnected -= OnReaderDisconnected;
+            if( _closed ) return;
+            _closed = true;
+            _input.Close();
+            _output.Close();
             _channel.Close( m );
+            _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( reason, message ) );
         }
 
         public bool IsConnected => _channel?.IsConnected ?? false;

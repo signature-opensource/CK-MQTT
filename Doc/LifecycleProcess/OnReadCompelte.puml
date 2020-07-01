@@ -1,5 +1,6 @@
 @startuml OnReadComplete
 InputHandler -> MqttClient : OnComplete|OnReadError
 MqttClient -> OutputHandler : Close(StopCurrentWrite/StopWriteLoop)
+OutputHandler -> PipeWriter : Complete
 MqttClient -> IMqttChannel : Close
 @enduml

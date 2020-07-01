@@ -1,6 +1,7 @@
 @startuml OnWriteError
 OutputHandler -> MqttClient : OnWriteError
 MqttClient -> InputHandler : Close (CancelCurrentRead/StopListening)
+InputHandler -> PipeReader : Complete
 MqttClient -> IMqttChannel : Close
 @enduml
 

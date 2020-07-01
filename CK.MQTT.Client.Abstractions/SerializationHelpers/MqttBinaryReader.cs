@@ -27,15 +27,12 @@ namespace CK.MQTT.Abstractions.Serialisation
             do
             {
                 // Check for a corrupted stream.  Read a max of 5 bytes.
-                // In a future version, add a DataFormatException.
                 if( shift == 5 * 7 )
                 {
                     position = reader.Position;
                     return OperationStatus.InvalidData; // 5 bytes max per Int32, shift += 7
                 }
-                // ReadByte handles end of stream cases for us.
-
-                if( !reader.TryRead( out b ) )
+                if( !reader.TryRead( out b ) ) // ReadByte handles end of stream cases for us.
                 {
                     position = reader.Position;
                     return OperationStatus.NeedMoreData;
@@ -160,13 +157,9 @@ namespace CK.MQTT.Abstractions.Serialisation
 
         public static bool TryReadMQTTPayload( this ref SequenceReader<byte> reader, out ReadOnlySequence<byte> output )
         {
-            if( !reader.TryReadBigEndian( out ushort size ) || size > reader.Remaining )
-            {
-                output = ReadOnlySequence<byte>.Empty;
-                return false;
-            }
+            bool failed = !reader.TryReadBigEndian( out ushort size ) || size > reader.Remaining )
             output = reader.Sequence.Slice( reader.Position );
-            return true;
+            return failed;
         }
 
 
