@@ -19,6 +19,12 @@ namespace CK.MQTT.Common.Stores
             return new ValueTask();
         }
 
+        public ValueTask ResetAsync()
+        {
+            _ids.Clear();
+            return new ValueTask();
+        }
+
         public bool Empty => _ids.Count == 0;
     }
 }

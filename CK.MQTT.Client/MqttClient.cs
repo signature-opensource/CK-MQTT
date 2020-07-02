@@ -54,7 +54,7 @@ namespace CK.MQTT.Client
             => item ?? throw new InvalidOperationException( "Client is Disconnected." );
 
         public async ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m,
-            MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null, bool throwIfSessionLost = false )
+            MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             _channel = _channelFactory.Create( _config.ConnectionString );
             _output = new OutgoingMessageHandler( ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _writerOptions ), _config );
@@ -74,18 +74,21 @@ namespace CK.MQTT.Client
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
             _input = new IncomingMessageHandler( ( a, b ) => Close( a, b ), PipeReader.Create( _channel.Stream, _readerOptions ), connectAckReflex.ProcessIncomingPacket );
             _closed = true;
-            bool noSession = _packetIdStore.Empty && _store.Empty;
             await _output.SendMessageAsync( new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ) );
-            return InternalConnectAsync( connectedTask, noSession, throwIfSessionLost );
+            return InternalConnectAsync( connectedTask );
         }
 
-        async Task<ConnectResult> InternalConnectAsync( Task<ConnectResult> connectedTask, bool noSession, bool throwOnSessionLost )
+        async Task<ConnectResult> InternalConnectAsync( Task<ConnectResult> connectedTask )
         {
             await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs ) );
             if( !connectedTask.IsCompleted ) return new ConnectResult( ConnectError.Timeout );
             ConnectResult res = await connectedTask;
-            if( throwOnSessionLost && !noSession && res.SessionState != SessionState.SessionPresent )
-                throw new InvalidOperationException( "Connect did not returned SessionState.SessionPresent when we expected the session to be resumed." );
+            if( res.SessionState == SessionState.CleanSession )
+            {
+                ValueTask task = _packetIdStore.ResetAsync();
+                await _store.ResetAsync();
+                await task;
+            }
             return res;
         }
 
@@ -150,8 +153,11 @@ namespace CK.MQTT.Client
             if( _closed ) return;
             _closed = true;
             _input!.Close( m, default );
+            _input = null;
             _output!.Close( m, default );
+            _output = null;
             _channel!.Close( m );
+            _channel = null;
             _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( reason, message ) );
         }
 

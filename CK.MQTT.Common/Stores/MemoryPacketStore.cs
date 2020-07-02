@@ -60,5 +60,11 @@ namespace CK.MQTT.Common.Stores
             _packets.Add( packet.PacketId, newPacket );
             return new ValueTask<IOutgoingPacketWithId>( newPacket );
         }
+
+        protected override ValueTask DoReset()
+        {
+            _packets.Clear();
+            return new ValueTask();
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
@@ -54,25 +55,38 @@ namespace CK.MQTT.Common.Stores
 
         public bool FreeId( int packetId, object? result = null )
         {
+            TaskCompletionSource<object?>? tcs;
             lock( _entries )
             {
                 _entries[packetId - 1].NextFreeId = _nextFreeId;
                 _nextFreeId = packetId;
-                var tcs = _entries[packetId - 1].TaskCS;
+                tcs = _entries[packetId - 1].TaskCS;
                 if( tcs == null ) return false;
-                tcs.SetResult( result );
                 _entries[packetId - 1].TaskCS = null;
-                return true;
             }
+            tcs.SetResult( result );//This must be the last thing we do, the tcs.SetResult may be a code calling
+            return true;
         }
 
-        public void EnsureSlotsAvailable( int count )
+        void EnsureSlotsAvailable( int count )
         {
             if( _entries.Length < count )
             {
                 Entry[] newEntries = new Entry[count * 2];
                 _entries.CopyTo( newEntries, 0 );
                 _entries = newEntries;
+            }
+        }
+
+        public void Reset()
+        {
+            if( _count == 0 ) return;
+            lock( _entries )
+            {
+                _count = 0;
+                Array.Clear( _entries, 0, _entries.Length );
+                _entries[0] = new Entry();
+                _nextFreeId = 1;
             }
         }
 

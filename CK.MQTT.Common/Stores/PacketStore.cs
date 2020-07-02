@@ -55,7 +55,7 @@ namespace CK.MQTT.Common.Stores
         {
             if( !_packetStore.FreeId( packetId ) )
             {
-                m.Warn( "Freeing a packet that was already free." );
+                m.Warn( $"Freeing packet id {packetId} that was not assigned or already freed." );
             }
             await DoDiscardPacketIdAsync( m, packetId );
             return;
@@ -64,5 +64,14 @@ namespace CK.MQTT.Common.Stores
         protected abstract ValueTask DoDiscardPacketIdAsync( IActivityMonitor m, int packetId );
 
         public bool Empty => _packetStore.Empty;
+
+        public ValueTask ResetAsync()
+        {
+            if( Empty ) return new ValueTask();
+            _packetStore.Reset();
+            return DoReset();
+        }
+
+        protected abstract ValueTask DoReset();
     }
 }

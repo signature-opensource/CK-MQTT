@@ -82,8 +82,11 @@ namespace CK.MQTT.Common.Channels
             m.Info( $"Sending message of size {outgoingPacket.Size}." );
             return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
         }
+        bool _complete;
         public void Complete()
         {
+            if( _complete ) return;
+            _complete = true;
             _messages.Writer.Complete();
             _reflexes.Writer.Complete();
         }
