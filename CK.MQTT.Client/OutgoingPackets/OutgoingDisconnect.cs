@@ -5,7 +5,7 @@ namespace CK.MQTT.Common
 {
     public class OutgoingDisconnect : SimpleOutgoingPacket
     {
-        public override int GetSize() => 2;
+        public override int Size => 2;
 
         protected override void Write( Span<byte> span )
         {

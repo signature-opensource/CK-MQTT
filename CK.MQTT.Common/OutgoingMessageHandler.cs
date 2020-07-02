@@ -13,12 +13,12 @@ namespace CK.MQTT.Common.Channels
         public delegate IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket );
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
-        readonly Action<DisconnectedReason> _clientClose;
+        readonly Action<IActivityMonitor, DisconnectedReason> _clientClose;
         readonly PipeWriter _pipeWriter;
         readonly Task _writeLoop;
         bool _stopped;
         readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
-        public OutgoingMessageHandler( Action<DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
+        public OutgoingMessageHandler( Action<IActivityMonitor, DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
@@ -38,11 +38,11 @@ namespace CK.MQTT.Common.Channels
         /// </summary>
         /// <param name="item"></param>
         /// <returns>A <see cref="ValueTask"/> that complete when the packet is sent.</returns>
-        public async ValueTask SendMessageAsync( IOutgoingPacket item )
+        public async ValueTask<Task> SendMessageAsync( IOutgoingPacket item )
         {
             var wrapper = new OutgoingPacketWrapper( item );
             await _messages.Writer.WriteAsync( wrapper );//ValueTask, will almost always return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
+            return wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
 
         async Task WriteLoop()
@@ -70,28 +70,32 @@ namespace CK.MQTT.Common.Channels
             catch( Exception e )
             {
                 m.Error( e );
-                Close( DisconnectedReason.UnspecifiedError );
+                Close( m, DisconnectedReason.UnspecifiedError );
                 return;
             }
-            Close( DisconnectedReason.SelfDisconnected );
+            Close( m, DisconnectedReason.SelfDisconnected );
         }
 
         ValueTask ProcessOutgoingPacket( IActivityMonitor m, IOutgoingPacket outgoingPacket )
         {
             if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask();
-            m.Info( $"Sending message of size {outgoingPacket.GetSize()}." );
+            m.Info( $"Sending message of size {outgoingPacket.Size}." );
             return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
         }
+        public void Complete()
+        {
+            _messages.Writer.Complete();
+            _reflexes.Writer.Complete();
+        }
 
-        public void Close( DisconnectedReason disconnectedReason )
+        public void Close( IActivityMonitor m, DisconnectedReason disconnectedReason )
         {
             if( _stopped ) return;
             _stopped = true;
-            _messages.Writer.Complete();
-            _reflexes.Writer.Complete();
+            Complete();
             _dirtyStopSource.Cancel();
             _pipeWriter.Complete();
-            _clientClose( disconnectedReason );
+            _clientClose( m, disconnectedReason );
         }
     }
 }

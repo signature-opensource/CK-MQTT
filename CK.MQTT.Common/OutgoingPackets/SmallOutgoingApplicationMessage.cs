@@ -11,12 +11,12 @@ namespace CK.MQTT.Common.OutgoingPackets
     {
         private readonly ReadOnlyMemory<byte> _memory;
 
-        public SmallOutgoingApplicationMessage(bool dup, bool retain, string topic, QualityOfService qos, ReadOnlyMemory<byte> payload)
-            : base(dup, retain, topic, qos )
+        public SmallOutgoingApplicationMessage( bool dup, bool retain, string topic, QualityOfService qos, ReadOnlyMemory<byte> payload )
+            : base( dup, retain, topic, qos )
         {
             _memory = payload;
         }
-        public override int GetSize() => _memory.Length;
+        protected override int PayloadSize => _memory.Length;
 
         protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
             => pw.WriteAsync( _memory ).AsNonGenericValueTask();

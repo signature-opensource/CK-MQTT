@@ -26,7 +26,7 @@ namespace CK.MQTT.Abstractions.Packets
             _topic = topic;
         }
 
-        public abstract int GetSize();
+        public abstract int Size { get; }
 
         protected abstract ValueTask WritePayload( PipeWriter writer, CancellationToken cancellationToken );
 

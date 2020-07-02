@@ -14,7 +14,7 @@ namespace CK.MQTT.Server
             _sessionState = existingSession;
         }
 
-        public override int GetSize() => 4;
+        public override int Size() => 4;
 
         protected override void Write( Span<byte> span )
         {

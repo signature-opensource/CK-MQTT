@@ -23,7 +23,7 @@ namespace CK.MQTT.Common.Reflexes
         public async ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, IncomingMessageHandler sender,
             byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
-            if( PacketType.PublishRelease != (PacketType)header )
+            if( ((byte)PacketType.PublishRelease | 0b0010) != header  )
             {
                 await next();
                 return;

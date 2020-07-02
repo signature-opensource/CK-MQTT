@@ -21,7 +21,7 @@ namespace CK.MQTT.Client.OutgoingPackets
         public QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349306
-        protected override byte Header => (byte)PacketType.Subscribe | 0b0000_0010;
+        protected override byte Header => (byte)PacketType.Subscribe | 0b0010;
         protected override int RemainingSize => 2 + _subscriptions.Sum( s => s.TopicFilter.MQTTSize() + 1 );
 
         protected override void WriteContent( Span<byte> span )

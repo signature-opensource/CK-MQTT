@@ -10,13 +10,12 @@ using CK.MQTT.Common.Stores;
 using System;
 using System.IO.Pipelines;
 using System.Net;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using CK.MQTT.Common.Processes;
 using System.Text;
 using System.Buffers;
 using System.IO;
-using System.Threading;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CK.MQTT.Client
 {
@@ -51,32 +50,32 @@ namespace CK.MQTT.Client
             _channelFactory = channelFactory;
         }
 
+        T ThrowIfNull<T>( [NotNull] T? item ) where T : class
+            => item ?? throw new InvalidOperationException( "Client is Disconnected." );
+
         public async ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             _channel = _channelFactory.Create( _config.ConnectionString );
-            _output = new OutgoingMessageHandler( () => Close( PipeWriter.Create( _channel.Stream, _writerOptions ), _config );
-            _output.Stopped += OnWriterDisconnected;
+            _output = new OutgoingMessageHandler( ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _writerOptions ), _config );
             KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config, _output, PingReqTimeout ) : null;
             _output.OutputMiddleware = timer != null ? timer.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null;
             ConnectAckReflex connectAckReflex = new ConnectAckReflex( new ReflexMiddlewareBuilder()
+                .UseMiddleware( LogPacketTypeReflex.ProcessIncomingPacket )
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
                 .UseMiddleware( new PubackReflex( _store ) )
                 .UseMiddleware( new PubReceivedReflex( _store, _output ) )
                 .UseMiddleware( new PubRelReflex( _store, _output ) )
+                .UseMiddleware( new PubCompReflex( _store ) )
                 .UseMiddleware( new SubackReflex( _store ) )
                 .UseMiddleware( new UnsubackReflex( _store ) )
                 .UseMiddleware( new PingRespReflex( timer is null ? (Action?)null : timer.ResetTimer ) )
                 .Build( InvalidPacket ) );
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            _input = new IncomingMessageHandler( PipeReader.Create( _channel.Stream, _readerOptions ), connectAckReflex.ProcessIncomingPacket );
+            _input = new IncomingMessageHandler( ( a, b ) => Close( a, b ), PipeReader.Create( _channel.Stream, _readerOptions ), connectAckReflex.ProcessIncomingPacket );
             _closed = true;
             await _output.SendMessageAsync( new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ) );
             return Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs ).ContinueWith( ( t ) => new ConnectResult( ConnectError.Timeout ) ) ).Unwrap();
         }
-
-        void OnReaderDisconnected( IActivityMonitor m, IncomingMessageHandler sender, DisconnectedReason e ) => Close( m, e );
-
-        void OnWriterDisconnected( IActivityMonitor m, OutgoingMessageHandler sender, Exception? e ) => Close( m, DisconnectedReason.RemoteDisconnected );
 
         void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.
 
@@ -89,7 +88,7 @@ namespace CK.MQTT.Client
             }
             else
             {
-                int toRead = msg.PayloadLenght;
+                int toRead = msg.PayloadLength;
                 using( m.OpenInfo( $"Received message: Topic'{msg.Topic}'" ) )
                 {
                     MemoryStream stream = new MemoryStream();
@@ -134,28 +133,33 @@ namespace CK.MQTT.Client
 
         void Close( IActivityMonitor m, DisconnectedReason reason, string? message = null )
         {
+            const DisconnectedReason reasonMax = (DisconnectedReason)int.MaxValue;
+            if( reason == reasonMax ) throw new ArgumentException( nameof( reason ) );
             if( _closed ) return;
             _closed = true;
-            _input.Close();
-            _output.Close();
-            _channel.Close( m );
+            _input!.Close( m, default );
+            _output!.Close( m, default );
+            _channel!.Close( m );
             _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( reason, message ) );
         }
 
         public bool IsConnected => _channel?.IsConnected ?? false;
 
-        public async ValueTask DisconnectAsync( IActivityMonitor m, CancellationToken cancellationToken )
+        public async ValueTask DisconnectAsync( IActivityMonitor m )
         {
-            await _output.SendMessageAsync( new OutgoingDisconnect() );
+            Task disconnect = await ThrowIfNull( _output ).SendMessageAsync( new OutgoingDisconnect() );
+            _output.Complete();
+            await disconnect;
+            Close( m, DisconnectedReason.SelfDisconnected );
         }
 
         public async ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message )
-            => await SenderHelper.SendPacket<object>( m, _store, _output, message, _config );
+            => await SenderHelper.SendPacket<object>( m, _store, ThrowIfNull( _output ), message, _config );
 
         public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
-            => SenderHelper.SendPacket<SubscribeReturnCode[]>( m, _store, _output, new OutgoingSubscribe( subscriptions ), _config );
+            => SenderHelper.SendPacket<SubscribeReturnCode[]>( m, _store, ThrowIfNull( _output ), new OutgoingSubscribe( subscriptions ), _config );
 
         public async ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
-            => await SenderHelper.SendPacket<object>( m, _store, _output, new OutgoingUnsubscribe( topics ), _config );
+            => await SenderHelper.SendPacket<object>( m, _store, ThrowIfNull( _output ), new OutgoingUnsubscribe( topics ), _config );
     }
 }

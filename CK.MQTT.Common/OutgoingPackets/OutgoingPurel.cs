@@ -8,6 +8,6 @@ namespace CK.MQTT.Common.OutgoingPackets
         {
         }
 
-        public override byte Header => (byte)PacketType.PublishRelease;
+        public override byte Header => (byte)PacketType.PublishRelease | 0b0010; //bit set due to: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800426
     }
 }

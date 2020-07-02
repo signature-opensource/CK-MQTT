@@ -50,10 +50,10 @@ namespace CK.MQTT.Client.OutgoingPackets
             _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
         }
 
+        protected override int PayloadSize => _sizePostPayload + _lastWill?.Size ?? 0;
+
         protected override byte Header => (byte)PacketType.Connect;
-
-        public override int GetSize() => _sizePostPayload + _lastWill?.GetSize() ?? 0 + HeaderSize;
-
+        
         protected override int HeaderSize => _pConf.ProtocolName.MQTTSize()
                                                 + 1 //_protocolLevel
                                                 + 1 //_flag

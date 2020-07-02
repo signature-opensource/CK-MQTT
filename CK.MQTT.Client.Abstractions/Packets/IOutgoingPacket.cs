@@ -8,6 +8,6 @@ namespace CK.MQTT.Common
     {
         ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken );
 
-        int GetSize();
+        int Size { get; }
     }
 }

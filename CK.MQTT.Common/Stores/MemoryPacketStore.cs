@@ -25,7 +25,7 @@ namespace CK.MQTT.Common.Stores
 
             public QualityOfService Qos { get; set; }
 
-            public int GetSize() => _buffer.Length;
+            public int Size => _buffer.Length;
 
             public ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
                 => writer.WriteAsync( _buffer ).AsNonGenericValueTask();
@@ -53,7 +53,7 @@ namespace CK.MQTT.Common.Stores
         protected override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
         {
             Debug.Assert( !_packets.ContainsKey( packet.PacketId ) );
-            var arr = new byte[packet.GetSize()];
+            var arr = new byte[packet.Size];
             var pipe = PipeWriter.Create( new MemoryStream( arr ) );
             packet.WriteAsync( pipe, default );
             var newPacket = new OutgoingStoredPacket( packet.PacketId, packet.Qos, arr );

@@ -13,18 +13,17 @@ namespace CK.MQTT.Client.Reflexes
     {
         readonly TaskCompletionSource<ConnectResult> _tcs = new TaskCompletionSource<ConnectResult>();
         readonly Reflex _reflex;
-        public ConnectAckReflex(Reflex reflex)
+        public ConnectAckReflex( Reflex reflex )
         {
             _reflex = reflex;
         }
-        
 
         public Task<ConnectResult> Task => _tcs.Task;
         public async ValueTask ProcessIncomingPacket( IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {
             if( header != (byte)PacketType.ConnectAck )
             {
-                _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError, SessionState.Unknown, ConnectReturnCode.Unknown ) );
+                _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError ) );
             }
             ReadResult? read = await reader.ReadAsync( m, 2, default );
             if( !read.HasValue ) return;
@@ -37,7 +36,7 @@ namespace CK.MQTT.Client.Reflexes
                 m.Warn( "Remaining bytes at the end of the packet. Ignoring them !" );
             }
             sender.CurrentReflex = _reflex;
-            _tcs.SetResult( new ConnectResult( ConnectError.Ok, (SessionState)state, (ConnectReturnCode)code ) );
+            _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
         }
     }
 }

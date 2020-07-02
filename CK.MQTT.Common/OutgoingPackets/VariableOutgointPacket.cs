@@ -12,7 +12,7 @@ namespace CK.MQTT.Common.OutgoingPackets
 
         protected abstract int RemainingSize { get; }
 
-        public override int GetSize() => RemainingSize.CompactByteCount() + 1 + RemainingSize;
+        public override int Size => RemainingSize.CompactByteCount() + 1 + RemainingSize;
 
         protected abstract void WriteContent( Span<byte> buffer );
 

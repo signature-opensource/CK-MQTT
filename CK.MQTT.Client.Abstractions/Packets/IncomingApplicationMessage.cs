@@ -4,13 +4,13 @@ namespace CK.MQTT.Abstractions.Packets
 {
     public class IncomingApplicationMessage
     {
-        public IncomingApplicationMessage( string topic, PipeReader pipeReader, bool duplicate, bool retain, int payloadLenght )
+        public IncomingApplicationMessage( string topic, PipeReader pipeReader, bool duplicate, bool retain, int payloadLength )
         {
             Topic = topic;
             PipeReader = pipeReader;
             Duplicate = duplicate;
             Retain = retain;
-            PayloadLenght = payloadLenght;
+            PayloadLength = payloadLength;
         }
         public string Topic { get; }
 
@@ -20,6 +20,6 @@ namespace CK.MQTT.Abstractions.Packets
 
         public bool Retain { get; }
 
-        public int PayloadLenght { get; }
+        public int PayloadLength { get; }
     }
 }

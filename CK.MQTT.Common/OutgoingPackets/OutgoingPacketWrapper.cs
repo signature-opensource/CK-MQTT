@@ -14,7 +14,7 @@ namespace CK.MQTT.Common.OutgoingPackets
         }
         public Task Sent => _taskCompletionSource.Task;
 
-        public int GetSize() => _outgoingPacket.GetSize();
+        public int Size => _outgoingPacket.Size;
 
         public async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
         {

@@ -12,9 +12,8 @@ namespace CK.MQTT.Common
 
         void Write( PipeWriter pw )
         {
-            int size = GetSize();
-            Write( pw.GetSpan( size ) );
-            pw.Advance( size );
+            Write( pw.GetSpan( Size ) );
+            pw.Advance( Size );
         }
 
         public ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
@@ -22,6 +21,6 @@ namespace CK.MQTT.Common
             Write( pw );
             return pw.FlushAsync( cancellationToken ).AsNonGenericValueTask();
         }
-        public abstract int GetSize();
+        public abstract int Size { get; }
     }
 }

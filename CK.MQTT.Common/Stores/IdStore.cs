@@ -1,4 +1,3 @@
-using CK.Core;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 

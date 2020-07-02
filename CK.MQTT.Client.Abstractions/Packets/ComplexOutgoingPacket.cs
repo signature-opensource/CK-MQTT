@@ -18,7 +18,11 @@ namespace CK.MQTT.Common.OutgoingPackets
         /// The total size of the packet.
         /// This Property will be called when serializing the packet.
         /// </summary>
-        public abstract int GetSize();
+        public int Size => RemainingSize + 1 + RemainingSize.CompactByteCount();
+
+        int RemainingSize => HeaderSize + PayloadSize;
+
+        protected abstract int PayloadSize { get; }
 
         /// <summary>
         /// The minimum size of the <see cref="Span{byte}"/> that will be given when calling <see cref="WriteHeaderContent(Span{byte})"/>.
@@ -28,7 +32,7 @@ namespace CK.MQTT.Common.OutgoingPackets
 
         protected void WriteHeader( PipeWriter pw )
         {
-            int remainingSize = GetSize();
+            int remainingSize = RemainingSize;
             int sizeOfSize = remainingSize.CompactByteCount();
             int bytesToWrite = HeaderSize + sizeOfSize + 1;
             Span<byte> span = pw.GetSpan( bytesToWrite );

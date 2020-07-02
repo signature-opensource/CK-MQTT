@@ -31,6 +31,6 @@ namespace CK.MQTT
         /// </summary>
 		public int WaitTimeoutMs { get; }
 
-        public int ChannelsPacketCount { get; }
+        public int ChannelsPacketCount { get; } = 32;
     }
 }

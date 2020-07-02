@@ -22,8 +22,7 @@ namespace CK.MQTT.Common.OutgoingPackets
             _getPayloadSize = getPayloadSize;
             _payloadWriter = payloadWriter;
         }
-
-        public override int GetSize() => HeaderSize + _getPayloadSize();
+        protected override int PayloadSize => _getPayloadSize();
 
         protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {

@@ -157,7 +157,7 @@ namespace CK.MQTT.Abstractions.Serialisation
 
         public static bool TryReadMQTTPayload( this ref SequenceReader<byte> reader, out ReadOnlySequence<byte> output )
         {
-            bool failed = !reader.TryReadBigEndian( out ushort size ) || size > reader.Remaining )
+            bool failed = !reader.TryReadBigEndian( out ushort size ) || size > reader.Remaining;
             output = reader.Sequence.Slice( reader.Position );
             return failed;
         }

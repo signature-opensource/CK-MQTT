@@ -6,7 +6,7 @@ namespace CK.MQTT.Client.OutgoingPackets
 {
     class OutgoingPingReq : SimpleOutgoingPacket
     {
-        public override int GetSize() => 2;
+        public override int Size => 2;
 
         protected override void Write( Span<byte> span )
         {

@@ -19,12 +19,12 @@ namespace CK.MQTT.Common.Channels
 
     public class IncomingMessageHandler
     {
-        readonly Action _stopClient;
+        readonly Action<IActivityMonitor, DisconnectedReason> _stopClient;
         readonly PipeReader _pipeReader;
         readonly Task _readLoop;
         readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
         bool _closed;
-        public IncomingMessageHandler( Action stopClient, PipeReader pipeReader, Reflex reflex )
+        public IncomingMessageHandler( Action<IActivityMonitor, DisconnectedReason> stopClient, PipeReader pipeReader, Reflex reflex )
         {
             _stopClient = stopClient;
             _pipeReader = pipeReader;
@@ -57,51 +57,56 @@ namespace CK.MQTT.Common.Channels
                 ReadResult read = await _pipeReader.ReadAsync( _cleanStop.Token );
                 if( read.IsCanceled ) return;
                 OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
-                using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
+                if( res == OperationStatus.InvalidData )
                 {
-                    if( res == OperationStatus.InvalidData )
+                    CloseWithError( m, DisconnectedReason.ProtocolError, "Corrupted Stream." );
+                    return;
+                }
+                if( res == OperationStatus.NeedMoreData )
+                {
+                    if( read.IsCompleted )
                     {
-                        CloseWithError( m, "Corrupted Stream." );
+                        if( read.Buffer.Length == 0 )
+                        {
+                            m.Info( "Remote closed channel." );
+                            Close( m, DisconnectedReason.RemoteDisconnected );
+                        }
+                        else CloseWithError( m, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
                         return;
                     }
-                    if( res == OperationStatus.NeedMoreData )
-                    {
-                        if( read.IsCompleted )
-                        {
-                            CloseWithError( m, "Unexpected End Of Stream." );
-                            return;
-                        }
-                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
-                        continue;
-                    }
-                    _pipeReader.AdvanceTo( position );
+                    _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                    continue;
+                }
+                _pipeReader.AdvanceTo( position );
+                using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
+                {
                     try
                     {
                         await CurrentReflex( m, this, header, length, _pipeReader );
                     }
                     catch( Exception e )
                     {
-                        CloseWithError( m, exception: e );
+                        CloseWithError( m, DisconnectedReason.UnspecifiedError, exception: e );
                         return;
                     }
                 }
             }
         }
 
-        void CloseWithError( IActivityMonitor m, string? error = null, Exception? exception = null )
+        void CloseWithError( IActivityMonitor m, DisconnectedReason reason, string? error = null, Exception? exception = null )
         {
             if( _closed ) return;
             m.Error( error ?? string.Empty, exception );
-            Close();
+            Close( m, reason );
         }
 
-        public void Close()
+        public void Close( IActivityMonitor m, DisconnectedReason reason )
         {
             if( _closed ) return;
             _closed = true;
             _cleanStop.Cancel();
             _pipeReader.Complete();
-            _stopClient();
+            _stopClient( m, reason );
         }
     }
 }
