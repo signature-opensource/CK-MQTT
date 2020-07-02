@@ -18,5 +18,7 @@ namespace CK.MQTT.Common.Stores
             _ids.Add( id );
             return new ValueTask();
         }
+
+        public bool Empty => _ids.Count == 0;
     }
 }
