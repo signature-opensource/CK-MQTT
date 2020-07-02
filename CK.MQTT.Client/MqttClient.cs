@@ -53,7 +53,8 @@ namespace CK.MQTT.Client
         T ThrowIfNull<T>( [NotNull] T? item ) where T : class
             => item ?? throw new InvalidOperationException( "Client is Disconnected." );
 
-        public async ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
+        public async ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m,
+            MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null, bool throwIfSessionLost = false )
         {
             _channel = _channelFactory.Create( _config.ConnectionString );
             _output = new OutgoingMessageHandler( ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _writerOptions ), _config );
@@ -73,8 +74,19 @@ namespace CK.MQTT.Client
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
             _input = new IncomingMessageHandler( ( a, b ) => Close( a, b ), PipeReader.Create( _channel.Stream, _readerOptions ), connectAckReflex.ProcessIncomingPacket );
             _closed = true;
+            bool noSession = _packetIdStore.Empty && _store.Empty;
             await _output.SendMessageAsync( new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ) );
-            return Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs ).ContinueWith( ( t ) => new ConnectResult( ConnectError.Timeout ) ) ).Unwrap();
+            return InternalConnectAsync( connectedTask, noSession, throwIfSessionLost );
+        }
+
+        async Task<ConnectResult> InternalConnectAsync( Task<ConnectResult> connectedTask, bool noSession, bool throwOnSessionLost )
+        {
+            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs ) );
+            if( !connectedTask.IsCompleted ) return new ConnectResult( ConnectError.Timeout );
+            ConnectResult res = await connectedTask;
+            if( throwOnSessionLost && !noSession && res.SessionState != SessionState.SessionPresent )
+                throw new InvalidOperationException( "Connect did not returned SessionState.SessionPresent when we expected the session to be resumed." );
+            return res;
         }
 
         void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.

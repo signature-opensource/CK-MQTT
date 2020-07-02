@@ -8,5 +8,7 @@ namespace CK.MQTT.Common.Stores
         ValueTask StoreId( IActivityMonitor m, int id );
 
         ValueTask RemoveId( IActivityMonitor m, int id );
+
+        bool Empty { get; }
     }
 }

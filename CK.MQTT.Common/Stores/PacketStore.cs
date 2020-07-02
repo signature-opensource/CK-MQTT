@@ -62,5 +62,7 @@ namespace CK.MQTT.Common.Stores
         }
 
         protected abstract ValueTask DoDiscardPacketIdAsync( IActivityMonitor m, int packetId );
+
+        public bool Empty => _packetStore.Empty;
     }
 }

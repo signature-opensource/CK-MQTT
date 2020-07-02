@@ -13,6 +13,9 @@ namespace CK.MQTT.Common.Stores
 
         Entry[] _entries;
         int _nextFreeId = 1;
+        /// <summary>
+        /// Current count of Entries.
+        /// </summary>
         int _count = 0;
         readonly int _maxPacketId;
 
@@ -72,5 +75,7 @@ namespace CK.MQTT.Common.Stores
                 _entries = newEntries;
             }
         }
+
+        public bool Empty => _count == 0;
     }
 }
