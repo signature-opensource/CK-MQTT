@@ -1,11 +1,10 @@
 using CK.Core;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.Packets;
+using CK.MQTT.Common;
 using System;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client.Reflexes
+namespace CK.MQTT.Client
 {
     public class LogPacketTypeReflex
     {

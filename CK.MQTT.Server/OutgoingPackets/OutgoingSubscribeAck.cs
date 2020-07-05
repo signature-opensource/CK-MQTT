@@ -1,6 +1,3 @@
-using CK.MQTT.Common.OutgoingPackets;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using System;
 
 namespace CK.MQTT.Server.OutgoingPackets

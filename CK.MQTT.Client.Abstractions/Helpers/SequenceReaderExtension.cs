@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
-namespace CK.MQTT.Abstractions.Serialisation
+namespace CK.MQTT
 {
     /// <summary>
     /// Simple helper class on <see cref="SequenceReader{T}"/>.

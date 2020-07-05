@@ -1,6 +1,4 @@
-using CK.MQTT.Common.Packets;
-
-namespace CK.MQTT.Common.OutgoingPackets
+namespace CK.MQTT.Common
 {
     public class OutgoingPuback : OutgoingPacketWithId
     {

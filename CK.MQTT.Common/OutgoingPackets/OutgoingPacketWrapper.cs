@@ -2,7 +2,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.OutgoingPackets
+namespace CK.MQTT.Common
 {
     public class OutgoingPacketWrapper : IOutgoingPacket
     {
@@ -15,6 +15,8 @@ namespace CK.MQTT.Common.OutgoingPackets
         public Task Sent => _taskCompletionSource.Task;
 
         public int Size => _outgoingPacket.Size;
+
+        public bool Burned => _outgoingPacket.Burned;
 
         public async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
         {

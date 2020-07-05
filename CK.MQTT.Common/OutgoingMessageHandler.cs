@@ -1,12 +1,11 @@
 using CK.Core;
-using CK.MQTT.Common.OutgoingPackets;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.Channels
+namespace CK.MQTT.Common
 {
     public class OutgoingMessageHandler
     {

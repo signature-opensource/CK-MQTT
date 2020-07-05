@@ -1,6 +1,4 @@
-using CK.MQTT.Common;
-
-namespace CK.MQTT.Abstractions.Packets
+namespace CK.MQTT
 {
     public interface IOutgoingPacketWithId : IOutgoingPacket
     {

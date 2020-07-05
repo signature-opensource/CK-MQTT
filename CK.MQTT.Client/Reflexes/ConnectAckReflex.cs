@@ -1,13 +1,8 @@
-using CK.Core;
 using CK.MQTT.Client.Deserialization;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.Packets;
 using System;
-using System.IO.Pipelines;
 using System.Threading.Tasks;
-using CK.MQTT.Abstractions.Serialisation;
 
-namespace CK.MQTT.Client.Reflexes
+namespace CK.MQTT.Client
 {
     class ConnectAckReflex
     {

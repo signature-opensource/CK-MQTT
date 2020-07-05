@@ -1,12 +1,7 @@
-using CK.MQTT.Abstractions.Packets;
-using CK.MQTT.Common;
-using CK.MQTT.Common.OutgoingPackets;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using System;
 using System.Linq;
 
-namespace CK.MQTT.Client.OutgoingPackets
+namespace CK.MQTT.Client
 {
     class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacketWithId
     {

@@ -1,7 +1,4 @@
-using CK.Core;
-using CK.MQTT.Client.OutgoingPackets;
-using CK.MQTT.Common;
-using CK.MQTT.Common.Channels;
+using CK.MQTT;
 using System;
 using System.Threading;
 

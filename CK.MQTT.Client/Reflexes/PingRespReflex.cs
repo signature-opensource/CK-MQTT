@@ -1,13 +1,7 @@
-using CK.Core;
-using CK.MQTT.Abstractions.Serialisation;
-using CK.MQTT.Common;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.Packets;
 using System;
-using System.IO.Pipelines;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client.Reflexes
+namespace CK.MQTT.Client
 {
     class PingRespReflex : IReflexMiddleware
     {

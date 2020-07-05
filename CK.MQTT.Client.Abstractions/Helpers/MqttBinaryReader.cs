@@ -7,7 +7,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Abstractions.Serialisation
+namespace CK.MQTT
 {
     public static class MqttBinaryReader
     {
@@ -107,7 +107,7 @@ namespace CK.MQTT.Abstractions.Serialisation
             };
         }
 
-        public static async ValueTask<ReadResult?> ReadAsync( this PipeReader pipeReader, IActivityMonitor m, int minimumByteCount, CancellationToken cancellationToken = default )
+        public static async ValueTask<ReadResult?> ReadAsync( this PipeReader pipeReader, IMqttLogger m, int minimumByteCount, CancellationToken cancellationToken = default )
         {
             while( true )
             {
@@ -132,7 +132,7 @@ namespace CK.MQTT.Abstractions.Serialisation
         /// </summary>
         /// <param name="pipeReader"></param>
         /// <returns></returns>
-        public static async ValueTask<ushort> ReadPacketIdPacket( this PipeReader pipeReader, IActivityMonitor m, int packetSize )
+        public static async ValueTask<ushort> ReadPacketIdPacket( this PipeReader pipeReader, IMqttLogger m, int packetSize )
         {
             while( true )
             {

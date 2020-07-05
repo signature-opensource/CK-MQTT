@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public static class MQTTTypesHelper
     {

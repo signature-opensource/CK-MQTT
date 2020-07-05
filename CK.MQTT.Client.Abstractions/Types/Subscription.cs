@@ -1,4 +1,4 @@
-namespace CK.MQTT.Common.Packets
+namespace CK.MQTT
 {
     public class Subscription
     {

@@ -13,7 +13,7 @@ namespace CK.MQTT
     /// <param name="monitor">The monitor that must be used to log activities.</param>
     /// <param name="sender">The source of the event.</param>
     /// <param name="e">An object that contains no event data (<see cref="EventArgs.Empty"/> should be used).</param>
-    public delegate Task SequentialEventHandlerAsync<TSender, TArg>( IActivityMonitor monitor, TSender sender, TArg e );
+    public delegate Task SequentialEventHandlerAsync<TSender, TArg>( IMqttLogger monitor, TSender sender, TArg e );
 
     /// <summary>
     /// Implements a host for <see cref="EventHandlerAync"/> delegates.
@@ -96,7 +96,7 @@ namespace CK.MQTT
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="sender">The sender of the event.</param>
         /// <param name="args">The event argument.</param>
-        public Task RaiseAsync( IActivityMonitor monitor, TSender sender, TArg args )
+        public Task RaiseAsync( IMqttLogger monitor, TSender sender, TArg args )
         {
             var h = _handler;
             if( h == null ) return Task.CompletedTask;
@@ -104,7 +104,7 @@ namespace CK.MQTT
             return RaiseSequentialAsync( monitor, (SequentialEventHandlerAsync<TSender, TArg>[])h, sender, args );
         }
 
-        static async Task RaiseSequentialAsync( IActivityMonitor monitor, SequentialEventHandlerAsync<TSender, TArg>[] all, TSender sender, TArg args )
+        static async Task RaiseSequentialAsync( IMqttLogger monitor, SequentialEventHandlerAsync<TSender, TArg>[] all, TSender sender, TArg args )
         {
             foreach( var h in all ) await h( monitor, sender, args );
         }

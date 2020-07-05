@@ -1,13 +1,12 @@
-using CK.Core;
 using System;
 using System.Buffers;
 using System.Diagnostics;
 
-namespace CK.MQTT.Client.Deserialization
+namespace CK.MQTT.Client
 {
     static class ConnectAck
     {
-        internal static void Deserialize( IActivityMonitor m, ReadOnlySequence<byte> buffer, out byte state, out byte code, out SequencePosition position )
+        internal static void Deserialize( ReadOnlySequence<byte> buffer, out byte state, out byte code, out SequencePosition position )
         {
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
             bool res = reader.TryRead( out state );

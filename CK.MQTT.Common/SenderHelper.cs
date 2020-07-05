@@ -1,11 +1,9 @@
 using CK.Core;
-using CK.MQTT.Abstractions.Packets;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.Stores;
 using System;
+using System.Net;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.Processes
+namespace CK.MQTT.Common
 {
     public static class SenderHelper
     {
@@ -34,8 +32,8 @@ namespace CK.MQTT.Common.Processes
             }
         }
 
-        public static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m, OutgoingMessageHandler output,
-            PacketStore messageStore, IOutgoingPacketWithId msg, int waitTimeoutMs )
+        public static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m, OutgoingMessageHandler output, PacketStore messageStore,
+            IOutgoingPacketWithId msg, int waitTimeoutMs )
             where T : class
         {
             (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );
@@ -43,15 +41,19 @@ namespace CK.MQTT.Common.Processes
         }
 
         public static async Task<T?> Send<T>( IActivityMonitor m,
-            OutgoingMessageHandler output, PacketStore store, IOutgoingPacketWithId packet, Task<object?> ackReceived, int waitTimeoutMs )
+            OutgoingMessageHandler output, PacketStore store,
+            Task<object?> ackReceived, int waitTimeoutMs )
             where T : class
         {
-            do
+            while( !ackReceived.IsCompleted )
             {
-                await output.SendMessageAsync( packet );//We await that the message is actually sent on the wire.
+                IOutgoingPacketWithId packet = await store.GetMessageByIdAsync( m, packet.PacketId );
                 await Task.WhenAny( Task.Delay( waitTimeoutMs ), ackReceived );
-            } while( !ackReceived.IsCompleted );
-            return (T?)await ackReceived;//I don't really like this, but it's really handy.
+            }
+            object? res = await ackReceived;
+            if( res is null ) return null;
+            if( res is T a ) return a;
+            throw new ProtocolViolationException( "Received ack is not of the expected type." );
         }
     }
 }

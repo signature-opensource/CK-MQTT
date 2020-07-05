@@ -1,9 +1,8 @@
 using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
-using CK.MQTT.Abstractions.Serialisation;
 
-namespace CK.MQTT.Common.Deserialization
+namespace CK.MQTT.Common
 {
     public static class Publish
     {

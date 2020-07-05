@@ -1,8 +1,6 @@
-using CK.MQTT.Abstractions.Packets;
-using CK.MQTT.Common.Serialisation;
 using System;
 
-namespace CK.MQTT.Common.OutgoingPackets
+namespace CK.MQTT.Common
 {
     public abstract class OutgoingPacketWithId : SimpleOutgoingPacket, IOutgoingPacketWithId
     {

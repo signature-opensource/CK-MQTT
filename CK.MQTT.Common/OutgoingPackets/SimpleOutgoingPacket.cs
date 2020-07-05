@@ -21,6 +21,9 @@ namespace CK.MQTT.Common
             Write( pw );
             return pw.FlushAsync( cancellationToken ).AsNonGenericValueTask();
         }
+
         public abstract int Size { get; }
+
+        public bool Burned => false;
     }
 }

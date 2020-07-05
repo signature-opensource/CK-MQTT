@@ -1,4 +1,3 @@
-using CK.MQTT.Common.Packets;
 using System;
 
 namespace CK.MQTT.Common

@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 using System.Threading.Tasks;
 
@@ -20,7 +19,7 @@ namespace CK.MQTT
           where TArg : class
         {
             TaskCompletionSource<TArg?> taskCompletionSource = new TaskCompletionSource<TArg?>();
-            void SetResult( IActivityMonitor m, TSender sender, TArg item )
+            void SetResult( IMqttLogger m, TSender sender, TArg item )
             {
                 if( !predicate?.Invoke( item ) ?? false ) return;
                 taskCompletionSource.SetResult( item );

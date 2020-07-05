@@ -1,5 +1,5 @@
 using CK.Core;
-using CK.MQTT.Abstractions.Packets;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +7,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.Stores
+namespace CK.MQTT.Common
 {
     public class MemoryPacketStore : PacketStore
     {
@@ -17,15 +17,18 @@ namespace CK.MQTT.Common.Stores
 
             public OutgoingStoredPacket( int packetId, QualityOfService qos, byte[] buffer )
             {
-                PacketId = packetId;
                 Qos = qos;
                 _buffer = buffer;
+                ((IOutgoingPacketWithId)(this)).PacketId = packetId;
             }
-            public int PacketId { get; set; }
+
+            int IOutgoingPacketWithId.PacketId { get; set; }
 
             public QualityOfService Qos { get; set; }
 
             public int Size => _buffer.Length;
+
+            public bool Burned => false;
 
             public ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
                 => writer.WriteAsync( _buffer ).AsNonGenericValueTask();
@@ -33,7 +36,8 @@ namespace CK.MQTT.Common.Stores
 
         readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
 
-        public MemoryPacketStore( int packetIdMaxValue ) : base( packetIdMaxValue )
+        public MemoryPacketStore( Func<IOutgoingPacketWithId, IOutgoingPacketWithId> transformer, int packetIdMaxValue )
+            : base( transformer, packetIdMaxValue )
         {
         }
 
@@ -46,8 +50,7 @@ namespace CK.MQTT.Common.Stores
 
         protected override ValueTask DoDiscardPacketIdAsync( IActivityMonitor m, int packetId )
         {
-            //nothing to do, the packet id is not persisted.
-            return new ValueTask();
+            return new ValueTask(); //nothing to do, the packet id is not persisted.
         }
 
         protected override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
@@ -66,5 +69,8 @@ namespace CK.MQTT.Common.Stores
             _packets.Clear();
             return new ValueTask();
         }
+
+        protected override ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IActivityMonitor m, int packetId )
+            => new ValueTask<IOutgoingPacketWithId>( _packets[packetId] );
     }
 }

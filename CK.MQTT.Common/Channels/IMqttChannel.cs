@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Threading;
 
-namespace CK.MQTT.Common.Channels
+namespace CK.MQTT.Common
 {
     public interface IMqttChannel : IDisposable
     {

@@ -4,9 +4,8 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using CK.MQTT.Abstractions.Serialisation;
 
-namespace CK.MQTT.Common.Channels
+namespace CK.MQTT.Common
 {
     /// </summary>
     /// <param name="m">The monitor to log activity in a reflex.</param>

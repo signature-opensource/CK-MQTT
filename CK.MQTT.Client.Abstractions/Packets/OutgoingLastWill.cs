@@ -1,10 +1,8 @@
-using CK.MQTT.Common;
-using CK.MQTT.Common.Serialisation;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Abstractions.Packets
+namespace CK.MQTT
 {
     public abstract class OutgoingLastWill : IOutgoingPacket
     {
@@ -27,6 +25,8 @@ namespace CK.MQTT.Abstractions.Packets
         }
 
         public abstract int Size { get; }
+
+        public abstract bool Burned { get; }
 
         protected abstract ValueTask WritePayload( PipeWriter writer, CancellationToken cancellationToken );
 

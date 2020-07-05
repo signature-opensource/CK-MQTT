@@ -1,7 +1,6 @@
-using CK.MQTT.Common.Serialisation;
 using System;
 
-namespace CK.MQTT.Common.OutgoingPackets
+namespace CK.MQTT.Common
 {
     /// <summary>
     /// Simplify the serialisation of a variable size small packet.

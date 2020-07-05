@@ -1,34 +1,23 @@
-using CK.MQTT.Common.Serialisation;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.OutgoingPackets
+namespace CK.MQTT
 {
     public abstract class ComplexOutgoingPacket : IOutgoingPacket
     {
-        /// <summary>
-        /// The first byte of the packet, most of the time there is only the packet type written.
-        /// This Property will be called when serializing the packet.
-        /// </summary>
         protected abstract byte Header { get; }
 
-        /// <summary>
-        /// The total size of the packet.
-        /// This Property will be called when serializing the packet.
-        /// </summary>
         public int Size => RemainingSize + 1 + RemainingSize.CompactByteCount();
 
         int RemainingSize => HeaderSize + PayloadSize;
 
         protected abstract int PayloadSize { get; }
 
-        /// <summary>
-        /// The minimum size of the <see cref="Span{byte}"/> that will be given when calling <see cref="WriteHeaderContent(Span{byte})"/>.
-        /// This Property will be called when serializing the packet.
-        /// </summary>
         protected abstract int HeaderSize { get; }
+
+        public abstract bool Burned { get; }
 
         protected void WriteHeader( PipeWriter pw )
         {

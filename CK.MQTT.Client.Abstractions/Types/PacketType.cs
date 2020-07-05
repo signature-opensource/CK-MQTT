@@ -1,4 +1,4 @@
-namespace CK.MQTT.Common.Packets
+namespace CK.MQTT
 {
     /// <summary>
     /// Represents one of the possible MQTT packet types

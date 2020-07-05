@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace CK.MQTT.Common.Stores
+namespace CK.MQTT.Common
 {
     public class PacketIdFactory
     {

@@ -1,7 +1,7 @@
 using CK.Core;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.Stores
+namespace CK.MQTT.Common
 {
     public interface IPacketStoreManager
     {

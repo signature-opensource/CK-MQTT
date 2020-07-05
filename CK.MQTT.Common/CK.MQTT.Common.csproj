@@ -18,5 +18,8 @@
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Client.Abstractions\CK.MQTT.Abstractions.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Processes\" />
+  </ItemGroup>
 
 </Project>

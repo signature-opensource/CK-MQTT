@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.MQTT.Common.Channels;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;

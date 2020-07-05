@@ -1,6 +1,6 @@
 using System.IO.Pipelines;
 
-namespace CK.MQTT.Abstractions.Packets
+namespace CK.MQTT
 {
     public class IncomingApplicationMessage
     {

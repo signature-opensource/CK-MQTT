@@ -1,17 +1,9 @@
-using CK.Core;
-using CK.MQTT.Abstractions.Packets;
 using CK.MQTT.Client.OutgoingPackets;
 using CK.MQTT.Client.Reflexes;
 using CK.MQTT.Common;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Reflexes;
-using CK.MQTT.Common.Stores;
 using System;
-using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Tasks;
-using CK.MQTT.Common.Processes;
 using System.Text;
 using System.Buffers;
 using System.IO;

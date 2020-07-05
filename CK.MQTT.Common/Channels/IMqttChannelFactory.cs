@@ -1,5 +1,3 @@
-using CK.MQTT.Common.Channels;
-
 namespace CK.MQTT.Common
 {
     public interface IMqttChannelFactory

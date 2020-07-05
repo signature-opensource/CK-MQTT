@@ -1,16 +1,11 @@
-using CK.MQTT.Common;
-using CK.MQTT.Common.OutgoingPackets;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using System;
 
-namespace CK.MQTT.Abstractions.Packets
+namespace CK.MQTT
 {
     public abstract class OutgoingApplicationMessage : ComplexOutgoingPacket, IOutgoingPacketWithId
     {
         readonly bool _dup;
         readonly bool _retain;
-        readonly string _topic;
         readonly bool _packetIdPresent;
 
         protected OutgoingApplicationMessage(
@@ -22,16 +17,18 @@ namespace CK.MQTT.Abstractions.Packets
         {
             _dup = dup;
             _retain = retain;
-            _topic = topic;
+            Topic = topic;
             Qos = qos;
             _packetIdPresent = Qos > QualityOfService.AtMostOnce;
         }
+
+        public string Topic { get; set; }
 
         public int PacketId { get; set; }
 
         public QualityOfService Qos { get; }
 
-        protected sealed override int HeaderSize => _topic.MQTTSize() + (_packetIdPresent ? 2 : 0);
+        protected sealed override int HeaderSize => Topic.MQTTSize() + (_packetIdPresent ? 2 : 0);
 
         const byte _dupFlag = 1 << 4;
         const byte _retainFlag = 1;
@@ -47,7 +44,7 @@ namespace CK.MQTT.Abstractions.Packets
 
         protected sealed override void WriteHeaderContent( Span<byte> span )
         {
-            span = span.WriteString( _topic );
+            span = span.WriteString( Topic );
             if( _packetIdPresent ) span.WriteUInt16( (ushort)PacketId );
         }
     }

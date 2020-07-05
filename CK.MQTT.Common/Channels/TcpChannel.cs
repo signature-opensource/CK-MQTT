@@ -2,7 +2,7 @@ using CK.Core;
 using System.IO;
 using System.Net.Sockets;
 
-namespace CK.MQTT.Common.Channels
+namespace CK.MQTT.Common
 {
     public class TcpChannel : IMqttChannel
     {

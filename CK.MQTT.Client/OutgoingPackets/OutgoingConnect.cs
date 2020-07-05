@@ -1,14 +1,8 @@
-using CK.MQTT.Abstractions.Packets;
-using CK.MQTT.Common;
-using CK.MQTT.Common.OutgoingPackets;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Serialisation;
 using System;
-using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client.OutgoingPackets
+namespace CK.MQTT.Client
 {
     class OutgoingConnect : ComplexOutgoingPacket
     {
@@ -53,7 +47,7 @@ namespace CK.MQTT.Client.OutgoingPackets
         protected override int PayloadSize => _sizePostPayload + _lastWill?.Size ?? 0;
 
         protected override byte Header => (byte)PacketType.Connect;
-        
+
         protected override int HeaderSize => _pConf.ProtocolName.MQTTSize()
                                                 + 1 //_protocolLevel
                                                 + 1 //_flag
@@ -93,5 +87,7 @@ namespace CK.MQTT.Client.OutgoingPackets
             if( password != null ) span.WriteString( password );
             pw.Advance( _sizePostPayload );
         }
+
+        public override bool Burned => _lastWill?.Burned ?? false;
     }
 }

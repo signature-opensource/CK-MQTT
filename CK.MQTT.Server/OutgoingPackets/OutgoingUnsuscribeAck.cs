@@ -1,6 +1,3 @@
-using CK.MQTT.Common.OutgoingPackets;
-using CK.MQTT.Common.Packets;
-
 namespace CK.MQTT.Server.OutgoingPackets
 {
     class OutgoingUnsuscribeAck : OutgoingPacketWithId

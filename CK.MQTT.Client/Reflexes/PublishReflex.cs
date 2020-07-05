@@ -1,18 +1,8 @@
-using CK.Core;
-using CK.MQTT.Abstractions.Packets;
-using CK.MQTT.Abstractions.Serialisation;
-using CK.MQTT.Common;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.Deserialization;
-using CK.MQTT.Common.OutgoingPackets;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Stores;
 using System;
-using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client.Reflexes
+namespace CK.MQTT.Client
 {
     class PublishReflex : IReflexMiddleware
     {

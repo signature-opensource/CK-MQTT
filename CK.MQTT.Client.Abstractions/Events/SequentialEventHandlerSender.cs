@@ -2,6 +2,7 @@ using CK.Core;
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 
 namespace CK.MQTT
 {
@@ -12,7 +13,7 @@ namespace CK.MQTT
     /// <param name="monitor">The monitor to use.</param>
     /// <param name="sender">The source of the event.</param>
     /// <param name="e">An object that contains no event data (<see cref="EventArgs.Empty"/> should be used).</param>
-    public delegate void SequentialEventHandler<TSender, TArg>( IActivityMonitor monitor, TSender sender, TArg e );
+    public delegate void SequentialEventHandler<TSender, TArg>( IMqttLogger monitor, TSender sender, TArg e );
 
     /// <summary>
     /// Implements a host for <see cref="SequentialEventHandler{TSender,TArg}"/> delegates.
@@ -96,7 +97,7 @@ namespace CK.MQTT
         /// <param name="monitor">The monitor to use.</param>
         /// <param name="sender">The sender of the event.</param>
         /// <param name="args">The event argument.</param>
-        public void Raise( IActivityMonitor monitor, TSender sender, TArg args )
+        public void Raise( IMqttLogger monitor, TSender sender, TArg args )
         {
             var h = _handler;
             if( h == null ) return;

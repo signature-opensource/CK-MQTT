@@ -1,11 +1,10 @@
 using CK.Core;
-using CK.MQTT.Abstractions.Packets;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.OutgoingPackets
+namespace CK.MQTT.Common
 {
     public class SmallOutgoingApplicationMessage : OutgoingApplicationMessage
     {
@@ -17,6 +16,8 @@ namespace CK.MQTT.Common.OutgoingPackets
             _memory = payload;
         }
         protected override int PayloadSize => _memory.Length;
+
+        public override bool Burned => false;
 
         protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
             => pw.WriteAsync( _memory ).AsNonGenericValueTask();

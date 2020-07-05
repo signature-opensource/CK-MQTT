@@ -1,4 +1,4 @@
-namespace CK.MQTT.Abstractions.Types
+namespace CK.MQTT
 {
     public enum StopMode
     {

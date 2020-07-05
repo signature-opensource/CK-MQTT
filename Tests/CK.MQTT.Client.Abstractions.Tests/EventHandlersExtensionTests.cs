@@ -2,7 +2,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
-namespace CK.MQTT.Client.Abstractions.Tests
+namespace CK.MQTT.Client
 {
     public class EventHandlersExtensionTests
     {

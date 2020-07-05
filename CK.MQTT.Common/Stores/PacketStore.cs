@@ -1,8 +1,9 @@
 using CK.Core;
-using CK.MQTT.Abstractions.Packets;
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.Stores
+namespace CK.MQTT.Common
 {
     /// <summary>
     /// This class have no way to be closed by design.
@@ -12,14 +13,16 @@ namespace CK.MQTT.Common.Stores
     public abstract class PacketStore
     {
         readonly IdStore _packetStore;
-        protected PacketStore( int packetIdMaxValue )
+        readonly Func<IOutgoingPacketWithId, IOutgoingPacketWithId> _packetTransformer;
+
+        protected PacketStore( Func<IOutgoingPacketWithId, IOutgoingPacketWithId> packetTrasnformer, int packetIdMaxValue )
         {
             _packetStore = new IdStore( packetIdMaxValue );
+            _packetTransformer = packetTrasnformer;
         }
 
         /// <summary>
         /// Store a <see cref="IOutgoingPacketWithId"/> in the session, return a <see cref="IOutgoingPacket"/>.
-        /// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180912
         /// </summary>
         /// <returns>A <see cref="IOutgoingPacket"/> that can be sent on the wire.</returns>
         public async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
@@ -33,9 +36,16 @@ namespace CK.MQTT.Common.Stores
                 if( waitTime < 5000 ) waitTime += 500;
                 success = _packetStore.TryGetId( out packetId, out idFreedAwaiter );
             }
+            Debug.Assert( idFreedAwaiter != null );
             packet.PacketId = (ushort)packetId;
-            return (await DoStoreMessageAsync( m, packet ), idFreedAwaiter!);
+            var newPacket = await DoStoreMessageAsync( m, packet );
+            return (_packetTransformer( newPacket ), idFreedAwaiter);
         }
+
+        public async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IActivityMonitor m, int packetId )
+            => _packetTransformer( await DoGetMessageByIdAsync( m, packetId ) );
+
+        protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IActivityMonitor m, int packetId );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
 

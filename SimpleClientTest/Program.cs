@@ -1,13 +1,7 @@
 using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
-using CK.MQTT;
 using CK.MQTT.Client;
-using CK.MQTT.Common.Channels;
-using CK.MQTT.Common.OutgoingPackets;
-using CK.MQTT.Common.Packets;
-using CK.MQTT.Common.Stores;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace SimpleClientTest
@@ -36,7 +30,7 @@ namespace SimpleClientTest
                 return;
             }
             var returnSub = await await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ) );
-            await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, true, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask() ) );
+            await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, true, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask(), false ) );
             await client.DisconnectAsync( m );
             result = await await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );
         }

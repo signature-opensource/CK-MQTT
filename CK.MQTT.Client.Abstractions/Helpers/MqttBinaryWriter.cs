@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Text;
 
-namespace CK.MQTT.Common.Serialisation
+namespace CK.MQTT
 {
     public static class MqttBinaryWriter
     {
