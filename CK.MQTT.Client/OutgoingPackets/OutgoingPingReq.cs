@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class OutgoingPingReq : SimpleOutgoingPacket
     {

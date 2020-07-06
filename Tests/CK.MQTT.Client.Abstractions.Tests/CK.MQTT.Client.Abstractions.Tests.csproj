@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
@@ -14,9 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\CK.MQTT.Client.Abstractions\CK.MQTT.Abstractions.csproj" />
-    <ProjectReference Include="..\..\CK.MQTT.Common.MQTT.Common.csproj" />
-    <ProjectReference Include="..\..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
+    <ProjectReference Include="..\..\CK.MQTT.Client.BasicImplementations\CK.MQTT.Client.BasicImplementations.csproj" />
+    <ProjectReference Include="..\..\CK.MQTT.Server\CK.MQTT.Server.csproj" />
   </ItemGroup>
 
 </Project>

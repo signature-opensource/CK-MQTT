@@ -4,8 +4,4 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
-  </ItemGroup>
-
 </Project>

@@ -1,21 +1,20 @@
-using CK.MQTT;
 using System;
 using System.Threading;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class KeepAliveTimer
     {
-        readonly IActivityMonitor _m;
+        readonly IMqttLogger _m;
         readonly TimeSpan _keepAlive;
         readonly TimeSpan _pingRespTimeout;
         readonly OutgoingMessageHandler _output;
         readonly Timer _timer;
         bool _timeoutMode;
-        readonly Action<IActivityMonitor> _timeoutCallback;
-        public KeepAliveTimer( MqttConfiguration config, OutgoingMessageHandler output, Action<IActivityMonitor> timeoutCallback )
+        readonly Action<IMqttLogger> _timeoutCallback;
+        public KeepAliveTimer( IMqttLoggerFactory loggerFactory, MqttConfiguration config, OutgoingMessageHandler output, Action<IMqttLogger> timeoutCallback )
         {
-            _m = new ActivityMonitor();
+            _m = loggerFactory.Create();
             _keepAlive = TimeSpan.FromSeconds( config.KeepAliveSecs );
             _pingRespTimeout = TimeSpan.FromMilliseconds( config.WaitTimeoutMs );
             _output = output;
@@ -34,7 +33,7 @@ namespace CK.MQTT.Client
             _output.QueueReflexMessage( new OutgoingPingReq() );
         }
 
-        public IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket )
+        public IOutgoingPacket OutputTransformer( IMqttLogger m, IOutgoingPacket outgoingPacket )
         {
             ResetTimer();
             return outgoingPacket;

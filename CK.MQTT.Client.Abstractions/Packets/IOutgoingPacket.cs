@@ -6,10 +6,8 @@ namespace CK.MQTT
 {
     public interface IOutgoingPacket
     {
-        ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken );
+        ValueTask<bool> WriteAsync( PipeWriter writer, CancellationToken cancellationToken );
 
         int Size { get; }
-
-        bool Burned { get; }
     }
 }

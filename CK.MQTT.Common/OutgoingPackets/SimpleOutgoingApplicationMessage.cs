@@ -3,14 +3,13 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public class SimpleOutgoingApplicationMessage : OutgoingApplicationMessage
     {
         readonly Func<int> _getPayloadSize;
         readonly Func<PipeWriter, CancellationToken, ValueTask> _payloadWriter;
         readonly bool _writeOnce;
-        bool _burned;
         public SimpleOutgoingApplicationMessage(
             bool dup,
             bool retain,
@@ -27,13 +26,11 @@ namespace CK.MQTT.Common
         }
         protected override int PayloadSize => _getPayloadSize();
 
-        public override bool Burned => _burned;
-
-        protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected override async ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
-            if( _writeOnce ) _burned = true;
             await _payloadWriter( pw, cancellationToken );
             await pw.FlushAsync( cancellationToken );
+            return _writeOnce;
         }
     }
 }

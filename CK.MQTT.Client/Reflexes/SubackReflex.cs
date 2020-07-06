@@ -1,9 +1,9 @@
-using CK.MQTT.Client.Deserialization;
 using System;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class SubackReflex : IReflexMiddleware
     {
@@ -14,7 +14,7 @@ namespace CK.MQTT.Client
             _store = store;
         }
         public async ValueTask ProcessIncomingPacketAsync(
-            IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+            IMqttLogger m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             if( PacketType.SubscribeAck != (PacketType)header )
             {

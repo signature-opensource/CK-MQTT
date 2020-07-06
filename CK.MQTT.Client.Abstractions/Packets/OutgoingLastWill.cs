@@ -28,15 +28,15 @@ namespace CK.MQTT
 
         public abstract bool Burned { get; }
 
-        protected abstract ValueTask WritePayload( PipeWriter writer, CancellationToken cancellationToken );
+        protected abstract ValueTask<bool> WritePayload( PipeWriter writer, CancellationToken cancellationToken );
 
-        public async ValueTask WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask<bool> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
         {
             int stringSize = _topic.MQTTSize();
             writer.GetSpan( stringSize ).WriteString( _topic );
             writer.Advance( stringSize );
-            var res = await writer.FlushAsync( cancellationToken );
-            await WritePayload( writer, cancellationToken );
+            await writer.FlushAsync( cancellationToken );
+            return await WritePayload( writer, cancellationToken );
         }
     }
 }

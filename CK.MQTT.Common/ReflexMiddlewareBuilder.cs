@@ -1,20 +1,19 @@
-using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public delegate ValueTask ReflexMiddleware(
-        IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next
+        IMqttLogger m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next
     );
 
     public interface IReflexMiddleware
     {
         ValueTask ProcessIncomingPacketAsync(
-            IActivityMonitor m, IncomingMessageHandler sender,
+            IMqttLogger m, IncomingMessageHandler sender,
         byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
     }
 
@@ -37,7 +36,7 @@ namespace CK.MQTT.Common
             foreach( var curr in _reflexes.Reverse<ReflexMiddleware>() )
             {
                 Reflex previousReflex = lastReflex;
-                Reflex newMiddleware = ( IActivityMonitor m, IncomingMessageHandler s, byte h, int l, PipeReader p ) //We create a lambda that...
+                Reflex newMiddleware = ( IMqttLogger m, IncomingMessageHandler s, byte h, int l, PipeReader p ) //We create a lambda that...
                     =>
                 {
                     return curr( m, s, h, l, p, // Call current the middleware

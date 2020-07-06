@@ -8,8 +8,11 @@
   </PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="PacketWriter\**" />
+	  <Compile Remove="Processes\**" />
 	  <EmbeddedResource Remove="PacketWriter\**" />
+	  <EmbeddedResource Remove="Processes\**" />
 	  <None Remove="PacketWriter\**" />
+	  <None Remove="Processes\**" />
 	</ItemGroup>
 
   <ItemGroup>
@@ -17,9 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Client.Abstractions\CK.MQTT.Abstractions.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Processes\" />
   </ItemGroup>
 
 </Project>

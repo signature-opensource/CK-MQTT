@@ -2,7 +2,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     public class EventHandlersExtensionTests
     {
@@ -17,7 +17,7 @@ namespace CK.MQTT.Client
             var task = eventEmitter.WaitAsync();
             task.IsCompleted.Should().BeFalse();
             task.IsFaulted.Should().BeFalse();
-            eventEmitter.Raise( TestHelper.Monitor, this, new Unit() );
+            eventEmitter.Raise( new MqttActivityMonitor( TestHelper.Monitor ), this, new Unit() );
             await Task.Yield();
             await Task.Delay( 500 );
             task.IsCompleted.Should().BeTrue();

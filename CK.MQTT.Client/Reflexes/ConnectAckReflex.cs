@@ -1,8 +1,8 @@
-using CK.MQTT.Client.Deserialization;
 using System;
+using System.IO.Pipelines;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class ConnectAckReflex
     {
@@ -14,7 +14,7 @@ namespace CK.MQTT.Client
         }
 
         public Task<ConnectResult> Task => _tcs.Task;
-        public async ValueTask ProcessIncomingPacket( IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
+        public async ValueTask ProcessIncomingPacket( IMqttLogger m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {
             if( header != (byte)PacketType.ConnectAck )
             {
@@ -22,9 +22,9 @@ namespace CK.MQTT.Client
             }
             ReadResult? read = await reader.ReadAsync( m, 2, default );
             if( !read.HasValue ) return;
-            ConnectAck.Deserialize( m, read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
+            ConnectAck.Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
             reader.AdvanceTo( position );
-            packetSize -= 2;
+            packetSize -= 2;//TODO: The packet size shouldn't be hardcoded here...
             if( packetSize > 0 )
             {
                 await reader.BurnBytes( packetSize );

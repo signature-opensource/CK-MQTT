@@ -1,7 +1,7 @@
 using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
-using CK.MQTT.Client;
+using CK.MQTT;
 using System.Threading.Tasks;
 
 namespace SimpleClientTest
@@ -16,15 +16,14 @@ namespace SimpleClientTest
             config.MinimalFilter = LogFilter.Trace;
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Trace;
-            var m = new ActivityMonitor();
-            m.Info( "letsgo" );
+            var m = new MqttActivityMonitor( new ActivityMonitor() );
             var client = new MqttClient(
                 new InMemoryPacketIdStore(),
                 new MemoryPacketStore( ushort.MaxValue ),
                 //new MqttConfiguration( "broker.hivemq.com:1883" ),
                 new MqttConfiguration( "test.mosquitto.org:1883" ),
                 new TcpChannelFactory() );
-            var result = await await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
+            var result = await await client.ConnectAsync( m, new MqttActivityMonitorFactory(), new MqttClientCredentials( "CKMqttTest", true ) );
             if( result.ConnectionStatus != ConnectReturnCode.Accepted )
             {
                 return;
@@ -32,7 +31,7 @@ namespace SimpleClientTest
             var returnSub = await await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ) );
             await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, true, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask(), false ) );
             await client.DisconnectAsync( m );
-            result = await await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );
+            result = await await client.ConnectAsync( m, new MqttActivityMonitorFactory(), new MqttClientCredentials( "CKMqttTest", false ) );
         }
     }
 }

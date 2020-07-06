@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public class TcpChannelFactory : IMqttChannelFactory
     {

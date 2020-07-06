@@ -5,25 +5,25 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public class OutgoingMessageHandler
     {
-        public delegate IOutgoingPacket OutputTransformer( IActivityMonitor m, IOutgoingPacket outgoingPacket );
+        public delegate IOutgoingPacket OutputTransformer( IMqttLogger m, IOutgoingPacket outgoingPacket );
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
-        readonly Action<IActivityMonitor, DisconnectedReason> _clientClose;
+        readonly Action<IMqttLogger, DisconnectedReason> _clientClose;
         readonly PipeWriter _pipeWriter;
         readonly Task _writeLoop;
         bool _stopped;
         readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
-        public OutgoingMessageHandler( Action<IActivityMonitor, DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
+        public OutgoingMessageHandler( IMqttLoggerFactory loggerFactory, Action<IMqttLogger, DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _clientClose = clientClose;
             _pipeWriter = writer;
-            _writeLoop = WriteLoop();
+            _writeLoop = WriteLoop( loggerFactory );
         }
 
         public OutputTransformer? OutputMiddleware { get; set; }
@@ -44,9 +44,9 @@ namespace CK.MQTT.Common
             return wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
 
-        async Task WriteLoop()
+        async Task WriteLoop( IMqttLoggerFactory loggerFactory )
         {
-            ActivityMonitor m = new ActivityMonitor();
+            IMqttLogger m = loggerFactory.Create();
             try
             {
                 bool mainLoop = true;
@@ -75,28 +75,35 @@ namespace CK.MQTT.Common
             Close( m, DisconnectedReason.SelfDisconnected );
         }
 
-        ValueTask ProcessOutgoingPacket( IActivityMonitor m, IOutgoingPacket outgoingPacket )
+        ValueTask<bool> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
         {
-            if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask();
+            if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask<bool>( false );
             m.Info( $"Sending message of size {outgoingPacket.Size}." );
             return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
         }
+
         bool _complete;
-        public void Complete()
+        public Task Complete()
         {
-            if( _complete ) return;
+            if( _complete ) return _writeLoop;
             _complete = true;
             _messages.Writer.Complete();
             _reflexes.Writer.Complete();
+            return _writeLoop;
         }
 
-        public void Close( IActivityMonitor m, DisconnectedReason disconnectedReason )
+        public void Close( IMqttLogger m, DisconnectedReason disconnectedReason )
         {
             if( _stopped ) return;
             _stopped = true;
-            Complete();
+            var task = Complete();
             _dirtyStopSource.Cancel();
             _pipeWriter.Complete();
+            if( !task.IsCompleted )
+            {
+                m.Warn( "OutgoingMessageHandler main loop is taking time to exit..." );
+                task.Wait();
+            }
             _clientClose( m, disconnectedReason );
         }
     }

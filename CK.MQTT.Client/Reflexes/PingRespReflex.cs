@@ -1,7 +1,8 @@
 using System;
+using System.IO.Pipelines;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class PingRespReflex : IReflexMiddleware
     {
@@ -11,7 +12,7 @@ namespace CK.MQTT.Client
         {
             _callback = callback;
         }
-        public ValueTask ProcessIncomingPacketAsync( IActivityMonitor m, IncomingMessageHandler sender,
+        public ValueTask ProcessIncomingPacketAsync( IMqttLogger m, IncomingMessageHandler sender,
             byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             if( PacketType.PingResponse != (PacketType)header )

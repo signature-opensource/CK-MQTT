@@ -1,6 +1,3 @@
-using CK.Core;
-using CK.MQTT.Abstractions;
-using CK.MQTT.Common;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
@@ -8,31 +5,26 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class TestImpl : IMqttClient
     {
-        SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessage;
-        SequentialEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessageAsync;
-        ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eParMessageAsync;
+        readonly SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessage;
+        readonly SequentialEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage> _eSeqMessageAsync;
+        readonly SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected> _eSeqDisconnect;
+        readonly SequentialEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected> _eSeqDisconnectAsync;
 
-        SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected> _eSeqDisconnect;
-        SequentialEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected> _eSeqDisconnectAsync;
-        ParallelEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected> _eParDisconnectAsync;
-
-        public TestImpl( IActivityMonitor monitor )
+        public TestImpl( IMqttLogger monitor )
         {
             _eSeqMessage = new SequentialEventHandlerSender<IMqttClient, OutgoingApplicationMessage>();
             _eSeqMessageAsync = new SequentialEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage>();
-            _eParMessageAsync = new ParallelEventHandlerAsyncSender<IMqttClient, OutgoingApplicationMessage>();
 
             _eSeqDisconnect = new SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected>();
             _eSeqDisconnectAsync = new SequentialEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected>();
-            _eParDisconnectAsync = new ParallelEventHandlerAsyncSender<IMqttClient, MqttEndpointDisconnected>();
 
             Monitor = monitor;
         }
-        public IActivityMonitor Monitor { get; }
+        public IMqttLogger Monitor { get; }
 
         /// <summary>
         /// This is THE sender: first, async parallels are launched, then the synchronous ones and then sequential async ones
@@ -44,9 +36,8 @@ namespace CK.MQTT.Client
         public Task DoReceiveMessageAsync( string topic, byte[] payload )
         {
             var msg = new SmallOutgoingApplicationMessage( false, false, topic, QualityOfService.AtLeastOnce, payload );
-            var taskParallel = _eParMessageAsync.RaiseAsync( Monitor, this, msg );
             _eSeqMessage.Raise( Monitor, this, msg );
-            return Task.WhenAll( _eSeqMessageAsync.RaiseAsync( Monitor, this, msg ), taskParallel );
+            return _eSeqMessageAsync.RaiseAsync( Monitor, this, msg );
         }
 
         public async Task DoSafeReceiveMessageAsync( string topic, byte[] payload )
@@ -54,10 +45,8 @@ namespace CK.MQTT.Client
             try
             {
                 var msg = new SmallOutgoingApplicationMessage( false, false, topic, QualityOfService.AtLeastOnce, payload );
-                var taskParallel = _eParMessageAsync.RaiseAsync( Monitor, this, msg );
                 _eSeqMessage.Raise( Monitor, this, msg );
                 await _eSeqMessageAsync.RaiseAsync( Monitor, this, msg );
-                await taskParallel;
             }
             catch( Exception ex )
             {
@@ -77,12 +66,6 @@ namespace CK.MQTT.Client
             remove { _eSeqMessageAsync.Remove( value ); }
         }
 
-        public event ParallelEventHandlerAsync<IMqttClient, OutgoingApplicationMessage> ParallelMessageReceivedAsync
-        {
-            add { _eParMessageAsync.Add( value ); }
-            remove { _eParMessageAsync.Remove( value ); }
-        }
-
         public event SequentialEventHandler<IMqttClient, MqttEndpointDisconnected> Disconnected
         {
             add { _eSeqDisconnect.Add( value ); }
@@ -93,12 +76,6 @@ namespace CK.MQTT.Client
         {
             add { _eSeqDisconnectAsync.Add( value ); }
             remove { _eSeqDisconnectAsync.Remove( value ); }
-        }
-
-        public event ParallelEventHandlerAsync<IMqttClient, MqttEndpointDisconnected> ParallelDisconnectedAsync
-        {
-            add { _eParDisconnectAsync.Add( value ); }
-            remove { _eParDisconnectAsync.Remove( value ); }
         }
 
         event SequentialEventHandlerAsync<IMqttClient, IncomingApplicationMessage> IMqttClient.MessageReceivedAsync
@@ -118,7 +95,7 @@ namespace CK.MQTT.Client
 
         public bool IsConnected => throw new NotImplementedException();
 
-        public Task DisconnectAsync( IActivityMonitor m )
+        public Task DisconnectAsync( IMqttLogger m )
         {
             throw new NotImplementedException();
         }
@@ -128,12 +105,12 @@ namespace CK.MQTT.Client
             throw new NotImplementedException();
         }
 
-        public Task<Task<IReadOnlyCollection<SubscribeReturnCode>>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
+        public Task<Task<IReadOnlyCollection<SubscribeReturnCode>>> SubscribeAsync( IMqttLogger m, params Subscription[] subscriptions )
         {
             throw new NotImplementedException();
         }
 
-        public ValueTask<ValueTask> PublishAsync( IActivityMonitor m, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
+        public ValueTask<ValueTask> PublishAsync( IMqttLogger m, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
         {
             throw new NotImplementedException();
         }
@@ -143,27 +120,27 @@ namespace CK.MQTT.Client
             throw new NotImplementedException();
         }
 
-        ValueTask<Task<SubscribeReturnCode[]>> IMqttClient.SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
+        ValueTask<Task<SubscribeReturnCode[]>> IMqttClient.SubscribeAsync( IMqttLogger m, params Subscription[] subscriptions )
         {
             throw new NotImplementedException();
         }
 
-        public ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message )
+        public ValueTask<Task> PublishAsync( IMqttLogger m, OutgoingApplicationMessage message )
         {
             throw new NotImplementedException();
         }
 
-        public ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
+        public ValueTask<Task> UnsubscribeAsync( IMqttLogger m, params string[] topics )
         {
             throw new NotImplementedException();
         }
 
-        ValueTask IMqttClient.DisconnectAsync( IActivityMonitor m )
+        ValueTask IMqttClient.DisconnectAsync( IMqttLogger m )
         {
             throw new NotImplementedException();
         }
 
-        public ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m, MqttClientCredentials credentials = null, OutgoingLastWill lastWill = null )
+        public ValueTask<Task<ConnectResult>> ConnectAsync( IMqttLogger m, IMqttLoggerFactory loggerFactory, MqttClientCredentials credentials = null, OutgoingLastWill lastWill = null )
         {
             throw new NotImplementedException();
         }
@@ -174,45 +151,23 @@ namespace CK.MQTT.Client
     {
         class MqttCientConsumer
         {
-            readonly IActivityMonitor _monitor;
+            readonly IMqttLogger _monitor;
             readonly string _name;
             readonly Random _rand;
 
             public MqttCientConsumer( string name )
             {
-                _monitor = new ActivityMonitor( "MqttCientConsumer" );
                 _name = name;
                 _rand = new Random( name.GetHashCode() );
             }
 
             public string LastTopic { get; private set; }
-
-            public async Task OnMessage( ActivityMonitor.DependentToken token, IMqttClient client, OutgoingApplicationMessage m )
-            {
-                using( _monitor.StartDependentActivity( token ) )
-                {
-                    _monitor.Info( $"Consumer {_name}: Receiving message from topic '{m.Topic}'." );
-                    await Task.Delay( _rand.Next( 20, 1000 ) );
-                    _monitor.Info( $"Consumer {_name} did it job." );
-                    LastTopic = m.Topic;
-                }
-            }
-
-            public async Task OnDisconnect( ActivityMonitor.DependentToken token, IMqttClient client, MqttEndpointDisconnected m )
-            {
-                using( _monitor.StartDependentActivity( token ) )
-                {
-                    _monitor.Info( $"Consumer {_name}: Disconnection: Message = '{m.Message}'." );
-                    await Task.Delay( _rand.Next( 20, 150 ) );
-                    LastTopic = null;
-                }
-            }
         }
 
         [Test]
         public async Task event_async_and_sync_look_the_same()
         {
-            var impl = new TestImpl( TestHelper.Monitor );
+            var impl = new TestImpl( new MqttActivityMonitor( TestHelper.Monitor ));
 
             var consumer1 = new MqttCientConsumer( "Consumer1" );
             var consumer2 = new MqttCientConsumer( "Consumer2" );
@@ -220,9 +175,6 @@ namespace CK.MQTT.Client
 
             impl.MessageReceived += SyncReceiving;
             impl.MessageReceivedAsync += SequentialAsyncReceiving;
-            impl.ParallelMessageReceivedAsync += consumer1.OnMessage;
-            impl.ParallelMessageReceivedAsync += consumer2.OnMessage;
-            impl.ParallelMessageReceivedAsync += consumer3.OnMessage;
 
             await impl.DoReceiveMessageAsync( "topic", Array.Empty<byte>() );
             LastTopicSync.Should().Be( "topic" );
@@ -258,13 +210,13 @@ namespace CK.MQTT.Client
         static string LastTopicSync;
         static string LastTopicASync;
 
-        private static void SyncReceiving( IActivityMonitor monitor, IMqttClient sender, OutgoingApplicationMessage e )
+        private static void SyncReceiving( IMqttLogger monitor, IMqttClient sender, OutgoingApplicationMessage e )
         {
             LastTopicSync = e.Topic;
             monitor.Info( "Synchronous Reception." );
         }
 
-        static Task SequentialAsyncReceiving( IActivityMonitor monitor, IMqttClient sender, OutgoingApplicationMessage e )
+        static Task SequentialAsyncReceiving( IMqttLogger monitor, IMqttClient sender, OutgoingApplicationMessage e )
         {
             LastTopicASync = e.Topic;
             monitor.Info( "Asynchronous Reception (but sequential)." );

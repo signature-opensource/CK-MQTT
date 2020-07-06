@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public abstract class OutgoingPacketWithId : SimpleOutgoingPacket, IOutgoingPacketWithId
     {

@@ -2,7 +2,7 @@ using System;
 using System.Buffers;
 using System.Diagnostics;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     static class ConnectAck
     {

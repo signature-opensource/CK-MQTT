@@ -1,8 +1,9 @@
 using System;
+using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class OutgoingConnect : ComplexOutgoingPacket
     {
@@ -68,14 +69,16 @@ namespace CK.MQTT.Client
                 .WriteString( _creds?.ClientId ?? "" );
         }
 
-        protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected override async ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
+            bool burned = false;
             if( _lastWill != null )
             {
-                await _lastWill.WriteAsync( pw, cancellationToken );
+                burned = await _lastWill.WriteAsync( pw, cancellationToken );
             }
             WriteEndOfPayload( pw );
             await pw.FlushAsync( cancellationToken );
+            return burned;
         }
 
         void WriteEndOfPayload( PipeWriter pw )
@@ -87,7 +90,5 @@ namespace CK.MQTT.Client
             if( password != null ) span.WriteString( password );
             pw.Advance( _sizePostPayload );
         }
-
-        public override bool Burned => _lastWill?.Burned ?? false;
     }
 }

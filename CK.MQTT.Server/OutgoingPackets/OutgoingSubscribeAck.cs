@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT.Server.OutgoingPackets
+namespace CK.MQTT
 {
     class OutgoingSubscribeAck : VariableOutgointPacket
     {

@@ -1,16 +1,17 @@
 using System;
+using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class PublishReflex : IReflexMiddleware
     {
         readonly IPacketIdStore _store;
-        readonly Func<IActivityMonitor, IncomingApplicationMessage, Task> _deliverMessage;
+        readonly Func<IMqttLogger, IncomingApplicationMessage, Task> _deliverMessage;
         readonly OutgoingMessageHandler _output;
 
-        public PublishReflex( IPacketIdStore store, Func<IActivityMonitor, IncomingApplicationMessage, Task> payloadProcessor, OutgoingMessageHandler output )
+        public PublishReflex( IPacketIdStore store, Func<IMqttLogger, IncomingApplicationMessage, Task> payloadProcessor, OutgoingMessageHandler output )
         {
             _store = store;
             _deliverMessage = payloadProcessor;
@@ -20,7 +21,7 @@ namespace CK.MQTT.Client
         const byte _retainFlag = 1;
 
         public async ValueTask ProcessIncomingPacketAsync(
-            IActivityMonitor m, IncomingMessageHandler sender,
+            IMqttLogger m, IncomingMessageHandler sender,
             byte header, int packetLength, PipeReader reader, Func<ValueTask> next )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )

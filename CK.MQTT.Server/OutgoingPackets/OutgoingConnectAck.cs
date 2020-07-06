@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT
 {
     public class OutgoingConnectAck : SimpleOutgoingPacket
     {

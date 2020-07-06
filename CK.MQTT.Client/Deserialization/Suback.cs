@@ -2,9 +2,8 @@ using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using CK.MQTT;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class Suback
     {

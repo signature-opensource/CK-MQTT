@@ -1,8 +1,7 @@
-using CK.Core;
 using System.IO;
 using System.Net.Sockets;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public class TcpChannel : IMqttChannel
     {
@@ -17,7 +16,7 @@ namespace CK.MQTT.Common
 
         public Stream Stream => _tcpClient.GetStream();
 
-        public void Close( IActivityMonitor m ) => _tcpClient.Close();
+        public void Close( IMqttLogger m ) => _tcpClient.Close();
 
         public void Dispose() => _tcpClient.Dispose();
     }

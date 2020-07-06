@@ -1,4 +1,4 @@
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public interface IMqttChannelFactory
     {

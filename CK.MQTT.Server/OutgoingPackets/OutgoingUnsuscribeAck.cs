@@ -1,4 +1,4 @@
-namespace CK.MQTT.Server.OutgoingPackets
+namespace CK.MQTT
 {
     class OutgoingUnsuscribeAck : OutgoingPacketWithId
     {

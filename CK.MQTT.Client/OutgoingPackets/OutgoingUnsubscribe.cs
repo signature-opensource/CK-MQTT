@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     class OutgoingUnsubscribe : VariableOutgointPacket, IOutgoingPacketWithId
     {

@@ -4,7 +4,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public abstract class SimpleOutgoingPacket : IOutgoingPacket
     {
@@ -16,10 +16,11 @@ namespace CK.MQTT.Common
             pw.Advance( Size );
         }
 
-        public ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public async ValueTask<bool> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             Write( pw );
-            return pw.FlushAsync( cancellationToken ).AsNonGenericValueTask();
+            await pw.FlushAsync( cancellationToken ).AsNonGenericValueTask();
+            return false;
         }
 
         public abstract int Size { get; }

@@ -1,14 +1,13 @@
-using CK.Core;
 using System;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public static class SenderHelper
     {
         public static ValueTask<Task<T?>> SendPacket<T>(
-            IActivityMonitor m,
+            IMqttLogger m,
             PacketStore messageStore,
             OutgoingMessageHandler output,
             IOutgoingPacketWithId packet,
@@ -22,7 +21,7 @@ namespace CK.MQTT.Common
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        public static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor m, OutgoingMessageHandler output, IOutgoingPacketWithId msg )
+        public static async ValueTask<Task<T?>> PublishQoS0<T>( IMqttLogger m, OutgoingMessageHandler output, IOutgoingPacketWithId msg )
             where T : class
         {
             using( m.OpenTrace( "Executing Publish protocol with QoS 0." ) )
@@ -32,7 +31,7 @@ namespace CK.MQTT.Common
             }
         }
 
-        public static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m, OutgoingMessageHandler output, PacketStore messageStore,
+        public static async ValueTask<Task<T?>> StoreAndSend<T>( IMqttLogger m, OutgoingMessageHandler output, PacketStore messageStore,
             IOutgoingPacketWithId msg, int waitTimeoutMs )
             where T : class
         {
@@ -40,14 +39,15 @@ namespace CK.MQTT.Common
             return Send<T>( m, output, messageStore, newPacket, ackReceived, waitTimeoutMs );
         }
 
-        public static async Task<T?> Send<T>( IActivityMonitor m,
-            OutgoingMessageHandler output, PacketStore store,
-            Task<object?> ackReceived, int waitTimeoutMs )
+        public static async Task<T?> Send<T>( IMqttLogger m,
+            OutgoingMessageHandler output, PacketStore store, IOutgoingPacketWithId packet, Task<object?> ackReceived, int waitTimeoutMs )
             where T : class
         {
+            await output.SendMessageAsync( packet );
+            await Task.WhenAny( Task.Delay( waitTimeoutMs ), ackReceived );
             while( !ackReceived.IsCompleted )
             {
-                IOutgoingPacketWithId packet = await store.GetMessageByIdAsync( m, packet.PacketId );
+                packet = await store.GetMessageByIdAsync( m, packet.PacketId );
                 await Task.WhenAny( Task.Delay( waitTimeoutMs ), ackReceived );
             }
             object? res = await ackReceived;

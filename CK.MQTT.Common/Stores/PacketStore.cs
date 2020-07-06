@@ -1,9 +1,8 @@
-using CK.Core;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     /// <summary>
     /// This class have no way to be closed by design.
@@ -12,20 +11,23 @@ namespace CK.MQTT.Common
     /// </summary>
     public abstract class PacketStore
     {
+        public delegate IOutgoingPacketWithId PacketTransformer( IOutgoingPacketWithId packetToTransform );
         readonly IdStore _packetStore;
-        readonly Func<IOutgoingPacketWithId, IOutgoingPacketWithId> _packetTransformer;
+        readonly PacketTransformer _packetTransformerOnRestore;
+        readonly PacketTransformer _packetTransformerOnSave;
 
-        protected PacketStore( Func<IOutgoingPacketWithId, IOutgoingPacketWithId> packetTrasnformer, int packetIdMaxValue )
+        protected PacketStore( PacketTransformer packetTransformerOnRestore, PacketTransformer packetTransformerOnSave, int packetIdMaxValue )
         {
             _packetStore = new IdStore( packetIdMaxValue );
-            _packetTransformer = packetTrasnformer;
+            _packetTransformerOnRestore = packetTransformerOnRestore;
+            _packetTransformerOnSave = packetTransformerOnSave;
         }
 
         /// <summary>
         /// Store a <see cref="IOutgoingPacketWithId"/> in the session, return a <see cref="IOutgoingPacket"/>.
         /// </summary>
         /// <returns>A <see cref="IOutgoingPacket"/> that can be sent on the wire.</returns>
-        public async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
+        public async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
         {
             bool success = _packetStore.TryGetId( out int packetId, out Task<object?>? idFreedAwaiter );
             int waitTime = 500;
@@ -39,17 +41,17 @@ namespace CK.MQTT.Common
             Debug.Assert( idFreedAwaiter != null );
             packet.PacketId = (ushort)packetId;
             var newPacket = await DoStoreMessageAsync( m, packet );
-            return (_packetTransformer( newPacket ), idFreedAwaiter);
+            return (_packetTransformerOnSave( newPacket ), idFreedAwaiter);
         }
 
-        public async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IActivityMonitor m, int packetId )
-            => _packetTransformer( await DoGetMessageByIdAsync( m, packetId ) );
+        public async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IMqttLogger m, int packetId )
+            => _packetTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
 
-        protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IActivityMonitor m, int packetId );
+        protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IMqttLogger m, int packetId );
 
-        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
+        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet );
 
-        public async ValueTask<QualityOfService> DiscardMessageByIdAsync( IActivityMonitor m, int packetId, object? packet = null )
+        public async ValueTask<QualityOfService> DiscardMessageByIdAsync( IMqttLogger m, int packetId, object? packet = null )
         {
             var qos = await DoDiscardMessage( m, packetId );
             if( qos == QualityOfService.AtLeastOnce )
@@ -59,9 +61,9 @@ namespace CK.MQTT.Common
             return qos;
         }
 
-        protected abstract ValueTask<QualityOfService> DoDiscardMessage( IActivityMonitor m, int packetId );
+        protected abstract ValueTask<QualityOfService> DoDiscardMessage( IMqttLogger m, int packetId );
 
-        public async ValueTask DiscardPacketIdAsync( IActivityMonitor m, int packetId )
+        public async ValueTask DiscardPacketIdAsync( IMqttLogger m, int packetId )
         {
             if( !_packetStore.FreeId( packetId ) )
             {
@@ -71,7 +73,7 @@ namespace CK.MQTT.Common
             return;
         }
 
-        protected abstract ValueTask DoDiscardPacketIdAsync( IActivityMonitor m, int packetId );
+        protected abstract ValueTask DoDiscardPacketIdAsync( IMqttLogger m, int packetId );
 
         public bool Empty => _packetStore.Empty;
 

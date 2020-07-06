@@ -2,7 +2,7 @@ using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 
-namespace CK.MQTT.Common
+namespace CK.MQTT
 {
     public static class Publish
     {

@@ -17,8 +17,6 @@ namespace CK.MQTT
 
         protected abstract int HeaderSize { get; }
 
-        public abstract bool Burned { get; }
-
         protected void WriteHeader( PipeWriter pw )
         {
             int remainingSize = RemainingSize;
@@ -33,9 +31,9 @@ namespace CK.MQTT
 
         protected abstract void WriteHeaderContent( Span<byte> span );
 
-        protected abstract ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
+        protected abstract ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
 
-        public ValueTask WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public ValueTask<bool> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( pw );
             return WritePayloadAsync( pw, cancellationToken );

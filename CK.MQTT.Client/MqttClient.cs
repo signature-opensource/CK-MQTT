@@ -1,6 +1,3 @@
-using CK.MQTT.Client.OutgoingPackets;
-using CK.MQTT.Client.Reflexes;
-using CK.MQTT.Common;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -8,49 +5,46 @@ using System.Text;
 using System.Buffers;
 using System.IO;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Pipelines;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT
 {
     public class MqttClient : IMqttClient
     {
         //Dont change between lifecycles
-        readonly IPacketIdStore _packetIdStore;
-        readonly PacketStore _store;
         readonly MqttConfiguration _config;
         readonly IMqttChannelFactory _channelFactory;
-        readonly StreamPipeReaderOptions? _readerOptions;
-        readonly StreamPipeWriterOptions? _writerOptions;
 
         //change between lifecycles
         bool _closed;
         IMqttChannel? _channel;
         IncomingMessageHandler? _input;
         OutgoingMessageHandler? _output;
+        IPacketIdStore? _packetIdStore;
+        PacketStore? _store;
         public MqttClient(
             IPacketIdStore packetIdStore,
             PacketStore store,
             MqttConfiguration mqttConfiguration,
             IMqttChannelFactory channelFactory,
-            StreamPipeReaderOptions? readerOptions = null,
-            StreamPipeWriterOptions? writerOptions = null )
+             )
         {
             _packetIdStore = packetIdStore;
             _store = store;
             _config = mqttConfiguration;
-            _readerOptions = readerOptions;
-            _writerOptions = writerOptions;
             _channelFactory = channelFactory;
+            _storeTransformer = storeTransformer ?? DefaultMqttStoreTransformer.Default;
         }
 
         T ThrowIfNull<T>( [NotNull] T? item ) where T : class
             => item ?? throw new InvalidOperationException( "Client is Disconnected." );
 
-        public async ValueTask<Task<ConnectResult>> ConnectAsync( IActivityMonitor m,
+        public async ValueTask<Task<ConnectResult>> ConnectAsync( IMqttLogger m, IMqttLoggerFactory loggerFactory,
             MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             _channel = _channelFactory.Create( _config.ConnectionString );
-            _output = new OutgoingMessageHandler( ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _writerOptions ), _config );
-            KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config, _output, PingReqTimeout ) : null;
+            _output = new OutgoingMessageHandler( loggerFactory, ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config );
+            KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( loggerFactory, _config, _output, PingReqTimeout ) : null;
             _output.OutputMiddleware = timer != null ? timer.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null;
             ConnectAckReflex connectAckReflex = new ConnectAckReflex( new ReflexMiddlewareBuilder()
                 .UseMiddleware( LogPacketTypeReflex.ProcessIncomingPacket )
@@ -64,7 +58,7 @@ namespace CK.MQTT.Client
                 .UseMiddleware( new PingRespReflex( timer is null ? (Action?)null : timer.ResetTimer ) )
                 .Build( InvalidPacket ) );
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            _input = new IncomingMessageHandler( ( a, b ) => Close( a, b ), PipeReader.Create( _channel.Stream, _readerOptions ), connectAckReflex.ProcessIncomingPacket );
+            _input = new IncomingMessageHandler( loggerFactory, ( a, b ) => Close( a, b ), PipeReader.Create( _channel.Stream, _config.ReaderOptions ), connectAckReflex.ProcessIncomingPacket );
             _closed = true;
             await _output.SendMessageAsync( new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ) );
             return InternalConnectAsync( connectedTask );
@@ -84,9 +78,9 @@ namespace CK.MQTT.Client
             return res;
         }
 
-        void PingReqTimeout( IActivityMonitor m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.
+        void PingReqTimeout( IMqttLogger m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.
 
-        async Task OnMessage( IActivityMonitor m, IncomingApplicationMessage msg )
+        async Task OnMessage( IMqttLogger m, IncomingApplicationMessage msg )
         {
             if( _eMessage.HasHandlers )
             {
@@ -117,7 +111,7 @@ namespace CK.MQTT.Client
             }
         }
 
-        ValueTask InvalidPacket( IActivityMonitor m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
+        ValueTask InvalidPacket( IMqttLogger m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {
             Close( m, DisconnectedReason.ProtocolError );
             throw new ProtocolViolationException();
@@ -138,7 +132,7 @@ namespace CK.MQTT.Client
             remove => _eMessage.Remove( value );
         }
 
-        void Close( IActivityMonitor m, DisconnectedReason reason, string? message = null )
+        void Close( IMqttLogger m, DisconnectedReason reason, string? message = null )
         {
             const DisconnectedReason reasonMax = (DisconnectedReason)int.MaxValue;
             if( reason == reasonMax ) throw new ArgumentException( nameof( reason ) );
@@ -155,21 +149,21 @@ namespace CK.MQTT.Client
 
         public bool IsConnected => _channel?.IsConnected ?? false;
 
-        public async ValueTask DisconnectAsync( IActivityMonitor m )
+        public async ValueTask DisconnectAsync( IMqttLogger m )
         {
             Task disconnect = await ThrowIfNull( _output ).SendMessageAsync( new OutgoingDisconnect() );
-            _output.Complete();
+            await _output.Complete();
             await disconnect;
             Close( m, DisconnectedReason.SelfDisconnected );
         }
 
-        public async ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message )
+        public async ValueTask<Task> PublishAsync( IMqttLogger m, OutgoingApplicationMessage message )
             => await SenderHelper.SendPacket<object>( m, _store, ThrowIfNull( _output ), message, _config );
 
-        public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
+        public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IMqttLogger m, params Subscription[] subscriptions )
             => SenderHelper.SendPacket<SubscribeReturnCode[]>( m, _store, ThrowIfNull( _output ), new OutgoingSubscribe( subscriptions ), _config );
 
-        public async ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
+        public async ValueTask<Task> UnsubscribeAsync( IMqttLogger m, params string[] topics )
             => await SenderHelper.SendPacket<object>( m, _store, ThrowIfNull( _output ), new OutgoingUnsubscribe( topics ), _config );
     }
 }
