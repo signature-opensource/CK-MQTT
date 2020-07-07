@@ -1,9 +1,9 @@
-using CK.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,40 +11,11 @@ namespace CK.MQTT
 {
     public class MemoryPacketStore : PacketStore
     {
-        class PipeWriterWrapper : PipeWriter
-        {
-            readonly PipeWriter _pipeWriter;
-            bool _firstWrite = true;
-            public PipeWriterWrapper(PipeWriter pipeWriter)
-            {
-                _pipeWriter = pipeWriter;
-            }
-
-            public override void Advance( int bytes ) => _pipeWriter.Advance( bytes );
-
-            public override void CancelPendingFlush() => _pipeWriter.CancelPendingFlush();
-
-            public override void Complete( Exception exception = null ) => _pipeWriter.Complete( exception );
-
-            public override ValueTask<FlushResult> FlushAsync( CancellationToken cancellationToken = default ) => _pipeWriter.FlushAsync( cancellationToken );
-
-            public override Memory<byte> GetMemory( int sizeHint = 0 ) => _pipeWriter.GetMemory( sizeHint );
-
-            public override Span<byte> GetSpan( int sizeHint = 0 ) => _pipeWriter.GetSpan( sizeHint );
-
-            public override Stream AsStream( bool leaveOpen = false ) => throw new NotImplementedException();
-
-            public override ValueTask CompleteAsync( Exception exception = null ) => base.CompleteAsync( exception );
-
-            protected override Task CopyFromAsync( Stream source, CancellationToken cancellationToken = default ) => throw new NotImplementedException();
-
-            public override ValueTask<FlushResult> WriteAsync( ReadOnlyMemory<byte> source, CancellationToken cancellationToken = default ) => base.WriteAsync( source, cancellationToken );
-        }
         class OutgoingStoredPacket : IOutgoingPacketWithId
         {
-            readonly byte[] _buffer;
+            readonly ReadOnlyMemory<byte> _buffer;
 
-            public OutgoingStoredPacket( int packetId, QualityOfService qos, byte[] buffer )
+            public OutgoingStoredPacket( int packetId, QualityOfService qos, ReadOnlyMemory<byte> buffer )
             {
                 Qos = qos;
                 _buffer = buffer;
@@ -66,8 +37,8 @@ namespace CK.MQTT
 
         readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
 
-        public MemoryPacketStore( PacketTransformer packetTransformerOnRestore, PacketTransformer packetTransformerOnSave, int packetIdMaxValue )
-            : base( packetTransformerOnRestore, packetTransformerOnSave, packetIdMaxValue )
+        public MemoryPacketStore( IStoreTransformer storeTransformer, int packetIdMaxValue )
+            : base( storeTransformer, packetIdMaxValue )
         {
         }
 
@@ -86,7 +57,7 @@ namespace CK.MQTT
         protected override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
         {
             Debug.Assert( !_packets.ContainsKey( packet.PacketId ) );
-            var arr = new byte[packet.Size];
+            byte[] arr = new byte[packet.Size];
             var pipe = PipeWriter.Create( new MemoryStream( arr ) );
             packet.WriteAsync( pipe, default );
             var newPacket = new OutgoingStoredPacket( packet.PacketId, packet.Qos, arr );
@@ -102,5 +73,8 @@ namespace CK.MQTT
 
         protected override ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IMqttLogger m, int packetId )
             => new ValueTask<IOutgoingPacketWithId>( _packets[packetId] );
+
+        protected override ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IMqttLogger m )
+            => new ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>>( _packets.Select( s => (IOutgoingPacketWithId)s.Value ).ToAsyncEnumerable() );
     }
 }

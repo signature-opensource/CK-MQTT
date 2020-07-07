@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class InMemoryPacketIdStore : IPacketIdStore
+    public class MemoryPacketIdStore : IPacketIdStore
     {
         readonly HashSet<int> _ids = new HashSet<int>();
         public ValueTask RemoveId( IMqttLogger m, int id )

@@ -140,7 +140,7 @@ namespace CK.MQTT
             throw new NotImplementedException();
         }
 
-        public ValueTask<Task<ConnectResult>> ConnectAsync( IMqttLogger m, IMqttLoggerFactory loggerFactory, MqttClientCredentials credentials = null, OutgoingLastWill lastWill = null )
+        public ValueTask<Task<ConnectResult>> ConnectAsync( IMqttLogger m, MqttClientCredentials credentials = null, OutgoingLastWill lastWill = null )
         {
             throw new NotImplementedException();
         }

@@ -1,7 +1,9 @@
+using System.Threading.Tasks;
+
 namespace CK.MQTT
 {
     public interface IMqttChannelFactory
     {
-        IMqttChannel Create( string connectionString );
+        ValueTask<IMqttChannel> CreateAsync( IMqttLogger m, string connectionString );
     }
 }

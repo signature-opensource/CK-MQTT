@@ -1,5 +1,5 @@
-using CK.Core;
 using System;
+using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class OutgoingMessageHandler
+    public class OutgoingMessageHandler : IDisposable
     {
         public delegate IOutgoingPacket OutputTransformer( IMqttLogger m, IOutgoingPacket outgoingPacket );
         readonly Channel<IOutgoingPacket> _messages;
@@ -69,10 +69,10 @@ namespace CK.MQTT
             catch( Exception e )
             {
                 m.Error( e );
-                Close( m, DisconnectedReason.UnspecifiedError );
+                CloseInternal( m, DisconnectedReason.UnspecifiedError, false );
                 return;
             }
-            Close( m, DisconnectedReason.SelfDisconnected );
+            CloseInternal( m, DisconnectedReason.SelfDisconnected, false );
         }
 
         ValueTask<bool> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
@@ -85,26 +85,36 @@ namespace CK.MQTT
         bool _complete;
         public Task Complete()
         {
-            if( _complete ) return _writeLoop;
-            _complete = true;
+            lock( _writeLoop )
+            {
+                if( _complete ) return _writeLoop;
+                _complete = true;
+            }
             _messages.Writer.Complete();
             _reflexes.Writer.Complete();
             return _writeLoop;
         }
 
-        public void Close( IMqttLogger m, DisconnectedReason disconnectedReason )
+        void CloseInternal( IMqttLogger m, DisconnectedReason disconnectedReason, bool waitLoop )
         {
-            if( _stopped ) return;
-            _stopped = true;
+            lock( _writeLoop )
+            {
+                if( _stopped ) return;
+                _stopped = true;
+            }
+            m.Trace( $"Closing {nameof( OutgoingMessageHandler )}." );
             var task = Complete();
             _dirtyStopSource.Cancel();
-            _pipeWriter.Complete();
-            if( !task.IsCompleted )
+            if( waitLoop && !task.IsCompleted )
             {
-                m.Warn( "OutgoingMessageHandler main loop is taking time to exit..." );
+                m.Warn( $"{nameof( OutgoingMessageHandler )} main loop is taking time to exit..." );
                 task.Wait();
             }
             _clientClose( m, disconnectedReason );
         }
+
+        public void Dispose() => _pipeWriter.Complete();
+
+        public void Close( IMqttLogger m, DisconnectedReason disconnectedReason ) => CloseInternal( m, disconnectedReason, true );
     }
 }

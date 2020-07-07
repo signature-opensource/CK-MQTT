@@ -14,6 +14,9 @@ namespace CK.MQTT
             string connectionString,
             ushort keepAliveSecs = 0,
             int waitTimeoutSecs = -1,
+            IMqttChannelFactory? channelFactory = null,
+            IMqttLoggerFactory? loggerFactory = null,
+            IStoreFactory? storeFactory = null,
             IStoreTransformer? storeTransformer = null,
             StreamPipeReaderOptions? readerOptions = null,
             StreamPipeWriterOptions? writerOptions = null
@@ -22,6 +25,9 @@ namespace CK.MQTT
             ConnectionString = connectionString;
             KeepAliveSecs = keepAliveSecs;
             WaitTimeoutMs = waitTimeoutSecs;
+            ChannelFactory = channelFactory ?? new TcpChannelFactory();
+            LoggerFactory = loggerFactory ?? new MqttActivityMonitorFactory();
+            StoreFactory = storeFactory ?? new MemoryStoreFactory();
             StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
             ReaderOptions = readerOptions;
             WriterOptions = writerOptions;
@@ -42,12 +48,14 @@ namespace CK.MQTT
         /// Default value is 5 seconds
         /// </summary>
 		public int WaitTimeoutMs { get; }
+        public IMqttChannelFactory ChannelFactory { get; }
+        public IMqttLoggerFactory LoggerFactory { get; }
+        public IStoreFactory StoreFactory { get; }
         public IStoreTransformer StoreTransformer { get; }
         public StreamPipeReaderOptions? ReaderOptions { get; }
 
         public StreamPipeWriterOptions? WriterOptions { get; }
 
         public int ChannelsPacketCount { get; } = 32;
-
     }
 }

@@ -14,9 +14,9 @@ namespace CK.MQTT
 
         public void Error( string message ) => _m.Error( message );
 
-        public void Error( Exception e ) => _m.Error( e );
+        public void Error( Exception? e ) => _m.Error( e );
 
-        public void Error( string message, Exception e ) => _m.Error( message, e );
+        public void Error( string message, Exception? e ) => _m.Error( message, e );
 
         public void Info( string message ) => _m.Info( message );
 

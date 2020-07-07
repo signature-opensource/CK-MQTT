@@ -6,16 +6,9 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    /// </summary>
-    /// <param name="m">The monitor to log activity in a reflex.</param>
-    /// <param name="header">The byte header of the incoming packet.</param>
-    /// <param name="packetSize">The packet size of the incoming packet.</param>
-    /// <param name="reader">The PipeReader of the incoming transmission.</param>
-    /// <param name="currentBuffer">The buffer</param>
-    /// <returns></returns>
     public delegate ValueTask Reflex( IMqttLogger m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader );
 
-    public class IncomingMessageHandler
+    public class IncomingMessageHandler : IDisposable
     {
         readonly Action<IMqttLogger, DisconnectedReason> _stopClient;
         readonly PipeReader _pipeReader;
@@ -67,7 +60,7 @@ namespace CK.MQTT
                         if( read.Buffer.Length == 0 )
                         {
                             l.Info( "Remote closed channel." );
-                            Close( l, DisconnectedReason.RemoteDisconnected );
+                            CloseInternal( l, DisconnectedReason.RemoteDisconnected, false );
                         }
                         else CloseWithError( l, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
                         return;
@@ -95,16 +88,27 @@ namespace CK.MQTT
         {
             if( _closed ) return;
             m.Error( error ?? string.Empty, exception );
-            Close( m, reason );
+            CloseInternal( m, reason, false );
         }
 
-        public void Close( IMqttLogger m, DisconnectedReason reason )
+        void CloseInternal( IMqttLogger m, DisconnectedReason reason, bool waitLoop )
         {
-            if( _closed ) return;
-            _closed = true;
+            lock( _readLoop )
+            {
+                if( _closed ) return;
+                _closed = true;
+            }
+            m.Trace( $"Closing {nameof( IncomingMessageHandler )}." );
             _cleanStop.Cancel();
-            _pipeReader.Complete();
+            if( waitLoop && !_readLoop.IsCompleted )
+            {
+                m.Warn( $"{nameof( IncomingMessageHandler )} main loop is taking time to exit..." );
+                _readLoop.Wait();
+            }
             _stopClient( m, reason );
         }
+
+        public void Dispose() => _pipeReader.Complete();
+        public void Close( IMqttLogger m, DisconnectedReason reason ) => CloseInternal( m, reason, true );
     }
 }

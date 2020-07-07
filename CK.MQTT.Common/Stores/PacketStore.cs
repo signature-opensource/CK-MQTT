@@ -1,5 +1,6 @@
-using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -13,14 +14,12 @@ namespace CK.MQTT
     {
         public delegate IOutgoingPacketWithId PacketTransformer( IOutgoingPacketWithId packetToTransform );
         readonly IdStore _packetStore;
-        readonly PacketTransformer _packetTransformerOnRestore;
-        readonly PacketTransformer _packetTransformerOnSave;
+        readonly IStoreTransformer _storeTransformer;
 
-        protected PacketStore( PacketTransformer packetTransformerOnRestore, PacketTransformer packetTransformerOnSave, int packetIdMaxValue )
+        protected PacketStore( IStoreTransformer storeTransformer, int packetIdMaxValue )
         {
             _packetStore = new IdStore( packetIdMaxValue );
-            _packetTransformerOnRestore = packetTransformerOnRestore;
-            _packetTransformerOnSave = packetTransformerOnSave;
+            _storeTransformer = storeTransformer;
         }
 
         /// <summary>
@@ -41,11 +40,16 @@ namespace CK.MQTT
             Debug.Assert( idFreedAwaiter != null );
             packet.PacketId = (ushort)packetId;
             var newPacket = await DoStoreMessageAsync( m, packet );
-            return (_packetTransformerOnSave( newPacket ), idFreedAwaiter);
+            return (_storeTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
         }
 
+        public async ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> GetAllMessagesAsync( IMqttLogger m )
+            => (await DoGetAllMessagesAsync( m )).Select( s => _storeTransformer.PacketTransformerOnRestore( s ) );
+
+        protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IMqttLogger m );
+
         public async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IMqttLogger m, int packetId )
-            => _packetTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
+            => _storeTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IMqttLogger m, int packetId );
 
