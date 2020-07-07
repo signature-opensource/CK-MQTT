@@ -12,7 +12,7 @@ namespace CK.MQTT
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the disconnection.
         /// The <see cref="IMqttChannel"/> should not be connected if canceled, it should only stop a "clean" disconnect <see cref="IMqttChannel"/>.</param>
         /// <returns></returns>
-        void Close( IMqttLogger m  );
+        void Close( IMqttLogger m );
 
         /// <summary>
         /// <see langword="true"/> if the channel was connected in the last operation on the <see cref="Stream"/>.

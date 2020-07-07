@@ -32,7 +32,7 @@ namespace CK.MQTT
         public ReflexMiddlewareBuilder UseMiddleware( ReflexMiddleware reflex ) => Use( reflex );
 
         public Reflex Build( Reflex lastReflex )
-       {
+        {
             foreach( var curr in _reflexes.Reverse<ReflexMiddleware>() )
             {
                 Reflex previousReflex = lastReflex;

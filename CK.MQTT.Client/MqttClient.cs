@@ -6,6 +6,7 @@ using System.Buffers;
 using System.IO;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
+using System.Collections.Generic;
 
 namespace CK.MQTT
 {
@@ -16,7 +17,7 @@ namespace CK.MQTT
         readonly IMqttChannelFactory _channelFactory;
 
         //change between lifecycles
-        bool _closed;
+        bool _closed = true;
         IMqttChannel? _channel;
         IncomingMessageHandler? _input;
         OutgoingMessageHandler? _output;
@@ -28,16 +29,19 @@ namespace CK.MQTT
             _channelFactory = config.ChannelFactory;
         }
 
-        T ThrowIfNull<T>( [NotNull] T? item ) where T : class
-            => item ?? throw new InvalidOperationException( "Client is Disconnected." );
+        T ThrowIfNotConnected<T>( [NotNull] T? item ) where T : class
+        {
+            if( _closed ) throw new InvalidOperationException( "Client is Disconnected." );
+            return item ?? throw new NullReferenceException( "Blame Kuinox" );
+        }
 
-        public async ValueTask<Task<ConnectResult>> ConnectAsync( IMqttLogger m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
+        public async Task<ConnectResult> ConnectAsync( IMqttLogger m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _config.StoreTransformer, _config.ConnectionString, credentials?.CleanSession ?? true );
 
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
-            _output = new OutgoingMessageHandler( _config.LoggerFactory, ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config );
-            KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config.LoggerFactory, _config, _output, PingReqTimeout ) : null;
+            _output = new OutgoingMessageHandler( _config.OutputLogger, ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config );
+            KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config.KeepAliveLogger, _config, _output, PingReqTimeout ) : null;
             _output.OutputMiddleware = timer != null ? timer.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null;
             ConnectAckReflex connectAckReflex = new ConnectAckReflex( new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
@@ -47,24 +51,35 @@ namespace CK.MQTT
                 .UseMiddleware( new PingRespReflex( timer is null ? (Action?)null : timer.ResetTimer ) )
                 .Build( InvalidPacket ) );
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            _input = new IncomingMessageHandler( _config.LoggerFactory, ( a, b ) => Close( a, b ), PipeReader.Create( _channel.Stream, _config.ReaderOptions ), connectAckReflex.ProcessIncomingPacket );
-            _closed = true;
+            _input = new IncomingMessageHandler( _config.InputLogger, ( a, b ) => Close( a, b ), PipeReader.Create( _channel.Stream, _config.ReaderOptions ), connectAckReflex.ProcessIncomingPacket );
             await _output.SendMessageAsync( new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ) );
-            return InternalConnectAsync( connectedTask );
-        }
-
-        async Task<ConnectResult> InternalConnectAsync( Task<ConnectResult> connectedTask )
-        {
             await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs ) );
-            if( !connectedTask.IsCompleted ) return new ConnectResult( ConnectError.Timeout );
+            if( !connectedTask.IsCompleted )
+            {
+                Close( m, DisconnectedReason.UnspecifiedError, raiseEvent: false );
+                return new ConnectResult( ConnectError.Timeout );
+            }
             ConnectResult res = await connectedTask;
             if( res.SessionState == SessionState.CleanSession )
             {
-                ValueTask task = ThrowIfNull( _packetIdStore ).ResetAsync();
-                await ThrowIfNull( _store ).ResetAsync();
+                ValueTask task = _packetIdStore.ResetAsync();
+                await _store.ResetAsync();
                 await task;
             }
+            else
+            {
+                await SendAllStoredMessages( m, _store, _output );
+            }
+            _closed = false;
             return res;
+        }
+        async static Task SendAllStoredMessages( IMqttLogger m, PacketStore store, OutgoingMessageHandler output )
+        {
+            IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store!.GetAllMessagesAsync( m );
+            await foreach( IOutgoingPacketWithId msg in msgs )
+            {
+                await output!.SendMessageAsync( msg );
+            }
         }
 
         void PingReqTimeout( IMqttLogger m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.
@@ -122,7 +137,7 @@ namespace CK.MQTT
         }
 
         readonly object _lock = new object();
-        void Close( IMqttLogger m, DisconnectedReason reason, string? message = null )
+        void Close( IMqttLogger m, DisconnectedReason reason, string? message = null, bool raiseEvent = true )
         {
             const DisconnectedReason reasonMax = (DisconnectedReason)int.MaxValue;
             if( reason == reasonMax ) throw new ArgumentException( nameof( reason ) );
@@ -139,14 +154,14 @@ namespace CK.MQTT
             _channel = null;
             _input = null;
             _output = null;
-            _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( reason, message ) );
+            if( raiseEvent ) _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( reason, message ) );
         }
 
         public bool IsConnected => _channel?.IsConnected ?? false;
 
         public async ValueTask DisconnectAsync( IMqttLogger m )
         {
-            Task disconnect = await ThrowIfNull( _output ).SendMessageAsync( new OutgoingDisconnect() );
+            Task disconnect = await ThrowIfNotConnected( _output ).SendMessageAsync( new OutgoingDisconnect() );
             await _output.Complete();
             await disconnect;
             Close( m, DisconnectedReason.SelfDisconnected );
@@ -157,12 +172,12 @@ namespace CK.MQTT
             _output?.Dispose();
         }
         public async ValueTask<Task> PublishAsync( IMqttLogger m, OutgoingApplicationMessage message )
-            => await SenderHelper.SendPacket<object>( m, ThrowIfNull( _store ), ThrowIfNull( _output ), message, _config );
+            => await SenderHelper.SendPacket<object>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), message, _config );
 
         public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IMqttLogger m, params Subscription[] subscriptions )
-            => SenderHelper.SendPacket<SubscribeReturnCode[]>( m, ThrowIfNull( _store ), ThrowIfNull( _output ), new OutgoingSubscribe( subscriptions ), _config );
+            => SenderHelper.SendPacket<SubscribeReturnCode[]>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), new OutgoingSubscribe( subscriptions ), _config );
 
         public async ValueTask<Task> UnsubscribeAsync( IMqttLogger m, params string[] topics )
-            => await SenderHelper.SendPacket<object>( m, ThrowIfNull( _store ), ThrowIfNull( _output ), new OutgoingUnsubscribe( topics ), _config );
+            => await SenderHelper.SendPacket<object>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), new OutgoingUnsubscribe( topics ), _config );
     }
 }

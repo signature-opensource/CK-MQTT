@@ -12,9 +12,9 @@ namespace CK.MQTT
         readonly Timer _timer;
         bool _timeoutMode;
         readonly Action<IMqttLogger> _timeoutCallback;
-        public KeepAliveTimer( IMqttLoggerFactory loggerFactory, MqttConfiguration config, OutgoingMessageHandler output, Action<IMqttLogger> timeoutCallback )
+        public KeepAliveTimer( IMqttLogger keepAliveLogger, MqttConfiguration config, OutgoingMessageHandler output, Action<IMqttLogger> timeoutCallback )
         {
-            _m = loggerFactory.Create();
+            _m = keepAliveLogger;
             _keepAlive = TimeSpan.FromSeconds( config.KeepAliveSecs );
             _pingRespTimeout = TimeSpan.FromMilliseconds( config.WaitTimeoutMs );
             _output = output;

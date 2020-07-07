@@ -140,7 +140,7 @@ namespace CK.MQTT
             throw new NotImplementedException();
         }
 
-        public ValueTask<Task<ConnectResult>> ConnectAsync( IMqttLogger m, MqttClientCredentials credentials = null, OutgoingLastWill lastWill = null )
+        public Task<ConnectResult> ConnectAsync( IMqttLogger m, MqttClientCredentials credentials, OutgoingLastWill lastWill )
         {
             throw new NotImplementedException();
         }
@@ -167,7 +167,7 @@ namespace CK.MQTT
         [Test]
         public async Task event_async_and_sync_look_the_same()
         {
-            var impl = new TestImpl( new MqttActivityMonitor( TestHelper.Monitor ));
+            var impl = new TestImpl( new MqttActivityMonitor( TestHelper.Monitor ) );
 
             var consumer1 = new MqttCientConsumer( "Consumer1" );
             var consumer2 = new MqttCientConsumer( "Consumer2" );

@@ -68,17 +68,18 @@ namespace CK.MQTT
 
         public static async ValueTask<string> ReadMQTTString( this PipeReader pipeReader )
         {
-            Beginning:
-            ReadResult result = await pipeReader.ReadAsync();
-            if( result.IsCanceled ) throw new OperationCanceledException();
-            if( !TryReadMQTTString( result.Buffer, out string? output, out SequencePosition sequencePosition ) )
+            while( true )
             {
+                ReadResult result = await pipeReader.ReadAsync();
+                if( result.IsCanceled ) throw new OperationCanceledException();
+                if( TryReadMQTTString( result.Buffer, out string? output, out SequencePosition sequencePosition ) )
+                {
+                    pipeReader.AdvanceTo( sequencePosition );
+                    return output;
+                }
                 pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
                 if( result.IsCompleted ) throw new EndOfStreamException();
-                goto Beginning;
             }
-            pipeReader.AdvanceTo( sequencePosition );
-            return output;
         }
 
         static bool TryReadUInt16( ReadOnlySequence<byte> buffer, out ushort val, out SequencePosition sequencePosition )

@@ -1,3 +1,6 @@
+using CK.Core;
+using System;
+using System.Collections.Specialized;
 using System.IO.Pipelines;
 
 namespace CK.MQTT
@@ -14,19 +17,26 @@ namespace CK.MQTT
             string connectionString,
             ushort keepAliveSecs = 0,
             int waitTimeoutSecs = -1,
+            bool waitForConnectionBeforeReSendingMessages = false,
+            IMqttLogger? inputLogger = null,
+            IMqttLogger? outputLogger = null,
+            IMqttLogger? keepAliveLogger = null,
             IMqttChannelFactory? channelFactory = null,
-            IMqttLoggerFactory? loggerFactory = null,
             IStoreFactory? storeFactory = null,
             IStoreTransformer? storeTransformer = null,
             StreamPipeReaderOptions? readerOptions = null,
             StreamPipeWriterOptions? writerOptions = null
         )
         {
+            if( keepAliveSecs > 0 && keepAliveLogger is null ) throw new ArgumentNullException( $"{nameof( keepAliveLogger )} cannot be null when keepAlive is enabled." );
             ConnectionString = connectionString;
             KeepAliveSecs = keepAliveSecs;
             WaitTimeoutMs = waitTimeoutSecs;
+            WaitForConnectionBeforeReSendingMessages = waitForConnectionBeforeReSendingMessages;
+            InputLogger = inputLogger ?? new MqttActivityMonitor( new ActivityMonitor() );
+            OutputLogger = outputLogger ?? new MqttActivityMonitor( new ActivityMonitor() );
+            KeepAliveLogger = keepAliveLogger;
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
-            LoggerFactory = loggerFactory ?? new MqttActivityMonitorFactory();
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
             StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
             ReaderOptions = readerOptions;
@@ -48,8 +58,11 @@ namespace CK.MQTT
         /// Default value is 5 seconds
         /// </summary>
 		public int WaitTimeoutMs { get; }
+        public bool WaitForConnectionBeforeReSendingMessages { get; }
+        public IMqttLogger InputLogger { get; }
+        public IMqttLogger OutputLogger { get; }
+        public IMqttLogger? KeepAliveLogger { get; }
         public IMqttChannelFactory ChannelFactory { get; }
-        public IMqttLoggerFactory LoggerFactory { get; }
         public IStoreFactory StoreFactory { get; }
         public IStoreTransformer StoreTransformer { get; }
         public StreamPipeReaderOptions? ReaderOptions { get; }

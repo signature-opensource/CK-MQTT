@@ -17,13 +17,13 @@ namespace CK.MQTT
         readonly Task _writeLoop;
         bool _stopped;
         readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
-        public OutgoingMessageHandler( IMqttLoggerFactory loggerFactory, Action<IMqttLogger, DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
+        public OutgoingMessageHandler( IMqttLogger outputLogger, Action<IMqttLogger, DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _clientClose = clientClose;
             _pipeWriter = writer;
-            _writeLoop = WriteLoop( loggerFactory );
+            _writeLoop = WriteLoop( outputLogger );
         }
 
         public OutputTransformer? OutputMiddleware { get; set; }
@@ -44,9 +44,8 @@ namespace CK.MQTT
             return wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
 
-        async Task WriteLoop( IMqttLoggerFactory loggerFactory )
+        async Task WriteLoop( IMqttLogger m )
         {
-            IMqttLogger m = loggerFactory.Create();
             try
             {
                 bool mainLoop = true;

@@ -15,12 +15,12 @@ namespace CK.MQTT
         readonly Task _readLoop;
         readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
         bool _closed;
-        public IncomingMessageHandler( IMqttLoggerFactory loggerFactory, Action<IMqttLogger, DisconnectedReason> stopClient, PipeReader pipeReader, Reflex reflex )
+        public IncomingMessageHandler( IMqttLogger inputLogger, Action<IMqttLogger, DisconnectedReason> stopClient, PipeReader pipeReader, Reflex reflex )
         {
             _stopClient = stopClient;
             _pipeReader = pipeReader;
             CurrentReflex = reflex;
-            _readLoop = ReadLoop( loggerFactory );
+            _readLoop = ReadLoop( inputLogger );
         }
 
         /// <summary>
@@ -40,9 +40,8 @@ namespace CK.MQTT
             return reader.TryReadMQTTRemainingLength( out length, out position );
         }
 
-        async Task ReadLoop( IMqttLoggerFactory loggerFactory )
+        async Task ReadLoop( IMqttLogger m )
         {
-            IMqttLogger l = loggerFactory.Create();
             while( !_cleanStop.IsCancellationRequested )
             {
                 ReadResult read = await _pipeReader.ReadAsync( _cleanStop.Token );
@@ -50,7 +49,7 @@ namespace CK.MQTT
                 OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
                 if( res == OperationStatus.InvalidData )
                 {
-                    CloseWithError( l, DisconnectedReason.ProtocolError, "Corrupted Stream." );
+                    CloseWithError( m, DisconnectedReason.ProtocolError, "Corrupted Stream." );
                     return;
                 }
                 if( res == OperationStatus.NeedMoreData )
@@ -59,25 +58,25 @@ namespace CK.MQTT
                     {
                         if( read.Buffer.Length == 0 )
                         {
-                            l.Info( "Remote closed channel." );
-                            CloseInternal( l, DisconnectedReason.RemoteDisconnected, false );
+                            m.Info( "Remote closed channel." );
+                            CloseInternal( m, DisconnectedReason.RemoteDisconnected, false );
                         }
-                        else CloseWithError( l, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
+                        else CloseWithError( m, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
                         return;
                     }
                     _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                     continue;
                 }
                 _pipeReader.AdvanceTo( position );
-                using( l.OpenTrace( $"Incoming packet of {length} bytes." ) )
+                using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
                 {
                     try
                     {
-                        await CurrentReflex( l, this, header, length, _pipeReader );
+                        await CurrentReflex( m, this, header, length, _pipeReader );
                     }
                     catch( Exception e )
                     {
-                        CloseWithError( l, DisconnectedReason.UnspecifiedError, exception: e );
+                        CloseWithError( m, DisconnectedReason.UnspecifiedError, exception: e );
                         return;
                     }
                 }
