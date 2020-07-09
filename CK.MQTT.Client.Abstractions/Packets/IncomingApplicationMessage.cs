@@ -2,9 +2,9 @@ using System.IO.Pipelines;
 
 namespace CK.MQTT
 {
-    public class IncomingApplicationMessage
+    public class IncomingMessage
     {
-        public IncomingApplicationMessage( string topic, PipeReader pipeReader, bool duplicate, bool retain, int payloadLength )
+        public IncomingMessage( string topic, PipeReader pipeReader, bool duplicate, bool retain, int payloadLength )
         {
             Topic = topic;
             PipeReader = pipeReader;

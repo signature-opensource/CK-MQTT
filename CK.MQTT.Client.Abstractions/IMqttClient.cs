@@ -1,54 +1,64 @@
+using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
     /// <summary>
-    /// Represents an MQTT Client
+    /// Represent a MQTT Client.
     /// </summary>
     public interface IMqttClient
     {
         /// <summary>
-        /// Event raised when the Client gets disconnected, synchronously.
-        /// The Client disconnection could be caused by a protocol disconnect, an error or a remote disconnection
-        /// produced by the Server.
-        /// See <see cref="MqttEndpointDisconnected"/> for more details on the disconnection information
+        /// <see langword="delegate"/> used when the client is Disconnected.
         /// </summary>
-        event SequentialEventHandler<IMqttClient, MqttEndpointDisconnected> Disconnected;
+        /// <param name="m">The logger, use it to log the activities perfomed while processing the disconnection.</param>
+        /// <param name="arg">Object containing information about the disconnection, like the reason.</param>
+        public delegate void Disconnected( IMqttLogger m, MqttEndpointDisconnected arg );
 
         /// <summary>
-        /// Return <see langword="true"/> if the last packet was sent successfully
+        /// <see langword="delegate"/> called when the <see cref="IMqttClient"/> got Disconnected.
+        /// See <see cref="MqttEndpointDisconnected"/> for more details on the disconnection information.
+        /// </summary>
+        Disconnected? DisconnectedHandler { get; set; }
+
+        /// <summary>
+        /// Return <see langword="false"/> if the last operation on the underlying Communication Channel was not successfull.
         /// </summary>
         bool IsConnected { get; }
 
         /// <summary>
-        /// Event raised for each received message in asynchronous way, each async handler being called
-        /// one after the other.
+        /// <see langword="delegate"/> called when the client receive an <see cref="IncomingMessage"/>.
         /// </summary>
-        event SequentialEventHandlerAsync<IMqttClient, IncomingApplicationMessage> MessageReceivedAsync;
+        /// <param name="monitor">The logger, use it to log the activities perfomed while processing the <see cref="IncomingMessage"/>.</param>
+        /// <param name="message">The message to process. You MUST read completly the message, or you will corrupt the communication stream !</param>
+        /// <returns>A <see cref="ValueTask"/> that complete when the packet processing is finished.</returns>
+        public delegate ValueTask MessageHandlerDelegate( IMqttLogger monitor, IncomingMessage message );
 
         /// <summary>
-        /// Represents the protocol connection, which consists of sending a CONNECT packet
-        /// and awaiting the corresponding CONNACK packet from the Server
+        /// <see langword="delegate"/> called when the <see cref="IMqttClient"/> receive a Publish Packet.
         /// </summary>
+        MessageHandlerDelegate? MessageHandler { get; set; }
+
+        /// <summary>
+        /// Connect the <see cref="IMqttClient"/> to a Broker.
+        /// </summary>
+        /// <param name="m">The logger used to log activities about the connection.</param>
         /// <param name="credentials">
-        /// The credentials used to connect to the Server. See <see cref="MqttClientCredentials" /> for more details on the credentials information
+        /// The credentials used to connect to the Server. See <see cref="MqttClientCredentials" /> for more details on the credentials information.
+        /// If <see langword="null"/>, the client will attempt an anonymous connection (<a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242">MQTT-3.1.3-6</a>).
         /// </param>
-        /// <param name="will">
-        /// The last will message to send from the Server when an unexpected Client disconnection occurrs. 
-        /// See <see cref="LastWill" /> for more details about the will message structure
-        /// </param>
-        /// <param name="cleanSession">
-        /// Indicates if the session state between Client and Server must be cleared between connections
-        /// Defaults to false, meaning that session state will be preserved by default accross connections
+        /// <param name="lastWill">
+        /// The <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Will_Flag">
+        /// last will message </a> that the Server will send if an unexpected Client disconnection occurs. 
         /// </param>
         /// <returns>
-        /// Returns the state of the client session created as part of the connection
-        /// See <see cref="SessionState" /> for more details about the session state values
+        /// Returns a <see cref="Task{ConnectResult}"/> that encapsulate a <see cref="ConnectResult"/>.
+        /// You must not send any message before the the <see cref="Task{ConnectResult}"/> complete.
         /// </returns>
-        /// <exception cref="MqttClientException">MqttClientException</exception>
         /// <remarks>
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
-        /// for more details about the protocol connection
+        /// for more details about the connection protocol.
         /// </remarks>
         Task<ConnectResult> ConnectAsync( IMqttLogger m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 

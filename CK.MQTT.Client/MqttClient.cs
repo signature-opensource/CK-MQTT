@@ -7,6 +7,7 @@ using System.IO;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Collections.Generic;
+using static CK.MQTT.IMqttClient;
 
 namespace CK.MQTT
 {
@@ -41,7 +42,7 @@ namespace CK.MQTT
 
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
             _output = new OutgoingMessageHandler( _config.OutputLogger, ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config );
-            KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config.KeepAliveLogger, _config, _output, PingReqTimeout ) : null;
+            KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config!.KeepAliveLogger!, _config, _output, PingReqTimeout ) : null;
             _output.OutputMiddleware = timer != null ? timer.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null;
             ConnectAckReflex connectAckReflex = new ConnectAckReflex( new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
@@ -84,11 +85,12 @@ namespace CK.MQTT
 
         void PingReqTimeout( IMqttLogger m ) => Close( m, DisconnectedReason.RemoteDisconnected );//TODO: clean disconnect, not close.
 
-        async Task OnMessage( IMqttLogger m, IncomingApplicationMessage msg )
+        async Task OnMessage( IMqttLogger m, IncomingMessage msg )
         {
-            if( _eMessage.HasHandlers )
+            var handler = MessageHandler;
+            if( handler != null )
             {
-                await _eMessage.RaiseAsync( m, this, msg );
+                await handler( m, msg );
                 return;
             }
             else
@@ -121,20 +123,7 @@ namespace CK.MQTT
             throw new ProtocolViolationException();
         }
 
-        readonly SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected> _eDisconnected
-            = new SequentialEventHandlerSender<IMqttClient, MqttEndpointDisconnected>();
-        public event SequentialEventHandler<IMqttClient, MqttEndpointDisconnected> Disconnected
-        {
-            add => _eDisconnected.Add( value );
-            remove => _eDisconnected.Remove( value );
-        }
-        readonly SequentialEventHandlerAsyncSender<IMqttClient, IncomingApplicationMessage> _eMessage
-            = new SequentialEventHandlerAsyncSender<IMqttClient, IncomingApplicationMessage>();
-        public event SequentialEventHandlerAsync<IMqttClient, IncomingApplicationMessage> MessageReceivedAsync
-        {
-            add => _eMessage.Add( value );
-            remove => _eMessage.Remove( value );
-        }
+        public MessageHandlerDelegate? MessageHandler { get; set; }
 
         readonly object _lock = new object();
         void Close( IMqttLogger m, DisconnectedReason reason, string? message = null, bool raiseEvent = true )
@@ -154,17 +143,23 @@ namespace CK.MQTT
             _channel = null;
             _input = null;
             _output = null;
-            if( raiseEvent ) _eDisconnected.Raise( m, this, new MqttEndpointDisconnected( reason, message ) );
+            if( raiseEvent ) DisconnectedHandler?.Invoke( m, new MqttEndpointDisconnected( reason, message ) );
         }
+        public Disconnected? DisconnectedHandler { get; set; }
 
-        public bool IsConnected => _channel?.IsConnected ?? false;
+        public bool IsConnected => !_closed && (_channel?.IsConnected ?? false);
+
 
         public async ValueTask DisconnectAsync( IMqttLogger m )
         {
             Task disconnect = await ThrowIfNotConnected( _output ).SendMessageAsync( new OutgoingDisconnect() );
             await _output.Complete();
             await disconnect;
-            Close( m, DisconnectedReason.SelfDisconnected );
+            if( !_closed )
+            {
+                m.Warn( "Client is not closed after completing to send messages." );
+                Close( m, DisconnectedReason.SelfDisconnected );
+            }
         }
         public void Dispose()
         {

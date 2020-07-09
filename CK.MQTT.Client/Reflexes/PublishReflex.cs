@@ -8,10 +8,10 @@ namespace CK.MQTT
     class PublishReflex : IReflexMiddleware
     {
         readonly IPacketIdStore _store;
-        readonly Func<IMqttLogger, IncomingApplicationMessage, Task> _deliverMessage;
+        readonly Func<IMqttLogger, IncomingMessage, Task> _deliverMessage;
         readonly OutgoingMessageHandler _output;
 
-        public PublishReflex( IPacketIdStore store, Func<IMqttLogger, IncomingApplicationMessage, Task> payloadProcessor, OutgoingMessageHandler output )
+        public PublishReflex( IPacketIdStore store, Func<IMqttLogger, IncomingMessage, Task> payloadProcessor, OutgoingMessageHandler output )
         {
             _store = store;
             _deliverMessage = payloadProcessor;
@@ -45,7 +45,7 @@ namespace CK.MQTT
                 if( qos == QualityOfService.AtMostOnce )
                 {
                     string theTopic = await reader.ReadMQTTString();
-                    await _deliverMessage( m, new IncomingApplicationMessage( theTopic, reader, dup, retain, packetLength - theTopic.MQTTSize() ) );
+                    await _deliverMessage( m, new IncomingMessage( theTopic, reader, dup, retain, packetLength - theTopic.MQTTSize() ) );
                     return;
                 }
                 if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
@@ -55,7 +55,7 @@ namespace CK.MQTT
                 }
                 reader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
             }
-            var incomingMessage = new IncomingApplicationMessage( topic, reader, dup, retain, packetLength - 2 - topic.MQTTSize() );
+            var incomingMessage = new IncomingMessage( topic, reader, dup, retain, packetLength - 2 - topic.MQTTSize() );
             if( qos == QualityOfService.AtLeastOnce )
             {
                 await _deliverMessage( m, incomingMessage );

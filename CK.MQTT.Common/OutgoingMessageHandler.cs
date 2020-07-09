@@ -46,32 +46,35 @@ namespace CK.MQTT
 
         async Task WriteLoop( IMqttLogger m )
         {
-            try
+            using( m.OpenInfo( "Output loop listening..." ) )
             {
-                bool mainLoop = true;
-                while( mainLoop )
+                try
                 {
-                    if( _dirtyStopSource.IsCancellationRequested ) break;
-                    if( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) || _messages.Reader.TryRead( out packet ) )
+                    bool mainLoop = true;
+                    while( mainLoop )
                     {
-                        await ProcessOutgoingPacket( m, packet );
-                        continue;
+                        if( _dirtyStopSource.IsCancellationRequested ) break;
+                        if( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) || _messages.Reader.TryRead( out packet ) )
+                        {
+                            await ProcessOutgoingPacket( m, packet );
+                            continue;
+                        }
+                        mainLoop = await await Task.WhenAny( _reflexes.Reader.WaitToReadAsync().AsTask(), _messages.Reader.WaitToReadAsync().AsTask() );
                     }
-                    mainLoop = await await Task.WhenAny( _reflexes.Reader.WaitToReadAsync().AsTask(), _messages.Reader.WaitToReadAsync().AsTask() );
+                    using( m.OpenTrace( "Sending remaining messages..." ) )
+                    {
+                        while( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
+                        while( _messages.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
+                    }
                 }
-                using( m.OpenTrace( "Sending remaining messages..." ) )
+                catch( Exception e )
                 {
-                    while( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
-                    while( _messages.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
+                    m.Error( e );
+                    CloseInternal( m, DisconnectedReason.UnspecifiedError, false );
+                    return;
                 }
+                CloseInternal( m, DisconnectedReason.SelfDisconnected, false );
             }
-            catch( Exception e )
-            {
-                m.Error( e );
-                CloseInternal( m, DisconnectedReason.UnspecifiedError, false );
-                return;
-            }
-            CloseInternal( m, DisconnectedReason.SelfDisconnected, false );
         }
 
         ValueTask<bool> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )

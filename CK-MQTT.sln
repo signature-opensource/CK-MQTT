@@ -23,8 +23,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{25AD6D5E
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Abstractions", "CK.MQTT.Client.Abstractions\CK.MQTT.Abstractions.csproj", "{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client.Abstractions.Tests", "Tests\CK.MQTT.Client.Abstractions.Tests\CK.MQTT.Client.Abstractions.Tests.csproj", "{55BA9E7A-BFB0-429E-A424-D9FE187936CC}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Common", "CK.MQTT.Common\CK.MQTT.Common.csproj", "{C1C6D60D-7667-4E3A-8607-627B00D2E451}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleClientTest", "SimpleClientTest\SimpleClientTest.csproj", "{94C70015-DF05-4353-B7B6-3E88A226CC84}"
@@ -65,14 +63,6 @@ Global
 		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Release|x64.ActiveCfg = Release|Any CPU
 		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Release|x64.Build.0 = Release|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Debug|x64.Build.0 = Debug|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Release|x64.ActiveCfg = Release|Any CPU
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC}.Release|x64.Build.0 = Release|Any CPU
 		{C1C6D60D-7667-4E3A-8607-627B00D2E451}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C1C6D60D-7667-4E3A-8607-627B00D2E451}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1C6D60D-7667-4E3A-8607-627B00D2E451}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -110,7 +100,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{55BA9E7A-BFB0-429E-A424-D9FE187936CC} = {25AD6D5E-4103-4178-A0E9-643E2C4080D2}
 		{6907007D-52E8-4989-9240-CF4E69A1434F} = {25AD6D5E-4103-4178-A0E9-643E2C4080D2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution

@@ -56,7 +56,7 @@ namespace CK.MQTT
 
         protected override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
         {
-            Debug.Assert( !_packets.ContainsKey( packet.PacketId ) );
+            if( _packets.ContainsKey( packet.PacketId ) ) throw new InvalidOperationException( $"Packet Id was badly choosen. Did you restored it's state correctly ?" );
             byte[] arr = new byte[packet.Size];
             var pipe = PipeWriter.Create( new MemoryStream( arr ) );
             packet.WriteAsync( pipe, default );

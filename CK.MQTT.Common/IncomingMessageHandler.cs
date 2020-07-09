@@ -42,42 +42,49 @@ namespace CK.MQTT
 
         async Task ReadLoop( IMqttLogger m )
         {
-            while( !_cleanStop.IsCancellationRequested )
+            using( m.OpenInfo( "Listening Incoming Messages..." ) )
             {
-                ReadResult read = await _pipeReader.ReadAsync( _cleanStop.Token );
-                if( read.IsCanceled ) return;
-                OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
-                if( res == OperationStatus.InvalidData )
+                while( !_cleanStop.IsCancellationRequested )
                 {
-                    CloseWithError( m, DisconnectedReason.ProtocolError, "Corrupted Stream." );
-                    return;
-                }
-                if( res == OperationStatus.NeedMoreData )
-                {
-                    if( read.IsCompleted )
+                    ReadResult read = await _pipeReader.ReadAsync( _cleanStop.Token );
+                    if( read.IsCanceled )
                     {
-                        if( read.Buffer.Length == 0 )
+                        m.Trace( "Read Cancelled, exiting." );
+                        return;
+                    }
+                    OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
+                    if( res == OperationStatus.InvalidData )
+                    {
+                        CloseWithError( m, DisconnectedReason.ProtocolError, "Corrupted Stream." );
+                        return;
+                    }
+                    if( res == OperationStatus.NeedMoreData )
+                    {
+                        if( read.IsCompleted )
                         {
-                            m.Info( "Remote closed channel." );
-                            CloseInternal( m, DisconnectedReason.RemoteDisconnected, false );
+                            if( read.Buffer.Length == 0 )
+                            {
+                                m.Info( "Remote closed channel." );
+                                CloseInternal( m, DisconnectedReason.RemoteDisconnected, false );
+                            }
+                            else CloseWithError( m, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
+                            return;
                         }
-                        else CloseWithError( m, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
-                        return;
+                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                        continue;
                     }
-                    _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
-                    continue;
-                }
-                _pipeReader.AdvanceTo( position );
-                using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
-                {
-                    try
+                    _pipeReader.AdvanceTo( position );
+                    using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
                     {
-                        await CurrentReflex( m, this, header, length, _pipeReader );
-                    }
-                    catch( Exception e )
-                    {
-                        CloseWithError( m, DisconnectedReason.UnspecifiedError, exception: e );
-                        return;
+                        try
+                        {
+                            await CurrentReflex( m, this, header, length, _pipeReader );
+                        }
+                        catch( Exception e )
+                        {
+                            CloseWithError( m, DisconnectedReason.UnspecifiedError, exception: e );
+                            return;
+                        }
                     }
                 }
             }
@@ -99,6 +106,8 @@ namespace CK.MQTT
             }
             m.Trace( $"Closing {nameof( IncomingMessageHandler )}." );
             _cleanStop.Cancel();
+            _pipeReader.Complete();
+            _pipeReader.CancelPendingRead();
             if( waitLoop && !_readLoop.IsCompleted )
             {
                 m.Warn( $"{nameof( IncomingMessageHandler )} main loop is taking time to exit..." );

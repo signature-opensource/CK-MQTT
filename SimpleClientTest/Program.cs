@@ -11,7 +11,10 @@ namespace SimpleClientTest
         static async Task Main( string[] args )
         {
             var config = new GrandOutputConfiguration();
-            config.Handlers.Add( new ConsoleConfiguration() );
+            config.Handlers.Add( new ConsoleConfiguration()
+            {
+                EnableMonitorIdColorFlag = true
+            } );
             ActivityMonitor.DefaultFilter = LogFilter.Debug;
             config.MinimalFilter = LogFilter.Debug;
             var go = GrandOutput.EnsureActiveDefault( config );

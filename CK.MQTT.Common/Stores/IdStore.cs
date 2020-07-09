@@ -1,24 +1,39 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
+    [DebuggerDisplay( "Count = {_count} {DebuggerDisplay}" )]
     class IdStore
     {
+        [DebuggerDisplay( "{DebuggerDisplay} {NextFreeId,nq}" )]
         struct Entry
         {
             public int NextFreeId;
             public TaskCompletionSource<object?>? TaskCS;
+
+            public char DebuggerDisplay => TaskCS == null ? '-' : 'X';
         }
 
         Entry[] _entries;
-        int _nextFreeId = 1;
+        int _nextFreeId = 0;
         /// <summary>
         /// Current count of Entries.
         /// </summary>
         int _count = 0;
         readonly int _maxPacketId;
+
+        string DebuggerDisplay
+        {
+            get
+            {
+                Span<char> chars = new char[_entries.Length];
+                for( int i = 0; i < _entries.Length; i++ ) chars[i] = _entries[i].DebuggerDisplay;
+                return chars.ToString();
+            }
+        }
 
         public IdStore( int packetIdMaxValue )
         {

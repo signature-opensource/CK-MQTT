@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring" Version="12.2.0" />
+    <PackageReference Include="CK.Monitoring" Version="12.3.2--0004-develop" />
   </ItemGroup>
 
   <ItemGroup>

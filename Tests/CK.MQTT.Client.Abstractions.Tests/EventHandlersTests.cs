@@ -78,19 +78,6 @@ namespace CK.MQTT
             remove { _eSeqDisconnectAsync.Remove( value ); }
         }
 
-        event SequentialEventHandlerAsync<IMqttClient, IncomingApplicationMessage> IMqttClient.MessageReceivedAsync
-        {
-            add
-            {
-                throw new NotImplementedException();
-            }
-
-            remove
-            {
-                throw new NotImplementedException();
-            }
-        }
-
         public string ClientId => throw new NotImplementedException();
 
         public bool IsConnected => throw new NotImplementedException();

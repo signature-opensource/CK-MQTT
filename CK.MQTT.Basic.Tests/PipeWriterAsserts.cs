@@ -9,7 +9,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
     public class PipeWriterAsserts
     {
         [Test]
-        public void PipeWriter_work_as_i_expected()
+        public void PipeWriter_second_memory_access_is_same()
         {
             MemoryStream mem = new MemoryStream();
             PipeWriter pw = PipeWriter.Create( mem );

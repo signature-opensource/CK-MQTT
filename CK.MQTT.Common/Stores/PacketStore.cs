@@ -32,15 +32,18 @@ namespace CK.MQTT
             int waitTime = 500;
             while( !success )
             {
-                m.Warn( "No PacketID available, awaiting until one is free." );
+                m.Warn( "No PacketId available, awaiting until one is free." );
                 await Task.Delay( waitTime );
                 if( waitTime < 5000 ) waitTime += 500;
                 success = _packetStore.TryGetId( out packetId, out idFreedAwaiter );
             }
             Debug.Assert( idFreedAwaiter != null );
             packet.PacketId = (ushort)packetId;
-            var newPacket = await DoStoreMessageAsync( m, packet );
-            return (_storeTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
+            using( m.OpenTrace( $"{nameof( _packetStore )} determined new packet id would be {packetId}." ) )
+            {
+                var newPacket = await DoStoreMessageAsync( m, packet );
+                return (_storeTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
+            }
         }
 
         public async ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> GetAllMessagesAsync( IMqttLogger m )
