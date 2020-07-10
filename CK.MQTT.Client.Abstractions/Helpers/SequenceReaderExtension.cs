@@ -12,7 +12,13 @@ namespace CK.MQTT
     /// </summary>
     public static class SequenceReaderExtension
     {
-        public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out ushort value )
+        /// <summary>
+        /// <see cref="SequenceReaderExtensions.TryReadBigEndian(ref SequenceReader{byte}, out short)"/> but casted to <see cref="ushort"/>
+        /// </summary>
+        /// <param name="sequenceReader"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out ushort value ) 
         {
             bool status = sequenceReader.TryReadBigEndian( out short toCast );
             value = (ushort)toCast;
@@ -39,7 +45,10 @@ namespace CK.MQTT
             return true;
         }
 
-        private static bool TryReadMultisegmentUtf8String(
+        /// <summary>
+        /// Copy&Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
+        /// </summary>
+        static bool TryReadMultisegmentUtf8String(
             ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
             Debug.Assert( reader.UnreadSpan.Length < length );

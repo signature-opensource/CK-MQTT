@@ -33,7 +33,7 @@ namespace CK.MQTT
         public async ValueTask<bool> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
         {
             int stringSize = _topic.MQTTSize();
-            writer.GetSpan( stringSize ).WriteString( _topic );
+            writer.GetSpan( stringSize ).WriteMQTTString( _topic );
             writer.Advance( stringSize );
             await writer.FlushAsync( cancellationToken );
             return await WritePayload( writer, cancellationToken );

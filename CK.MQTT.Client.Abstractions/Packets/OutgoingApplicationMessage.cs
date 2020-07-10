@@ -44,7 +44,7 @@ namespace CK.MQTT
 
         protected sealed override void WriteHeaderContent( Span<byte> span )
         {
-            span = span.WriteString( Topic );
+            span = span.WriteMQTTString( Topic );
             if( _packetIdPresent ) span.WriteUInt16( (ushort)PacketId );
         }
     }

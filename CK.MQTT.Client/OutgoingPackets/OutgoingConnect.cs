@@ -58,7 +58,7 @@ namespace CK.MQTT
         protected override void WriteHeaderContent( Span<byte> span )
         {
             //protocol name: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349225
-            span = span.WriteString( _pConf.ProtocolName );
+            span = span.WriteMQTTString( _pConf.ProtocolName );
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349228
             span[0] = _pConf.ProtocolLevel;
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
@@ -66,7 +66,7 @@ namespace CK.MQTT
             span = span[2..]
                 //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
                 .WriteUInt16( _mConf.KeepAliveSecs )
-                .WriteString( _creds?.ClientId ?? "" );
+                .WriteMQTTString( _creds?.ClientId ?? "" );
         }
 
         protected override async ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
@@ -86,8 +86,8 @@ namespace CK.MQTT
             Span<byte> span = pw.GetSpan( _sizePostPayload );
             string? username = _creds?.UserName;
             string? password = _creds?.Password;
-            if( username != null ) span = span.WriteString( username );
-            if( password != null ) span.WriteString( password );
+            if( username != null ) span = span.WriteMQTTString( username );
+            if( password != null ) span.WriteMQTTString( password );
             pw.Advance( _sizePostPayload );
         }
     }

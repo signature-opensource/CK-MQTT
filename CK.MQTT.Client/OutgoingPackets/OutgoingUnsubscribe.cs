@@ -26,7 +26,7 @@ namespace CK.MQTT
             span = span.WriteUInt16( (ushort)PacketId );
             foreach( string topic in _topics )
             {
-                span = span.WriteString( topic );
+                span = span.WriteMQTTString( topic );
             }
         }
     }

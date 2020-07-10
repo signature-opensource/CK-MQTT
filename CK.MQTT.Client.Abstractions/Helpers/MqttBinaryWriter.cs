@@ -4,26 +4,17 @@ using System.Text;
 
 namespace CK.MQTT
 {
+    /// <summary>
+    /// Various extension methods that help serializing MQTT values on a <see cref="Span{T}"/>.
+    /// </summary>
     public static class MqttBinaryWriter
     {
-        public static byte ComputeRemainingLengthSize( uint remainingSize )
-        {
-            byte output = 1;
-            while( remainingSize >= 0x80 )
-            {
-                output++;
-                remainingSize >>= 7;
-            }
-            return output;
-        }
-
         /// <summary>
-        /// Write the byte header, then the packet length. Return the number of byte written.
+        /// Write the packet length.
         /// </summary>
         /// <param name="buffer">The buffer to write in.</param>
-        /// <param name="header">The header to write.</param>
-        /// <param name="packetLength">The length of the packet.</param>
-        /// <returns></returns>
+        /// <param name="packetLength">The length of the packet to write.</param>
+        /// <returns>The <paramref name="buffer"/> but sliced after the writtens bytes (at least 1 byte, up to 5 bytes).</returns>
         public static Span<byte> WriteRemainingSize( this Span<byte> buffer, int packetLength )
         {
             // Write out an int 7 bits at a time.  The high bit of the byte,
@@ -38,23 +29,28 @@ namespace CK.MQTT
             return buffer[(i + 1)..];
         }
 
-        public static Span<byte> WriteString( this Span<byte> buffer, string str )
+        /// <summary>
+        /// Write a mqtt string.
+        /// </summary>
+        /// <param name="buffer">The buffer to write in.</param>
+        /// <param name="str">The string to write.</param>
+        /// <returns>The <paramref name="buffer"/> but sliced after the writtens bytes (2+ the number of bytes in the string).</returns>
+        public static Span<byte> WriteMQTTString( this Span<byte> buffer, string str )
         {
             Debug.Assert( str.Length <= ushort.MaxValue );
-            WriteUInt16( buffer, (ushort)str.Length );
-            if( str.Length == 0 ) return buffer[2..];
-            int copyAmount = Encoding.UTF8.GetBytes( str.AsSpan(), buffer[2..] );
-            return buffer[(copyAmount + 2)..];
+            WriteUInt16( buffer, (ushort)str.Length );//Write the string length.
+            buffer = buffer[2..];//slice out the uint16.
+            if( str.Length == 0 ) return buffer;//if the string is empty, simply return the remaining buffer.
+            int copyAmount = Encoding.UTF8.GetBytes( str.AsSpan(), buffer );//mqtt string are utf8. http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_UTF-8_encoded_strings_
+            return buffer[copyAmount..];//slice out what we written.
         }
 
-        public static Span<byte> WritePayload( this Span<byte> buffer, ReadOnlySpan<byte> payload )
-        {
-            Debug.Assert( payload.Length <= ushort.MaxValue );
-            WriteUInt16( buffer, (ushort)payload.Length );
-            payload.CopyTo( buffer[2..] );
-            return buffer[..(payload.Length + 2)];
-        }
-
+        /// <summary>
+        /// Write an <see cref="ushort"/>.
+        /// </summary>
+        /// <param name="buffer">The buffer to write to.</param>
+        /// <param name="x">The <see cref="ushort"/> to write.</param>
+        /// <returns>The <paramref name="buffer"/>  but sliced after the 2 writtens bytes.</returns>
         public static Span<byte> WriteUInt16( this Span<byte> buffer, ushort x )
         {
             buffer[0] = (byte)(x >> 8);

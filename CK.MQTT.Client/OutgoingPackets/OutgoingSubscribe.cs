@@ -24,7 +24,7 @@ namespace CK.MQTT
             span = span.WriteUInt16( (ushort)PacketId );
             for( int i = 0; i < _subscriptions.Length; i++ )
             {
-                span = span.WriteString( _subscriptions[i].TopicFilter );
+                span = span.WriteMQTTString( _subscriptions[i].TopicFilter );
                 span[0] = (byte)_subscriptions[i].MaximumQualityOfService;
                 span = span[1..];
             }

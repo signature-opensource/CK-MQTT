@@ -63,42 +63,33 @@ namespace CK.MQTT
         Task<ConnectResult> ConnectAsync( IMqttLogger m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 
         /// <summary>
-        /// Represents the protocol subscription, which consists of sending a SUBSCRIBE packet
-        /// and awaiting the corresponding SUBACK packet from the Server
+        /// Susbscribe the <see cref="IMqttClient"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
         /// </summary>
-        /// <param name="topicFilter">
-        /// The topic to subscribe for incoming application messages. 
-        /// Every message sent by the Server that matches a subscribed topic, will go to the <see cref="MessageStream"/> 
-        /// </param>
-        /// <param name="qos">
-        /// The maximum Quality Of Service (QoS) that the Server should maintain when publishing application messages for the subscribed topic to the Client
-        /// This QoS is maximum because it depends on the QoS supported by the Server. 
-        /// See <see cref="QualityOfService" /> for more details about the QoS values
-        /// </param>
-        /// <exception cref="MqttClientException">MqttClientException</exception>
+        /// <param name="m">The logger used to log the activities about the subscription process.</param>
+        /// <param name="subscriptions">The subscriptions to send to the broker.</param>
+        /// <returns>
+        /// A <see cref="ValueTask{Task{SubscribeReturnCode[]}}"/> that complete when the subscribe is guaranteed to be sent.
+        /// The <see cref="Task{SubscribeReturnCode[]}"/> complete when the client received the <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800441">Subscribe acknowledgement</a>.
+        /// It's Task result contain a <see cref="SubscribeReturnCode"/> per subcription, with the same order than the array given in parameters.
+        /// </returns>
         /// <remarks>
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180876">MQTT Subscribe</a>
-        /// for more details about the protocol subscription
+        /// for more details about the protocol subscription.
         /// </remarks>
         ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IMqttLogger m, params Subscription[] subscriptions );
 
         /// <summary>
-        /// Represents the protocol publish, which consists of sending a PUBLISH packet
-        /// and awaiting the corresponding ACK packet, if applies, based on the QoS defined
+        /// Send a message to the broker.
         /// </summary>
+        /// <param name="m">The logger used to log the activities about the process of sending the message.</param>
         /// <param name="message">
         /// The application message to publish to the Server.
         /// See <see cref="OutgoingApplicationMessage" /> for more details about the application messages
         /// </param>
-        /// <param name="qos">
-        /// The Quality Of Service (QoS) associated to the application message, which determines 
-        /// the sequence of acknowledgements that Client and Server should send each other to consider the message as delivered
-        /// See <see cref="QualityOfService" /> for more details about the QoS values
-        /// </param>
-        /// <param name="retain">
-        /// Indicates if the application message should be retained by the Server for future subscribers.
-        /// Only the last message of each topic is retained
-        /// </param>
+        /// <returns>
+        /// The <see cref="ValueTask{TResult}"/> that complete when the publish is guaranteed to be sent.
+        /// The <see cref="Task"/> complete when the client receive the broker acknowledgement.
+        /// </returns>
         /// <remarks>
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180850">MQTT Publish</a>
         /// for more details about the protocol publish
@@ -106,14 +97,16 @@ namespace CK.MQTT
         ValueTask<Task> PublishAsync( IMqttLogger m, OutgoingApplicationMessage message );
 
         /// <summary>
-        /// Represents the protocol unsubscription, which consists of sending an UNSUBSCRIBE packet
-        /// and awaiting the corresponding UNSUBACK packet from the Server
+        /// Unsubscribe the client from topics.
         /// </summary>
+        /// <param name="m">The logger used to log the activities about the unsubscribe process.</param>
         /// <param name="topics">
-        /// The list of topics to unsubscribe from. Once the unsubscription completes, no more application messages for those topics
-        /// will arrive to <see cref="MessageReceived"/> 
+        /// The list of topics to unsubscribe from.
         /// </param>
-        /// <exception cref="MqttClientException">MqttClientException</exception>
+        /// <returns>
+        /// The <see cref="ValueTask{TResult}"/> that complete when the Unsubscribe is guaranteed to be sent.
+        /// The <see cref="Task"/> complete when the client receive the broker acknowledgement.
+        /// Once the Task completes, no more application messages for those topics will arrive.</returns>
         /// <remarks>
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180885">MQTT Unsubscribe</a>
         /// for more details about the protocol unsubscription
@@ -121,10 +114,10 @@ namespace CK.MQTT
         ValueTask<Task> UnsubscribeAsync( IMqttLogger m, params string[] topics );
 
         /// <summary>
-        /// Represents the protocol disconnection, which consists of sending a DISCONNECT packet to the Server
-        /// No acknowledgement is sent by the Server on the disconnection
+        /// Disconnect the client.
         /// Once the client is successfully disconnected, the <see cref="Disconnected"/> event will be fired 
         /// </summary>
+        /// <returns>A <see cref="ValueTask"/> that complete when the client is disconnected.</returns>
         /// <remarks>
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
         /// for more details about the protocol disconnection
