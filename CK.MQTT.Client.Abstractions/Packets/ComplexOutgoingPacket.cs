@@ -2,11 +2,14 @@ using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
     /// <summary>
-    /// An <see cref="IOutgoingPacket"/> that have a variable header writable synchronously, and a variable payload writable asynchronously.
+    /// An <see cref="IOutgoingPacket"/> that have a variable header writable synchronously, and a variable payload writable asynchronously. <br/>
+    /// The <see cref="WriteHeader(PipeWriter)"/> method is to serialize in memory data, like the topic string. 
+    /// The <see cref="WritePayloadAsync(PipeWriter, CancellationToken)"/> is to write data that may not be in memory actually (like the payload).
     /// </summary>
     public abstract class ComplexOutgoingPacket : IOutgoingPacket
     {
@@ -38,7 +41,7 @@ namespace CK.MQTT
         /// <summary>
         /// Write the Header, remaining size, and call <see cref="WriteHeaderContent(Span{byte})"/>.
         /// </summary>
-        /// <param name="pw"></param>
+        /// <param name="pw">The <see cref="PipeWriter"/> to write to.</param>
         protected void WriteHeader( PipeWriter pw )
         {
             int bytesToWrite = HeaderSize + RemainingSize.CompactByteCount() + 1;//Compute how many byte will be written.
@@ -49,11 +52,23 @@ namespace CK.MQTT
             pw.Advance( bytesToWrite );//advance the number of bytes written.
         }
 
+        /// <summary>
+        /// Write synchronously the header. This is intended to be used to write in memory data.
+        /// </summary>
+        /// <param name="span">The buffer to write to. It's length will be <see cref="HeaderSize"/>.</param>
         protected abstract void WriteHeaderContent( Span<byte> span );
 
-        protected abstract ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
+        /// <summary>
+        /// Write asynchronously the payload. This is intended to be used to write data that may not be in memory.
+        /// </summary>
+        /// <param name="pw">The <see cref="PipeWriter"/> to write to.</param>
+        /// <param name="cancellationToken">The cancellation token, to cancel the write.</param>
+        /// <returns>A <see cref="ValueTask{TResult}"/> that complete with a <see cref="IOutgoingPacket.WriteResult"/> result.
+        /// I recommend to watch it's documentation.</returns>
+        protected abstract ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
 
-        public ValueTask<bool> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        ///<inheritdoc/>
+        public ValueTask<WriteResult> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( pw );
             return WritePayloadAsync( pw, cancellationToken );

@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Various extensions helper methods that help reading MQTT values on <see cref="PipeReader"/>, <see cref="SequenceReader{byte}"/>, or <see cref="ReadOnlySequence{byte}"/>.
+    /// Various extensions methods that help reading MQTT values on <see cref="PipeReader"/>, <see cref="SequenceReader{T}"/>, or <see cref="ReadOnlySequence{T}"/>.
     /// </summary>
     public static class MqttBinaryReader
     {
@@ -71,9 +72,8 @@ namespace CK.MQTT
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
             bool result = reader.TryReadMQTTString( out output );
             sequencePosition = reader.Position;
-#pragma warning disable CS8762 // Parameter must have a non-null value when exiting in some condition.
-            return result; // https://github.com/dotnet/roslyn/issues/44080
-#pragma warning restore CS8762 // Parameter must have a non-null value when exiting in some condition.
+            Debug.Assert( result == (output != null) );
+            return output != null;// TODO: https://github.com/dotnet/roslyn/issues/44080
         }
 
         /// <summary>
@@ -170,8 +170,10 @@ namespace CK.MQTT
         /// Read a <see cref="ushort"/> directly from a <see cref="PipeReader"/>. Use this only if you are in an async context, and the next read cannot use a <see cref="SequenceReader{T}"/>.
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read the data from.</param>
-        /// <returns>A <see cref="ValueTask{TResult} that contain a <see cref="ushort"/> when completed.</returns>
-        public static async ValueTask<ushort> ReadPacketIdPacket( this PipeReader pipeReader, IMqttLogger m, int packetSize )
+        /// <param name="m">The <see cref="IMqttLogger"/> to use.</param>
+        /// <param name="remainingLength">The remaining length of the packet. If it's bigger than 2, will log a warning.</param>
+        /// <returns>A <see cref="ValueTask{TResult}"/> that contain a <see cref="ushort"/> when completed.</returns>
+        public static async ValueTask<ushort> ReadPacketIdPacket( this PipeReader pipeReader, IMqttLogger m, int remainingLength )
         {
             while( true )//If the data was not available on the first try, we redo the process.
             {
@@ -180,11 +182,11 @@ namespace CK.MQTT
                 if( TryReadUInt16( result.Buffer, out ushort output, out SequencePosition sequencePosition ) )
                 { //ushort was correctly read.
                     pipeReader.AdvanceTo( sequencePosition );//we mark that the data was read.
-                    packetSize -= 2;
-                    if( packetSize > 0 ) //The packet may contain more data, but we don't know how to process it, so we skip it.
+                    remainingLength -= 2;
+                    if( remainingLength > 0 ) //The packet may contain more data, but we don't know how to process it, so we skip it.
                     {
-                        m.Warn( $"Packet bigger than expected, skipping {packetSize} bytes." );
-                        await pipeReader.BurnBytes( packetSize );
+                        m.Warn( $"Packet bigger than expected, skipping {remainingLength} bytes." );
+                        await pipeReader.BurnBytes( remainingLength );
                     }
                     return output;
                 }

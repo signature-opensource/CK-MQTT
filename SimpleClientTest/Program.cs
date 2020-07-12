@@ -8,7 +8,7 @@ namespace SimpleClientTest
 {
     class Program
     {
-        static async Task Main( string[] args )
+        static async Task Main()
         {
             var config = new GrandOutputConfiguration();
             config.Handlers.Add( new ConsoleConfiguration()
@@ -22,12 +22,12 @@ namespace SimpleClientTest
             var m = new MqttActivityMonitor( new ActivityMonitor() );
             var client = new MqttClient( new MqttConfiguration( "test.mosquitto.org:1883" ) );
             var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
-            if( result.ConnectionStatus != ConnectReturnCode.Accepted )
+            if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
             {
-                return;
+                throw new System.Exception();
             }
             var returnSub = await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ) );
-            await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, true, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask(), false ) );
+            await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, true, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) ) );
             await client.DisconnectAsync( m );
             await Task.Delay( 3000 );
             result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );

@@ -2,6 +2,7 @@ using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 using static CK.MQTT.PacketStore;
 
 namespace CK.MQTT
@@ -53,7 +54,7 @@ namespace CK.MQTT
 
             public int Size => _packet.Size;
 
-            public ValueTask<bool> WriteAsync( PipeWriter writer, CancellationToken cancellationToken ) => _packet.WriteAsync( new PipeWriterWrapper( writer ), cancellationToken );
+            public ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken ) => _packet.WriteAsync( new PipeWriterWrapper( writer ), cancellationToken );
         }
 
         static byte TransformerLogic( byte header )
@@ -62,11 +63,9 @@ namespace CK.MQTT
             return header |= 0b100;
         }
 
-        IOutgoingPacketWithId NoOp( IOutgoingPacketWithId arg ) => arg;
+        protected static IOutgoingPacketWithId SetDup( IOutgoingPacketWithId arg ) => new PacketWrapper( arg );
 
-        protected IOutgoingPacketWithId SetDup( IOutgoingPacketWithId arg ) => new PacketWrapper( arg );
-
-        public PacketTransformer PacketTransformerOnRestore => NoOp;
+        public PacketTransformer PacketTransformerOnRestore => ( IOutgoingPacketWithId arg ) => arg;
 
         public PacketTransformer PacketTransformerOnSave => SetDup;
 

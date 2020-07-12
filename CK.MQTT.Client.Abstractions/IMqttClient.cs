@@ -1,5 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -53,8 +51,8 @@ namespace CK.MQTT
         /// last will message </a> that the Server will send if an unexpected Client disconnection occurs. 
         /// </param>
         /// <returns>
-        /// Returns a <see cref="Task{ConnectResult}"/> that encapsulate a <see cref="ConnectResult"/>.
-        /// You must not send any message before the the <see cref="Task{ConnectResult}"/> complete.
+        /// Returns a <see cref="Task{T}"/> that encapsulate a <see cref="ConnectResult"/>.
+        /// You must not send any message before the the <see cref="Task{T}"/> complete.
         /// </returns>
         /// <remarks>
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
@@ -68,8 +66,8 @@ namespace CK.MQTT
         /// <param name="m">The logger used to log the activities about the subscription process.</param>
         /// <param name="subscriptions">The subscriptions to send to the broker.</param>
         /// <returns>
-        /// A <see cref="ValueTask{Task{SubscribeReturnCode[]}}"/> that complete when the subscribe is guaranteed to be sent.
-        /// The <see cref="Task{SubscribeReturnCode[]}"/> complete when the client received the <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800441">Subscribe acknowledgement</a>.
+        /// A <see cref="ValueTask{TResult}"/> that complete when the subscribe is guaranteed to be sent.
+        /// The <see cref="Task{T}"/> complete when the client received the <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800441">Subscribe acknowledgement</a>.
         /// It's Task result contain a <see cref="SubscribeReturnCode"/> per subcription, with the same order than the array given in parameters.
         /// </returns>
         /// <remarks>

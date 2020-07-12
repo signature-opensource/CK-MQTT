@@ -1,7 +1,7 @@
 namespace CK.MQTT
 {
     /// <summary>
-    /// Represents one of the possible MQTT packet types
+    /// Represents one of the possible MQTT packet types.
     /// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc374395205
     /// </summary>
 	public enum PacketType : byte
@@ -61,8 +61,6 @@ namespace CK.MQTT
         /// <summary>
         /// MQTT DISCONNECT packet
         /// </summary>
-        Disconnect = 0xE0,
-
-        Mask = 0xF0
+        Disconnect = 0xE0
     }
 }

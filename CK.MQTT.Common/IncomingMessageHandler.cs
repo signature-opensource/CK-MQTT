@@ -67,7 +67,11 @@ namespace CK.MQTT
                                 m.Info( "Remote closed channel." );
                                 CloseInternal( m, DisconnectedReason.RemoteDisconnected, false );
                             }
-                            else CloseWithError( m, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
+                            else
+                            {
+                                CloseWithError( m, DisconnectedReason.RemoteDisconnected, "Unexpected End Of Stream." );
+                            }
+
                             return;
                         }
                         _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.

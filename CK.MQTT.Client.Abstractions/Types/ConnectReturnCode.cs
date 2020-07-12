@@ -5,12 +5,12 @@ namespace CK.MQTT
     /// </summary>
     /// <remarks>
     /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc385349256">Connect Return code</a>
-    /// section for more details on the connection status values
+    /// section for more details on the connection status values.
     /// </remarks>
 	public enum ConnectReturnCode : byte
     {
         /// <summary>
-        /// Connection accepted
+        /// Connection accepted.
         /// </summary>
         Accepted = 0x00,
         /// <summary>
@@ -36,6 +36,9 @@ namespace CK.MQTT
         /// The Client is not authorized to connect
         /// </summary>
         NotAuthorized = 0x05,
-        Unknown
+        /// <summary>
+        /// Could not communicate with server or protocol errror.
+        /// </summary>
+        Unknown = byte.MaxValue
     }
 }

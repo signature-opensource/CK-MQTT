@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
@@ -77,9 +77,9 @@ namespace CK.MQTT
             }
         }
 
-        ValueTask<bool> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
+        ValueTask<WriteResult> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
         {
-            if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask<bool>( false );
+            if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask<WriteResult>( WriteResult.Cancelled );
             m.Info( $"Sending message of size {outgoingPacket.Size}." );
             return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
         }

@@ -3,6 +3,7 @@ using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
@@ -16,15 +17,13 @@ namespace CK.MQTT
             pw.Advance( Size );
         }
 
-        public async ValueTask<bool> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public async ValueTask<WriteResult> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             Write( pw );
             await pw.FlushAsync( cancellationToken ).AsNonGenericValueTask();
-            return false;
+            return WriteResult.Written;
         }
 
         public abstract int Size { get; }
-
-        public bool Burned => false;
     }
 }

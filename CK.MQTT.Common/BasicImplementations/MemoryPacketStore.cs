@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
+    /// <summary>
+    /// Store <see cref="IOutgoingPacket"/> in memory.
+    /// Does NOT save the data, if the process is killed, data is lost !
+    /// </summary>
     public class MemoryPacketStore : PacketStore
     {
         class OutgoingStoredPacket : IOutgoingPacketWithId
@@ -28,10 +32,10 @@ namespace CK.MQTT
 
             public int Size => _buffer.Length;
 
-            public async ValueTask<bool> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+            public async ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
             {
                 await writer.WriteAsync( _buffer );
-                return false;
+                return WriteResult.Written;
             }
         }
 
@@ -50,19 +54,23 @@ namespace CK.MQTT
         }
 
         protected override ValueTask DoDiscardPacketIdAsync( IMqttLogger m, int packetId )
-        {
-            return new ValueTask(); //nothing to do, the packet id is not persisted.
-        }
+            => new ValueTask(); //nothing to do, the packet id is not persisted.
 
-        protected override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
+        /// <summary>
+        /// Store the Message in memory. Packet is always reusable.
+        /// </summary>
+        /// <param name="m"></param>
+        /// <param name="packet"></param>
+        /// <returns></returns>
+        protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
         {
             if( _packets.ContainsKey( packet.PacketId ) ) throw new InvalidOperationException( $"Packet Id was badly choosen. Did you restored it's state correctly ?" );
-            byte[] arr = new byte[packet.Size];
-            var pipe = PipeWriter.Create( new MemoryStream( arr ) );
-            packet.WriteAsync( pipe, default );
+            byte[] arr = new byte[packet.Size];//Some packet can be written only once. So we need to allocate memory for them.
+            PipeWriter pipe = PipeWriter.Create( new MemoryStream( arr ) );//And write their content to this memory.
+            if( await packet.WriteAsync( pipe, default ) != WriteResult.Written) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             var newPacket = new OutgoingStoredPacket( packet.PacketId, packet.Qos, arr );
             _packets.Add( packet.PacketId, newPacket );
-            return new ValueTask<IOutgoingPacketWithId>( newPacket );
+            return newPacket;
         }
 
         protected override ValueTask DoReset()

@@ -3,6 +3,7 @@ using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
@@ -17,10 +18,10 @@ namespace CK.MQTT
         }
         protected override int PayloadSize => _memory.Length;
 
-        protected async override ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected async override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             await pw.WriteAsync( _memory ).AsNonGenericValueTask();
-            return false;
+            return WriteResult.Written;
         }
     }
 }

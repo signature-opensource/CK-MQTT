@@ -3,7 +3,7 @@ using System;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Credentials used to connect a Client to a Server as part of the protocol connection
+    /// Credentials used to connect a Client to a Server as part of the protocol connection.
     /// </summary>
 	public class MqttClientCredentials
     {
@@ -12,6 +12,7 @@ namespace CK.MQTT
         /// specifying the id of client to connect
         /// </summary>
         /// <param name="clientId">Id of the client to connect. Can be null or empty.</param>
+        /// <param name="cleanSession"><see langword="true"/> to require to the server to delete the previous session.</param>
         public MqttClientCredentials( string clientId, bool cleanSession )
         {
             if( clientId.Length == 0 && !cleanSession ) throw new ArgumentException( "If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7]. http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242" );
@@ -25,8 +26,9 @@ namespace CK.MQTT
         /// for authentication
         /// </summary>
         /// <param name="clientId">Id of the client to connect</param>
+        /// <param name="cleanSession"><see langword="true"/> to require to the server to delete the previous session.</param>
         /// <param name="userName">Username for authentication</param>
-        /// /// <param name="password">Password for authentication</param>
+        /// <param name="password">Password for authentication</param>
         public MqttClientCredentials( string clientId, bool cleanSession, string? userName, string? password ) : this( clientId, cleanSession )
         {
             UserName = userName;
@@ -42,9 +44,8 @@ namespace CK.MQTT
         }
 
         /// <summary>
-        /// Gets the Client's identifier. Must contain only the characters 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
-        /// and have a maximum of 23 encoded bytes. 
-        /// It can also be empty, in which case the server will generate and assign it.
+        /// Gets the Client's identifier.
+        /// <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242">It can also be empty.</a>
         /// </summary>
         public string ClientId { get; }
 
@@ -60,6 +61,9 @@ namespace CK.MQTT
         /// </summary>
 		public string? Password { get; }
 
+        /// <summary>
+        /// <see langword="true"/> to require to the server to delete the previous session.
+        /// </summary>
         public bool CleanSession { get; }
     }
 }

@@ -1,6 +1,7 @@
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
@@ -17,11 +18,11 @@ namespace CK.MQTT
 
         public int Size => _outgoingPacket.Size;
 
-        public async ValueTask<bool> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
         {
-            bool burned = await _outgoingPacket.WriteAsync( writer, cancellationToken );
+            WriteResult res = await _outgoingPacket.WriteAsync( writer, cancellationToken );
             _taskCompletionSource.SetResult( null );
-            return burned;
+            return res;
         }
     }
 }

@@ -1,6 +1,5 @@
 using CK.Core;
 using System;
-using System.Collections.Specialized;
 using System.IO.Pipelines;
 
 namespace CK.MQTT

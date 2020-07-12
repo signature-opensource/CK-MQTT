@@ -2,6 +2,7 @@ using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
@@ -69,16 +70,16 @@ namespace CK.MQTT
                 .WriteMQTTString( _creds?.ClientId ?? "" );
         }
 
-        protected override async ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected override async ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
-            bool burned = false;
             if( _lastWill != null )
             {
-                burned = await _lastWill.WriteAsync( pw, cancellationToken );
+                WriteResult res = await _lastWill.WriteAsync( pw, cancellationToken );
+                if( res != WriteResult.Written ) return res;
             }
             WriteEndOfPayload( pw );
             await pw.FlushAsync( cancellationToken );
-            return burned;
+            return WriteResult.Written;
         }
 
         void WriteEndOfPayload( PipeWriter pw )

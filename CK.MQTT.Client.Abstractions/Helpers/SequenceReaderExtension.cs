@@ -26,7 +26,7 @@ namespace CK.MQTT
         }
 
         /// <summary>
-        /// Copy&Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
+        /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
         /// </summary>
         /// <param name="reader"></param>
         /// <param name="length"></param>
@@ -46,7 +46,7 @@ namespace CK.MQTT
         }
 
         /// <summary>
-        /// Copy&Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
+        /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
         /// </summary>
         static bool TryReadMultisegmentUtf8String(
             ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )

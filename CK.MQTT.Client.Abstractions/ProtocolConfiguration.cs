@@ -1,11 +1,19 @@
 namespace CK.MQTT
 {
     /// <summary>
-    /// Defines some well known values of the MQTT protocol,
-    /// which are useful to access anywhere
+    /// Defines some well known values of the MQTT protocol, which are useful to access anywhere.
     /// </summary>
 	public class ProtocolConfiguration
     {
+        /// <summary>
+        /// Instantiate a new <see cref="ProtocolConfiguration"/>.
+        /// </summary>
+        /// <param name="securePort">The default port when communication are secured.</param>
+        /// <param name="nonSecurePort">The default port when communication are in clear text.</param>
+        /// <param name="supportedLevel">The minimal <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349227">protocol level</a> supported.</param>
+        /// <param name="singleLevelTopicWildcard"></param>
+        /// <param name="multiLevelTopicWildcard"></param>
+        /// <param name="protocolName">The protocol magic string that is send in the connect packet.</param>
         public ProtocolConfiguration(
             int securePort,
             int nonSecurePort,
@@ -21,11 +29,24 @@ namespace CK.MQTT
             MultiLevelTopicWildcard = multiLevelTopicWildcard;
             ProtocolName = protocolName;
         }
+        /// <summary>
+        /// Default for MQTT3.
+        /// </summary>
         public static ProtocolConfiguration Mqtt3 => new ProtocolConfiguration( 8883, 1883, 4, "+", "#", "MQTT" );
+
+        /// <summary>
+        /// The default port when communication are secured.
+        /// </summary>
         public int SecurePort { get; }
 
+        /// <summary>
+        /// The default port when communication are in clear text.
+        /// </summary>
         public int NonSecurePort { get; }
 
+        /// <summary>
+        /// The minimal <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349227">protocol level</a> supported.
+        /// </summary>
         public byte ProtocolLevel { get; }
 
         /// <summary>
@@ -38,6 +59,9 @@ namespace CK.MQTT
         /// </summary>
 		public string MultiLevelTopicWildcard { get; }
 
+        /// <summary>
+        /// The protocol magic string that is send in the connect packet.
+        /// </summary>
         public string ProtocolName { get; }
     }
 }

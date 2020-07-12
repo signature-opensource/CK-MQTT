@@ -2,35 +2,26 @@ using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
     public class SimpleOutgoingApplicationMessage : OutgoingApplicationMessage
     {
         readonly Func<int> _getPayloadSize;
-        readonly Func<PipeWriter, CancellationToken, ValueTask> _payloadWriter;
-        readonly bool _writeOnce;
+        readonly Func<PipeWriter, CancellationToken, ValueTask<WriteResult>> _payloadWriter;
         public SimpleOutgoingApplicationMessage(
-            bool dup,
-            bool retain,
-            string topic,
-            QualityOfService qos,
+            bool dup, bool retain, string topic, QualityOfService qos,
             Func<int> getPayloadSize,
-            Func<PipeWriter, CancellationToken, ValueTask> payloadWriter,
-            bool writeOnce
+            Func<PipeWriter, CancellationToken, ValueTask<WriteResult>> payloadWriter
             ) : base( dup, retain, topic, qos )
         {
             _getPayloadSize = getPayloadSize;
             _payloadWriter = payloadWriter;
-            _writeOnce = writeOnce;
         }
         protected override int PayloadSize => _getPayloadSize();
 
-        protected override async ValueTask<bool> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
-        {
-            await _payloadWriter( pw, cancellationToken );
-            await pw.FlushAsync( cancellationToken );
-            return _writeOnce;
-        }
+        protected override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+            => _payloadWriter( pw, cancellationToken );
     }
 }

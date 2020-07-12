@@ -19,6 +19,9 @@ namespace CK.MQTT
         /// of the corresponding endpoint instance
         /// </summary>
 		SelfDisconnected,
+        /// <summary>
+        /// A protocol error.
+        /// </summary>
         ProtocolError,
         /// <summary>
         /// Disconnected because of an unexpected error on the endpoint, 
@@ -55,7 +58,7 @@ namespace CK.MQTT
 		public DisconnectedReason Reason { get; }
 
         /// <summary>
-        /// Message that explains the disconnection cause
+        /// Message that explains the disconnection cause.
         /// </summary>
 		public string? Message { get; }
     }
