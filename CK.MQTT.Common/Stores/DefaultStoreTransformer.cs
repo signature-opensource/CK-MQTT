@@ -65,9 +65,9 @@ namespace CK.MQTT
 
         protected static IOutgoingPacketWithId SetDup( IOutgoingPacketWithId arg ) => new PacketWrapper( arg );
 
-        public PacketTransformer PacketTransformerOnRestore => ( IOutgoingPacketWithId arg ) => arg;
+        public Func<IOutgoingPacketWithId, IOutgoingPacketWithId> PacketTransformerOnRestore => ( IOutgoingPacketWithId arg ) => arg;
 
-        public PacketTransformer PacketTransformerOnSave => SetDup;
+        public Func<IOutgoingPacketWithId, IOutgoingPacketWithId> PacketTransformerOnSave => SetDup;
 
         public static DefaultStoreTransformer Default => new DefaultStoreTransformer();
     }

@@ -10,8 +10,8 @@ using static CK.MQTT.IOutgoingPacket;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Store <see cref="IOutgoingPacket"/> in memory.
-    /// Does NOT save the data, if the process is killed, data is lost !
+    /// In memory implementation of<see cref="PacketStore"/>.
+    /// This class DONT persist the data, if the process is killed, data is lost !
     /// </summary>
     public class MemoryPacketStore : PacketStore
     {
@@ -41,11 +41,17 @@ namespace CK.MQTT
 
         readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
 
+        /// <summary>
+        /// Instantiate a new <see cref="MemoryPacketStore"/>.
+        /// </summary>
+        /// <param name="storeTransformer">The <see cref="IStoreTransformer"/> that will wrap packets delivered by this store.</param>
+        /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
         public MemoryPacketStore( IStoreTransformer storeTransformer, int packetIdMaxValue )
             : base( storeTransformer, packetIdMaxValue )
         {
         }
 
+        /// <inheritdoc/>
         protected override ValueTask<QualityOfService> DoDiscardMessage( IMqttLogger m, int packetId )
         {
             QualityOfService qos = _packets[packetId].Qos;
@@ -53,15 +59,11 @@ namespace CK.MQTT
             return new ValueTask<QualityOfService>( qos );
         }
 
+        /// <inheritdoc/>
         protected override ValueTask DoDiscardPacketIdAsync( IMqttLogger m, int packetId )
             => new ValueTask(); //nothing to do, the packet id is not persisted.
 
-        /// <summary>
-        /// Store the Message in memory. Packet is always reusable.
-        /// </summary>
-        /// <param name="m"></param>
-        /// <param name="packet"></param>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
         {
             if( _packets.ContainsKey( packet.PacketId ) ) throw new InvalidOperationException( $"Packet Id was badly choosen. Did you restored it's state correctly ?" );
@@ -73,15 +75,18 @@ namespace CK.MQTT
             return newPacket;
         }
 
+        /// <inheritdoc/>
         protected override ValueTask DoReset()
         {
             _packets.Clear();
             return new ValueTask();
         }
 
+        /// <inheritdoc/>
         protected override ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IMqttLogger m, int packetId )
             => new ValueTask<IOutgoingPacketWithId>( _packets[packetId] );
 
+        /// <inheritdoc/>
         protected override ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IMqttLogger m )
             => new ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>>( _packets.Select( s => (IOutgoingPacketWithId)s.Value ).ToAsyncEnumerable() );
     }

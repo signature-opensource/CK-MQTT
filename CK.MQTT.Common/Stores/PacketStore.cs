@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// This class have no way to be closed by design.
-    /// The implementation should guarantee the persitence when store methods are completed.
-    /// If not, it WILL result in data loss.
+    /// Store packets, used by an <see cref="IMqttClient"/> to persist packets.
+    /// This abstract class implement the packet id assignation, and delegate the actual job of persisting to the child classes.
+    /// This class have no way to be closed/disposed, when a method complete, the packet should be persisted.
+    /// If not, it WILL result in data loss. (Because of a power outage for exemple).
     /// </summary>
     public abstract class PacketStore
     {
-        public delegate IOutgoingPacketWithId PacketTransformer( IOutgoingPacketWithId packetToTransform );
         readonly IdStore _packetStore;
         readonly IStoreTransformer _storeTransformer;
 
