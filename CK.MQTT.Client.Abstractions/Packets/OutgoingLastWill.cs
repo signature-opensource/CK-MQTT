@@ -21,7 +21,7 @@ namespace CK.MQTT
         /// <param name="retain">The retain flag.</param>
         /// <param name="topic">The topic of the will message.</param>
         /// <param name="qos">The qos of the will message.</param>
-        protected OutgoingLastWill( bool dup, bool retain, string topic, QualityOfService qos )
+        protected OutgoingLastWill( bool retain, string topic, QualityOfService qos )
         {
             Retain = retain;
             Qos = qos;

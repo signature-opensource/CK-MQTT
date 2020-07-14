@@ -10,11 +10,9 @@ namespace CK.MQTT
     {
         readonly Func<int> _getPayloadSize;
         readonly Func<PipeWriter, CancellationToken, ValueTask<WriteResult>> _payloadWriter;
-        public SimpleOutgoingApplicationMessage(
-            bool dup, bool retain, string topic, QualityOfService qos,
-            Func<int> getPayloadSize,
+        public SimpleOutgoingApplicationMessage( bool retain, string topic, QualityOfService qos, Func<int> getPayloadSize,
             Func<PipeWriter, CancellationToken, ValueTask<WriteResult>> payloadWriter
-            ) : base( dup, retain, topic, qos )
+            ) : base( retain, topic, qos )
         {
             _getPayloadSize = getPayloadSize;
             _payloadWriter = payloadWriter;

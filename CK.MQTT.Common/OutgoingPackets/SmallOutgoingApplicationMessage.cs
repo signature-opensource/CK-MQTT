@@ -11,8 +11,8 @@ namespace CK.MQTT
     {
         private readonly ReadOnlyMemory<byte> _memory;
 
-        public SmallOutgoingApplicationMessage( bool dup, bool retain, string topic, QualityOfService qos, ReadOnlyMemory<byte> payload )
-            : base( dup, retain, topic, qos )
+        public SmallOutgoingApplicationMessage( bool retain, string topic, QualityOfService qos, ReadOnlyMemory<byte> payload )
+            : base( retain, topic, qos )
         {
             _memory = payload;
         }
