@@ -73,8 +73,6 @@ namespace CK.MQTT
             WriteHeader( pw );
             WriteResult result = await WritePayloadAsync( pw, cancellationToken );
             await pw.FlushAsync();//WritePayloadAsync can be user code, and users forget to flush the payload. I was this user.
-            //This add a really, really small overhead... But is not required if the user code is not bugged.
-            //So i don't know what to do.
             return result;
         }
     }

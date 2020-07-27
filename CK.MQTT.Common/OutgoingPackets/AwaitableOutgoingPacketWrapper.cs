@@ -5,11 +5,11 @@ using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
-    public class OutgoingPacketWrapper : IOutgoingPacket
+    public class AwaitableOutgoingPacketWrapper : IOutgoingPacket
     {
         readonly IOutgoingPacket _outgoingPacket;
         readonly TaskCompletionSource<object?> _taskCompletionSource = new TaskCompletionSource<object?>();
-        public OutgoingPacketWrapper( IOutgoingPacket outgoingPacket )
+        public AwaitableOutgoingPacketWrapper( IOutgoingPacket outgoingPacket )
         {
             _outgoingPacket = outgoingPacket;
         }
@@ -24,5 +24,7 @@ namespace CK.MQTT
             _taskCompletionSource.SetResult( null );
             return res;
         }
+
+        public override string ToString() => $"AwaitableWrapper({_outgoingPacket})";
     }
 }

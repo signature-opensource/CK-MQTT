@@ -55,6 +55,8 @@ namespace CK.MQTT
             public int Size => _packet.Size;
 
             public ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken ) => _packet.WriteAsync( new PipeWriterWrapper( writer ), cancellationToken );
+
+            public override string ToString() => $"DefaultStoreTransformer({_packet})";
         }
 
         static byte TransformerLogic( byte header )

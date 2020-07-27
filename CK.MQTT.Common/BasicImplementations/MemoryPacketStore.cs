@@ -67,6 +67,8 @@ namespace CK.MQTT
         protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
         {
             if( _packets.ContainsKey( packet.PacketId ) ) throw new InvalidOperationException( $"Packet Id was badly choosen. Did you restored it's state correctly ?" );
+            m.Trace( $"Allocating {packet.Size} bytes to persist {packet}." );
+            //TODO: https://github.com/signature-opensource/CK-MQTT/issues/12
             byte[] arr = new byte[packet.Size];//Some packet can be written only once. So we need to allocate memory for them.
             PipeWriter pipe = PipeWriter.Create( new MemoryStream( arr ) );//And write their content to this memory.
             if( await packet.WriteAsync( pipe, default ) != WriteResult.Written) throw new InvalidOperationException( "Didn't wrote packet correctly." );

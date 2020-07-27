@@ -39,7 +39,7 @@ namespace CK.MQTT
         /// <returns>A <see cref="ValueTask"/> that complete when the packet is sent.</returns>
         public async ValueTask<Task> SendMessageAsync( IOutgoingPacket item )
         {
-            var wrapper = new OutgoingPacketWrapper( item );
+            var wrapper = new AwaitableOutgoingPacketWrapper( item );
             await _messages.Writer.WriteAsync( wrapper );//ValueTask, will almost always return synchronously
             return wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
@@ -80,7 +80,7 @@ namespace CK.MQTT
         ValueTask<WriteResult> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
         {
             if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask<WriteResult>( WriteResult.Cancelled );
-            m.Info( $"Sending message of size {outgoingPacket.Size}." );
+            m.Info( $"Sending message '{outgoingPacket}' of size {outgoingPacket.Size}." );
             return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
         }
 
