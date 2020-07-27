@@ -68,10 +68,14 @@ namespace CK.MQTT
         protected abstract ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
 
         ///<inheritdoc/>
-        public ValueTask<WriteResult> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public async ValueTask<WriteResult> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( pw );
-            return WritePayloadAsync( pw, cancellationToken );
+            WriteResult result = await WritePayloadAsync( pw, cancellationToken );
+            await pw.FlushAsync();//WritePayloadAsync can be user code, and users forget to flush the payload. I was this user.
+            //This add a really, really small overhead... But is not required if the user code is not bugged.
+            //So i don't know what to do.
+            return result;
         }
     }
 }
