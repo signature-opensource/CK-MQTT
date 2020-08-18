@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -13,7 +15,7 @@ namespace CK.MQTT
         {
             public int NextFreeId;
             public TaskCompletionSource<object?>? TaskCS;
-
+            public long EmissionTime;
             public char DebuggerDisplay => TaskCS == null ? '-' : 'X';
         }
 
@@ -24,7 +26,7 @@ namespace CK.MQTT
         /// </summary>
         int _count = 0;
         readonly int _maxPacketId;
-
+        readonly Stopwatch _stopwatch = new Stopwatch();
         string DebuggerDisplay
         {
             get
@@ -39,6 +41,7 @@ namespace CK.MQTT
         {
             _entries = new Entry[64];
             _maxPacketId = packetIdMaxValue;
+            _stopwatch.Start();
         }
 
         public bool TryGetId( out int packetId, [NotNullWhen( true )] out Task<object?>? idFreedAwaiter )
@@ -67,7 +70,7 @@ namespace CK.MQTT
                 return true;
             }
         }
-
+        public void PacketSent( int packetId ) => _entries[packetId - 1].EmissionTime = _stopwatch.ElapsedMilliseconds;
         public bool FreeId( int packetId, object? result = null )
         {
             TaskCompletionSource<object?>? tcs;
@@ -78,9 +81,27 @@ namespace CK.MQTT
                 tcs = _entries[packetId - 1].TaskCS;
                 if( tcs == null ) return false;
                 _entries[packetId - 1].TaskCS = null;
+                _entries[packetId - 1].EmissionTime = 0;
             }
-            tcs.SetResult( result );//This must be the last thing we do, the tcs.SetResult may be a code calling
+            tcs.SetResult( result );//This must be the last thing we do, the tcs.SetResult may continue a Task synchronously.
             return true;
+        }
+
+        public (int packetId, long waitTime) GetOldestPacket()
+        {
+            Entry smallest = new Entry
+            {
+                EmissionTime = long.MaxValue
+            };
+            int smallIndex = -1;//if not assigned, will return 0 (invalid packet id)
+            for( int i = 0; i < _count; i++ )
+            {
+                Entry entry = _entries[i];
+                if( entry.EmissionTime == 0 || entry.EmissionTime > smallest.EmissionTime ) continue;
+                smallest = entry;
+                smallIndex = i;
+            }
+            return (smallIndex + 1, _stopwatch.ElapsedMilliseconds - smallest.EmissionTime);
         }
 
         void EnsureSlotsAvailable( int count )

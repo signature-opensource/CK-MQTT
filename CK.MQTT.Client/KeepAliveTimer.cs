@@ -33,11 +33,7 @@ namespace CK.MQTT
             _output.QueueReflexMessage( new OutgoingPingReq() );
         }
 
-        public IOutgoingPacket OutputTransformer( IMqttLogger m, IOutgoingPacket outgoingPacket )
-        {
-            ResetTimer();
-            return outgoingPacket;
-        }
+        public void OnOutput( IMqttLogger m, IOutgoingPacket outgoingPacket ) => ResetTimer();
 
         public void ResetTimer()
         {

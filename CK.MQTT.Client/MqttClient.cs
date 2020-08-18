@@ -41,9 +41,12 @@ namespace CK.MQTT
             (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _config.StoreTransformer, _config.ConnectionString, credentials?.CleanSession ?? true );
 
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
-            _output = new OutgoingMessageHandler( _config.OutputLogger, ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config );
-            KeepAliveTimer? timer = _config.KeepAliveSecs != 0 ? new KeepAliveTimer( _config!.KeepAliveLogger!, _config, _output, PingReqTimeout ) : null;
-            _output.OutputMiddleware = timer != null ? timer.OutputTransformer : (OutgoingMessageHandler.OutputTransformer?)null;
+            _output = new OutgoingMessageHandler( ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config, _store );
+            KeepAliveTimer? timer = null;
+            if( _config.KeepAliveSecs != 0 ) {
+                timer = new KeepAliveTimer( _config!.KeepAliveLogger!, _config, _output, PingReqTimeout );
+                _output.OnMessageEmitted += timer.OnOutput;
+            }
             ConnectAckReflex connectAckReflex = new ConnectAckReflex( new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
                 .UseMiddleware( new PublishLifecycleReflex( _store, _output ) )

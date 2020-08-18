@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
@@ -9,44 +10,60 @@ namespace CK.MQTT
 {
     public class OutgoingMessageHandler : IDisposable
     {
-        public delegate IOutgoingPacket OutputTransformer( IMqttLogger m, IOutgoingPacket outgoingPacket );
+        public class MessageEventArgs : EventArgs
+        {
+            public MessageEventArgs( IMqttLogger logger, IOutgoingPacket packet )
+            {
+                Logger = logger;
+                Packet = packet;
+            }
+
+            public IMqttLogger Logger { get; }
+            public IOutgoingPacket Packet { get; }
+        }
+
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
         readonly Action<IMqttLogger, DisconnectedReason> _clientClose;
         readonly PipeWriter _pipeWriter;
+        readonly MqttConfiguration _config;
+        readonly PacketStore _packetStore;
         readonly Task _writeLoop;
         bool _stopped;
         readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
-        public OutgoingMessageHandler( IMqttLogger outputLogger, Action<IMqttLogger, DisconnectedReason> clientClose, PipeWriter writer, MqttConfiguration config )
+        public OutgoingMessageHandler( Action<IMqttLogger, DisconnectedReason> clientClose,
+            PipeWriter writer, MqttConfiguration config, PacketStore packetStore )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _clientClose = clientClose;
             _pipeWriter = writer;
-            _writeLoop = WriteLoop( outputLogger );
+            _config = config;
+            _packetStore = packetStore;
+            _writeLoop = WriteLoop();
         }
 
-        public OutputTransformer? OutputMiddleware { get; set; }
+        //These will become handy to add telemetry
+
+        public event Action<IMqttLogger, IOutgoingPacket>? OnMessageEmit;
+        public event Action<IMqttLogger, IOutgoingPacket>? OnMessageEmitted;
 
         public bool QueueMessage( IOutgoingPacket item ) => _messages.Writer.TryWrite( item );
 
         public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="item"></param>
         /// <returns>A <see cref="ValueTask"/> that complete when the packet is sent.</returns>
         public async ValueTask<Task> SendMessageAsync( IOutgoingPacket item )
         {
             var wrapper = new AwaitableOutgoingPacketWrapper( item );
-            await _messages.Writer.WriteAsync( wrapper );//ValueTask, will almost always return synchronously
+            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
             return wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
 
-        async Task WriteLoop( IMqttLogger m )
+        Task<bool> LoopTasks => Task.WhenAny( _reflexes.Reader.WaitToReadAsync().AsTask(), _messages.Reader.WaitToReadAsync().AsTask() ).Unwrap();
+        async Task WriteLoop()
         {
-            using( m.OpenInfo( "Output loop listening..." ) )
+            using( _config.OutputLogger.OpenInfo( "Output loop listening..." ) )
             {
                 try
                 {
@@ -56,32 +73,61 @@ namespace CK.MQTT
                         if( _dirtyStopSource.IsCancellationRequested ) break;
                         if( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) || _messages.Reader.TryRead( out packet ) )
                         {
-                            await ProcessOutgoingPacket( m, packet );
+                            await ProcessOutgoingPacket( packet );
                             continue;
                         }
-                        mainLoop = await await Task.WhenAny( _reflexes.Reader.WaitToReadAsync().AsTask(), _messages.Reader.WaitToReadAsync().AsTask() );
+                        (int packetId, long waitTime) = _packetStore.IdStore.GetOldestPacket();
+                        //0 mean there is no packet in the store.
+                        if( packetId != 0 )
+                        {
+                            if( waitTime < _config.WaitTimeoutMs )
+                            {
+                                Task<bool> tasks = LoopTasks;
+                                await Task.WhenAny( tasks, Task.Delay( (int)(_config.WaitTimeoutMs - waitTime) ) );
+                                if( tasks.IsCompleted ) mainLoop = await tasks;
+                                continue;
+                            }
+                            await SendUnackPacket( packetId );
+                        }
+                        mainLoop = await LoopTasks;
                     }
-                    using( m.OpenTrace( "Sending remaining messages..." ) )
+                    using( _config.OutputLogger.OpenTrace( "Sending remaining messages..." ) )
                     {
-                        while( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
-                        while( _messages.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( m, packet );
+                        while( _reflexes.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( packet );
+                        while( _messages.Reader.TryRead( out IOutgoingPacket packet ) ) await ProcessOutgoingPacket( packet );
                     }
                 }
                 catch( Exception e )
                 {
-                    m.Error( e );
-                    CloseInternal( m, DisconnectedReason.UnspecifiedError, false );
+                    _config.OutputLogger.Error( e );
+                    CloseInternal( _config.OutputLogger, DisconnectedReason.UnspecifiedError, false );
                     return;
                 }
-                CloseInternal( m, DisconnectedReason.SelfDisconnected, false );
+                CloseInternal( _config.OutputLogger, DisconnectedReason.SelfDisconnected, false );
             }
         }
-
-        ValueTask<WriteResult> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
+        async Task SendUnackPacket( int packetId )
         {
-            if( _dirtyStopSource.IsCancellationRequested ) return new ValueTask<WriteResult>( WriteResult.Cancelled );
-            m.Info( $"Sending message '{outgoingPacket}' of size {outgoingPacket.Size}." );
-            return (OutputMiddleware?.Invoke( m, outgoingPacket ) ?? outgoingPacket).WriteAsync( _pipeWriter, _dirtyStopSource.Token );
+            if( packetId == 0 ) return;
+            IOutgoingPacketWithId packet = await _packetStore.GetMessageByIdAsync( _config.OutputLogger, packetId );
+            await _messages.Writer.WriteAsync( packet );
+            _packetStore.IdStore.PacketSent( packetId );//We reset the timer, or this packet will be picked up again.
+        }
+
+        async ValueTask<WriteResult> ProcessOutgoingPacket( IOutgoingPacket outgoingPacket )
+        {
+            if( _dirtyStopSource.IsCancellationRequested ) return WriteResult.Cancelled;
+            using( _config.OutputLogger.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.Size}." ) )
+            {
+                OnMessageEmit?.Invoke( _config.OutputLogger, outgoingPacket );
+                WriteResult result = await outgoingPacket.WriteAsync( _pipeWriter, _dirtyStopSource.Token );
+                OnMessageEmitted?.Invoke( _config.OutputLogger, outgoingPacket );
+                if( outgoingPacket is IOutgoingPacketWithId packetWithId )
+                {
+                    _packetStore.IdStore.PacketSent( packetWithId.PacketId );
+                }
+                return result;
+            }
         }
 
         bool _complete;

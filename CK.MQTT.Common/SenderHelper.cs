@@ -43,13 +43,7 @@ namespace CK.MQTT
             OutgoingMessageHandler output, PacketStore store, IOutgoingPacketWithId packet, Task<object?> ackReceived, int waitTimeoutMs )
             where T : class
         {
-            await output.SendMessageAsync( packet );
-            await Task.WhenAny( Task.Delay( waitTimeoutMs ), ackReceived );
-            while( !ackReceived.IsCompleted )
-            {
-                packet = await store.GetMessageByIdAsync( m, packet.PacketId );
-                await Task.WhenAny( Task.Delay( waitTimeoutMs ), ackReceived );
-            }
+            await await output.SendMessageAsync( packet );
             object? res = await ackReceived;
             if( res is null ) return null;
             if( res is T a ) return a;
