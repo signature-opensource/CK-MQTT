@@ -56,6 +56,6 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="message">The message to log.</param>
         /// <param name="e">The error to log.</param>
-        void Error( string? message = null, Exception? e = null);
+        void Error( string? message = null, Exception? e = null );
     }
 }

@@ -18,7 +18,7 @@ namespace CK.MQTT
         /// <param name="sequenceReader"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out ushort value ) 
+        public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out ushort value )
         {
             bool status = sequenceReader.TryReadBigEndian( out short toCast );
             value = (ushort)toCast;

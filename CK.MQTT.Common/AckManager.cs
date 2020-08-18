@@ -16,7 +16,7 @@ namespace CK.MQTT.Common
 
         internal void SendPacket( int packetId )
         {
-            lock(_packets)
+            lock( _packets )
             {
                 _packets.Add( new ValueTuple<int, long>( packetId, _stopwatch.ElapsedMilliseconds ) );
             }
@@ -37,7 +37,7 @@ namespace CK.MQTT.Common
         /// <returns></returns>
         internal IEnumerable<int> PacketWaitingForMoreThan( int waitTimeSecs )
         {
-            lock(_packets)
+            lock( _packets )
             {
                 long dueFor = _stopwatch.ElapsedMilliseconds - waitTimeSecs * 1000;
                 return _packets.RemoveWhereAndReturnsRemoved( s => s.Item2 < dueFor ).Select( s => s.Item1 );

@@ -71,7 +71,7 @@ namespace CK.MQTT
             //TODO: https://github.com/signature-opensource/CK-MQTT/issues/12
             byte[] arr = new byte[packet.Size];//Some packet can be written only once. So we need to allocate memory for them.
             PipeWriter pipe = PipeWriter.Create( new MemoryStream( arr ) );//And write their content to this memory.
-            if( await packet.WriteAsync( pipe, default ) != WriteResult.Written) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            if( await packet.WriteAsync( pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             var newPacket = new OutgoingStoredPacket( packet.PacketId, packet.Qos, arr );
             _packets.Add( packet.PacketId, newPacket );
             return newPacket;
