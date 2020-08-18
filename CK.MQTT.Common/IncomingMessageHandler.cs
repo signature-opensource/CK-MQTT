@@ -8,6 +8,10 @@ namespace CK.MQTT
 {
     public delegate ValueTask Reflex( IMqttLogger m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader );
 
+    /// <summary>
+    /// Message pump that do basic processing on the incoming data,
+    /// and delegate the message processing job to the <see cref="Reflex"/>.
+    /// </summary>
     public class IncomingMessageHandler : IDisposable
     {
         readonly Action<IMqttLogger, DisconnectedReason> _stopClient;
@@ -15,6 +19,13 @@ namespace CK.MQTT
         readonly Task _readLoop;
         readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
         bool _closed;
+        /// <summary>
+        /// Instantiate the <see cref="IncomingMessageHandler"/> and immediatly start to process incoming packets.
+        /// </summary>
+        /// <param name="inputLogger">The logger to use to log the activities while processing the incoming data.</param>
+        /// <param name="stopClient"><see langword="delegate"/> called when the <see cref="IncomingMessageHandler"/> stops.</param>
+        /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
+        /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
         public IncomingMessageHandler( IMqttLogger inputLogger, Action<IMqttLogger, DisconnectedReason> stopClient, PipeReader pipeReader, Reflex reflex )
         {
             _stopClient = stopClient;
@@ -120,7 +131,14 @@ namespace CK.MQTT
             _stopClient( m, reason );
         }
 
+        /// <summary>
+        /// Dispose the <see cref="PipeReader"/>.
+        /// </summary>
         public void Dispose() => _pipeReader.Complete();
+
+        /// <summary>
+        /// Close properly the handler.
+        /// </summary>
         public void Close( IMqttLogger m, DisconnectedReason reason ) => CloseInternal( m, reason, true );
     }
 }

@@ -5,18 +5,29 @@ using System.IO.Pipelines;
 namespace CK.MQTT
 {
     /// <summary>
-    /// General configuration used across the protocol implementation
+    /// Configuration of a <see cref="IMqttClient"/>.
     /// </summary>
     public class MqttConfiguration
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="MqttConfiguration" /> class 
+        /// Initializes a new instance of the <see cref="MqttConfiguration" /> class.
         /// </summary>
-		public MqttConfiguration(
+        /// <param name="connectionString">The connection string that will be used by the <see cref="IMqttChannelFactory"/>.</param>
+        /// <param name="keepAliveSecs">If the client didn't sent a packet in the given amount of time, it will send a PingRequest packet.
+        /// <br/>0 to disable the KeepAlive mechanism.</param>
+        /// <param name="waitTimeoutSecs">Time before the client try to resend a packet.</param>
+        /// <param name="inputLogger">The logger to use to log the activities while processing the incoming data.</param>
+        /// <param name="outputLogger">The logger to use to log the activities while processing the outgoing data.</param>
+        /// <param name="keepAliveLogger">TODO: we don't need this, remove</param>
+        /// <param name="channelFactory">Factory that create a channel, used to communicated with the broker.</param>
+        /// <param name="storeFactory">Factory that create a store, used to store packets.</param>
+        /// <param name="storeTransformer">The store transformer allow to modify packet while they are stored, or sent.</param>
+        /// <param name="readerOptions">Options to configurate the <see cref="PipeReader"/>.</param>
+        /// <param name="writerOptions">Options to configurate the <see cref="PipeWriter"/>.</param>
+        public MqttConfiguration(
             string connectionString,
             ushort keepAliveSecs = 0,
             int waitTimeoutSecs = -1,
-            bool waitForConnectionBeforeReSendingMessages = false,
             IMqttLogger? inputLogger = null,
             IMqttLogger? outputLogger = null,
             IMqttLogger? keepAliveLogger = null,
@@ -31,7 +42,6 @@ namespace CK.MQTT
             ConnectionString = connectionString;
             KeepAliveSecs = keepAliveSecs;
             WaitTimeoutMs = waitTimeoutSecs;
-            WaitForConnectionBeforeReSendingMessages = waitForConnectionBeforeReSendingMessages;
             InputLogger = inputLogger ?? new MqttActivityMonitor( new ActivityMonitor() );
             OutputLogger = outputLogger ?? new MqttActivityMonitor( new ActivityMonitor() );
             KeepAliveLogger = keepAliveLogger;
@@ -57,7 +67,6 @@ namespace CK.MQTT
         /// Default value is 5 seconds
         /// </summary>
 		public int WaitTimeoutMs { get; }
-        public bool WaitForConnectionBeforeReSendingMessages { get; }
         public IMqttLogger InputLogger { get; }
         public IMqttLogger OutputLogger { get; }
         public IMqttLogger? KeepAliveLogger { get; }

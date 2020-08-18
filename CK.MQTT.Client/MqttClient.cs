@@ -11,6 +11,7 @@ using static CK.MQTT.IMqttClient;
 
 namespace CK.MQTT
 {
+    /// <inheritdoc cref="IMqttClient"/>
     public class MqttClient : IMqttClient, IDisposable
     {
         //Dont change between lifecycles
@@ -24,6 +25,10 @@ namespace CK.MQTT
         OutgoingMessageHandler? _output;
         IPacketIdStore? _packetIdStore;
         PacketStore? _store;
+        /// <summary>
+        /// Instantiate the <see cref="MqttClient"/> with the given configuration.
+        /// </summary>
+        /// <param name="config">The config to use.</param>
         public MqttClient( MqttConfiguration config )
         {
             _config = config;
@@ -36,6 +41,7 @@ namespace CK.MQTT
             return item ?? throw new NullReferenceException( "Blame Kuinox" );
         }
 
+        /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IMqttLogger m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _config.StoreTransformer, _config.ConnectionString, credentials?.CleanSession ?? true );
@@ -77,6 +83,7 @@ namespace CK.MQTT
             _closed = false;
             return res;
         }
+
         async static Task SendAllStoredMessages( IMqttLogger m, PacketStore store, OutgoingMessageHandler output )
         {
             IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store!.GetAllMessagesAsync( m );
@@ -126,6 +133,7 @@ namespace CK.MQTT
             throw new ProtocolViolationException();
         }
 
+        /// <inheritdoc/>
         public MessageHandlerDelegate? MessageHandler { get; set; }
 
         readonly object _lock = new object();
@@ -148,11 +156,14 @@ namespace CK.MQTT
             _output = null;
             if( raiseEvent ) DisconnectedHandler?.Invoke( m, new MqttEndpointDisconnected( reason, message ) );
         }
+        /// <inheritdoc/>
         public Disconnected? DisconnectedHandler { get; set; }
 
+        /// <inheritdoc/>
         public bool IsConnected => !_closed && (_channel?.IsConnected ?? false);
 
 
+        /// <inheritdoc/>
         public async ValueTask DisconnectAsync( IMqttLogger m )
         {
             Task disconnect = await ThrowIfNotConnected( _output ).SendMessageAsync( new OutgoingDisconnect() );
@@ -164,17 +175,24 @@ namespace CK.MQTT
                 Close( m, DisconnectedReason.SelfDisconnected );
             }
         }
+
+        /// <summary>
+        /// Dispose the <see cref="Pipe"/>s used to operate.
+        /// </summary>
         public void Dispose()
         {
             _input?.Dispose();
             _output?.Dispose();
         }
+        /// <inheritdoc/>
         public async ValueTask<Task> PublishAsync( IMqttLogger m, OutgoingApplicationMessage message )
             => await SenderHelper.SendPacket<object>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), message, _config );
 
+        /// <inheritdoc/>
         public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IMqttLogger m, params Subscription[] subscriptions )
             => SenderHelper.SendPacket<SubscribeReturnCode[]>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), new OutgoingSubscribe( subscriptions ), _config );
 
+        /// <inheritdoc/>
         public async ValueTask<Task> UnsubscribeAsync( IMqttLogger m, params string[] topics )
             => await SenderHelper.SendPacket<object>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), new OutgoingUnsubscribe( topics ), _config );
     }

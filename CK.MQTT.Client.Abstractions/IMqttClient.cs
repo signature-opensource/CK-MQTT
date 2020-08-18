@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Represent a MQTT Client.
+    /// Represent a MQTT3 Client.
     /// </summary>
     public interface IMqttClient
     {
