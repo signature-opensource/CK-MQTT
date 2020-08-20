@@ -48,11 +48,6 @@ namespace CK.MQTT
 
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
             _output = new OutgoingMessageHandler( ( a, b ) => Close( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config, _store );
-            KeepAliveTimer? timer = null;
-            if( _config.KeepAliveSecs != 0 ) {
-                timer = new KeepAliveTimer( _config!.KeepAliveLogger!, _config, _output, PingReqTimeout );
-                _output.OnMessageEmitted += timer.OnOutput;
-            }
             ConnectAckReflex connectAckReflex = new ConnectAckReflex( new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
                 .UseMiddleware( new PublishLifecycleReflex( _store, _output ) )
@@ -166,13 +161,11 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async ValueTask DisconnectAsync( IMqttLogger m )
         {
-            Task disconnect = await ThrowIfNotConnected( _output ).SendMessageAsync( new OutgoingDisconnect() );
-            await _output.Complete();
-            await disconnect;
+            await await ThrowIfNotConnected( _output ).SendMessageAsync( OutgoingDisconnect.Instance );
+                Close( m, DisconnectedReason.SelfDisconnected );
             if( !_closed )
             {
                 m.Warn( "Client is not closed after completing to send messages." );
-                Close( m, DisconnectedReason.SelfDisconnected );
             }
         }
 

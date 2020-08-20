@@ -4,6 +4,12 @@ namespace CK.MQTT
 {
     class OutgoingPingReq : SimpleOutgoingPacket
     {
+        private OutgoingPingReq() { }
+        /// <summary>
+        /// Return the default instance of <see cref="OutgoingPingReq"/>.
+        /// </summary>
+        public static OutgoingPingReq Instance { get; } = new OutgoingPingReq();
+
         public override int Size => 2;
 
         protected override void Write( Span<byte> span )

@@ -14,6 +14,7 @@ namespace CK.MQTT
         struct Entry
         {
             public int NextFreeId;
+            public ushort TryCount;
             public TaskCompletionSource<object?>? TaskCS;
             public long EmissionTime;
             public char DebuggerDisplay => TaskCS == null ? '-' : 'X';
@@ -26,6 +27,7 @@ namespace CK.MQTT
         /// </summary>
         int _count = 0;
         readonly int _maxPacketId;
+        readonly MqttConfiguration _config;
         readonly Stopwatch _stopwatch = new Stopwatch();
         string DebuggerDisplay
         {
@@ -37,10 +39,12 @@ namespace CK.MQTT
             }
         }
 
-        public IdStore( int packetIdMaxValue )
+        public IdStore( int packetIdMaxValue, MqttConfiguration config )
         {
             _entries = new Entry[64];
             _maxPacketId = packetIdMaxValue;
+            _config = config;
+            _config = config;
             _stopwatch.Start();
         }
 
@@ -70,7 +74,20 @@ namespace CK.MQTT
                 return true;
             }
         }
-        public void PacketSent( int packetId ) => _entries[packetId - 1].EmissionTime = _stopwatch.ElapsedMilliseconds;
+        public void PacketSent( IMqttLogger m, int packetId )
+        {
+            lock( _entries )
+            {
+                _entries[packetId - 1].EmissionTime = _stopwatch.ElapsedMilliseconds;
+                int count = ++_entries[packetId - 1].TryCount;
+                if( count == _config.AttemptCountBeforeGivingUpPacket && _config.AttemptCountBeforeGivingUpPacket > 0 )
+                {
+                    m.Warn( $"Packet with id {packetId} is not acknowledged after sending it {count - 1} times." +
+                        $"\nThis was the last attempt, as configured." );
+                }
+            }
+        }
+
         public bool FreeId( int packetId, object? result = null )
         {
             TaskCompletionSource<object?>? tcs;
@@ -82,6 +99,7 @@ namespace CK.MQTT
                 if( tcs == null ) return false;
                 _entries[packetId - 1].TaskCS = null;
                 _entries[packetId - 1].EmissionTime = 0;
+                _entries[packetId - 1].TryCount = 0;
             }
             tcs.SetResult( result );//This must be the last thing we do, the tcs.SetResult may continue a Task synchronously.
             return true;
@@ -94,12 +112,17 @@ namespace CK.MQTT
                 EmissionTime = long.MaxValue
             };
             int smallIndex = -1;//if not assigned, will return 0 (invalid packet id)
+            ushort confTryCount = _config.AttemptCountBeforeGivingUpPacket;
             for( int i = 0; i < _count; i++ )
             {
                 Entry entry = _entries[i];
-                if( entry.EmissionTime == 0 || entry.EmissionTime > smallest.EmissionTime ) continue;
-                smallest = entry;
-                smallIndex = i;
+                if( entry.EmissionTime != 0
+                    && entry.EmissionTime <= smallest.EmissionTime
+                    && (entry.TryCount != confTryCount || confTryCount == 0) )
+                {
+                    smallest = entry;
+                    smallIndex = i;
+                }
             }
             return (smallIndex + 1, _stopwatch.ElapsedMilliseconds - smallest.EmissionTime);
         }

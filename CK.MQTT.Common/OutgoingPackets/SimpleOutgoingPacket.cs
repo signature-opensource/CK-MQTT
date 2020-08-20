@@ -9,6 +9,10 @@ namespace CK.MQTT
 {
     public abstract class SimpleOutgoingPacket : IOutgoingPacket
     {
+        /// <summary>
+        /// Allow to write synchronously to the input buffer.
+        /// </summary>
+        /// <param name="buffer">The buffer to modify.</param>
         protected abstract void Write( Span<byte> buffer );
 
         void Write( PipeWriter pw )
@@ -17,6 +21,7 @@ namespace CK.MQTT
             pw.Advance( Size );
         }
 
+        /// <inheritdoc/>
         public async ValueTask<WriteResult> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             Write( pw );
@@ -24,6 +29,7 @@ namespace CK.MQTT
             return WriteResult.Written;
         }
 
+        /// <inheritdoc/>
         public abstract int Size { get; }
     }
 }

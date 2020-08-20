@@ -16,6 +16,7 @@ namespace CK.MQTT
         /// <param name="keepAliveSecs">If the client didn't sent a packet in the given amount of time, it will send a PingRequest packet.
         /// <br/>0 to disable the KeepAlive mechanism.</param>
         /// <param name="waitTimeoutSecs">Time before the client try to resend a packet.</param>
+        /// <param name="attemptCountBeforeGivingUpPacket"></param>
         /// <param name="inputLogger">The logger to use to log the activities while processing the incoming data.</param>
         /// <param name="outputLogger">The logger to use to log the activities while processing the outgoing data.</param>
         /// <param name="keepAliveLogger">TODO: we don't need this, remove</param>
@@ -28,6 +29,7 @@ namespace CK.MQTT
             string connectionString,
             ushort keepAliveSecs = 0,
             int waitTimeoutSecs = -1,
+            ushort attemptCountBeforeGivingUpPacket = 50,
             IMqttLogger? inputLogger = null,
             IMqttLogger? outputLogger = null,
             IMqttLogger? keepAliveLogger = null,
@@ -42,8 +44,9 @@ namespace CK.MQTT
             ConnectionString = connectionString;
             KeepAliveSecs = keepAliveSecs;
             WaitTimeoutMs = waitTimeoutSecs;
-            InputLogger = inputLogger ?? new MqttActivityMonitor( new ActivityMonitor() );
-            OutputLogger = outputLogger ?? new MqttActivityMonitor( new ActivityMonitor() );
+            AttemptCountBeforeGivingUpPacket = attemptCountBeforeGivingUpPacket;
+            InputLogger = inputLogger ?? new MqttActivityMonitor( new ActivityMonitor( "Input Pump Logger" ) );
+            OutputLogger = outputLogger ?? new MqttActivityMonitor( new ActivityMonitor( "Output Pump Logger" ) );
             KeepAliveLogger = keepAliveLogger;
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
@@ -67,6 +70,7 @@ namespace CK.MQTT
         /// Default value is 5 seconds
         /// </summary>
 		public int WaitTimeoutMs { get; }
+        public ushort AttemptCountBeforeGivingUpPacket { get; }
         public IMqttLogger InputLogger { get; }
         public IMqttLogger OutputLogger { get; }
         public IMqttLogger? KeepAliveLogger { get; }

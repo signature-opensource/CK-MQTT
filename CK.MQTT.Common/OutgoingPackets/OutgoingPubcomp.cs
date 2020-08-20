@@ -6,6 +6,7 @@ namespace CK.MQTT
         {
         }
 
+        /// <inheritdoc/>
         public override byte Header => (byte)PacketType.PublishComplete;
     }
 }

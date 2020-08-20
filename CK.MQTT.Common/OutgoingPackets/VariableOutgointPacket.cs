@@ -11,10 +11,12 @@ namespace CK.MQTT
 
         protected abstract int RemainingSize { get; }
 
+        /// <inheritdoc/>
         public override int Size => RemainingSize.CompactByteCount() + 1 + RemainingSize;
 
         protected abstract void WriteContent( Span<byte> buffer );
 
+        /// <inheritdoc/>
         protected override void Write( Span<byte> span )
         {
             span[0] = Header;

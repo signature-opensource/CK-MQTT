@@ -15,8 +15,10 @@ namespace CK.MQTT
             PacketId = packetId;
         }
 
+        /// <inheritdoc/>
         public override int Size => 4;
 
+        /// <inheritdoc/>
         protected override void Write( Span<byte> span )
         {
             span[0] = Header;
