@@ -1,3 +1,4 @@
+using CK.Core;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,49 +15,49 @@ namespace CK.MQTT
     public abstract class PacketStore
     {
         internal IdStore IdStore { get; }
-        readonly IStoreTransformer _storeTransformer;
+        readonly MqttConfiguration _config;
 
-        protected PacketStore( IStoreTransformer storeTransformer, int packetIdMaxValue )
+        protected PacketStore( MqttConfiguration config, int packetIdMaxValue )
         {
-            IdStore = new IdStore( packetIdMaxValue );
-            _storeTransformer = storeTransformer;
+            IdStore = new IdStore( packetIdMaxValue, config );
+            _config = config;
         }
 
         /// <summary>
         /// Store a <see cref="IOutgoingPacketWithId"/> in the session, return a <see cref="IOutgoingPacket"/>.
         /// </summary>
         /// <returns>A <see cref="IOutgoingPacket"/> that can be sent on the wire.</returns>
-        internal async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet )
+        internal async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
         {
             bool success = IdStore.TryGetId( out int packetId, out Task<object?>? idFreedAwaiter );
             int waitTime = 500;
             while( !success )
             {
-                m.Warn( "No PacketId available, awaiting until one is free." );
+                m.Warn()?.Send( "No PacketId available, awaiting until one is free." );
                 await Task.Delay( waitTime );
                 if( waitTime < 5000 ) waitTime += 500;
                 success = IdStore.TryGetId( out packetId, out idFreedAwaiter );
             }
             Debug.Assert( idFreedAwaiter != null );
             packet.PacketId = (ushort)packetId;
-            using( m.OpenTrace( $"{nameof( IdStore )} determined new packet id would be {packetId}." ) )
+            using( m.OpenTrace()?.Send( $"{nameof( IdStore )} determined new packet id would be {packetId}." ) )
             {
                 var newPacket = await DoStoreMessageAsync( m, packet );
-                return (_storeTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
+                return (_config.StoreTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
             }
         }
 
-        public async ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> GetAllMessagesAsync( IMqttLogger m )
-            => (await DoGetAllMessagesAsync( m )).Select( s => _storeTransformer.PacketTransformerOnRestore( s ) );
+        public async ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> GetAllMessagesAsync( IActivityMonitor m )
+            => (await DoGetAllMessagesAsync( m )).Select( s => _config.StoreTransformer.PacketTransformerOnRestore( s ) );
 
-        protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IMqttLogger m );
+        protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor m );
 
         internal async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IMqttLogger m, int packetId )
-            => _storeTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
+            => _config.StoreTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IMqttLogger m, int packetId );
 
-        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IMqttLogger m, IOutgoingPacketWithId packet );
+        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
 
         public async ValueTask<QualityOfService> DiscardMessageByIdAsync( IMqttLogger m, int packetId, object? packet = null )
         {

@@ -10,28 +10,28 @@ namespace SimpleClientTest
     {
         static async Task Main()
         {
-            var config = new GrandOutputConfiguration();
-            config.Handlers.Add( new ConsoleConfiguration()
-            {
-                EnableMonitorIdColorFlag = true
-            } );
-            ActivityMonitor.DefaultFilter = LogFilter.Debug;
-            config.MinimalFilter = LogFilter.Debug;
-            var go = GrandOutput.EnsureActiveDefault( config );
-            go.ExternalLogLevelFilter = LogLevelFilter.Debug;
-            var m = new MqttActivityMonitor( new ActivityMonitor() );
-            var client = new MqttClient( new MqttConfiguration( "test.mosquitto.org:1883" ) );
-            var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
-            if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
-            {
-                throw new System.Exception();
-            }
-            var returnSub = await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ) );
-            await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) ) );
-            await client.DisconnectAsync( m );
-            await Task.Delay( 3000 );
-            result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );
-            await Task.Delay( 500 );
+            //var config = new GrandOutputConfiguration();
+            //config.Handlers.Add( new ConsoleConfiguration()
+            //{
+            //    EnableMonitorIdColorFlag = true
+            //} );
+            //ActivityMonitor.DefaultFilter = LogFilter.Debug;
+            //config.MinimalFilter = LogFilter.Debug;
+            //var go = GrandOutput.EnsureActiveDefault( config );
+            //go.ExternalLogLevelFilter = LogLevelFilter.Debug;
+            //var m = new MqttActivityMonitor( new ActivityMonitor() );
+            //var client = new MqttClient( new MqttConfiguration( "test.mosquitto.org:1883" ) );
+            //var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
+            //if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
+            //{
+            //    throw new System.Exception();
+            //}
+            //var returnSub = await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ) );
+            //await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) ) );
+            //await client.DisconnectAsync( m );
+            //await Task.Delay( 3000 );
+            //result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );
+            //await Task.Delay( 500 );
         }
     }
 }

@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -6,41 +7,36 @@ namespace CK.MQTT
 {
     public static class SenderHelper
     {
-        public static ValueTask<Task<T?>> SendPacket<T>(
-            IMqttLogger m,
-            PacketStore messageStore,
-            OutgoingMessageHandler output,
-            IOutgoingPacketWithId packet,
-            MqttConfiguration config )
+        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, PacketStore messageStore, OutgoingMessageHandler output,
+            IOutgoingPacketWithId packet, MqttConfiguration config )
             where T : class
             => packet.Qos switch
             {
                 QualityOfService.AtMostOnce => PublishQoS0<T>( m, output, packet ),
-                QualityOfService.AtLeastOnce => StoreAndSend<T>( m, output, messageStore, packet, config.WaitTimeoutMs ),
-                QualityOfService.ExactlyOnce => StoreAndSend<T>( m, output, messageStore, packet, config.WaitTimeoutMs ),
+                QualityOfService.AtLeastOnce => StoreAndSend<T>( m, output, messageStore, packet ),
+                QualityOfService.ExactlyOnce => StoreAndSend<T>( m, output, messageStore, packet ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        public static async ValueTask<Task<T?>> PublishQoS0<T>( IMqttLogger m, OutgoingMessageHandler output, IOutgoingPacketWithId msg )
+        public static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor m, OutgoingMessageHandler output, IOutgoingPacketWithId msg )
             where T : class
         {
-            using( m.OpenTrace( "Executing Publish protocol with QoS 0." ) )
+            using( m.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
             {
                 await output.SendMessageAsync( msg );
                 return Task.FromResult<T?>( null );
             }
         }
 
-        public static async ValueTask<Task<T?>> StoreAndSend<T>( IMqttLogger m, OutgoingMessageHandler output, PacketStore messageStore,
-            IOutgoingPacketWithId msg, int waitTimeoutMs )
+        public static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m, OutgoingMessageHandler output, PacketStore messageStore, IOutgoingPacketWithId msg )
             where T : class
         {
             (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );
-            return Send<T>( m, output, messageStore, newPacket, ackReceived, waitTimeoutMs );
+            return Send<T>( m, output, newPacket, ackReceived );
         }
 
-        public static async Task<T?> Send<T>( IMqttLogger m,
-            OutgoingMessageHandler output, PacketStore store, IOutgoingPacketWithId packet, Task<object?> ackReceived, int waitTimeoutMs )
+        public static async Task<T?> Send<T>( IActivityMonitor m,
+            OutgoingMessageHandler output,  IOutgoingPacketWithId packet, Task<object?> ackReceived )
             where T : class
         {
             await await output.SendMessageAsync( packet );

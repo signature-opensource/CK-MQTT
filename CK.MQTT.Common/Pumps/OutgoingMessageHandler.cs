@@ -11,18 +11,17 @@ namespace CK.MQTT
     /// The message pump that serialize the messages to the <see cref="PipeWriter"/>.
     /// Accept messages concurrently, but it will send them one per one.
     /// </summary>
-    public class OutgoingMessageHandler : IDisposable
+    public class OutgoingMessageHandler
     {
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
-        readonly IncomingMessageHandler _incomingMessageHandler;
-        readonly Action<IMqttLogger, DisconnectedReason> _clientClose;
+        readonly PingRespReflex _pingRespReflex;
+        readonly Func<IMqttLogger, DisconnectedReason, Task> _clientClose;
         readonly PipeWriter _pipeWriter;
         readonly MqttConfiguration _config;
         readonly PacketStore _packetStore;
         readonly Task _writeLoopTask;
-        bool _stopped;
-        readonly CancellationTokenSource _dirtyStopSource = new CancellationTokenSource();
+        readonly CancellationTokenSource _stopSource = new CancellationTokenSource();
         /// <summary>
         /// Instantiate a new <see cref="OutgoingMessageHandler"/>.
         /// </summary>
@@ -31,13 +30,13 @@ namespace CK.MQTT
         /// <param name="config">The config to use.</param>
         /// <param name="packetStore">The packet store to use to retrieve packets.</param>
         public OutgoingMessageHandler(
-            IncomingMessageHandler incomingMessageHandler,
-            Action<IMqttLogger, DisconnectedReason> clientClose,
+            PingRespReflex pingRespReflex,
+            Func<IMqttLogger, DisconnectedReason, Task> clientClose,
             PipeWriter writer, MqttConfiguration config, PacketStore packetStore )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
-            _incomingMessageHandler = incomingMessageHandler;
+            _pingRespReflex = pingRespReflex;
             _clientClose = clientClose;
             _pipeWriter = writer;
             _config = config;
@@ -49,7 +48,7 @@ namespace CK.MQTT
 
         public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
 
-        /// <returns>A <see cref="ValueTask"/> that complete when the packet is sent.</returns>
+        /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
         public async ValueTask<Task> SendMessageAsync( IOutgoingPacket item )
         {
             var wrapper = new AwaitableOutgoingPacketWrapper( item );
@@ -58,26 +57,26 @@ namespace CK.MQTT
         }
 
 
-        async ValueTask<bool> SendAMessageFromQueue()
+        async ValueTask<bool> SendAMessageFromQueue( IMqttLogger m )
         {
-            if( _dirtyStopSource.IsCancellationRequested ) return false;
+            if( _stopSource.IsCancellationRequested ) return false;
             if( !_reflexes.Reader.TryRead( out IOutgoingPacket packet ) && !_messages.Reader.TryRead( out packet ) ) return false;
-            await ProcessOutgoingPacket( packet );
+            await ProcessOutgoingPacket( m, packet );
             return true;
         }
 
-        static readonly Task _neverTask = new TaskCompletionSource<object>().Task;
+        static Task NeverTask { get; } = new TaskCompletionSource<object>().Task;
 
-        async ValueTask<Task> ResendUnackPacket()
+        async ValueTask<Task> ResendUnackPacket( IMqttLogger m )
         {
             while( true )
             {
                 (int packetId, long waitTime) = _packetStore.IdStore.GetOldestPacket();
                 //0 mean there is no packet in the store. So we don't want to wake up the loop to resend packets.
-                if( packetId == 0 ) return _neverTask;//Loop will complete another task when a new packet will be sent.
+                if( packetId == 0 ) return NeverTask;//Loop will complete another task when a new packet will be sent.
                 //Wait the right amount of time
                 if( waitTime < _config.WaitTimeoutMs ) return Task.Delay( (int)(_config.WaitTimeoutMs - waitTime) );
-                await SendUnackPacket( packetId );
+                await SendUnackPacket( m, packetId );
             }
         }
 
@@ -87,46 +86,52 @@ namespace CK.MQTT
             {
                 try
                 {
-                    while( !_dirtyStopSource.IsCancellationRequested )
+                    Task cancelTask = Task.FromCanceled( _stopSource.Token );
+                    while( !_stopSource.IsCancellationRequested )
                     {
-                        bool messageSent = await SendAMessageFromQueue();
-                        Task resendTask = await ResendUnackPacket();
+                        IMqttLogger m = _config.OutputLogger;
+                        bool messageSent = await SendAMessageFromQueue( m );
+                        Task resendTask = await ResendUnackPacket( m );
                         if( resendTask.IsCompleted || messageSent ) continue;//A message has been sent, skip keepAlive logic.
                         //We didn't sent any message. We start a KeepAlive.
-                        Task keepAliveTask = Task.Delay( _config.KeepAliveSecs );
-                        await Task.WhenAny(
+                        Task keepAliveTask = _config.KeepAliveSecs != 0 ? Task.Delay( _config.KeepAliveSecs ) : NeverTask;
+                        await await Task.WhenAny(
                             _reflexes.Reader.WaitToReadAsync().AsTask(),
                             _messages.Reader.WaitToReadAsync().AsTask(),
                             resendTask,
-                            keepAliveTask ).Unwrap();
+                            keepAliveTask,
+                            cancelTask
+                            );
                         if( keepAliveTask.IsCompleted )
                         {
-                            await ProcessOutgoingPacket( OutgoingPingReq.Instance );
+                            await ProcessOutgoingPacket( m, OutgoingPingReq.Instance );
+                            _pingRespReflex.StartPingTimeoutTimer();
                         }
-
                     }
+                    _pipeWriter.Complete();
                 }
                 catch( Exception e )
                 {
-                    _config.OutputLogger.Error( e );
-                    CloseInternal( _config.OutputLogger, DisconnectedReason.UnspecifiedError, false );
+                    _config.OutputLogger.Error( "Error while writing data.", e );
+                    _stopSource.Cancel();
+                    await _clientClose( _config.OutputLogger, DisconnectedReason.UnspecifiedError );
                 }
             }
         }
         async Task SendUnackPacket( IMqttLogger m, int packetId )
         {
             if( packetId == 0 ) return;
-            IOutgoingPacketWithId packet = await _packetStore.GetMessageByIdAsync( _config.OutputLogger, packetId );
-            await _messages.Writer.WriteAsync( packet );
+            IOutgoingPacketWithId packet = await _packetStore.GetMessageByIdAsync( m, packetId );
+            await _messages.Writer.WriteAsync( packet, _stopSource.Token );
             _packetStore.IdStore.PacketSent( m, packetId );//We reset the timer, or this packet will be picked up again.
         }
 
         async ValueTask<WriteResult> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
         {
-            if( _dirtyStopSource.IsCancellationRequested ) return WriteResult.Cancelled;
-            using( _config.OutputLogger.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.Size}." ) )
+            if( _stopSource.IsCancellationRequested ) return WriteResult.Cancelled;
+            using( m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.Size}." ) )
             {
-                WriteResult result = await outgoingPacket.WriteAsync( _pipeWriter, _dirtyStopSource.Token );
+                WriteResult result = await outgoingPacket.WriteAsync( _pipeWriter, _stopSource.Token );
                 if( outgoingPacket is IOutgoingPacketWithId packetWithId )
                 {
                     _packetStore.IdStore.PacketSent( m, packetWithId.PacketId );
@@ -135,25 +140,11 @@ namespace CK.MQTT
             }
         }
 
-        readonly object _stopLock = new object();
-        void CloseInternal( IMqttLogger m, DisconnectedReason disconnectedReason, bool waitLoop )
+        public Task CloseAsync()
         {
-            if( _stopped ) return;
-            _stopped = true;
-            m.Trace( $"Closing {nameof( OutgoingMessageHandler )}." );
-            _messages.Writer.Complete();
-            _reflexes.Writer.Complete();
-            _dirtyStopSource.Cancel();
-            if( waitLoop && !_writeLoopTask.IsCompleted )
-            {
-                m.Warn( $"{nameof( OutgoingMessageHandler )} write loop is taking time to exit..." );
-                _writeLoopTask.Wait();
-            }
-            _clientClose( m, disconnectedReason );
+            if( _stopSource.IsCancellationRequested ) return Task.CompletedTask;//Allow to not await ourself.
+            _stopSource.Cancel();
+            return _writeLoopTask;
         }
-
-        public void Dispose() => _pipeWriter.Complete();
-
-        public void Close( IMqttLogger m, DisconnectedReason disconnectedReason ) => CloseInternal( m, disconnectedReason, true );
     }
 }

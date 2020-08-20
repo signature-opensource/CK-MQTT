@@ -32,7 +32,6 @@ namespace CK.MQTT
             ushort attemptCountBeforeGivingUpPacket = 50,
             IMqttLogger? inputLogger = null,
             IMqttLogger? outputLogger = null,
-            IMqttLogger? keepAliveLogger = null,
             IMqttChannelFactory? channelFactory = null,
             IStoreFactory? storeFactory = null,
             IStoreTransformer? storeTransformer = null,
@@ -40,14 +39,12 @@ namespace CK.MQTT
             StreamPipeWriterOptions? writerOptions = null
         )
         {
-            if( keepAliveSecs > 0 && keepAliveLogger is null ) throw new ArgumentNullException( $"{nameof( keepAliveLogger )} cannot be null when keepAlive is enabled." );
             ConnectionString = connectionString;
             KeepAliveSecs = keepAliveSecs;
             WaitTimeoutMs = waitTimeoutSecs;
             AttemptCountBeforeGivingUpPacket = attemptCountBeforeGivingUpPacket;
             InputLogger = inputLogger ?? new MqttActivityMonitor( new ActivityMonitor( "Input Pump Logger" ) );
             OutputLogger = outputLogger ?? new MqttActivityMonitor( new ActivityMonitor( "Output Pump Logger" ) );
-            KeepAliveLogger = keepAliveLogger;
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
             StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
@@ -73,7 +70,6 @@ namespace CK.MQTT
         public ushort AttemptCountBeforeGivingUpPacket { get; }
         public IMqttLogger InputLogger { get; }
         public IMqttLogger OutputLogger { get; }
-        public IMqttLogger? KeepAliveLogger { get; }
         public IMqttChannelFactory ChannelFactory { get; }
         public IStoreFactory StoreFactory { get; }
         public IStoreTransformer StoreTransformer { get; }

@@ -1,3 +1,4 @@
+using CK.Core;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -12,7 +13,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="m">The logger, use it to log the activities perfomed while processing the disconnection.</param>
         /// <param name="arg">Object containing information about the disconnection, like the reason.</param>
-        public delegate void Disconnected( IMqttLogger m, MqttEndpointDisconnected arg );
+        public delegate void Disconnected( IMqttLogger m, DisconnectedReason reason );
 
         /// <summary>
         /// <see langword="delegate"/> called when the <see cref="IMqttClient"/> got Disconnected.
@@ -58,7 +59,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the connection protocol.
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( IMqttLogger m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 
         /// <summary>
         /// Susbscribe the <see cref="IMqttClient"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
@@ -74,7 +75,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180876">MQTT Subscribe</a>
         /// for more details about the protocol subscription.
         /// </remarks>
-        ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IMqttLogger m, params Subscription[] subscriptions );
+        ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions );
 
         /// <summary>
         /// Send a message to the broker.
@@ -92,7 +93,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180850">MQTT Publish</a>
         /// for more details about the protocol publish
         /// </remarks>
-        ValueTask<Task> PublishAsync( IMqttLogger m, OutgoingApplicationMessage message );
+        ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message );
 
         /// <summary>
         /// Unsubscribe the client from topics.
@@ -109,7 +110,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180885">MQTT Unsubscribe</a>
         /// for more details about the protocol unsubscription
         /// </remarks>
-        ValueTask<Task> UnsubscribeAsync( IMqttLogger m, params string[] topics );
+        ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics );
 
         /// <summary>
         /// Disconnect the client.
@@ -120,7 +121,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
         /// for more details about the protocol disconnection
         /// </remarks>
-        ValueTask DisconnectAsync( IMqttLogger m );
+        ValueTask DisconnectAsync();
     }
 
 }

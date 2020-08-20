@@ -22,6 +22,13 @@ namespace CK.MQTT
         IDisposable OpenTrace( string message );
 
         /// <summary>
+        /// Open a log group with a log level of Error.
+        /// </summary>
+        /// <param name="message">The message to log.</param>
+        /// <returns>A <see cref="IDisposable"/>, disposing it should close the log group.</returns>
+        IDisposable OpenError( string message );
+
+        /// <summary>
         /// Log a message with the trace log level.
         /// </summary>
         /// <param name="message">The message to log.</param>
