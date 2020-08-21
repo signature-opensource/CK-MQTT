@@ -13,10 +13,13 @@ namespace CK.MQTT
             _returnCodes = returnCodes;
         }
 
+        /// <inheritdoc/>
         protected override byte Header => (byte)PacketType.SubscribeAck;
 
+        /// <inheritdoc/>
         protected override int RemainingSize => 2 + _returnCodes.Length;
 
+        /// <inheritdoc/>
         protected override void WriteContent( Span<byte> span )
         {
             span = span.WriteUInt16( _packetId );

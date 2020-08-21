@@ -20,27 +20,30 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public void Error( string message ) => _m.Error( message );
+        public void Error( string message ) => _m.Error()?.Send( message );
 
         /// <inheritdoc/>
-        public void Error( Exception? e ) => _m.Error( e );
+        public void Error( Exception? e ) => _m.Error()?.Send( e );
 
         /// <inheritdoc/>
-        public void Error( string? message, Exception? e ) => _m.Error( message, e );
+        public void Error( string? message, Exception? e ) => _m.Error()?.Send( message, e );
 
         /// <inheritdoc/>
-        public void Info( string message ) => _m.Info( message );
+        public void Info( string message ) => _m.Info()?.Send( message );
 
         /// <inheritdoc/>
-        public IDisposable OpenInfo( string message ) => _m.OpenInfo( message );
+        public IDisposable? OpenInfo( string message ) => _m.OpenInfo()?.Send( message );
 
         /// <inheritdoc/>
-        public IDisposable OpenTrace( string message ) => _m.OpenTrace( message );
+        public IDisposable? OpenTrace( string message ) => _m.OpenTrace()?.Send( message );
 
         /// <inheritdoc/>
-        public void Trace( string message ) => _m.Trace( message );
+        public IDisposable? OpenError( string message ) => _m.OpenError()?.Send( message );
 
         /// <inheritdoc/>
-        public void Warn( string message ) => _m.Warn( message );
+        public void Trace( string message ) => _m.Trace()?.Send( message );
+
+        /// <inheritdoc/>
+        public void Warn( string message ) => _m.Warn()?.Send( message );
     }
 }

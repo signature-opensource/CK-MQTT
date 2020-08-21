@@ -45,7 +45,7 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
-            (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _config.StoreTransformer, _config.ConnectionString, credentials?.CleanSession ?? true );
+            (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
 
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
             ConnectAckReflex connectAckReflex = new ConnectAckReflex();
@@ -132,11 +132,16 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public MessageHandlerDelegate? MessageHandler { get; set; }
 
-        readonly object _lock = new object();
         Task CloseHandlers() => Task.WhenAll( ThrowIfNotConnected( _input ).CloseAsync(), ThrowIfNotConnected( _output ).CloseAsync() );
 
+        readonly object _lock = new object();
         async Task CloseSelfAsync( IMqttLogger m, DisconnectedReason reason )
         {
+            lock( _lock )
+            {
+                if( _closed ) return;
+                _closed = true;
+            }
             m.Info( $"Client closing reason: '{reason}.'" );
             await CloseHandlers();
             ThrowIfNotConnected( _channel ).Close( m );
@@ -146,9 +151,13 @@ namespace CK.MQTT
 
         async Task CloseUser()
         {
+            lock( _lock )
+            {
+                if( _closed ) return;
+                _closed = true;
+            }
             await CloseHandlers();//we closed the loop, we can safely use on of it's logger.
             ThrowIfNotConnected( _channel ).Close( _config.InputLogger );
-            _closed = true;
         }
 
         /// <inheritdoc/>

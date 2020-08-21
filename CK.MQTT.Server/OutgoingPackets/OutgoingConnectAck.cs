@@ -12,8 +12,10 @@ namespace CK.MQTT
             _sessionState = existingSession;
         }
 
+        /// <inheritdoc/>
         public override int Size => 4;
 
+        /// <inheritdoc/>
         protected override void Write( Span<byte> span )
         {
             span[0] = (byte)PacketType.ConnectAck;
