@@ -11,14 +11,14 @@ namespace CK.MQTT
         readonly HashSet<int> _ids = new HashSet<int>();
 
         /// <inheritdoc/>
-        public ValueTask RemoveId( IMqttLogger m, int id )
+        public ValueTask RemoveId( IInputLogger? m, int id )
         {
             _ids.Remove( id );
             return new ValueTask();
         }
 
         /// <inheritdoc/>
-        public ValueTask StoreId( IMqttLogger m, int id )
+        public ValueTask StoreId( IInputLogger? m, int id )
         {
             _ids.Add( id );
             return new ValueTask();

@@ -19,7 +19,7 @@ namespace CK.MQTT
 
         void TimerCallback( object? state )
         {
-            _incomingMessageHandler.SetTimeout( ( m ) => m.Error( "The broker did not responded PingReq in the given amount of time." ) );
+            _incomingMessageHandler.SetTimeout( ( m ) => m?.PingReqTimeout() );
         }
 
         public void StartPingTimeoutTimer()
@@ -27,14 +27,20 @@ namespace CK.MQTT
             if( _config.KeepAliveSecs > 0 ) _timer.Change( _config.KeepAliveSecs * 1000, Timeout.Infinite );
         }
 
-        public ValueTask ProcessIncomingPacketAsync( IMqttLogger m, IncomingMessageHandler sender,
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender,
             byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
-            if( PacketType.PingResponse != (PacketType)header ) return next();
-            m.Trace( $"Handling incoming packet as {PacketType.PingResponse}." );
-            _timer.Change( Timeout.Infinite, Timeout.Infinite );//Abort timer
-            ValueTask valueTask = pipeReader.BurnBytes( packetLength );
-            return valueTask;
+            if( PacketType.PingResponse != (PacketType)header )
+            {
+                await next();
+                return;
+            }
+            using( m?.ProcessPacket( PacketType.PingResponse ) )
+            {
+
+                _timer.Change( Timeout.Infinite, Timeout.Infinite );//Abort timer
+                await pipeReader.BurnBytes( packetLength );
+            }
         }
     }
 }

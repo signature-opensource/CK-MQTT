@@ -74,7 +74,7 @@ namespace CK.MQTT
                 return true;
             }
         }
-        public void PacketSent( IMqttLogger m, int packetId )
+        public void PacketSent( IOutputLogger? m, int packetId )
         {
             lock( _entries )
             {
@@ -82,8 +82,7 @@ namespace CK.MQTT
                 int count = ++_entries[packetId - 1].TryCount;
                 if( count == _config.AttemptCountBeforeGivingUpPacket && _config.AttemptCountBeforeGivingUpPacket > 0 )
                 {
-                    m.Warn( $"Packet with id {packetId} is not acknowledged after sending it {count - 1} times." +
-                        $"\nThis was the last attempt, as configured." );
+                    m?.PacketMarkedPoisoned( packetId, count );
                 }
             }
         }

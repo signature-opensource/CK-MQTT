@@ -19,9 +19,7 @@ namespace CK.MQTT
     /// If a middleware advance the <see cref="PipeReader"/>, the next middleware can't be aware of it.
     /// </remarks>
     /// <returns>A <see cref="ValueTask"/> that complete when the middleware finished it's job.</returns>
-    public delegate ValueTask ReflexMiddleware(
-        IMqttLogger m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next
-    );
+    public delegate ValueTask ReflexMiddleware( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
 
     /// <summary>
     /// An interface exposing a method method that is a <see cref="ReflexMiddleware"/>.
@@ -29,9 +27,7 @@ namespace CK.MQTT
     public interface IReflexMiddleware
     {
         /// <inheritdoc cref="ReflexMiddleware"/>
-        ValueTask ProcessIncomingPacketAsync(
-            IMqttLogger m, IncomingMessageHandler sender,
-        byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
+        ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
     }
 
     /// <summary>
@@ -72,7 +68,7 @@ namespace CK.MQTT
                 Reflex previousReflex = lastReflex;
                 //Here some closure black magics. A lot of mind bending stuff happen if you inline this variable, and make it not work.
                 //TODO: A better implementation would not use a closure, to be more explicit.
-                Reflex newMiddleware = ( IMqttLogger m, IncomingMessageHandler s, byte h, int l, PipeReader p ) //We create a lambda that...
+                Reflex newMiddleware = ( IInputLogger? m, IncomingMessageHandler s, byte h, int l, PipeReader p ) //We create a lambda that...
                     => curr( m, s, h, l, p, () => previousReflex( m, s, h, l, p ) );// Call current the middleware, with a callback to the previous previous middleware.
                 lastReflex = newMiddleware;
             }

@@ -30,9 +30,10 @@ namespace CK.MQTT
         /// Instantiate the <see cref="MqttClient"/> with the given configuration.
         /// </summary>
         /// <param name="config">The config to use.</param>
-        public MqttClient( MqttConfiguration config )
+        public MqttClient( MqttConfiguration config, MessageHandlerDelegate messageHandler )
         {
             _config = config;
+            MessageHandler = messageHandler;
             _channelFactory = config.ChannelFactory;
         }
 
@@ -41,6 +42,7 @@ namespace CK.MQTT
             if( _closed ) throw new InvalidOperationException( "Client is Disconnected." );
             return item ?? throw new NullReferenceException( "Blame Kuinox" );
         }
+        ValueTask OnMessage( IncomingMessage msg ) => MessageHandler( msg );
 
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
@@ -50,12 +52,12 @@ namespace CK.MQTT
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
             ConnectAckReflex connectAckReflex = new ConnectAckReflex();
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            _input = new IncomingMessageHandler( _config, ( a, b ) => CloseSelfAsync( a, b ), PipeReader.Create( _channel.Stream, _config.ReaderOptions ), connectAckReflex.ProcessIncomingPacket );
+            _input = new IncomingMessageHandler( _config, CloseSelfAsync, PipeReader.Create( _channel.Stream, _config.ReaderOptions ), connectAckReflex.ProcessIncomingPacket );
             PingRespReflex pingRes = new PingRespReflex( _config, _input );
-            _output = new OutgoingMessageHandler( pingRes, ( a, b ) => CloseSelfAsync( a, b ), PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config, _store );
+            _output = new OutgoingMessageHandler( pingRes, CloseSelfAsync, PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config, _store );
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
-                .UseMiddleware( new PublishLifecycleReflex( _store, _output ) )
+                .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, _output ) )
                 .UseMiddleware( new SubackReflex( _store ) )
                 .UseMiddleware( new UnsubackReflex( _store ) )
                 .UseMiddleware( pingRes )
@@ -91,62 +93,31 @@ namespace CK.MQTT
             }
         }
 
-        async Task OnMessage( IMqttLogger m, IncomingMessage msg )
-        {
-            var handler = MessageHandler;
-            if( handler != null )
-            {
-                await handler( m, msg );
-                return;
-            }
-            else
-            {
-                int toRead = msg.PayloadLength;
-                using( m.OpenInfo( $"Received message: Topic'{msg.Topic}'" ) )
-                {
-                    MemoryStream stream = new MemoryStream();
-                    while( toRead > 0 )
-                    {
-                        var result = await msg.PipeReader.ReadAsync();
-                        var buffer = result.Buffer;
-                        if( buffer.Length > toRead )
-                        {
-                            buffer = buffer.Slice( 0, toRead );
-                        }
-                        toRead -= (int)buffer.Length;
-                        stream.Write( buffer.ToArray() );
-                        msg.PipeReader.AdvanceTo( buffer.End );
-                    }
-                    stream.Position = 0;
-                    m.Info( Encoding.UTF8.GetString( stream.ToArray() ) );
-                }
-            }
-        }
 
-        async ValueTask InvalidPacket( IMqttLogger m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
+        async ValueTask InvalidPacket( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {
-            await CloseSelfAsync( m, DisconnectedReason.ProtocolError );
+            await CloseSelfAsync( DisconnectedReason.ProtocolError );
             throw new ProtocolViolationException();
         }
 
         /// <inheritdoc/>
-        public MessageHandlerDelegate? MessageHandler { get; set; }
+        public MessageHandlerDelegate MessageHandler { get; set; }
 
         Task CloseHandlers() => Task.WhenAll( ThrowIfNotConnected( _input ).CloseAsync(), ThrowIfNotConnected( _output ).CloseAsync() );
 
         readonly object _lock = new object();
-        async Task CloseSelfAsync( IMqttLogger m, DisconnectedReason reason )
+        async Task CloseSelfAsync( DisconnectedReason reason )
         {
             lock( _lock )
             {
                 if( _closed ) return;
                 _closed = true;
             }
-            m.Info( $"Client closing reason: '{reason}.'" );
             await CloseHandlers();
-            ThrowIfNotConnected( _channel ).Close( m );
+            _config.InputLogger?.ClientSelfClosing( reason );
+            ThrowIfNotConnected( _channel ).Close( _config.InputLogger );
             _closed = true;
-            DisconnectedHandler?.Invoke( m, reason );
+            DisconnectedHandler?.Invoke( reason );
         }
 
         async Task CloseUser()

@@ -53,7 +53,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        protected override ValueTask<QualityOfService> DoDiscardMessage( IMqttLogger m, int packetId )
+        protected override ValueTask<QualityOfService> DoDiscardMessage( IInputLogger? m, int packetId )
         {
             QualityOfService qos = _packets[packetId].Qos;
             _packets.Remove( packetId );
@@ -61,7 +61,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        protected override ValueTask DoDiscardPacketIdAsync( IMqttLogger m, int packetId )
+        protected override ValueTask DoDiscardPacketIdAsync( IInputLogger? m, int packetId )
             => new ValueTask(); //nothing to do, the packet id is not persisted.
 
         /// <inheritdoc/>
@@ -86,7 +86,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        protected override ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IMqttLogger m, int packetId )
+        protected override ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IOutputLogger? m, int packetId )
             => new ValueTask<IOutgoingPacketWithId>( _packets[packetId] );
 
         /// <inheritdoc/>

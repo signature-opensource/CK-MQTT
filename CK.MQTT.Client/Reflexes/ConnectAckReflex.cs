@@ -9,7 +9,7 @@ namespace CK.MQTT
         readonly TaskCompletionSource<ConnectResult> _tcs = new TaskCompletionSource<ConnectResult>();
         public Reflex? Reflex { get; set; }
         public Task<ConnectResult> Task => _tcs.Task;
-        public async ValueTask ProcessIncomingPacket( IMqttLogger m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
+        public async ValueTask ProcessIncomingPacket( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
         {
             if( Reflex == null ) throw new NullReferenceException( nameof( Reflex ) );
             if( header != (byte)PacketType.ConnectAck )
@@ -24,7 +24,7 @@ namespace CK.MQTT
             if( packetSize > 0 )
             {
                 await reader.BurnBytes( packetSize );
-                m.Warn( "Remaining bytes at the end of the packet. Ignoring them !" );
+                m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
             }
             sender.CurrentReflex = Reflex;
             _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );

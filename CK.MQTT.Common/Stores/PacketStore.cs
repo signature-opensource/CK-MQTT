@@ -52,14 +52,14 @@ namespace CK.MQTT
 
         protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor m );
 
-        internal async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IMqttLogger m, int packetId )
+        internal async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IOutputLogger? m, int packetId )
             => _config.StoreTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
 
-        protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IMqttLogger m, int packetId );
+        protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IOutputLogger? m, int packetId );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
 
-        public async ValueTask<QualityOfService> DiscardMessageByIdAsync( IMqttLogger m, int packetId, object? packet = null )
+        public async ValueTask<QualityOfService> DiscardMessageByIdAsync( IInputLogger? m, int packetId, object? packet = null )
         {
             var qos = await DoDiscardMessage( m, packetId );
             if( qos == QualityOfService.AtLeastOnce )
@@ -69,19 +69,19 @@ namespace CK.MQTT
             return qos;
         }
 
-        protected abstract ValueTask<QualityOfService> DoDiscardMessage( IMqttLogger m, int packetId );
+        protected abstract ValueTask<QualityOfService> DoDiscardMessage( IInputLogger? m, int packetId );
 
-        internal async ValueTask DiscardPacketIdAsync( IMqttLogger m, int packetId )
+        internal async ValueTask DiscardPacketIdAsync( IInputLogger? m, int packetId )
         {
             if( !IdStore.FreeId( packetId ) )
             {
-                m.Warn( $"Freeing packet id {packetId} that was not assigned or already freed." );
+                m?.DoubleFreePacketId( packetId ); //TODO: maybe this should be a Protocol Error and disconnect ?
             }
             await DoDiscardPacketIdAsync( m, packetId );
             return;
         }
 
-        protected abstract ValueTask DoDiscardPacketIdAsync( IMqttLogger m, int packetId );
+        protected abstract ValueTask DoDiscardPacketIdAsync( IInputLogger? m, int packetId );
 
         public ValueTask ResetAsync()
         {

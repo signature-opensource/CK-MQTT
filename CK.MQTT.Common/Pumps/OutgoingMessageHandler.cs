@@ -16,12 +16,12 @@ namespace CK.MQTT
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
         readonly PingRespReflex _pingRespReflex;
-        readonly Func<IMqttLogger, DisconnectedReason, Task> _clientClose;
+        readonly Func<DisconnectedReason, Task> _clientClose;
         readonly PipeWriter _pipeWriter;
         readonly MqttConfiguration _config;
         readonly PacketStore _packetStore;
         readonly Task _writeLoopTask;
-        readonly CancellationTokenSource _stopSource = new CancellationTokenSource();
+        readonly CancellationTokenSource _stopSource;
         /// <summary>
         /// Instantiate a new <see cref="OutgoingMessageHandler"/>.
         /// </summary>
@@ -31,7 +31,7 @@ namespace CK.MQTT
         /// <param name="packetStore">The packet store to use to retrieve packets.</param>
         public OutgoingMessageHandler(
             PingRespReflex pingRespReflex,
-            Func<IMqttLogger, DisconnectedReason, Task> clientClose,
+            Func<DisconnectedReason, Task> clientClose,
             PipeWriter writer, MqttConfiguration config, PacketStore packetStore )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
@@ -41,6 +41,10 @@ namespace CK.MQTT
             _pipeWriter = writer;
             _config = config;
             _packetStore = packetStore;
+            _stopSource = new CancellationTokenSource();
+            TaskCompletionSource<object?> tcs = new TaskCompletionSource<object?>();
+            _stopSource.Token.Register( s => ((TaskCompletionSource<object?>)s!).SetResult( null ), tcs );
+            NeverTask = tcs.Task;
             _writeLoopTask = WriteLoop();
         }
 
@@ -57,7 +61,7 @@ namespace CK.MQTT
         }
 
 
-        async ValueTask<bool> SendAMessageFromQueue( IMqttLogger m )
+        async ValueTask<bool> SendAMessageFromQueue( IOutputLogger? m )
         {
             if( _stopSource.IsCancellationRequested ) return false;
             if( !_reflexes.Reader.TryRead( out IOutgoingPacket packet ) && !_messages.Reader.TryRead( out packet ) ) return false;
@@ -65,9 +69,9 @@ namespace CK.MQTT
             return true;
         }
 
-        static Task NeverTask { get; } = new TaskCompletionSource<object>().Task;
+        Task NeverTask { get; }
 
-        async ValueTask<Task> ResendUnackPacket( IMqttLogger m )
+        async ValueTask<Task> ResendUnackPacket( IOutputLogger? m )
         {
             while( true )
             {
@@ -75,33 +79,29 @@ namespace CK.MQTT
                 //0 mean there is no packet in the store. So we don't want to wake up the loop to resend packets.
                 if( packetId == 0 ) return NeverTask;//Loop will complete another task when a new packet will be sent.
                 //Wait the right amount of time
-                if( waitTime < _config.WaitTimeoutMs ) return Task.Delay( (int)(_config.WaitTimeoutMs - waitTime) );
+                if( waitTime < _config.WaitTimeoutMs ) return Task.Delay( (int)(_config.WaitTimeoutMs - waitTime), _stopSource.Token );
                 await SendUnackPacket( m, packetId );
             }
         }
 
         async Task WriteLoop()
         {
-            using( _config.OutputLogger.OpenInfo( "Output loop listening..." ) )
+            using( _config.OutputLogger?.OutputLoopStarting() )
             {
                 try
                 {
-                    Task cancelTask = Task.FromCanceled( _stopSource.Token );
                     while( !_stopSource.IsCancellationRequested )
                     {
-                        IMqttLogger m = _config.OutputLogger;
+                        IOutputLogger? m = _config.OutputLogger;
                         bool messageSent = await SendAMessageFromQueue( m );
                         Task resendTask = await ResendUnackPacket( m );
                         if( resendTask.IsCompleted || messageSent ) continue;//A message has been sent, skip keepAlive logic.
                         //We didn't sent any message. We start a KeepAlive.
-                        Task keepAliveTask = _config.KeepAliveSecs != 0 ? Task.Delay( _config.KeepAliveSecs ) : NeverTask;
+                        Task keepAliveTask = _config.KeepAliveSecs != 0 ? Task.Delay( _config.KeepAliveSecs, _stopSource.Token ) : NeverTask;
                         await await Task.WhenAny(
                             _reflexes.Reader.WaitToReadAsync().AsTask(),
                             _messages.Reader.WaitToReadAsync().AsTask(),
-                            resendTask,
-                            keepAliveTask,
-                            cancelTask
-                            );
+                            resendTask, keepAliveTask);
                         if( keepAliveTask.IsCompleted )
                         {
                             await ProcessOutgoingPacket( m, OutgoingPingReq.Instance );
@@ -112,13 +112,13 @@ namespace CK.MQTT
                 }
                 catch( Exception e )
                 {
-                    _config.OutputLogger.Error( "Error while writing data.", e );
+                    _config.OutputLogger?.ExceptionInOutputLoop( e );
                     _stopSource.Cancel();
-                    await _clientClose( _config.OutputLogger, DisconnectedReason.UnspecifiedError );
+                    await _clientClose( DisconnectedReason.UnspecifiedError );
                 }
             }
         }
-        async Task SendUnackPacket( IMqttLogger m, int packetId )
+        async Task SendUnackPacket( IOutputLogger? m, int packetId )
         {
             if( packetId == 0 ) return;
             IOutgoingPacketWithId packet = await _packetStore.GetMessageByIdAsync( m, packetId );
@@ -126,10 +126,10 @@ namespace CK.MQTT
             _packetStore.IdStore.PacketSent( m, packetId );//We reset the timer, or this packet will be picked up again.
         }
 
-        async ValueTask<WriteResult> ProcessOutgoingPacket( IMqttLogger m, IOutgoingPacket outgoingPacket )
+        async ValueTask<WriteResult> ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket )
         {
             if( _stopSource.IsCancellationRequested ) return WriteResult.Cancelled;
-            using( m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.Size}." ) )
+            using( m?.SendingMessage( ref outgoingPacket ) )
             {
                 WriteResult result = await outgoingPacket.WriteAsync( _pipeWriter, _stopSource.Token );
                 if( outgoingPacket is IOutgoingPacketWithId packetWithId )

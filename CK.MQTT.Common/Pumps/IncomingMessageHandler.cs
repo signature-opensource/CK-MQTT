@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public delegate ValueTask Reflex( IMqttLogger m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader );
+    public delegate ValueTask Reflex( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader );
 
     /// <summary>
     /// Message pump that do basic processing on the incoming data,
@@ -16,18 +16,18 @@ namespace CK.MQTT
     public class IncomingMessageHandler
     {
         readonly MqttConfiguration _config;
-        readonly Func<IMqttLogger, DisconnectedReason, Task> _stopClient;
+        readonly Func<DisconnectedReason, Task> _stopClient;
         readonly PipeReader _pipeReader;
         readonly Task _readLoop;
         readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
-        Action<IMqttLogger>? _timeoutLogger;
+        Action<IInputLogger?>? _timeoutLogger;
         /// <summary>
         /// Instantiate the <see cref="IncomingMessageHandler"/> and immediatly start to process incoming packets.
         /// </summary>
         /// <param name="stopClient"><see langword="delegate"/> called when the <see cref="IncomingMessageHandler"/> stops.</param>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public IncomingMessageHandler( MqttConfiguration config, Func<IMqttLogger, DisconnectedReason, Task> stopClient, PipeReader pipeReader, Reflex reflex )
+        public IncomingMessageHandler( MqttConfiguration config, Func<DisconnectedReason, Task> stopClient, PipeReader pipeReader, Reflex reflex )
         {
             _config = config;
             _stopClient = stopClient;
@@ -55,31 +55,31 @@ namespace CK.MQTT
 
         async Task ReadLoop()
         {
-            using( _config.InputLogger.OpenInfo( "Listening Incoming Messages..." ) )
+            using( _config.InputLogger?.InputLoopStarting() )
             {
                 try
                 {
                     while( !_cleanStop.IsCancellationRequested )
                     {
                         ReadResult read = await _pipeReader.ReadAsync( _cleanStop.Token );
-                        IMqttLogger m = _config.InputLogger;
-                        if( read.IsCanceled )
+                        IInputLogger? m = _config.InputLogger;
+                        if( _cleanStop.Token.IsCancellationRequested || read.IsCanceled )
                         {
-                            m.Trace( "Read Loop Cancelled." );
+                            m?.ReadLoopTokenCancelled();
                             break;//The client called the cancel, no need to notify it.
                         }
                         OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
                         if( res == OperationStatus.InvalidData )
                         {
-                            m.Error( "Corrupted Stream." );
+                            m?.InvalidIncomingData();
                             _cleanStop.Cancel();
-                            await _stopClient( m, DisconnectedReason.ProtocolError );
+                            await _stopClient( DisconnectedReason.ProtocolError );
                             break;
                         }
                         if( res == OperationStatus.Done )
                         {
                             _pipeReader.AdvanceTo( position );
-                            using( m.OpenTrace( $"Incoming packet of {length} bytes." ) )
+                            using( m?.IncomingPacket( header, length ) )
                             {
                                 await CurrentReflex( m, this, header, length, _pipeReader );
                             }
@@ -88,20 +88,20 @@ namespace CK.MQTT
                         Debug.Assert( res == OperationStatus.NeedMoreData );
                         if( read.IsCompleted )
                         {
-                            if( read.Buffer.Length == 0 ) m.Info( "Remote closed channel." );
-                            else m.Error( "Unexpected End Of Stream." );
+                            if( read.Buffer.Length == 0 ) m?.EndOfStream();
+                            else m?.UnexpectedEndOfStream();
                             _cleanStop.Cancel();
-                            await _stopClient( m, DisconnectedReason.RemoteDisconnected );
+                            await _stopClient( DisconnectedReason.RemoteDisconnected );
                             break;
                         }
                         _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                     }
                     if( _timeoutLogger != null )
                     {
-                        using( _config.InputLogger.OpenError( $"A reflex waited a packet too long and timeouted." ) )
+                        using( _config.InputLogger?.ReflexTimeout() )
                         {
                             _timeoutLogger( _config.InputLogger );
-                            await _stopClient( _config.InputLogger, DisconnectedReason.SelfDisconnected );
+                            await _stopClient( DisconnectedReason.SelfDisconnected );
                         }
                     }
                     _pipeReader.Complete();
@@ -109,9 +109,9 @@ namespace CK.MQTT
                 }
                 catch( Exception e )
                 {
-                    _config.InputLogger.Error( "Error while processing incoming data.", e );
+                    _config.InputLogger?.ExceptionOnParsingIncomingData( e );
                     _cleanStop.Cancel();
-                    await _stopClient( _config.InputLogger, DisconnectedReason.UnspecifiedError );
+                    await _stopClient( DisconnectedReason.UnspecifiedError );
                 }
             }
         }
@@ -119,7 +119,7 @@ namespace CK.MQTT
         /// <summary>
         /// Allow <see cref="Reflex"/> to notify they waited too much a packet and timeouted.
         /// </summary>
-        public void SetTimeout( Action<IMqttLogger> timeoutLogger )
+        public void SetTimeout( Action<IInputLogger?> timeoutLogger )
         {
             _timeoutLogger = timeoutLogger;
             _cleanStop.Cancel();

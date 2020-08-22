@@ -13,7 +13,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="m">The logger, use it to log the activities perfomed while processing the disconnection.</param>
         /// <param name="arg">Object containing information about the disconnection, like the reason.</param>
-        public delegate void Disconnected( IMqttLogger m, DisconnectedReason reason );
+        public delegate void Disconnected( DisconnectedReason reason );
 
         /// <summary>
         /// <see langword="delegate"/> called when the <see cref="IMqttClient"/> got Disconnected.
@@ -29,15 +29,14 @@ namespace CK.MQTT
         /// <summary>
         /// <see langword="delegate"/> called when the client receive an <see cref="IncomingMessage"/>.
         /// </summary>
-        /// <param name="monitor">The logger, use it to log the activities perfomed while processing the <see cref="IncomingMessage"/>.</param>
         /// <param name="message">The message to process. You MUST read completly the message, or you will corrupt the communication stream !</param>
         /// <returns>A <see cref="ValueTask"/> that complete when the packet processing is finished.</returns>
-        public delegate ValueTask MessageHandlerDelegate( IMqttLogger monitor, IncomingMessage message );
+        public delegate ValueTask MessageHandlerDelegate( IncomingMessage message );
 
         /// <summary>
         /// <see langword="delegate"/> called when the <see cref="IMqttClient"/> receive a Publish Packet.
         /// </summary>
-        MessageHandlerDelegate? MessageHandler { get; set; }
+        MessageHandlerDelegate MessageHandler { get; set; }
 
         /// <summary>
         /// Connect the <see cref="IMqttClient"/> to a Broker.

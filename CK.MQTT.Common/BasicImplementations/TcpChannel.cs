@@ -27,7 +27,7 @@ namespace CK.MQTT
         public Stream Stream => _tcpClient.GetStream();
 
         /// <inheritdoc/>
-        public void Close( IMqttLogger m ) => _tcpClient.Close();
+        public void Close( IInputLogger? m ) => _tcpClient.Close();
 
         /// <inheritdoc/>
         public void Dispose() => _tcpClient.Dispose();

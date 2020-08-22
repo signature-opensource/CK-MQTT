@@ -19,7 +19,6 @@ namespace CK.MQTT
         /// <param name="attemptCountBeforeGivingUpPacket"></param>
         /// <param name="inputLogger">The logger to use to log the activities while processing the incoming data.</param>
         /// <param name="outputLogger">The logger to use to log the activities while processing the outgoing data.</param>
-        /// <param name="keepAliveLogger">TODO: we don't need this, remove</param>
         /// <param name="channelFactory">Factory that create a channel, used to communicated with the broker.</param>
         /// <param name="storeFactory">Factory that create a store, used to store packets.</param>
         /// <param name="storeTransformer">The store transformer allow to modify packet while they are stored, or sent.</param>
@@ -30,8 +29,6 @@ namespace CK.MQTT
             ushort keepAliveSecs = 0,
             int waitTimeoutSecs = -1,
             ushort attemptCountBeforeGivingUpPacket = 50,
-            IMqttLogger? inputLogger = null,
-            IMqttLogger? outputLogger = null,
             IMqttChannelFactory? channelFactory = null,
             IStoreFactory? storeFactory = null,
             IStoreTransformer? storeTransformer = null,
@@ -43,8 +40,6 @@ namespace CK.MQTT
             KeepAliveSecs = keepAliveSecs;
             WaitTimeoutMs = waitTimeoutSecs;
             AttemptCountBeforeGivingUpPacket = attemptCountBeforeGivingUpPacket;
-            InputLogger = inputLogger ?? new MqttActivityMonitor( new ActivityMonitor( "Input Pump Logger" ) );
-            OutputLogger = outputLogger ?? new MqttActivityMonitor( new ActivityMonitor( "Output Pump Logger" ) );
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
             StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
@@ -67,9 +62,10 @@ namespace CK.MQTT
         /// Default value is 5 seconds
         /// </summary>
 		public int WaitTimeoutMs { get; }
+        //0 to disable
         public ushort AttemptCountBeforeGivingUpPacket { get; }
-        public IMqttLogger InputLogger { get; }
-        public IMqttLogger OutputLogger { get; }
+        public IInputLogger? InputLogger { get; set; }
+        public IOutputLogger? OutputLogger { get; set; }
         public IMqttChannelFactory ChannelFactory { get; }
         public IStoreFactory StoreFactory { get; }
         public IStoreTransformer StoreTransformer { get; }
