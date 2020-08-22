@@ -64,7 +64,7 @@ namespace CK.MQTT
             var qos = await DoDiscardMessage( m, packetId );
             if( qos == QualityOfService.AtLeastOnce )
             {
-                IdStore.FreeId( packetId, packet );
+                IdStore.FreeId( m, packetId, packet );
             }
             return qos;
         }
@@ -73,7 +73,7 @@ namespace CK.MQTT
 
         internal async ValueTask DiscardPacketIdAsync( IInputLogger? m, int packetId )
         {
-            if( !IdStore.FreeId( packetId ) )
+            if( !IdStore.FreeId( m, packetId ) )
             {
                 m?.DoubleFreePacketId( packetId ); //TODO: maybe this should be a Protocol Error and disconnect ?
             }

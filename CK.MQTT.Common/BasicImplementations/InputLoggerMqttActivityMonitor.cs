@@ -62,5 +62,9 @@ namespace CK.MQTT
         public void EndOfStream() => _m.Trace()?.Send( $"End of Stream." );
 
         public void UnexpectedEndOfStream() => _m.Error()?.Send( "Unexpected End of Stream." );
+
+        public void LoopCanceledException( Exception e ) => _m.Trace()?.Send( e, "Cancelled exception in loop." );
+
+        public void FreedPacketId( int packetId ) => _m.Trace()?.Send( $"Freed packet id {packetId}." );
     }
 }

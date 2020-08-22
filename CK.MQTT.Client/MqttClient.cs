@@ -103,7 +103,7 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public MessageHandlerDelegate MessageHandler { get; set; }
 
-        Task CloseHandlers() => Task.WhenAll( ThrowIfNotConnected( _input ).CloseAsync(), ThrowIfNotConnected( _output ).CloseAsync() );
+        Task CloseHandlers() => Task.WhenAll(  _input!.CloseAsync(), _output!.CloseAsync() );
 
         readonly object _lock = new object();
         async Task CloseSelfAsync( DisconnectedReason reason )
@@ -128,7 +128,7 @@ namespace CK.MQTT
                 _closed = true;
             }
             await CloseHandlers();//we closed the loop, we can safely use on of it's logger.
-            ThrowIfNotConnected( _channel ).Close( _config.InputLogger );
+            _channel!.Close( _config.InputLogger );
         }
 
         /// <inheritdoc/>

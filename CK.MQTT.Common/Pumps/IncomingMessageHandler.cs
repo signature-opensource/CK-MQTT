@@ -107,6 +107,10 @@ namespace CK.MQTT
                     _pipeReader.Complete();
                     _pipeReader.CancelPendingRead();
                 }
+                catch(OperationCanceledException e)
+                {
+                    _config.InputLogger?.LoopCanceledException( e );
+                }
                 catch( Exception e )
                 {
                     _config.InputLogger?.ExceptionOnParsingIncomingData( e );

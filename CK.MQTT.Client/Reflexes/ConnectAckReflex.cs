@@ -16,6 +16,7 @@ namespace CK.MQTT
             {
                 _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError ) );
             }
+            m?.ProcessPacket( PacketType.ConnectAck );
             ReadResult? read = await reader.ReadAsync( m, 2, default );
             if( !read.HasValue ) return;
             ConnectAck.Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );

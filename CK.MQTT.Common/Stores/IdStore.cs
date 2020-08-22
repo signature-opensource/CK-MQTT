@@ -87,7 +87,7 @@ namespace CK.MQTT
             }
         }
 
-        public bool FreeId( int packetId, object? result = null )
+        public bool FreeId( IInputLogger? m, int packetId, object? result = null )
         {
             TaskCompletionSource<object?>? tcs;
             lock( _entries )
@@ -99,6 +99,7 @@ namespace CK.MQTT
                 _entries[packetId - 1].TaskCS = null;
                 _entries[packetId - 1].EmissionTime = 0;
                 _entries[packetId - 1].TryCount = 0;
+                m?.FreedPacketId( packetId );
             }
             tcs.SetResult( result );//This must be the last thing we do, the tcs.SetResult may continue a Task synchronously.
             return true;

@@ -13,6 +13,7 @@ namespace CK.MQTT
         void ReadLoopTokenCancelled();
         void InvalidIncomingData();
         void ExceptionOnParsingIncomingData(Exception e);
+        void LoopCanceledException( Exception e );
         IDisposable? ReflexTimeout();
         IDisposable? IncomingPacket( byte header, int length );
         void EndOfStream();
@@ -27,6 +28,6 @@ namespace CK.MQTT
         void UnexpectedEndOfStream( int requestedByteCount, int availableByteCount );
         void PingReqTimeout();
         void DoubleFreePacketId(int packetId);
-        
+        void FreedPacketId( int packetId );
     }
 }

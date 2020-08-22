@@ -75,6 +75,7 @@ namespace CK.MQTT
         {
             while( true )
             {
+                if( _config.WaitTimeoutMs == Timeout.Infinite ) return NeverTask;
                 (int packetId, long waitTime) = _packetStore.IdStore.GetOldestPacket();
                 //0 mean there is no packet in the store. So we don't want to wake up the loop to resend packets.
                 if( packetId == 0 ) return NeverTask;//Loop will complete another task when a new packet will be sent.
@@ -101,7 +102,7 @@ namespace CK.MQTT
                         await await Task.WhenAny(
                             _reflexes.Reader.WaitToReadAsync().AsTask(),
                             _messages.Reader.WaitToReadAsync().AsTask(),
-                            resendTask, keepAliveTask);
+                            resendTask, keepAliveTask );
                         if( keepAliveTask.IsCompleted )
                         {
                             await ProcessOutgoingPacket( m, OutgoingPingReq.Instance );
