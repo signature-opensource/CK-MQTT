@@ -30,6 +30,7 @@ namespace CK.MQTT
         /// Instantiate the <see cref="MqttClient"/> with the given configuration.
         /// </summary>
         /// <param name="config">The config to use.</param>
+        /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
         public MqttClient( MqttConfiguration config, MessageHandlerDelegate messageHandler )
         {
             _config = config;

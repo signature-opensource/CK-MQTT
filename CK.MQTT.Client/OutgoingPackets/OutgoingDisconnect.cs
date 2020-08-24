@@ -2,6 +2,9 @@ using System;
 
 namespace CK.MQTT
 {
+    /// <summary>
+    /// Represent a disconnect packet to be serialized.
+    /// </summary>
     public class OutgoingDisconnect : SimpleOutgoingPacket
     {
         private OutgoingDisconnect() { }

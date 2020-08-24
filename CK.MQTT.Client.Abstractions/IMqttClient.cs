@@ -11,13 +11,11 @@ namespace CK.MQTT
         /// <summary>
         /// <see langword="delegate"/> used when the client is Disconnected.
         /// </summary>
-        /// <param name="m">The logger, use it to log the activities perfomed while processing the disconnection.</param>
-        /// <param name="arg">Object containing information about the disconnection, like the reason.</param>
+        /// <param name="reason">The reason of the disconnection.</param>
         public delegate void Disconnected( DisconnectedReason reason );
 
         /// <summary>
         /// <see langword="delegate"/> called when the <see cref="IMqttClient"/> got Disconnected.
-        /// See <see cref="MqttEndpointDisconnected"/> for more details on the disconnection information.
         /// </summary>
         Disconnected? DisconnectedHandler { get; set; }
 

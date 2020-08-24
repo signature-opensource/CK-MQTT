@@ -45,7 +45,7 @@ namespace CK.MQTT
         /// <summary>
         /// Instantiate a new <see cref="MemoryPacketStore"/>.
         /// </summary>
-        /// <param name="storeTransformer">The <see cref="IStoreTransformer"/> that will wrap packets delivered by this store.</param>
+        /// <param name="config">The config of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
         public MemoryPacketStore( MqttConfiguration config, int packetIdMaxValue )
             : base( config, packetIdMaxValue )

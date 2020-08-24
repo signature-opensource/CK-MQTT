@@ -4,7 +4,7 @@ using System;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Simple wrapper of an <see cref="IActivityMonitor"/> to a <see cref="IMqttLogger"/>.
+    /// Simple wrapper of an <see cref="IActivityMonitor"/> to a <see cref="IOutputLogger"/>.
     /// </summary>
     public class OutputLoggerMqttActivityMonitor : IOutputLogger
     {

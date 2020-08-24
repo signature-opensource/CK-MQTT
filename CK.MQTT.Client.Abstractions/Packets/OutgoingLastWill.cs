@@ -17,7 +17,6 @@ namespace CK.MQTT
         /// <summary>
         /// Instantiate a new <see cref="OutgoingLastWill"/>.
         /// </summary>
-        /// <param name="dup">The dup flag.</param>
         /// <param name="retain">The retain flag.</param>
         /// <param name="topic">The topic of the will message.</param>
         /// <param name="qos">The qos of the will message.</param>
