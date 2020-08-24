@@ -20,7 +20,7 @@ namespace CK.MQTT
         protected override void Write( Span<byte> span )
         {
             span[0] = Header;
-            span = span[1..].WriteRemainingSize( RemainingSize );
+            span = span[1..].WriteVariableByteInteger( RemainingSize );
             WriteContent( span );
         }
     }

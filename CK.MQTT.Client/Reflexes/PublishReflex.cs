@@ -58,12 +58,12 @@ namespace CK.MQTT
                 if( qos == QualityOfService.AtLeastOnce )
                 {
                     await _messageHandler( incomingMessage );
-                    if( !_output.QueueReflexMessage( new OutgoingPuback( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishAck, packetId );
+                    if( !_output.QueueReflexMessage( LifecyclePacketV3.Puback( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishAck, packetId );
                 }
                 if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
                 await _store.StoreId( m, packetId );
                 await _messageHandler( incomingMessage );
-                if( !_output.QueueReflexMessage( new OutgoingPubrec( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishReceived, packetId );
+                if( !_output.QueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishReceived, packetId );
             }
         }
     }
