@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.MQTT.IOutgoingPacket;
+using static CK.MQTT.ProtocolConfiguration;
 
 namespace CK.MQTT
 {
@@ -37,6 +38,8 @@ namespace CK.MQTT
         /// This is also the size of the <see cref="Span{T}"/> given when <see cref="WriteHeaderContent(Span{byte})"/> will be called.
         /// </summary>
         protected abstract int HeaderSize { get; }
+
+        public ProtocolLevelVersion ProtocolLevel { get; set; }
 
         /// <summary>
         /// Write the Header, remaining size, and call <see cref="WriteHeaderContent(Span{byte})"/>.

@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 
 namespace CK.MQTT
@@ -35,5 +36,7 @@ namespace CK.MQTT
             }
             return i + 1;
         }
+
+        public static int MQTTSize( this ReadOnlyMemory<byte> buffer ) => 2 + buffer.Length;
     }
 }

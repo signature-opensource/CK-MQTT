@@ -19,7 +19,7 @@ namespace CK.MQTT
 
         public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
-            PacketType packetType = (PacketType)((header >> 4) << 4);
+            PacketType packetType = (PacketType)((header >> 4) << 4);//to remove right bits that may store flags data
             switch( packetType )
             {
                 case PacketType.PublishAck:

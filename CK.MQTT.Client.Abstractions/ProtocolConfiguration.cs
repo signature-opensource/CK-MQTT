@@ -17,7 +17,7 @@ namespace CK.MQTT
         public ProtocolConfiguration(
             int securePort,
             int nonSecurePort,
-            byte supportedLevel,
+            ProtocolLevelVersion supportedLevel,
             string singleLevelTopicWildcard,
             string multiLevelTopicWildcard,
             string protocolName )
@@ -47,7 +47,14 @@ namespace CK.MQTT
         /// <summary>
         /// The minimal <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349227">protocol level</a> supported.
         /// </summary>
-        public byte ProtocolLevel { get; }
+        public ProtocolLevelVersion ProtocolLevel { get; }
+
+        public enum ProtocolLevelVersion
+        {
+            MQTT3 = 4,
+            MQTT5 = 5
+        }
+
 
         /// <summary>
         /// Character that defines the single level topic wildcard, which is '+'

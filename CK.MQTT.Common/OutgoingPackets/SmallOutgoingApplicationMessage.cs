@@ -7,7 +7,7 @@ using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
-    public class SmallOutgoingApplicationMessage : OutgoingApplicationMessage
+    public class SmallOutgoingApplicationMessage : OutgoingMessage
     {
         private readonly ReadOnlyMemory<byte> _memory;
 

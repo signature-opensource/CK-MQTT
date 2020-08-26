@@ -147,7 +147,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public async ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message )
+        public async ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingMessage message )
             => await SenderHelper.SendPacket<object>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), message, _config );
 
         /// <inheritdoc/>

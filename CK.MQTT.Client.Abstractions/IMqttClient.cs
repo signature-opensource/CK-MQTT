@@ -80,7 +80,7 @@ namespace CK.MQTT
         /// <param name="m">The logger used to log the activities about the process of sending the message.</param>
         /// <param name="message">
         /// The application message to publish to the Server.
-        /// See <see cref="OutgoingApplicationMessage" /> for more details about the application messages
+        /// See <see cref="OutgoingMessage" /> for more details about the application messages
         /// </param>
         /// <returns>
         /// The <see cref="ValueTask{TResult}"/> that complete when the publish is guaranteed to be sent.
@@ -90,7 +90,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180850">MQTT Publish</a>
         /// for more details about the protocol publish
         /// </remarks>
-        ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingApplicationMessage message );
+        ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingMessage message );
 
         /// <summary>
         /// Unsubscribe the client from topics.

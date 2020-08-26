@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace CK.MQTT.Common.OutgoingPackets.v5
+namespace CK.MQTT
 {
-    enum PropertyIdentifier : byte //Specs says "this is a variable byte integer but for now only one byte is used", one byte simplify implementation, so this enum is a byte for now.
+    public enum PropertyIdentifier : byte //Specs says "this is a variable byte integer but for now only one byte is used", one byte simplify implementation, so this enum is a byte for now.
     {
         PayloadFormatIndicator = 0x01,
         MessageExpiryInterval = 0x02,

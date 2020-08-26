@@ -11,7 +11,7 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
         readonly byte _header;
         readonly ReasonCode _reason;
         readonly string _reasonString;
-        readonly IReadOnlyList<(string, string)>? _userProperties;
+        readonly IReadOnlyList<(string, string)> _userProperties;
         readonly int _contentSize;
         readonly int _propertySize;
         public LifecyclePacketsV5( int packetId, byte header, ReasonCode reason, string reasonString, IReadOnlyList<(string, string)>? userProperties )
@@ -20,10 +20,10 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
             _header = header;
             _reason = reason;
             _reasonString = reasonString;
-            _userProperties = userProperties;
+            _userProperties = userProperties ?? Array.Empty<(string, string)>();
             _contentSize = 3;
             bool hasReason = !string.IsNullOrEmpty( reasonString );
-            bool hasUserProperties = (userProperties?.Count ?? 0) > 0;
+            bool hasUserProperties = userProperties?.Count > 0;
             if( hasReason || hasUserProperties )
             {  // property: 1 byte + property content
                 if( hasReason ) _propertySize += 1 + reasonString.MQTTSize();
@@ -43,43 +43,37 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
         protected override void Write( Span<byte> span )
         {
             bool hasReason = !string.IsNullOrEmpty( _reasonString );
-            bool hasUserProperties = (_userProperties?.Count ?? 0) > 0;
+            bool hasUserProperties = _userProperties.Count > 0;
             span[0] = _header;
-            if( !hasReason && !hasUserProperties )
+            span = span[1..].WriteVariableByteInteger( _contentSize );
+            span = span.WriteUInt16( (ushort)PacketId );
+            span[0] = (byte)_reason;
+            if( _propertySize == 0 )
             {
-                span[1] = 2;
-                span = span[2..].WriteUInt16( (ushort)PacketId );
-                span[0] = (byte)_reason;
-                Debug.Assert( Size == 5 );
-            }
-            else
-            {
-                span = span[1..].WriteVariableByteInteger( _contentSize );
-                span = span.WriteUInt16( (ushort)PacketId );
-                span[0] = (byte)_reason;
-                span = span[1..].WriteVariableByteInteger( _propertySize );
-                if( hasReason )
-                {
-                    span[0] = (byte)PropertyIdentifier.ReasonString;
-                    span = span[1..].WriteMQTTString( _reasonString );
-                }
-                if( hasUserProperties )
-                {
-                    foreach( (string, string) prop in _userProperties! )
-                    {
-                        span[0] = (byte)PropertyIdentifier.UserProperty;
-                        span = span[1..]
-                            .WriteMQTTString( prop.Item1 )
-                            .WriteMQTTString( prop.Item2 );
-                    }
-                }
                 Debug.Assert( span.Length == 0 );
+                return;
             }
+            span = span[1..].WriteVariableByteInteger( _propertySize );
+            if( hasReason )
+            {
+                span[0] = (byte)PropertyIdentifier.ReasonString;
+                span = span[1..].WriteMQTTString( _reasonString );
+            }
+            if( hasUserProperties )
+            {
+                foreach( (string, string) prop in _userProperties )
+                {
+                    span[0] = (byte)PropertyIdentifier.UserProperty;
+                    span = span[1..]
+                        .WriteMQTTString( prop.Item1 )
+                        .WriteMQTTString( prop.Item2 );
+                }
+            }
+            Debug.Assert( span.Length == 0 );
         }
 
         public static IOutgoingPacket Pubrel( int packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<(string, string)>? userProperties )
             => new LifecyclePacketsV5( packetId, (byte)PacketType.PublishRelease | 0b0010, reasonCode, reasonString, userProperties );
-
         public static IOutgoingPacket Pubrec( int packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<(string, string)>? userProperties )
             => new LifecyclePacketsV5( packetId, (byte)PacketType.PublishReceived, reasonCode, reasonString, userProperties );
         public static IOutgoingPacket Puback( int packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<(string, string)>? userProperties )

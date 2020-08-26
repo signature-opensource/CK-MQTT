@@ -57,5 +57,13 @@ namespace CK.MQTT
             buffer[1] = (byte)x;
             return buffer[2..];
         }
+
+        public static Span<byte> WriteBinaryData( this Span<byte> span, ReadOnlyMemory<byte> memory )
+        {
+            if( memory.Length > ushort.MaxValue ) throw new ArgumentException( $"Binary Data size should not exceed {ushort.MaxValue} bytes." );
+            span = span.WriteUInt16( (ushort)memory.Length );
+            memory.Span.CopyTo( span );
+            return span[memory.Length..];
+        }
     }
 }

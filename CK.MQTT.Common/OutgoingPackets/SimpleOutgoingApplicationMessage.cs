@@ -6,7 +6,7 @@ using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
-    public class SimpleOutgoingApplicationMessage : OutgoingApplicationMessage
+    public class SimpleOutgoingApplicationMessage : OutgoingMessage
     {
         readonly Func<int> _getPayloadSize;
         readonly Func<PipeWriter, CancellationToken, ValueTask<WriteResult>> _payloadWriter;
