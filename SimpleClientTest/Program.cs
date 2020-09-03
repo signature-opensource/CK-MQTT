@@ -19,11 +19,11 @@ namespace SimpleClientTest
             config.MinimalFilter = LogFilter.Debug;
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Debug;
-            var m = new ActivityMonitor("main");
-            var client = new MqttClient( new MqttConfiguration( "test.mosquitto.org:1883" )
+            var m = new ActivityMonitor( "main" );
+            var client = MqttClient.CreateMQTT5Client( new MqttConfiguration( "broker.hivemq.com:1883" )
             {
-                InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor("input") ),
-                OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor("output") )
+                InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor( "input" ) ),
+                OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "output" ) )
             }, MessageHandlerDelegate );
             var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
             if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
@@ -31,7 +31,7 @@ namespace SimpleClientTest
                 throw new System.Exception();
             }
             var returnSub = await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ) );
-            await await client.PublishAsync( m, new SimpleOutgoingApplicationMessage( false, "/test4712/42", QualityOfService.ExactlyOnce, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) ) );
+            await await client.PublishAsync( m, "/test4712/42", QualityOfService.ExactlyOnce, false, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) );
             await Task.Delay( 30000 );
             await client.DisconnectAsync();
             await Task.Delay( 3000 );

@@ -6,25 +6,20 @@ namespace System.IO.Pipelines
 {
     public class DuplexPipe : IDuplexPipe
     {
-        public DuplexPipe( PipeOptions pipeOptions )
+        public DuplexPipe( Stream stream, StreamPipeReaderOptions? readerOptions = null, StreamPipeWriterOptions? writerOptions = null )
         {
-            Input = new Pipe( pipeOptions );
-            Output = new Pipe( pipeOptions );
+            Input = PipeReader.Create( stream, readerOptions );
+            Output = PipeWriter.Create( stream, writerOptions );
         }
 
-        PipeReader IDuplexPipe.Input => Input.Reader;
-        PipeWriter IDuplexPipe.Output => Output.Writer;
+        public PipeReader Input { get; }
 
-        public Pipe Input { get; }
-
-        public Pipe Output { get; }
+        public PipeWriter Output { get; }
 
         public void Dispose()
         {
-            Input.Reader.Complete();
-            Input.Writer.Complete();
-            Output.Reader.Complete();
-            Output.Writer.Complete();
+            Input.Complete();
+            Output.Complete();
         }
     }
 }

@@ -17,10 +17,10 @@ namespace CK.MQTT
         /// The <paramref name="tcpClient"/> must be connected.
         /// </summary>
         /// <param name="tcpClient">The <see cref="TcpClient"/> to use.</param>
-        public TcpChannel( TcpClient tcpClient, PipeOptions? pipeOptions = null )
+        public TcpChannel( TcpClient tcpClient, StreamPipeReaderOptions? readerOptions = null, StreamPipeWriterOptions? writerOptions = null )
         {
             _tcpClient = tcpClient;
-            _duplexPipe = new DuplexPipe( pipeOptions ?? PipeOptions.Default );
+            _duplexPipe = new DuplexPipe( tcpClient.GetStream(), readerOptions, writerOptions );
         }
 
         /// <inheritdoc/>

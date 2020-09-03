@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
@@ -37,7 +38,13 @@ namespace CK.MQTT
             ProtocolConfiguration pConf,
             MqttConfiguration mConf,
             MqttClientCredentials? creds,
-            OutgoingLastWill? lastWill = null )
+            OutgoingLastWill? lastWill = null,
+            uint sessionExpiryInterval = 0,
+            ushort receiveMaximum = ushort.MaxValue,
+            int maximumPacketSize = 268435455,
+            ushort topicAliasMaximum = 0,
+            IReadOnlyList<(string, string)>? userProperties = null
+            )
         {
             _pConf = pConf;
             _mConf = mConf;
@@ -64,16 +71,19 @@ namespace CK.MQTT
         protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
             Debug.Assert( protocolLevel == _pConf.ProtocolLevel );
-            //protocol name: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349225
-            span = span.WriteMQTTString( _pConf.ProtocolName );
+
+            span = span.WriteMQTTString( _pConf.ProtocolName ); //protocol name: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349225
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349228
-            span[0] = (byte)_pConf.ProtocolLevel;
-            // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
+            span[0] = (byte)_pConf.ProtocolLevel; //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
+
             span[1] = _flags;
-            span = span[2..]
-                //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
-                .WriteUInt16( _mConf.KeepAliveSecs )
+            span = span[2..].WriteUInt16( _mConf.KeepAliveSecs )//http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
                 .WriteMQTTString( _creds?.ClientId ?? "" );
+            if(protocolLevel == ProtocolLevel.MQTT5)
+            {
+
+            }
+            Debug.Assert( span.Length == 0 );
         }
 
         protected override async ValueTask<WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
@@ -90,6 +100,7 @@ namespace CK.MQTT
 
         void WriteEndOfPayload( PipeWriter pw )
         {
+            if( _sizePostPayload == 0 ) return;
             Span<byte> span = pw.GetSpan( _sizePostPayload );
             string? username = _creds?.UserName;
             string? password = _creds?.Password;

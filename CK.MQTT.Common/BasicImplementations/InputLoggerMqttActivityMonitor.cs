@@ -76,7 +76,7 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public IDisposable? IncomingPacket( byte header, int length ) => _m.OpenTrace()?.Send( $"Incoming packet of {length} bytes." );
         /// <inheritdoc/>
-        public void EndOfStream() => _m.Trace()?.Send( $"End of Stream." );
+        public void EndOfStream() => _m.Trace()?.Send( $"End of server Stream." );
 
         /// <inheritdoc/>
         public void UnexpectedEndOfStream() => _m.Error()?.Send( "Unexpected End of Stream." );

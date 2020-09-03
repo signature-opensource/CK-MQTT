@@ -17,7 +17,7 @@ namespace CK.MQTT
         /// Return <see langword="false"/> if the last operation on the underlying Communication Channel was not successfull.
         /// </summary>
         bool IsConnected { get; }
-        
+
 
         /// <summary>
         /// <see langword="delegate"/> called when the <see cref="IMqtt3Client"/> receive a Publish Packet.
@@ -46,56 +46,7 @@ namespace CK.MQTT
         /// </remarks>
         Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 
-        /// <summary>
-        /// Susbscribe the <see cref="IMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
-        /// </summary>
-        /// <param name="m">The logger used to log the activities about the subscription process.</param>
-        /// <param name="subscriptions">The subscriptions to send to the broker.</param>
-        /// <returns>
-        /// A <see cref="ValueTask{TResult}"/> that complete when the subscribe is guaranteed to be sent.
-        /// The <see cref="Task{T}"/> complete when the client received the <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800441">Subscribe acknowledgement</a>.
-        /// It's Task result contain a <see cref="SubscribeReturnCode"/> per subcription, with the same order than the array given in parameters.
-        /// </returns>
-        /// <remarks>
-        /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180876">MQTT Subscribe</a>
-        /// for more details about the protocol subscription.
-        /// </remarks>
-        ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions );
-
-        /// <summary>
-        /// Send a message to the broker.
-        /// </summary>
-        /// <param name="m">The logger used to log the activities about the process of sending the message.</param>
-        /// <param name="message">
-        /// The application message to publish to the Server.
-        /// See <see cref="OutgoingMessage" /> for more details about the application messages
-        /// </param>
-        /// <returns>
-        /// The <see cref="ValueTask{TResult}"/> that complete when the publish is guaranteed to be sent.
-        /// The <see cref="Task"/> complete when the client receive the broker acknowledgement.
-        /// </returns>
-        /// <remarks>
-        /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180850">MQTT Publish</a>
-        /// for more details about the protocol publish
-        /// </remarks>
-        ValueTask<Task> PublishAsync( IActivityMonitor m, IOutgoingMessage message );
-
-        /// <summary>
-        /// Unsubscribe the client from topics.
-        /// </summary>
-        /// <param name="m">The logger used to log the activities about the unsubscribe process.</param>
-        /// <param name="topics">
-        /// The list of topics to unsubscribe from.
-        /// </param>
-        /// <returns>
-        /// The <see cref="ValueTask{TResult}"/> that complete when the Unsubscribe is guaranteed to be sent.
-        /// The <see cref="Task"/> complete when the client receive the broker acknowledgement.
-        /// Once the Task completes, no more application messages for those topics will arrive.</returns>
-        /// <remarks>
-        /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180885">MQTT Unsubscribe</a>
-        /// for more details about the protocol unsubscription
-        /// </remarks>
-        ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics );
+        ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class;
 
         /// <summary>
         /// Disconnect the client.

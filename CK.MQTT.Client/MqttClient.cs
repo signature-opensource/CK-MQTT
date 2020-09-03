@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 using System.IO.Pipelines;
 using System.Collections.Generic;
 using CK.Core;
+using System.Threading;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 
 namespace CK.MQTT
 {
@@ -16,7 +19,7 @@ namespace CK.MQTT
         readonly IMqttChannelFactory _channelFactory;
 
         //change between lifecycles
-        bool _closed = true;
+        CancellationTokenSource _closed = new CancellationTokenSource( 0 );
         IMqttChannel? _channel;
         IncomingMessageHandler? _input;
         OutgoingMessageHandler? _output;
@@ -42,10 +45,17 @@ namespace CK.MQTT
         public static IMqttClient CreateMQTTClient( MqttConfiguration config, MessageHandlerDelegate messageHandler )
             => new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
 
-        T ThrowIfNotConnected<T>( T? item ) where T : class
+        [MemberNotNull( nameof( _input ) )]
+        [MemberNotNull( nameof( _output ) )]
+        [MemberNotNull( nameof( _packetIdStore ) )]
+        [MemberNotNull( nameof( _store ) )]
+        void ThrowIfNotConnected()
         {
-            if( _closed ) throw new InvalidOperationException( "Client is Disconnected." );
-            return item!;
+            if( _closed.IsCancellationRequested ) throw new InvalidOperationException( "Client is Disconnected." );
+            Debug.Assert( _input != null );
+            Debug.Assert( _output != null );
+            Debug.Assert( _packetIdStore != null );
+            Debug.Assert( _store != null );
         }
         ValueTask OnMessage( IncomingMessage msg ) => MessageHandler( msg );
 
@@ -67,8 +77,14 @@ namespace CK.MQTT
                 .UseMiddleware( new UnsubackReflex( _store ) )
                 .UseMiddleware( pingRes )
                 .Build( InvalidPacket );
-            await _output.SendMessageAsync( new OutgoingConnect( ProtocolConfiguration.Mqtt3, _config, credentials, lastWill ) );
-            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs ) );
+            _closed = new CancellationTokenSource();
+            await _output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
+            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMs, _closed.Token ) );
+            if( _closed.IsCancellationRequested )
+            {
+                await CloseUser();
+                return new ConnectResult( ConnectError.RemoteDisconnected );
+            }
             if( !connectedTask.IsCompleted )
             {
                 await CloseUser();//We don't want to raise disconnect event if it fail to connect.
@@ -85,16 +101,15 @@ namespace CK.MQTT
             {
                 await SendAllStoredMessages( m, _store, _output );
             }
-            _closed = false;
             return res;
         }
 
         async static Task SendAllStoredMessages( IActivityMonitor m, PacketStore store, OutgoingMessageHandler output )
         {
-            IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store!.GetAllMessagesAsync( m );
+            IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store.GetAllMessagesAsync( m );
             await foreach( IOutgoingPacketWithId msg in msgs )
             {
-                await output!.SendMessageAsync( msg );
+                await output.SendMessageAsync( msg );
             }
         }
 
@@ -115,13 +130,12 @@ namespace CK.MQTT
         {
             lock( _lock )
             {
-                if( _closed ) return;
-                _closed = true;
+                if( _closed.IsCancellationRequested ) return;
+                _closed.Cancel();
             }
             await CloseHandlers();
             _config.InputLogger?.ClientSelfClosing( reason );
-            ThrowIfNotConnected( _channel ).Close( _config.InputLogger );
-            _closed = true;
+            _channel!.Close( _config.InputLogger );
             DisconnectedHandler?.Invoke( reason );
         }
 
@@ -129,8 +143,8 @@ namespace CK.MQTT
         {
             lock( _lock )
             {
-                if( _closed ) return;
-                _closed = true;
+                if( _closed.IsCancellationRequested ) return;
+                _closed.Cancel();
             }
             await CloseHandlers();//we closed the loop, we can safely use on of it's logger.
             _channel!.Close( _config.InputLogger );
@@ -140,26 +154,21 @@ namespace CK.MQTT
         public Disconnected? DisconnectedHandler { get; set; }
 
         /// <inheritdoc/>
-        public bool IsConnected => !_closed && (_channel?.IsConnected ?? false);
+        public bool IsConnected => !_closed.IsCancellationRequested && (_channel?.IsConnected ?? false);
 
 
         /// <inheritdoc/>
         public async ValueTask DisconnectAsync()
         {
-            await await ThrowIfNotConnected( _output ).SendMessageAsync( OutgoingDisconnect.Instance );
+            ThrowIfNotConnected();
+            await await _output.SendMessageAsync( OutgoingDisconnect.Instance );
             await CloseUser();
         }
 
-        /// <inheritdoc/>
-        public async ValueTask<Task> PublishAsync( IActivityMonitor m, OutgoingMessage message )
-            => await SenderHelper.SendPacket<object>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), message, _config );
-
-        /// <inheritdoc/>
-        public ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( IActivityMonitor m, params Subscription[] subscriptions )
-            => SenderHelper.SendPacket<SubscribeReturnCode[]>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), new OutgoingSubscribe( subscriptions ), _config );
-
-        /// <inheritdoc/>
-        public async ValueTask<Task> UnsubscribeAsync( IActivityMonitor m, params string[] topics )
-            => await SenderHelper.SendPacket<object>( m, ThrowIfNotConnected( _store ), ThrowIfNotConnected( _output ), new OutgoingUnsubscribe( topics ), _config );
+        public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class
+        {
+            ThrowIfNotConnected();
+            return SenderHelper.SendPacket<T>( m, _store, _output, outgoingPacket, _config );
+        }
     }
 }

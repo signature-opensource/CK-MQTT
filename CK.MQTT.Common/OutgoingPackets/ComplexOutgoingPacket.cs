@@ -50,7 +50,7 @@ namespace CK.MQTT
             int headerSize = GetHeaderSize( protocolLevel );
             int remainingSize = GetRemainingSize( protocolLevel );
             int bytesToWrite = headerSize + remainingSize.CompactByteCount() + 1;//Compute how many byte will be written.
-            Span<byte> span = pw.GetSpan( bytesToWrite );
+            Span<byte> span = pw.GetSpan( bytesToWrite )[..bytesToWrite];
             span[0] = Header;
             span = span[1..].WriteVariableByteInteger( remainingSize );//the result span length will be HeaderSize.
             Debug.Assert( span.Length == headerSize );
@@ -62,7 +62,7 @@ namespace CK.MQTT
         /// Write synchronously the header. This is intended to be used to write in memory data.
         /// </summary>
         /// <param name="span">The buffer to write to. It's length will be <see cref="GetHeaderSize()"/>.</param>
-        protected abstract Span<byte> WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span );
+        protected abstract void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span );
 
         /// <summary>
         /// Write asynchronously the payload. This is intended to be used to write data that may not be in memory.

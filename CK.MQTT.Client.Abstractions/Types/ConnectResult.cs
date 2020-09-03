@@ -17,6 +17,7 @@ namespace CK.MQTT
         /// The broker didn't answered in the given time.
         /// </summary>
         Timeout,
+        RemoteDisconnected,
         /// <summary>
         /// Other reasons...
         /// </summary>
