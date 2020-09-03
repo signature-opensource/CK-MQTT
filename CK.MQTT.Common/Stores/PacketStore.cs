@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Store packets, used by an <see cref="IMqttClient"/> to persist packets.
+    /// Store packets, used by an <see cref="IMqtt3Client"/> to persist packets.
     /// This abstract class implement the packet id assignation, and delegate the actual job of persisting to the child classes.
     /// This class have no way to be closed/disposed, when a method complete, the packet should be persisted.
     /// If not, it WILL result in data loss. (Because of a power outage for exemple).
@@ -15,13 +15,17 @@ namespace CK.MQTT
     public abstract class PacketStore
     {
         internal IdStore IdStore { get; }
-        readonly MqttConfiguration _config;
 
-        protected PacketStore( MqttConfiguration config, int packetIdMaxValue )
+
+        protected PacketStore( ProtocolConfiguration pConfig, MqttConfiguration config, int packetIdMaxValue )
         {
             IdStore = new IdStore( packetIdMaxValue, config );
-            _config = config;
+            PConfig = pConfig;
+            Config = config;
         }
+
+        protected ProtocolConfiguration PConfig { get; }
+        protected MqttConfiguration Config { get; }
 
         /// <summary>
         /// Store a <see cref="IOutgoingPacketWithId"/> in the session, return a <see cref="IOutgoingPacket"/>.
@@ -43,17 +47,17 @@ namespace CK.MQTT
             using( m.OpenTrace()?.Send( $"{nameof( IdStore )} determined new packet id would be {packetId}." ) )
             {
                 var newPacket = await DoStoreMessageAsync( m, packet );
-                return (_config.StoreTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
+                return (Config.StoreTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
             }
         }
 
         public async ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> GetAllMessagesAsync( IActivityMonitor m )
-            => (await DoGetAllMessagesAsync( m )).Select( s => _config.StoreTransformer.PacketTransformerOnRestore( s ) );
+            => (await DoGetAllMessagesAsync( m )).Select( s => Config.StoreTransformer.PacketTransformerOnRestore( s ) );
 
         protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor m );
 
         internal async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IOutputLogger? m, int packetId )
-            => _config.StoreTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
+            => Config.StoreTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IOutputLogger? m, int packetId );
 

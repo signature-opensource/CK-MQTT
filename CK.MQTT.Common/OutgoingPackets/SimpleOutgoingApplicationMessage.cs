@@ -17,6 +17,7 @@ namespace CK.MQTT
             _getPayloadSize = getPayloadSize;
             _payloadWriter = payloadWriter;
         }
+
         protected override int PayloadSize => _getPayloadSize();
 
         protected override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )

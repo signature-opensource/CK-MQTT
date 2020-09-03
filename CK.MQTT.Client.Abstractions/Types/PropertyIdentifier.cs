@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace CK.MQTT
 {
     public enum PropertyIdentifier : byte //Specs says "this is a variable byte integer but for now only one byte is used", one byte simplify implementation, so this enum is a byte for now.

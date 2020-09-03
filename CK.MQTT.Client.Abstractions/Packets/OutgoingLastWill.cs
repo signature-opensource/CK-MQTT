@@ -40,7 +40,7 @@ namespace CK.MQTT
         public QualityOfService Qos { get; }
 
         /// <inheritdoc/>
-        public abstract int Size { get; }
+        public abstract int GetSize( ProtocolLevel protocolLevel );
 
         /// <summary>
         /// Should write the payload the the last will.
@@ -56,7 +56,7 @@ namespace CK.MQTT
         /// <param name="writer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
             int stringSize = _topic.MQTTSize();
             writer.GetSpan( stringSize ).WriteMQTTString( _topic );

@@ -3,7 +3,6 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.MQTT.IOutgoingPacket;
-using static CK.MQTT.PacketStore;
 
 namespace CK.MQTT
 {
@@ -52,9 +51,10 @@ namespace CK.MQTT
 
             public QualityOfService Qos => _packet.Qos;
 
-            public int Size => _packet.Size;
+            public int GetSize( ProtocolLevel protocolLevel ) => _packet.GetSize( protocolLevel );
 
-            public ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken ) => _packet.WriteAsync( new PipeWriterWrapper( writer ), cancellationToken );
+            public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
+                => _packet.WriteAsync( protocolLevel, new PipeWriterWrapper( writer ), cancellationToken );
 
             public override string ToString() => $"DefaultStoreTransformer({_packet})";
         }

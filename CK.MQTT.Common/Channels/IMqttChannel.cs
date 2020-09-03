@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Pipelines;
 
 namespace CK.MQTT
 {
@@ -15,13 +16,13 @@ namespace CK.MQTT
         void Close( IInputLogger? m );
 
         /// <summary>
-        /// <see langword="true"/> if the channel was connected in the last operation on the <see cref="Stream"/>.
+        /// <see langword="true"/> if the channel was connected in the last operation on the <see cref="DuplexPipe"/>.
         /// </summary>
         public bool IsConnected { get; }
 
         /// <summary>
         /// Gets the stream.
         /// </summary>
-        public Stream Stream { get; }
+        public IDuplexPipe DuplexPipe { get; }
     }
 }

@@ -2,7 +2,7 @@ using System;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Tasks;
-using static CK.MQTT.IMqttClient;
+using static CK.MQTT.IMqtt3Client;
 
 namespace CK.MQTT
 {

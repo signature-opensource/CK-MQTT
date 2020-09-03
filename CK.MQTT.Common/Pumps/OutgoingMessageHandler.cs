@@ -18,6 +18,7 @@ namespace CK.MQTT
         readonly PingRespReflex _pingRespReflex;
         readonly Func<DisconnectedReason, Task> _clientClose;
         readonly PipeWriter _pipeWriter;
+        readonly ProtocolConfiguration _pconfig;
         readonly MqttConfiguration _config;
         readonly PacketStore _packetStore;
         readonly Task _writeLoopTask;
@@ -32,13 +33,14 @@ namespace CK.MQTT
         public OutgoingMessageHandler(
             PingRespReflex pingRespReflex,
             Func<DisconnectedReason, Task> clientClose,
-            PipeWriter writer, MqttConfiguration config, PacketStore packetStore )
+            PipeWriter writer, ProtocolConfiguration pconfig, MqttConfiguration config, PacketStore packetStore )
         {
             _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
             _pingRespReflex = pingRespReflex;
             _clientClose = clientClose;
             _pipeWriter = writer;
+            _pconfig = pconfig;
             _config = config;
             _packetStore = packetStore;
             _stopSource = new CancellationTokenSource();
@@ -130,13 +132,10 @@ namespace CK.MQTT
         async ValueTask<WriteResult> ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket )
         {
             if( _stopSource.IsCancellationRequested ) return WriteResult.Cancelled;
-            using( m?.SendingMessage( ref outgoingPacket ) )
+            using( m?.SendingMessage( ref outgoingPacket, _pconfig.ProtocolLevel ) )
             {
-                WriteResult result = await outgoingPacket.WriteAsync( _pipeWriter, _stopSource.Token );
-                if( outgoingPacket is IOutgoingPacketWithId packetWithId )
-                {
-                    _packetStore.IdStore.PacketSent( m, packetWithId.PacketId );
-                }
+                WriteResult result = await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, _stopSource.Token );
+                if( outgoingPacket is IOutgoingPacketWithId packetWithId ) _packetStore.IdStore.PacketSent( m, packetWithId.PacketId );
                 return result;
             }
         }

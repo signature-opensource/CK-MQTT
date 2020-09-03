@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,22 +47,27 @@ namespace CK.MQTT
             _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
         }
 
-        protected override int PayloadSize => _sizePostPayload + _lastWill?.Size ?? 0;
+        protected override int GetPayloadSize( ProtocolLevel protocolLevel )
+            => _sizePostPayload + _lastWill?.GetSize( protocolLevel ) ?? 0;
 
         protected override byte Header => (byte)PacketType.Connect;
 
-        protected override int HeaderSize => _pConf.ProtocolName.MQTTSize()
-                                                + 1 //_protocolLevel
-                                                + 1 //_flag
-                                                + 2 //_keepAlive
-                                                + _creds?.ClientId.MQTTSize() ?? 2;
-
-        protected override void WriteHeaderContent( Span<byte> span )
+        protected override int GetHeaderSize( ProtocolLevel protocolLevel )
         {
+            return _pConf.ProtocolName.MQTTSize()
+                + 1 //_protocolLevel
+                + 1 //_flag
+                + 2 //_keepAlive
+                + _creds?.ClientId.MQTTSize() ?? 2;
+        }
+
+        protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
+        {
+            Debug.Assert( protocolLevel == _pConf.ProtocolLevel );
             //protocol name: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349225
             span = span.WriteMQTTString( _pConf.ProtocolName );
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349228
-            span[0] = _pConf.ProtocolLevel;
+            span[0] = (byte)_pConf.ProtocolLevel;
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
             span[1] = _flags;
             span = span[2..]
@@ -70,11 +76,11 @@ namespace CK.MQTT
                 .WriteMQTTString( _creds?.ClientId ?? "" );
         }
 
-        protected override async ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected override async ValueTask<WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             if( _lastWill != null )
             {
-                WriteResult res = await _lastWill.WriteAsync( pw, cancellationToken );
+                WriteResult res = await _lastWill.WriteAsync( protocolLevel, pw, cancellationToken );
                 if( res != WriteResult.Written ) return res;
             }
             WriteEndOfPayload( pw );

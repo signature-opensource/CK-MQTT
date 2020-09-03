@@ -1,11 +1,9 @@
-using CK.Core;
-using System;
 using System.IO.Pipelines;
 
 namespace CK.MQTT
 {
     /// <summary>
-    /// Configuration of a <see cref="IMqttClient"/>.
+    /// Configuration of a <see cref="IMqtt3Client"/>.
     /// </summary>
     public class MqttConfiguration
     {
@@ -43,8 +41,6 @@ namespace CK.MQTT
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
             StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
-            ReaderOptions = readerOptions;
-            WriterOptions = writerOptions;
         }
 
         public string ConnectionString { get; }
@@ -69,10 +65,6 @@ namespace CK.MQTT
         public IMqttChannelFactory ChannelFactory { get; }
         public IStoreFactory StoreFactory { get; }
         public IStoreTransformer StoreTransformer { get; }
-        public StreamPipeReaderOptions? ReaderOptions { get; }
-
-        public StreamPipeWriterOptions? WriterOptions { get; }
-
         public int ChannelsPacketCount { get; } = 32;
     }
 }

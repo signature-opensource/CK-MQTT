@@ -27,7 +27,7 @@ namespace CK.MQTT
             => _m.Error()?.Send( $"Packet with id {packetId} is not acknowledged after sending it {tryCount} times." +
                         $"\nThis was the last attempt, as configured." );
 
-        public IDisposable? SendingMessage( ref IOutgoingPacket outgoingPacket )
-            => _m.OpenInfo()?.Send( $"Sending message '{outgoingPacket}' of size {outgoingPacket.Size}." );
+        public IDisposable? SendingMessage( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel )
+            => _m.OpenInfo()?.Send( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )}." );
     }
 }

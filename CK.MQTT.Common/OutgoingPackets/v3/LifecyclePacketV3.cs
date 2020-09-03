@@ -16,7 +16,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public override int Size => 4;
+        public override int GetSize( ProtocolLevel protocolLevel ) => 4;
 
         /// <inheritdoc/>
         protected override void Write( Span<byte> span )

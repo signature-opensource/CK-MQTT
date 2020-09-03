@@ -1,7 +1,6 @@
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.ProtocolConfiguration;
 
 namespace CK.MQTT
 {
@@ -37,11 +36,11 @@ namespace CK.MQTT
         /// <returns>A <see cref="ValueTask{TResult}"/> that complete when the packet is written.
         /// It's Result is a <see cref="WriteResult"/> that is <see cref="WriteResult.Written"/> if packet was written,
         /// or <see cref="WriteResult.Expired"/> if the packed was expired and could not be written.</returns>
-        ValueTask<WriteResult> WriteAsync( ProtocolLevelVersion protocolLevel, PipeWriter writer, CancellationToken cancellationToken );
+        ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken );
 
         /// <summary>
-        /// The <see cref="Size"/> of the packet. May be used by stores to allocate the required space to store the packet.
+        /// The Size of the packet. May be used by stores to allocate the required space to store the packet.
         /// </summary>
-        int Size { get; }
+        int GetSize( ProtocolLevel protocolLevel );
     }
 }

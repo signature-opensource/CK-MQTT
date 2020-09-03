@@ -1,6 +1,7 @@
 using System;
-using System.Diagnostics;
-using static CK.MQTT.ProtocolConfiguration;
+using System.IO.Pipelines;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -8,9 +9,8 @@ namespace CK.MQTT
     /// Represent an outgoing mqtt message that will be sent.
     /// The dup flag is handled by the store transformer.
     /// </summary>
-    public abstract class OutgoingMessage : ComplexOutgoingPacket, IOutgoingPacketWithId
+    public abstract class OutgoingMessage : ComplexOutgoingPacket, IOutgoingMessage
     {
-        readonly ProtocolLevelVersion _protocolLevel;
         readonly bool _retain;
         readonly string _topic;
         readonly string? _responseTopic;
@@ -24,23 +24,20 @@ namespace CK.MQTT
         /// <param name="topic">The message topic.</param>
         /// <param name="qos">The message qos.</param>
         protected OutgoingMessage(
-            ProtocolLevelVersion protocolLevel, bool retain, string topic, QualityOfService qos,
-            string? responseTopic, ushort correlationDataSize = 0, SpanLambda? correlationDataWriter = null //properties
+            bool retain, string topic, QualityOfService qos,
+            string? responseTopic = null, ushort correlationDataSize = 0, SpanLambda? correlationDataWriter = null //properties
         )
         {
             if( responseTopic != null )
             {
-                if( protocolLevel == ProtocolLevelVersion.MQTT3 ) throw new ArgumentException( $"Cannot use properties in MQTT3. Property used: '{responseTopic}'." );
                 _propertiesLength += 1 + responseTopic.MQTTSize();
             }
             if( correlationDataSize > 0 || correlationDataWriter != null )
             {
                 if( correlationDataSize == 0 && correlationDataWriter != null ) throw new ArgumentException( $"{nameof( correlationDataSize )} is 0 but {nameof( correlationDataWriter )} is not null. If no data will be written, don't set the writer." );
                 if( correlationDataWriter == null && correlationDataSize > 0 ) throw new ArgumentException( $"You set a {nameof( correlationDataSize )} but the {nameof( correlationDataWriter )} is null." );
-                if( protocolLevel == ProtocolLevelVersion.MQTT3 ) throw new ArgumentException( $"Cannot use properties in MQTT3. Property used: correlation data." );
                 _propertiesLength += 1 + correlationDataSize + 2;/*2 to write the data size itself*/
             }
-            _protocolLevel = protocolLevel;
             _retain = retain;
             _topic = topic;
             Qos = qos;
@@ -56,15 +53,16 @@ namespace CK.MQTT
         public QualityOfService Qos { get; }
 
         /// <inheritdoc/>
-        protected sealed override int HeaderSize
+        protected sealed override int GetHeaderSize( ProtocolLevel protocolLevel )
             => _topic.MQTTSize()
-            + (Qos > QualityOfService.AtMostOnce ? 2 : 0)//On QoS 0, no packet id(2bytes).
-            + _protocolLevel switch
-            {
-                ProtocolLevelVersion.MQTT3 => 0,
-                ProtocolLevelVersion.MQTT5 => _propertiesLength.CompactByteCount() + _propertiesLength,
-                _ => throw new InvalidOperationException( "Unknown protocol level" )
-            };
+                + (Qos > QualityOfService.AtMostOnce ? 2 : 0)//On QoS 0, no packet id(2bytes).
+                + protocolLevel switch
+                {
+                    ProtocolLevel.MQTT3 => 0,
+                    ProtocolLevel.MQTT5 => _propertiesLength.CompactByteCount() + _propertiesLength,
+                    _ => throw new InvalidOperationException( "Unknown protocol level" )
+                };
+
         const byte _retainFlag = 1;
 
         /// <summary>
@@ -79,15 +77,18 @@ namespace CK.MQTT
                 (byte)(_retain ? _retainFlag : 0)
             );
 
+        protected abstract int PayloadSize { get; }
+        protected sealed override int GetPayloadSize( ProtocolLevel protocolLevel ) => PayloadSize;
+
         /// <summary>
         /// Write the topic, and the qos if qos>0.
         /// </summary>
         /// <param name="span"></param>
-        protected sealed override void WriteHeaderContent( Span<byte> span )
+        protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
             span = span.WriteMQTTString( _topic );
             if( Qos > QualityOfService.AtMostOnce ) span = span.WriteUInt16( (ushort)PacketId );//topic id is not present on qos>0.
-            if( _protocolLevel == ProtocolLevelVersion.MQTT5 )
+            if( protocolLevel == ProtocolLevel.MQTT5 )
             {
                 span = span.WriteVariableByteInteger( _propertiesLength );
                 if( _correlationDataWriter != null )
@@ -103,7 +104,11 @@ namespace CK.MQTT
                     span = span[1..].WriteMQTTString( _responseTopic );
                 }
             }
-            Debug.Assert( span.Length == 0 );
         }
+
+        protected abstract ValueTask<IOutgoingPacket.WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
+
+        protected sealed override ValueTask<IOutgoingPacket.WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
+            => WritePayloadAsync( pw, cancellationToken );
     }
 }

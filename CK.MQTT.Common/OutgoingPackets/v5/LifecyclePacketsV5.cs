@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace CK.MQTT.Common.OutgoingPackets.v5
 {
@@ -30,7 +29,7 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
                 if( hasUserProperties ) _propertySize += userProperties.Select( s => 1 + s.Item1.MQTTSize() + s.Item2.MQTTSize() ).Sum();
                 _contentSize += _propertySize + _propertySize.CompactByteCount();
             }
-            Size += 1 + _contentSize.CompactByteCount() + _contentSize;
+            _getSize = GetSize( ProtocolLevel.MQTT5 ) + 1 + _contentSize.CompactByteCount() + _contentSize;
         }
 
         /// <inheritdoc/>
@@ -38,8 +37,11 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
 
         public QualityOfService Qos => QualityOfService.AtLeastOnce;
 
+        readonly int _getSize;
+
         /// <inheritdoc/>
-        public override int Size { get; }
+        public override int GetSize( ProtocolLevel protocolLevel ) => _getSize;
+
         protected override void Write( Span<byte> span )
         {
             bool hasReason = !string.IsNullOrEmpty( _reasonString );

@@ -1,20 +1,16 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using System.Text;
-using System.Buffers;
-using System.IO;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Collections.Generic;
-using static CK.MQTT.IMqttClient;
 using CK.Core;
 
 namespace CK.MQTT
 {
-    /// <inheritdoc cref="IMqttClient"/>
     public class MqttClient : IMqttClient
     {
+        readonly ProtocolConfiguration _pConfig;
+
         //Dont change between lifecycles
         readonly MqttConfiguration _config;
         readonly IMqttChannelFactory _channelFactory;
@@ -31,31 +27,39 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The config to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        public MqttClient( MqttConfiguration config, MessageHandlerDelegate messageHandler )
+        MqttClient( ProtocolConfiguration pConfig, MqttConfiguration config, MessageHandlerDelegate messageHandler )
         {
+            _pConfig = pConfig;
             _config = config;
             MessageHandler = messageHandler;
             _channelFactory = config.ChannelFactory;
         }
 
-        T ThrowIfNotConnected<T>( [NotNull] T? item ) where T : class
+        public static IMqtt3Client CreateMQTT3Client( MqttConfiguration config, MessageHandlerDelegate messageHandler ) =>
+            new MqttClient( ProtocolConfiguration.Mqtt3, config, messageHandler );
+        public static IMqtt5Client CreateMQTT5Client( MqttConfiguration config, MessageHandlerDelegate messageHandler ) =>
+            new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
+        public static IMqttClient CreateMQTTClient( MqttConfiguration config, MessageHandlerDelegate messageHandler )
+            => new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
+
+        T ThrowIfNotConnected<T>( T? item ) where T : class
         {
             if( _closed ) throw new InvalidOperationException( "Client is Disconnected." );
-            return item ?? throw new NullReferenceException( "Blame Kuinox" );
+            return item!;
         }
         ValueTask OnMessage( IncomingMessage msg ) => MessageHandler( msg );
 
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
-            (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
+            (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
 
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
             ConnectAckReflex connectAckReflex = new ConnectAckReflex();
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            _input = new IncomingMessageHandler( _config, CloseSelfAsync, PipeReader.Create( _channel.Stream, _config.ReaderOptions ), connectAckReflex.ProcessIncomingPacket );
+            _input = new IncomingMessageHandler( _config, CloseSelfAsync, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
             PingRespReflex pingRes = new PingRespReflex( _config, _input );
-            _output = new OutgoingMessageHandler( pingRes, CloseSelfAsync, PipeWriter.Create( _channel.Stream, _config.WriterOptions ), _config, _store );
+            _output = new OutgoingMessageHandler( pingRes, CloseSelfAsync, _channel.DuplexPipe.Output, _pConfig, _config, _store );
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
                 .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, _output ) )
@@ -104,7 +108,7 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public MessageHandlerDelegate MessageHandler { get; set; }
 
-        Task CloseHandlers() => Task.WhenAll(  _input!.CloseAsync(), _output!.CloseAsync() );
+        Task CloseHandlers() => Task.WhenAll( _input!.CloseAsync(), _output!.CloseAsync() );
 
         readonly object _lock = new object();
         async Task CloseSelfAsync( DisconnectedReason reason )
