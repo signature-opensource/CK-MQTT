@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.MQTT.IOutgoingPacket;
@@ -16,7 +17,7 @@ namespace CK.MQTT
         readonly ProtocolConfiguration _pConf;
         readonly byte _flags;
         readonly int _sizePostPayload;
-
+        readonly int _propertiesSize;
         const byte _usernameFlag = 0b1000_0000;
         const byte _passwordFlag = 0b0100_0000;
         const byte _willRetainFlag = 0b0010_0000;
@@ -43,15 +44,31 @@ namespace CK.MQTT
             ushort receiveMaximum = ushort.MaxValue,
             int maximumPacketSize = 268435455,
             ushort topicAliasMaximum = 0,
-            IReadOnlyList<(string, string)>? userProperties = null
-            )
+            bool requestResponseInformation = false,
+            bool requestProblemInformation = false,
+            IReadOnlyList<(string, string)>? userProperties = null )
         {
+            Debug.Assert( maximumPacketSize <= 268435455 );
             _pConf = pConf;
             _mConf = mConf;
             _creds = creds;
             _lastWill = lastWill;
             _flags = ByteFlag( creds, lastWill );
             _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
+
+            if( pConf.ProtocolLevel > ProtocolLevel.MQTT3 )
+            {
+                if( sessionExpiryInterval != 0 ) _propertiesSize += 5; //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Ref1477159
+                if( receiveMaximum != ushort.MaxValue ) _propertiesSize += 3; //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Receive_Maximum
+                if( maximumPacketSize != 268435455 ) _propertiesSize += 5; //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc471483569
+                if( topicAliasMaximum != 0 ) _propertiesSize += 3; //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547825
+                if( requestResponseInformation ) _propertiesSize += 2;//https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Request_Response_Information
+                if( requestProblemInformation ) _propertiesSize += 2;//https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547827
+                if( userProperties != null && userProperties.Count > 0)
+                {
+                    _propertiesSize += userProperties.Select( s => 1 + s.Item1.MQTTSize() + s.Item2.MQTTSize() ).Sum();
+                }
+            }
         }
 
         protected override int GetPayloadSize( ProtocolLevel protocolLevel )
@@ -79,7 +96,7 @@ namespace CK.MQTT
             span[1] = _flags;
             span = span[2..].WriteUInt16( _mConf.KeepAliveSecs )//http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
                 .WriteMQTTString( _creds?.ClientId ?? "" );
-            if(protocolLevel == ProtocolLevel.MQTT5)
+            if( protocolLevel == ProtocolLevel.MQTT5 )
             {
 
             }

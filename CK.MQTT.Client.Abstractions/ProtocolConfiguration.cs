@@ -68,5 +68,7 @@ namespace CK.MQTT
         /// The protocol magic string that is send in the connect packet.
         /// </summary>
         public string ProtocolName { get; }
+
+        public int MaximumPacketSize => 268435455;
     }
 }

@@ -12,7 +12,7 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
         readonly string _reasonString;
         readonly IReadOnlyList<(string, string)> _userProperties;
         readonly int _contentSize;
-        readonly int _propertySize;
+        readonly int _propertiesSize;
         public LifecyclePacketsV5( int packetId, byte header, ReasonCode reason, string reasonString, IReadOnlyList<(string, string)>? userProperties )
         {
             PacketId = packetId;
@@ -25,9 +25,9 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
             bool hasUserProperties = userProperties?.Count > 0;
             if( hasReason || hasUserProperties )
             {  // property: 1 byte + property content
-                if( hasReason ) _propertySize += 1 + reasonString.MQTTSize();
-                if( hasUserProperties ) _propertySize += userProperties.Select( s => 1 + s.Item1.MQTTSize() + s.Item2.MQTTSize() ).Sum();
-                _contentSize += _propertySize + _propertySize.CompactByteCount();
+                if( hasReason ) _propertiesSize += 1 + reasonString.MQTTSize();
+                if( hasUserProperties ) _propertiesSize += userProperties.Select( s => 1 + s.Item1.MQTTSize() + s.Item2.MQTTSize() ).Sum();
+                _contentSize += _propertiesSize + _propertiesSize.CompactByteCount();
             }
             _getSize = GetSize( ProtocolLevel.MQTT5 ) + 1 + _contentSize.CompactByteCount() + _contentSize;
         }
@@ -50,12 +50,12 @@ namespace CK.MQTT.Common.OutgoingPackets.v5
             span = span[1..].WriteVariableByteInteger( _contentSize );
             span = span.WriteUInt16( (ushort)PacketId );
             span[0] = (byte)_reason;
-            if( _propertySize == 0 )
+            if( _propertiesSize == 0 )
             {
                 Debug.Assert( span.Length == 0 );
                 return;
             }
-            span = span[1..].WriteVariableByteInteger( _propertySize );
+            span = span[1..].WriteVariableByteInteger( _propertiesSize );
             if( hasReason )
             {
                 span[0] = (byte)PropertyIdentifier.ReasonString;
