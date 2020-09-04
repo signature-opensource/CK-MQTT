@@ -88,7 +88,7 @@ namespace CK.MQTT
         protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
             span = span.WriteMQTTString( _topic );
-            if( Qos > QualityOfService.AtMostOnce ) span = span.WriteUInt16( (ushort)PacketId );//topic id is not present on qos>0.
+            if( Qos > QualityOfService.AtMostOnce ) span = span.WriteBigEndianUInt16( (ushort)PacketId );//topic id is not present on qos>0.
             if( protocolLevel == ProtocolLevel.MQTT3 )
             {
                 if( _propertiesLength > 0 ) throw new InvalidOperationException( "Sending a MQTT5 Publish when agent is running in MQTT3." );
@@ -99,7 +99,7 @@ namespace CK.MQTT
                 if( _correlationDataWriter != null )
                 {
                     span[0] = (byte)PropertyIdentifier.CorrelationData;
-                    span = span[1..].WriteUInt16( _correlationDataSize );
+                    span = span[1..].WriteBigEndianUInt16( _correlationDataSize );
                     _correlationDataWriter( span[.._correlationDataSize] );
                     span = span[_correlationDataSize..];
                 }

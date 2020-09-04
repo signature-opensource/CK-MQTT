@@ -28,7 +28,7 @@ namespace CK.MQTT
         }
     }
 
-    public static class SmallOutgoingApplicationMessageExtension
+    public static class SmallOutgoingApplicationMessageExtensions
     {
         public static async ValueTask<Task> PublishAsync( this IMqtt3Client client, IActivityMonitor m, string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
             => await client.SendPacket<object>( m, new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );

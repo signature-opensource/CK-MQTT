@@ -21,11 +21,14 @@ namespace CK.MQTT
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180829
         protected override byte Header => (byte)PacketType.Unsubscribe | 0b0010;
 
-        protected override int RemainingSize => 2 + _topics.Sum( s => s.MQTTSize() );
+        protected override int GetRemainingSize( ProtocolLevel protocolLevel )
+		{
+            return 2 + _topics.Sum( s => s.MQTTSize() );
+        }
 
-        protected override void WriteContent( Span<byte> span )
-        {
-            span = span.WriteUInt16( (ushort)PacketId );
+        protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span)
+		{
+            span = span.WriteBigEndianUInt16( (ushort)PacketId );
             foreach( string topic in _topics )
             {
                 span = span.WriteMQTTString( topic );
@@ -33,7 +36,7 @@ namespace CK.MQTT
         }
     }
 
-    public static class UnsubscribeExtension
+    public static class UnsubscribeExtensions
     {
         /// <summary>
         /// Unsubscribe the client from topics.
@@ -50,7 +53,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180885">MQTT Unsubscribe</a>
         /// for more details about the protocol unsubscription
         /// </remarks>
-        public async static ValueTask<Task> UnsubscribeAsync( IMqtt3Client client, IActivityMonitor m, params string[] topics )
+        public async static ValueTask<Task> UnsubscribeAsync( this IMqtt3Client client, IActivityMonitor m, params string[] topics )
          => await client.SendPacket<object>( m, new OutgoingUnsubscribe( topics ) );
     }
 }

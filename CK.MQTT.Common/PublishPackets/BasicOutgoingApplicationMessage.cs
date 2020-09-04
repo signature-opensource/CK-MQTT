@@ -31,7 +31,7 @@ namespace CK.MQTT
 
     }
 
-    public static class SimpleOutgoingApplicationMessageExtension
+    public static class SimpleOutgoingApplicationMessageExtensions
     {
         public static async ValueTask<Task> PublishAsync( this IMqtt3Client client, IActivityMonitor m, string topic, QualityOfService qos, bool retain,
             Func<int> getPayloadSize, PayloadWriterDelegate payloadWriter ) //Async required to convert wrapped Task<object> to Task.

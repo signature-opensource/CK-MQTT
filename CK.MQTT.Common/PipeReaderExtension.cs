@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public static class PipeReaderExtension
+    public static class PipeReaderExtensions
     {
         /// <summary>
         /// Return a read with a buffer containing at least the given amount of bytes.

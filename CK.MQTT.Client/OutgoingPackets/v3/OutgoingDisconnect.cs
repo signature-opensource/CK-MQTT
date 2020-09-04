@@ -21,8 +21,8 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        protected override void Write( Span<byte> span )
-        {
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
+		{
             span[0] = (byte)PacketType.Disconnect;
             span[1] = 0;
         }

@@ -29,10 +29,7 @@ namespace CK.MQTT
             ushort attemptCountBeforeGivingUpPacket = 50,
             IMqttChannelFactory? channelFactory = null,
             IStoreFactory? storeFactory = null,
-            IStoreTransformer? storeTransformer = null,
-            StreamPipeReaderOptions? readerOptions = null,
-            StreamPipeWriterOptions? writerOptions = null
-        )
+            IStoreTransformer? storeTransformer = null )
         {
             ConnectionString = connectionString;
             KeepAliveSecs = keepAliveSecs;

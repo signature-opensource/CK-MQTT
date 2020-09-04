@@ -10,7 +10,7 @@ namespace CK.MQTT
     /// Simple helper class on <see cref="SequenceReader{T}"/>.
     /// I expect that a more efficient/less buggy version of these functions will be part of SequenceReader API someday.
     /// </summary>
-    public static class SequenceReaderExtension
+    public static class SequenceReaderExtensions
     {
         /// <summary>
         /// <see cref="SequenceReaderExtensions.TryReadBigEndian(ref SequenceReader{byte}, out short)"/> but casted to <see cref="ushort"/>

@@ -1,5 +1,7 @@
 using CK.Core;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -8,10 +10,23 @@ namespace CK.MQTT
     class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacketWithId
     {
         readonly Subscription[] _subscriptions;
-
-        public OutgoingSubscribe( Subscription[] subscriptions )
+        readonly int _subscriptionIdentifier;
+        readonly IReadOnlyList<UserProperty>? _userProperties;
+        readonly int _propertiesLength;
+        public OutgoingSubscribe( Subscription[] subscriptions, int subscriptionIdentifier = 0, IReadOnlyList<UserProperty>? userProperties = null )
         {
             _subscriptions = subscriptions;
+            _subscriptionIdentifier = subscriptionIdentifier;
+            _userProperties = userProperties;
+            _propertiesLength = 0;
+            if( subscriptionIdentifier > 0 )
+            {
+                _propertiesLength += 1 + subscriptionIdentifier.CompactByteCount();
+            }
+            if( _userProperties != null )
+            {
+                _propertiesLength += userProperties.Sum( s => s.Size );
+            }
         }
 
         public int PacketId { get; set; }
@@ -19,11 +34,37 @@ namespace CK.MQTT
 
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349306
         protected override byte Header => (byte)PacketType.Subscribe | 0b0010;
-        protected override int RemainingSize => 2 + _subscriptions.Sum( s => s.TopicFilter.MQTTSize() + 1 );
 
-        protected override void WriteContent( Span<byte> span )
+        protected override int GetRemainingSize( ProtocolLevel protocolLevel )
+            => 2 //PacketId
+            + _subscriptions.Sum( s => s.TopicFilter.MQTTSize() + 1 ) //topics
+            + (protocolLevel > ProtocolLevel.MQTT3 ? _propertiesLength.CompactByteCount() : 0)
+            + _propertiesLength;
+
+
+        protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            span = span.WriteUInt16( (ushort)PacketId );
+            span = span.WriteBigEndianUInt16( (ushort)PacketId );
+            if( protocolLevel > ProtocolLevel.MQTT3 )
+            {
+                span = span.WriteVariableByteInteger( _propertiesLength );
+                if( _subscriptionIdentifier != 0 )
+                {
+                    span[0] = (byte)PropertyIdentifier.SubscriptionIdentifier;
+                    span = span[1..].WriteVariableByteInteger( _subscriptionIdentifier );
+                }
+                if( _userProperties != null && _userProperties.Count > 0 )
+                {
+                    foreach( UserProperty prop in _userProperties )
+                    {
+                        span = prop.Write( span );
+                    }
+                }
+            }
+            else
+            {
+                Debug.Assert( _propertiesLength == 0 );
+            }
             for( int i = 0; i < _subscriptions.Length; i++ )
             {
                 span = span.WriteMQTTString( _subscriptions[i].TopicFilter );
@@ -33,7 +74,7 @@ namespace CK.MQTT
         }
     }
 
-    public static class SubscribeExtension
+    public static class SubscribeExtensions
     {
         /// <summary>
         /// Susbscribe the <see cref="IMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.

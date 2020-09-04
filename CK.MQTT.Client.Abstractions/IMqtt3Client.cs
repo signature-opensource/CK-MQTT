@@ -18,11 +18,7 @@ namespace CK.MQTT
         /// </summary>
         bool IsConnected { get; }
 
-
-        /// <summary>
-        /// <see langword="delegate"/> called when the <see cref="IMqtt3Client"/> receive a Publish Packet.
-        /// </summary>
-        MessageHandlerDelegate MessageHandler { get; set; }
+        void SetMessageHandler( MessageHandlerDelegate messageHandler );
 
         /// <summary>
         /// Connect the <see cref="IMqtt3Client"/> to a Broker.

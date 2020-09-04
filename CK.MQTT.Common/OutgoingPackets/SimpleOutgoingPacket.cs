@@ -12,12 +12,13 @@ namespace CK.MQTT
         /// <summary>
         /// Allow to write synchronously to the input buffer.
         /// </summary>
+        /// <param name="protocolLevel"></param>
         /// <param name="buffer">The buffer to modify.</param>
-        protected abstract void Write( Span<byte> buffer );
+        protected abstract void Write( ProtocolLevel protocolLevel, Span<byte> buffer);
 
         void Write( ProtocolLevel protocolLevel, PipeWriter pw )
         {
-            Write( pw.GetSpan( GetSize( protocolLevel ) ) );
+            Write( protocolLevel, pw.GetSpan(GetSize(protocolLevel)));
             pw.Advance( GetSize( protocolLevel ) );
         }
 

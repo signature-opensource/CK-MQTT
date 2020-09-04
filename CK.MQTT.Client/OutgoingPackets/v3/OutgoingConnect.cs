@@ -14,6 +14,14 @@ namespace CK.MQTT
         readonly MqttConfiguration _mConf;
         readonly MqttClientCredentials? _creds;
         private readonly OutgoingLastWill? _lastWill;
+        readonly uint _sessionExpiryInterval;
+        readonly ushort _receiveMaximum;
+        readonly uint _maximumPacketSize;
+        readonly ushort _topicAliasMaximum;
+        readonly bool _requestResponseInformation;
+        readonly bool _requestProblemInformation;
+        readonly IReadOnlyList<UserProperty>? _userProperties;
+        readonly (string authentificationMethod, ReadOnlyMemory<byte> authentificationData)? _extendedAuth;
         readonly ProtocolConfiguration _pConf;
         readonly byte _flags;
         readonly int _sizePostPayload;
@@ -42,17 +50,26 @@ namespace CK.MQTT
             OutgoingLastWill? lastWill = null,
             uint sessionExpiryInterval = 0,
             ushort receiveMaximum = ushort.MaxValue,
-            int maximumPacketSize = 268435455,
+            uint maximumPacketSize = 268435455,
             ushort topicAliasMaximum = 0,
             bool requestResponseInformation = false,
             bool requestProblemInformation = false,
-            IReadOnlyList<(string, string)>? userProperties = null )
+            IReadOnlyList<UserProperty>? userProperties = null,
+            (string authentificationMethod, ReadOnlyMemory<byte> authentificationData)? extendedAuth = null )
         {
             Debug.Assert( maximumPacketSize <= 268435455 );
             _pConf = pConf;
             _mConf = mConf;
             _creds = creds;
             _lastWill = lastWill;
+            _sessionExpiryInterval = sessionExpiryInterval;
+            _receiveMaximum = receiveMaximum;
+            _maximumPacketSize = maximumPacketSize;
+            _topicAliasMaximum = topicAliasMaximum;
+            _requestResponseInformation = requestResponseInformation;
+            _requestProblemInformation = requestProblemInformation;
+            _userProperties = userProperties;
+            _extendedAuth = extendedAuth;
             _flags = ByteFlag( creds, lastWill );
             _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
 
@@ -64,9 +81,14 @@ namespace CK.MQTT
                 if( topicAliasMaximum != 0 ) _propertiesSize += 3; //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547825
                 if( requestResponseInformation ) _propertiesSize += 2;//https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Request_Response_Information
                 if( requestProblemInformation ) _propertiesSize += 2;//https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547827
-                if( userProperties != null && userProperties.Count > 0)
+                if( userProperties != null && userProperties.Count > 0 )
                 {
-                    _propertiesSize += userProperties.Select( s => 1 + s.Item1.MQTTSize() + s.Item2.MQTTSize() ).Sum();
+                    _propertiesSize += userProperties.Sum( s => s.Size );
+                }
+                if( extendedAuth.HasValue )
+                {
+                    _propertiesSize += 1 + extendedAuth.Value.authentificationMethod.MQTTSize();
+                    _propertiesSize += 1 + extendedAuth.Value.authentificationData.Length + 2;
                 }
             }
         }
@@ -82,7 +104,9 @@ namespace CK.MQTT
                 + 1 //_protocolLevel
                 + 1 //_flag
                 + 2 //_keepAlive
-                + _creds?.ClientId.MQTTSize() ?? 2;
+                + (_creds?.ClientId.MQTTSize() ?? 2)//clientId
+                + _propertiesSize
+                + (protocolLevel == ProtocolLevel.MQTT3 ? 0 : _propertiesSize.CompactByteCount());
         }
 
         protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
@@ -94,12 +118,60 @@ namespace CK.MQTT
             span[0] = (byte)_pConf.ProtocolLevel; //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
 
             span[1] = _flags;
-            span = span[2..].WriteUInt16( _mConf.KeepAliveSecs )//http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
-                .WriteMQTTString( _creds?.ClientId ?? "" );
+            span = span[2..].WriteBigEndianUInt16( _mConf.KeepAliveSecs );//http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
             if( protocolLevel == ProtocolLevel.MQTT5 )
             {
+                span = span.WriteVariableByteInteger( _propertiesSize );
 
+                if( _sessionExpiryInterval != 0 )
+                {
+                    span[0] = (byte)PropertyIdentifier.SessionExpiryInterval;
+                    span = span[1..].WriteBigEndianUInt32( _sessionExpiryInterval );
+                }
+                if( _receiveMaximum != ushort.MaxValue )
+                {
+                    span[0] = (byte)PropertyIdentifier.ReceiveMaximum;
+                    span = span[1..].WriteBigEndianUInt16( _receiveMaximum );
+                }
+                if( _maximumPacketSize != 268435455 )
+                {
+                    span[0] = (byte)PropertyIdentifier.MaximumPacketSize;
+                    span = span[1..].WriteBigEndianUInt32( _maximumPacketSize );
+                }
+                if( _topicAliasMaximum != 0 )
+                {
+                    span[0] = (byte)PropertyIdentifier.TopicAliasMaximum;
+                    span = span[1..].WriteBigEndianUInt16( _topicAliasMaximum );
+                }
+                if( _requestResponseInformation )
+                {
+                    span[0] = (byte)PropertyIdentifier.RequestResponseInformation;
+                    span[1] = 1;
+                    span = span[2..];
+                }
+                if( _requestProblemInformation )
+                {
+                    span[0] = (byte)PropertyIdentifier.RequestProblemInformation;
+                    span[1] = 1;
+                    span = span[2..];
+                }
+
+                if( _userProperties != null && _userProperties.Count > 0 )
+                {
+                    foreach( var prop in _userProperties )
+                    {
+                        span = prop.Write( span );
+                    }
+                }
+                if( _extendedAuth.HasValue )
+                {
+                    span[0] = (byte)PropertyIdentifier.AuthenticationMethod;
+                    span = span[1..].WriteMQTTString( _extendedAuth.Value.authentificationMethod );
+                    span[0] = (byte)PropertyIdentifier.AuthenticationData;
+                    span = span[1..].WriteBinaryData( _extendedAuth.Value.authentificationData );
+                }
             }
+            span = span.WriteMQTTString( _creds?.ClientId ?? "" );
             Debug.Assert( span.Length == 0 );
         }
 

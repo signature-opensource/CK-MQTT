@@ -25,6 +25,8 @@ namespace CK.MQTT
         OutgoingMessageHandler? _output;
         IPacketIdStore? _packetIdStore;
         PacketStore? _store;
+        MessageHandlerDelegate _messageHandler;
+
         /// <summary>
         /// Instantiate the <see cref="MqttClient"/> with the given configuration.
         /// </summary>
@@ -34,7 +36,7 @@ namespace CK.MQTT
         {
             _pConfig = pConfig;
             _config = config;
-            MessageHandler = messageHandler;
+            _messageHandler = messageHandler;
             _channelFactory = config.ChannelFactory;
         }
 
@@ -57,7 +59,13 @@ namespace CK.MQTT
             Debug.Assert( _packetIdStore != null );
             Debug.Assert( _store != null );
         }
-        ValueTask OnMessage( IncomingMessage msg ) => MessageHandler( msg );
+
+        /// <summary>
+        /// This method is required so the delegate used in the Reflex doesn't change.
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <returns></returns>
+        ValueTask OnMessage( IncomingMessage msg ) => _messageHandler( msg );
 
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
@@ -121,7 +129,10 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public MessageHandlerDelegate MessageHandler { get; set; }
+        public void SetMessageHandler( MessageHandlerDelegate messageHandler )
+        {
+            _messageHandler = messageHandler;
+        }
 
         Task CloseHandlers() => Task.WhenAll( _input!.CloseAsync(), _output!.CloseAsync() );
 
