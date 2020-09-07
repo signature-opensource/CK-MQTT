@@ -47,7 +47,7 @@ namespace CK.MQTT
             int bytesToWrite = HeaderSize + RemainingSize.CompactByteCount() + 1;//Compute how many byte will be written.
             Span<byte> span = pw.GetSpan( bytesToWrite );
             span[0] = Header;
-            span = span[1..].WriteRemainingSize( RemainingSize );//the result span length will be HeaderSize.
+            span = span[1..].WriteVariableByteInteger( RemainingSize );//the result span length will be HeaderSize.
             WriteHeaderContent( span[..HeaderSize] );
             pw.Advance( bytesToWrite );//advance the number of bytes written.
         }

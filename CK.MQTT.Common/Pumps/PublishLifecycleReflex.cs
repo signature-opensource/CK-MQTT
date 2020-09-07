@@ -33,14 +33,14 @@ namespace CK.MQTT
                     m?.ProcessPacket( PacketType.PublishRelease );
                     ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
                     await _packetIdStore.RemoveId( m, packetId );
-                    _output.QueueReflexMessage( new OutgoingPubcomp( packetId ) );
+                    _output.QueueReflexMessage( LifecyclePacketV3.Pubcomp( packetId ) );
                     return;
                 case PacketType.PublishReceived:
                     m?.ProcessPacket( PacketType.PublishReceived );
                     ushort packetId2 = await pipeReader.ReadPacketIdPacket( m, packetLength );
                     QualityOfService qos = await _store.DiscardMessageByIdAsync( m, packetId2 );
                     if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException( $"This packet was stored with a qos '{qos}', but received a '{ PacketType.PublishReceived }' that should be sent in a protocol flow of QOS 2." );
-                    _output.QueueReflexMessage( new OutgoingPubrel( packetId2 ) );
+                    _output.QueueReflexMessage( LifecyclePacketV3.Pubrel( packetId2 ) );
                     return;
                 default:
                     await next();
