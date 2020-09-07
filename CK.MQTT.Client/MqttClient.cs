@@ -65,7 +65,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="msg"></param>
         /// <returns></returns>
-        ValueTask OnMessage( IncomingMessage msg ) => _messageHandler( msg );
+        ValueTask OnMessage( string topic, PipeReader pipeReader, int payloadLength, bool retain ) => _messageHandler( topic, pipeReader, payloadLength, retain );
 
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )

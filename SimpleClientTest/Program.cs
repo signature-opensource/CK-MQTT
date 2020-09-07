@@ -2,6 +2,7 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
+using System.IO.Pipelines;
 using System.Threading.Tasks;
 
 namespace SimpleClientTest
@@ -40,10 +41,10 @@ namespace SimpleClientTest
             await Task.Delay( 500 );
         }
 
-        static ValueTask MessageHandlerDelegate( IncomingMessage message )
+        static ValueTask MessageHandlerDelegate( string topic, PipeReader pipeReader, int payloadLength, bool retain )
         {
-            System.Console.WriteLine( message.Topic );
-            return message.PipeReader.BurnBytes( message.PayloadLength );
+            System.Console.WriteLine( topic );
+            return pipeReader.BurnBytes( payloadLength );
         }
     }
 }
