@@ -118,7 +118,8 @@ namespace CK.MQTT
             span[0] = (byte)_pConf.ProtocolLevel; //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
 
             span[1] = _flags;
-            span = span[2..].WriteBigEndianUInt16( _mConf.KeepAliveSecs );//http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
+            ushort keepAlive = _mConf.KeepAlive == Timeout.InfiniteTimeSpan ? (ushort)0 : (ushort)_mConf.KeepAlive.TotalSeconds;
+            span = span[2..].WriteBigEndianUInt16( keepAlive );//http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
             if( protocolLevel == ProtocolLevel.MQTT5 )
             {
                 span = span.WriteVariableByteInteger( _propertiesSize );

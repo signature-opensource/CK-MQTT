@@ -14,7 +14,7 @@ namespace CK.MQTT
             public int NextFreeId;
             public ushort TryCount;
             public TaskCompletionSource<object?>? TaskCS;
-            public long EmissionTime;
+            public TimeSpan EmissionTime;
             public char DebuggerDisplay => TaskCS == null ? '-' : 'X';
         }
 
@@ -76,7 +76,7 @@ namespace CK.MQTT
         {
             lock( _entries )
             {
-                _entries[packetId - 1].EmissionTime = _stopwatch.ElapsedMilliseconds;
+                _entries[packetId - 1].EmissionTime = _stopwatch.Elapsed;
                 int count = ++_entries[packetId - 1].TryCount;
                 if( count == _config.AttemptCountBeforeGivingUpPacket && _config.AttemptCountBeforeGivingUpPacket > 0 )
                 {
@@ -95,7 +95,7 @@ namespace CK.MQTT
                 tcs = _entries[packetId - 1].TaskCS;
                 if( tcs == null ) return false;
                 _entries[packetId - 1].TaskCS = null;
-                _entries[packetId - 1].EmissionTime = 0;
+                _entries[packetId - 1].EmissionTime = default;
                 _entries[packetId - 1].TryCount = 0;
                 m?.FreedPacketId( packetId );
             }
@@ -103,18 +103,18 @@ namespace CK.MQTT
             return true;
         }
 
-        public (int packetId, long waitTime) GetOldestPacket()
+        public (int packetId, TimeSpan waitTime) GetOldestPacket()
         {
             Entry smallest = new Entry
             {
-                EmissionTime = long.MaxValue
+                EmissionTime = TimeSpan.MaxValue
             };
             int smallIndex = -1;//if not assigned, will return 0 (invalid packet id)
             ushort confTryCount = _config.AttemptCountBeforeGivingUpPacket;
             for( int i = 0; i < _count; i++ )
             {
                 Entry entry = _entries[i];
-                if( entry.EmissionTime != 0
+                if( entry.EmissionTime != default
                     && entry.EmissionTime <= smallest.EmissionTime
                     && (entry.TryCount != confTryCount || confTryCount == 0) )
                 {
@@ -122,7 +122,7 @@ namespace CK.MQTT
                     smallIndex = i;
                 }
             }
-            return (smallIndex + 1, _stopwatch.ElapsedMilliseconds - smallest.EmissionTime);
+            return (smallIndex + 1, _stopwatch.Elapsed - smallest.EmissionTime);
         }
 
         void EnsureSlotsAvailable( int count )

@@ -21,7 +21,7 @@ namespace CK.MQTT
         const byte _dupFlag = 1 << 4;
         const byte _retainFlag = 1;
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )
             {

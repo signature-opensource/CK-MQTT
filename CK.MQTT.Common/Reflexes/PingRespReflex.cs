@@ -1,3 +1,4 @@
+using CK.MQTT.Common.Pumps;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
@@ -10,7 +11,7 @@ namespace CK.MQTT
         readonly MqttConfiguration _config;
         readonly InputPump _incomingMessageHandler;
         readonly Timer _timer;
-        public PingRespReflex( MqttConfiguration config, InputPump incomingMessageHandler )
+        public PingRespReflex( MqttConfiguration config, InputPump incomingMessageHandler, MainOutputProcessor mainOutputProcessor )
         {
             _config = config;
             _incomingMessageHandler = incomingMessageHandler;
@@ -24,7 +25,7 @@ namespace CK.MQTT
 
         public void StartPingTimeoutTimer()
         {
-            if( _config.KeepAliveSecs > 0 ) _timer.Change( _config.KeepAliveSecs * 1000, Timeout.Infinite );
+            if( _config.WaitTimeout.TotalSeconds > 0 ) _timer.Change( _config.KeepAlive, Timeout.InfiniteTimeSpan );
         }
 
         public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender,

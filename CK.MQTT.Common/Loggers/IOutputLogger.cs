@@ -8,5 +8,6 @@ namespace CK.MQTT
         void ExceptionInOutputLoop(Exception e); 
         IDisposable? SendingMessage(ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel );
         void PacketMarkedPoisoned( int packetId, int tryCount );
+        void SendingKeepAlive();
     }
 }

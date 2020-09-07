@@ -1,4 +1,6 @@
+using System;
 using System.IO.Pipelines;
+using System.Threading;
 
 namespace CK.MQTT
 {
@@ -11,9 +13,9 @@ namespace CK.MQTT
         /// Initializes a new instance of the <see cref="MqttConfiguration" /> class.
         /// </summary>
         /// <param name="connectionString">The connection string that will be used by the <see cref="IMqttChannelFactory"/>.</param>
-        /// <param name="keepAliveSecs">If the client didn't sent a packet in the given amount of time, it will send a PingRequest packet.
+        /// <param name="keepAlive">If the client didn't sent a packet in the given amount of time, it will send a PingRequest packet.
         /// <br/>0 to disable the KeepAlive mechanism.</param>
-        /// <param name="waitTimeoutSecs">Time before the client try to resend a packet.</param>
+        /// <param name="waitTimeout">Time before the client try to resend a packet.</param>
         /// <param name="attemptCountBeforeGivingUpPacket"></param>
         /// <param name="inputLogger">The logger to use to log the activities while processing the incoming data.</param>
         /// <param name="outputLogger">The logger to use to log the activities while processing the outgoing data.</param>
@@ -24,16 +26,19 @@ namespace CK.MQTT
         /// <param name="writerOptions">Options to configurate the <see cref="PipeWriter"/>.</param>
         public MqttConfiguration(
             string connectionString,
-            ushort keepAliveSecs = 0,
-            int waitTimeoutSecs = -1,
+            TimeSpan keepAlive = new TimeSpan(),
+            TimeSpan? waitTimeout = null,
             ushort attemptCountBeforeGivingUpPacket = 50,
             IMqttChannelFactory? channelFactory = null,
             IStoreFactory? storeFactory = null,
             IStoreTransformer? storeTransformer = null )
         {
             ConnectionString = connectionString;
-            KeepAliveSecs = keepAliveSecs;
-            WaitTimeoutMs = waitTimeoutSecs;
+            if( keepAlive.Milliseconds != 0 ) throw new ArgumentException( "MQTT KeepAlive is in seconds, but this TimeSpan does not have whole seconds." );
+            if( keepAlive.TotalSeconds == 0 ) keepAlive = Timeout.InfiniteTimeSpan;
+            KeepAlive = keepAlive;
+            if( waitTimeout.HasValue && waitTimeout.Value.TotalSeconds <= 0 ) throw new ArgumentException( "WaitTimeout cannot be 0. It would mean that a packet is already timeout when it just has been sent." );
+            WaitTimeout = waitTimeout ?? Timeout.InfiniteTimeSpan;
             AttemptCountBeforeGivingUpPacket = attemptCountBeforeGivingUpPacket;
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
@@ -47,14 +52,13 @@ namespace CK.MQTT
         /// until a Ping packet is sent to maintain the connection alive
         /// Default value is 0 seconds, which means Keep Alive disabled
         /// </summary>
-        public ushort KeepAliveSecs { get; }
+        public TimeSpan KeepAlive { get; }
 
         /// <summary>
         /// Seconds to wait for an incoming required message until the operation timeouts
         /// This value is generally used to wait for Server or Client acknowledgements
-        /// Default value is 5 seconds
         /// </summary>
-		public int WaitTimeoutMs { get; }
+		public TimeSpan WaitTimeout { get; }
         //0 to disable
         public ushort AttemptCountBeforeGivingUpPacket { get; }
         public IInputLogger? InputLogger { get; set; }

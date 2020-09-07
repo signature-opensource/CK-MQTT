@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public delegate ValueTask Reflex( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader );
+    public delegate ValueTask Reflex( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader );
 
     /// <summary>
     /// Message pump that do basic processing on the incoming data,
     /// and delegate the message processing job to the <see cref="Reflex"/>.
     /// </summary>
-    public class IncomingMessageHandler
+    public class InputPump
     {
         readonly MqttConfiguration _config;
         readonly Func<DisconnectedReason, Task> _stopClient;
@@ -22,12 +22,12 @@ namespace CK.MQTT
         readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
         Action<IInputLogger?>? _timeoutLogger;
         /// <summary>
-        /// Instantiate the <see cref="IncomingMessageHandler"/> and immediatly start to process incoming packets.
+        /// Instantiate the <see cref="InputPump"/> and immediatly start to process incoming packets.
         /// </summary>
-        /// <param name="stopClient"><see langword="delegate"/> called when the <see cref="IncomingMessageHandler"/> stops.</param>
+        /// <param name="stopClient"><see langword="delegate"/> called when the <see cref="InputPump"/> stops.</param>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public IncomingMessageHandler( MqttConfiguration config, Func<DisconnectedReason, Task> stopClient, PipeReader pipeReader, Reflex reflex )
+        public InputPump( MqttConfiguration config, Func<DisconnectedReason, Task> stopClient, PipeReader pipeReader, Reflex reflex )
         {
             _config = config;
             _stopClient = stopClient;
