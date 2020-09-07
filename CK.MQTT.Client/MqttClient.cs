@@ -21,8 +21,8 @@ namespace CK.MQTT
         //change between lifecycles
         CancellationTokenSource _closed = new CancellationTokenSource( 0 );
         IMqttChannel? _channel;
-        IncomingMessageHandler? _input;
-        OutgoingMessageHandler? _output;
+        InputPump? _input;
+        OutputPump? _output;
         IPacketIdStore? _packetIdStore;
         PacketStore? _store;
         MessageHandlerDelegate _messageHandler;
@@ -76,9 +76,9 @@ namespace CK.MQTT
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
             ConnectAckReflex connectAckReflex = new ConnectAckReflex();
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            _input = new IncomingMessageHandler( _config, CloseSelfAsync, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
+            _input = new InputPump( _config, CloseSelfAsync, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
             PingRespReflex pingRes = new PingRespReflex( _config, _input );
-            _output = new OutgoingMessageHandler( pingRes, CloseSelfAsync, _channel.DuplexPipe.Output, _pConfig, _config, _store );
+            _output = new OutputPump( pingRes, CloseSelfAsync, _channel.DuplexPipe.Output, _pConfig, _config, _store );
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
                 .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, _output ) )
@@ -113,7 +113,7 @@ namespace CK.MQTT
             return res;
         }
 
-        async static Task SendAllStoredMessages( IActivityMonitor m, PacketStore store, OutgoingMessageHandler output )
+        async static Task SendAllStoredMessages( IActivityMonitor m, PacketStore store, OutputPump output )
         {
             IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store.GetAllMessagesAsync( m );
             await foreach( IOutgoingPacketWithId msg in msgs )
@@ -123,7 +123,7 @@ namespace CK.MQTT
         }
 
 
-        async ValueTask InvalidPacket( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetSize, PipeReader reader )
+        async ValueTask InvalidPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader )
         {
             await CloseSelfAsync( DisconnectedReason.ProtocolError );
             throw new ProtocolViolationException();

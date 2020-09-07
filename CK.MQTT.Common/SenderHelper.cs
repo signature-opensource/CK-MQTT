@@ -7,7 +7,7 @@ namespace CK.MQTT
 {
     public static class SenderHelper
     {
-        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, PacketStore messageStore, OutgoingMessageHandler output,
+        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, PacketStore messageStore, OutputPump output,
             IOutgoingPacketWithId packet, MqttConfiguration config )
             where T : class
             => packet.Qos switch
@@ -18,7 +18,7 @@ namespace CK.MQTT
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        public static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor m, OutgoingMessageHandler output, IOutgoingPacketWithId msg )
+        public static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor m, OutputPump output, IOutgoingPacketWithId msg )
             where T : class
         {
             using( m.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
@@ -28,7 +28,7 @@ namespace CK.MQTT
             }
         }
 
-        public static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m, OutgoingMessageHandler output, PacketStore messageStore, IOutgoingPacketWithId msg )
+        public static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m, OutputPump output, PacketStore messageStore, IOutgoingPacketWithId msg )
             where T : class
         {
             (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );
@@ -36,7 +36,7 @@ namespace CK.MQTT
         }
 
         public static async Task<T?> Send<T>( IActivityMonitor m,
-            OutgoingMessageHandler output,  IOutgoingPacketWithId packet, Task<object?> ackReceived )
+            OutputPump output,  IOutgoingPacketWithId packet, Task<object?> ackReceived )
             where T : class
         {
             await await output.SendMessageAsync( packet );

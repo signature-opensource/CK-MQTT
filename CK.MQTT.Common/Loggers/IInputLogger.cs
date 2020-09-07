@@ -15,11 +15,11 @@ namespace CK.MQTT
         IDisposable? IncomingPacket( byte header, int length );
         void EndOfStream();
         void UnexpectedEndOfStream();
-        IDisposable? ProcessPublishPacket( IncomingMessageHandler sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos );
+        IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos );
         IDisposable? ProcessPacket( PacketType packetType );
         void QueueFullPacketDropped( PacketType packetType, int packetId );
         void ClientSelfClosing( DisconnectedReason reason );
-        void UnparsedExtraBytes( IncomingMessageHandler incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize );
+        void UnparsedExtraBytes( InputPump incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize );
         void UnparsedExtraBytesPacketId( int unparsedSize );
         void ReadCancelled( int requestedByteCount );
         void UnexpectedEndOfStream( int requestedByteCount, int availableByteCount );

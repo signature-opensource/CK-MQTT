@@ -12,7 +12,7 @@ namespace CK.MQTT
         {
             _store = store;
         }
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             if( PacketType.UnsubscribeAck != (PacketType)header )
             {

@@ -8,9 +8,9 @@ namespace CK.MQTT
     public class PingRespReflex : IReflexMiddleware
     {
         readonly MqttConfiguration _config;
-        readonly IncomingMessageHandler _incomingMessageHandler;
+        readonly InputPump _incomingMessageHandler;
         readonly Timer _timer;
-        public PingRespReflex( MqttConfiguration config, IncomingMessageHandler incomingMessageHandler )
+        public PingRespReflex( MqttConfiguration config, InputPump incomingMessageHandler )
         {
             _config = config;
             _incomingMessageHandler = incomingMessageHandler;
@@ -27,7 +27,7 @@ namespace CK.MQTT
             if( _config.KeepAliveSecs > 0 ) _timer.Change( _config.KeepAliveSecs * 1000, Timeout.Infinite );
         }
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender,
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender,
             byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             if( PacketType.PingResponse != (PacketType)header )

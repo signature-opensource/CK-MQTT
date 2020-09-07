@@ -10,7 +10,7 @@ namespace CK.MQTT
     /// Middleware that process incoming packets. See <see cref="Reflex"/> for more information.
     /// </summary>
     /// <param name="m">The logger to log activities while processing the incoming packet.</param>
-    /// <param name="sender">The <see cref="IncomingMessageHandler"/> that called this middleware.</param>
+    /// <param name="sender">The <see cref="InputPump"/> that called this middleware.</param>
     /// <param name="header">The first byte of the packet.</param>
     /// <param name="packetLength">The length of the incoming packet.</param>
     /// <param name="pipeReader">The pipe reader to use to read the packet data.</param>
@@ -19,7 +19,7 @@ namespace CK.MQTT
     /// If a middleware advance the <see cref="PipeReader"/>, the next middleware can't be aware of it.
     /// </remarks>
     /// <returns>A <see cref="ValueTask"/> that complete when the middleware finished it's job.</returns>
-    public delegate ValueTask ReflexMiddleware( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
+    public delegate ValueTask ReflexMiddleware( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
 
     /// <summary>
     /// An interface exposing a method method that is a <see cref="ReflexMiddleware"/>.
@@ -27,7 +27,7 @@ namespace CK.MQTT
     public interface IReflexMiddleware
     {
         /// <inheritdoc cref="ReflexMiddleware"/>
-        ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
+        ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next );
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ namespace CK.MQTT
                 Reflex previousReflex = lastReflex;
                 //Here some closure black magics. A lot of mind bending stuff happen if you inline this variable, and make it not work.
                 //TODO: A better implementation would not use a closure, to be more explicit.
-                Reflex newMiddleware = ( IInputLogger? m, IncomingMessageHandler s, byte h, int l, PipeReader p ) //We create a lambda that...
+                Reflex newMiddleware = ( IInputLogger? m, InputPump s, byte h, int l, PipeReader p ) //We create a lambda that...
                     => curr( m, s, h, l, p, () => previousReflex( m, s, h, l, p ) );// Call current the middleware, with a callback to the previous previous middleware.
                 lastReflex = newMiddleware;
             }

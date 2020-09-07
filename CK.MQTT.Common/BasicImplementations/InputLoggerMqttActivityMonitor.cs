@@ -35,7 +35,7 @@ namespace CK.MQTT
         public IDisposable? ProcessPacket( PacketType packetType ) => _m.OpenTrace()?.Send( $"Handling incoming packet as {packetType}." );
 
         /// <inheritdoc/>
-        public IDisposable? ProcessPublishPacket( IncomingMessageHandler sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos )
+        public IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos )
             => _m.OpenTrace()?.Send( $"Handling incoming packet as {PacketType.Publish}." );
 
         /// <inheritdoc/>
@@ -51,7 +51,7 @@ namespace CK.MQTT
             => _m.Error().Send( $"Unexpected End Of Stream. Expected {requestedByteCount} bytes but got {availableByteCount}." );
 
         /// <inheritdoc/>
-        public void UnparsedExtraBytes( IncomingMessageHandler incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize )
+        public void UnparsedExtraBytes( InputPump incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize )
             => _m.Warn().Send( $"Packet bigger than expected, skipping {unparsedSize} bytes." );
 
         /// <inheritdoc/>

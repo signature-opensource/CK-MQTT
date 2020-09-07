@@ -9,15 +9,15 @@ namespace CK.MQTT
     {
         readonly IPacketIdStore _packetIdStore;
         readonly PacketStore _store;
-        readonly OutgoingMessageHandler _output;
-        public PublishLifecycleReflex( IPacketIdStore packetIdStore, PacketStore store, OutgoingMessageHandler output )
+        readonly OutputPump _output;
+        public PublishLifecycleReflex( IPacketIdStore packetIdStore, PacketStore store, OutputPump output )
         {
             _packetIdStore = packetIdStore;
             _store = store;
             _output = output;
         }
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
         {
             PacketType packetType = (PacketType)((header >> 4) << 4);//to remove right bits that may store flags data
             switch( packetType )

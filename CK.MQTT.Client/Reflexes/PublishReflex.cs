@@ -10,9 +10,9 @@ namespace CK.MQTT
     {
         readonly IPacketIdStore _store;
         readonly MessageHandlerDelegate _messageHandler;
-        readonly OutgoingMessageHandler _output;
+        readonly OutputPump _output;
 
-        public PublishReflex( IPacketIdStore store, MessageHandlerDelegate messageHandler, OutgoingMessageHandler output )
+        public PublishReflex( IPacketIdStore store, MessageHandlerDelegate messageHandler, OutputPump output )
         {
             _store = store;
             _messageHandler = messageHandler;
