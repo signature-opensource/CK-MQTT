@@ -21,7 +21,7 @@ namespace SimpleClientTest
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Debug;
             var m = new ActivityMonitor( "main" );
-            var client = MqttClient.CreateMQTTClient( new MqttConfiguration( "broker.hivemq.com:1883" )
+            var client = MqttClient.CreateMQTTClient( new MqttConfiguration( "test.mosquitto.org:1883" )
             {
                 InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor( "input" ) ),
                 OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "output" ) )
@@ -31,7 +31,7 @@ namespace SimpleClientTest
             {
                 throw new System.Exception();
             }
-            var returnSub = await await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ) );
+            var returnSub = await await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ), new Subscription( "/test122/#", QualityOfService.ExactlyOnce ) );
             await await client.PublishAsync( m, "/test4712/42", QualityOfService.ExactlyOnce, false, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) );
             await await client.UnsubscribeAsync( m, "test" );
             await Task.Delay( 3000 );
@@ -41,7 +41,7 @@ namespace SimpleClientTest
             await Task.Delay( 500 );
         }
 
-        static ValueTask MessageHandlerDelegate( string topic, PipeReader pipeReader, int payloadLength, bool retain )
+        static ValueTask MessageHandlerDelegate( string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain )
         {
             System.Console.WriteLine( topic );
             return pipeReader.BurnBytes( payloadLength );
