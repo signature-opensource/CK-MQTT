@@ -9,7 +9,7 @@ namespace CK.MQTT
         readonly Dictionary<string, (PacketStore, IPacketIdStore)> _stores = new Dictionary<string, (PacketStore, IPacketIdStore)>();
         public ValueTask<(PacketStore, IPacketIdStore)> CreateAsync( IActivityMonitor m, MqttConfiguration config, string storeId, bool resetStore )
         {
-            if( resetStore )
+            if( resetStore || !_stores.ContainsKey( storeId ) )
             {
                 _stores[storeId] = (new MemoryPacketStore( config, ushort.MaxValue ), new MemoryPacketIdStore());
             }
