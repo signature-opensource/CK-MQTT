@@ -1,5 +1,6 @@
 using CK.MQTT.Common.Pumps;
 using System;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,25 +9,11 @@ namespace CK.MQTT
 {
     public class PingRespReflex : IReflexMiddleware
     {
-        readonly MqttConfiguration _config;
-        readonly InputPump _incomingMessageHandler;
-        readonly Timer _timer;
-        public PingRespReflex( MqttConfiguration config, InputPump incomingMessageHandler, MainOutputProcessor mainOutputProcessor )
+        public PingRespReflex( InputPump incomingMessageHandler )
         {
-            _config = config;
-            _incomingMessageHandler = incomingMessageHandler;
-            _timer = new Timer( TimerCallback );
         }
 
-        void TimerCallback( object? state )
-        {
-            _incomingMessageHandler.SetTimeout( ( m ) => m?.PingReqTimeout() );
-        }
-
-        public void StartPingTimeoutTimer()
-        {
-            if( _config.WaitTimeout.TotalSeconds > 0 ) _timer.Change( _config.KeepAlive, Timeout.InfiniteTimeSpan );
-        }
+        public bool WaitingPingResp { get; set; }
 
         public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender,
             byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
@@ -38,8 +25,8 @@ namespace CK.MQTT
             }
             using( m?.ProcessPacket( PacketType.PingResponse ) )
             {
-
-                _timer.Change( Timeout.Infinite, Timeout.Infinite );//Abort timer
+                WaitingPingResp = false;
+                if( packetLength > 0 ) m?.UnparsedExtraBytes( sender, PacketType.PingResponse, 0, packetLength, packetLength );
                 await pipeReader.BurnBytes( packetLength );
             }
         }
