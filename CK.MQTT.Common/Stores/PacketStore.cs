@@ -14,7 +14,7 @@ namespace CK.MQTT
     /// </summary>
     public abstract class PacketStore
     {
-        internal IdStore IdStore { get; }
+        public IdStore IdStore { get; }
 
 
         protected PacketStore( ProtocolConfiguration pConfig, MqttConfiguration config, int packetIdMaxValue )
@@ -56,7 +56,7 @@ namespace CK.MQTT
 
         protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor m );
 
-        internal async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IOutputLogger? m, int packetId )
+        public async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IOutputLogger? m, int packetId )
             => Config.StoreTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IOutputLogger? m, int packetId );

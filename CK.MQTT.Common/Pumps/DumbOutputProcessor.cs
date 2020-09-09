@@ -3,11 +3,11 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using static CK.MQTT.OutputPump;
 
-namespace CK.MQTT.Common.Pumps
+namespace CK.MQTT
 {
     public static class DumbOutputProcessor
     {
-        public static async ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken )
+        public static async ValueTask OutputProcessor( IOutputLogger? m, OutputPump outputPump, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken )
         {
             if( reflexes.Reader.TryRead( out IOutgoingPacket packet ) || messages.Reader.TryRead( out packet ) )
             {

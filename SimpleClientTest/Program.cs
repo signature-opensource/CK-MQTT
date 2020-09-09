@@ -2,6 +2,7 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
+using System;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ namespace SimpleClientTest
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Debug;
             var m = new ActivityMonitor( "main" );
-            var client = new MqttClient( new MqttConfiguration( "localhost:1883", 5, 45_000 )
+            var client = MqttClient.CreateMQTT3Client( new MqttConfiguration( "localhost:1883", TimeSpan.FromSeconds( 1 ), TimeSpan.FromSeconds( 45 ) )
             {
                 InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor( "input" ) ),
                 OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "output" ) )
@@ -29,12 +30,12 @@ namespace SimpleClientTest
             var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
             if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
             {
-                throw new System.Exception();
+                throw new Exception();
             }
             var returnSub = await await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ), new Subscription( "/test122/#", QualityOfService.ExactlyOnce ) );
             await await client.PublishAsync( m, "/test4712/42", QualityOfService.ExactlyOnce, false, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) );
             await await client.UnsubscribeAsync( m, "test" );
-            await Task.Delay( 3000 );
+            await Task.Delay( 300000 );
             await client.DisconnectAsync();
             await Task.Delay( 3000 );
             result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );

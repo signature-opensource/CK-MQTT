@@ -29,9 +29,6 @@ namespace CK.MQTT.Common.PublishPackets
         {
             client.SetMessageHandler( async ( topic, pipeReader, payloadLengt, qos, retain ) =>
              {
-                 MemoryPool<byte>.Shared.Rent
-                 await pipeReader.FillBuffer()
-                 handler(new ApplicationMessage(topic, ))
              } );
         }
     }

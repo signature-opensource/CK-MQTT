@@ -27,6 +27,7 @@ namespace CK.MQTT
         /// Disconnected because of an unexpected error on the endpoint, 
         /// being this the Client or Server
         /// </summary>
-		UnspecifiedError
+		UnspecifiedError,
+        PingReqTimeout
     }
 }

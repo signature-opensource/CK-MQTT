@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     [DebuggerDisplay( "Count = {_count} {DebuggerDisplay}" )]
-    class IdStore
+    public class IdStore
     {
         [DebuggerDisplay( "{DebuggerDisplay} {NextFreeId,nq}" )]
         struct Entry

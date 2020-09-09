@@ -39,7 +39,7 @@ namespace CK.MQTT
             OutputPump output,  IOutgoingPacketWithId packet, Task<object?> ackReceived )
             where T : class
         {
-            await await output.SendMessageAsync( packet );
+            await output.SendMessageAsync( packet );
             object? res = await ackReceived;
             if( res is null ) return null;
             if( res is T a ) return a;

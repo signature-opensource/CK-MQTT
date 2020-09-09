@@ -7,7 +7,6 @@ using CK.Core;
 using System.Threading;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
-using CK.MQTT.Common.Pumps;
 
 namespace CK.MQTT
 {
@@ -79,7 +78,7 @@ namespace CK.MQTT
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
             _input = new InputPump( _config, CloseSelfAsync, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
             _output = new OutputPump( DumbOutputProcessor.OutputProcessor, CloseSelfAsync, _channel.DuplexPipe.Output, _pConfig, _config, _store );
-            PingRespReflex pingRes = new PingRespReflex( _config, _input );
+            PingRespReflex pingRes = new PingRespReflex( _input );
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
                 .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, _output ) )
@@ -89,7 +88,7 @@ namespace CK.MQTT
                 .Build( InvalidPacket );
             _closed = new CancellationTokenSource();
             await _output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-            _output.SetOutputProcessor( new MainOutputProcessor( _config, _store, pingRes ).OutputProcessor );
+            _output.SetOutputProcessor( new MainOutputProcessor( this, _config, _store, pingRes ).OutputProcessor );
             await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeout, _closed.Token ) );
             if( _closed.IsCancellationRequested )
             {
@@ -140,7 +139,7 @@ namespace CK.MQTT
         Task CloseHandlers() => Task.WhenAll( _input!.CloseAsync(), _output!.CloseAsync() );
 
         readonly object _lock = new object();
-        async Task CloseSelfAsync( DisconnectedReason reason )
+        internal async Task CloseSelfAsync( DisconnectedReason reason )
         {
             lock( _lock )
             {
@@ -160,7 +159,7 @@ namespace CK.MQTT
                 if( _closed.IsCancellationRequested ) return;
                 _closed.Cancel();
             }
-            await CloseHandlers();//we closed the loop, we can safely use on of it's logger.
+            await CloseHandlers();//we closed the loop, we can safely use one of it's logger.
             _channel!.Close( _config.InputLogger );
         }
 
