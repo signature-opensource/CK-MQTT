@@ -24,12 +24,7 @@ namespace CK.MQTT
             _pingRespReflex = pingRespReflex;
         }
 
-        async Task<bool> TestPingTimeout()
-        {
-            if( !_pingRespReflex.WaitingPingResp || _stopwatch.Elapsed <= _config.WaitTimeout ) return false;
-            await _client.CloseSelfAsync( DisconnectedReason.PingReqTimeout );
-            return true;
-        }
+        bool IsPingReqTimeout => _pingRespReflex.WaitingPingResp && _stopwatch.Elapsed > _config.WaitTimeout;
 
         TimeSpan Min( TimeSpan a, TimeSpan b )
         {
@@ -38,42 +33,59 @@ namespace CK.MQTT
             return a < b ? a : b;
         }
 
-        public async ValueTask OutputProcessor( IOutputLogger? m, OutputPump outputPump, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken )
+        public async ValueTask OutputProcessor(
+            IOutputLogger? m, PacketSender sender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken, Func<DisconnectedReason, Task> _clientClose
+        )
         {
-            // Before sending a packet, we check that a PingReq did not timeout. 
-            if( await TestPingTimeout() ) return; // We may have sent a ping, then outgoing packets were available to send so the post wait logic was not executed.
-            bool messageSent = await SendAMessageFromQueue( m, packetSender, reflexes, messages );
-            // We capture these values, so they wont change in the middle of the process.
+            // This is really easy to put bug in this function, thats why this is heavily commented.
+            // This function will be called again immediatly upon return, if the client is not closing.
+
+            if( IsPingReqTimeout ) // Because we are in a loop, this will be called immediatly after a return. Keep this in mind.
+            {
+                await _clientClose( DisconnectedReason.PingReqTimeout );
+                return;
+            }
+            // Because the config can change dynamically, we copy these values to avoid bugs.
             TimeSpan keepAlive = _config.KeepAlive;
             TimeSpan waitTimeout = _config.WaitTimeout;
-            TimeSpan timeToNextResend = await ResendUnackPacket( m, packetSender, waitTimeout );//We send all packets that waited for too long.
-            if( messageSent ) return; //We sent a packet, but there is maybe more to send.
-            //No packet was sent, so we need to wait a new packet.
-            //This chunk does a lot of 'slow' things, but we don't care since the output pump have nothing else to do.
-            Debug.Assert( keepAlive.Ticks > 0 );
-            while( keepAlive.Ticks > 0 )
+
+            // Prioritization: ...
+            bool packetSent = await SendAMessageFromQueue( m, sender, reflexes, messages ); // We want to send a fresh new packet...
+            TimeSpan timeToNextResend = await ResendAllUnackPacket( m, sender, waitTimeout ); // Then sending all packets that waited for too long.
+            // Here we sent all unack packet, it mean the only messages availables right are the one in the queue.
+            if( packetSent ) return;
+            // But if we didn't sent any message from the queue, it mean that we have no more messages to send.
+            // We need to wait for a new packet to send, or send a PingReq if didn't sent a message for too long and check if the broker did answer.
+            // This chunk does a lot of 'slow' things, but we don't care since the output pump have nothing else to do.
+
+            // Loop until we reached the time to send the keepalive.
+            // Or if keepalive is disabled (infinite), in this case, we don't want to exit this loop until a packet to send is available
+            while( keepAlive.Ticks > 0 || keepAlive != Timeout.InfiniteTimeSpan )
             {
-                // We compute the time we will have to wait.
                 // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-                TimeSpan timeToWait = Min( timeToNextResend, keepAlive );// We need to send a PingReq or resending the unack packets...
-                if( _pingRespReflex.WaitingPingResp ) timeToWait = Min( timeToWait, waitTimeout );//... but if we are waiting a PingResp, we may timeout before sending a new packet.
+                TimeSpan timeToWait = Min( timeToNextResend, keepAlive );
+                if( _pingRespReflex.WaitingPingResp ) timeToWait = Min( timeToWait, waitTimeout );
 
                 Task<bool> reflexesWait = reflexes.Reader.WaitToReadAsync().AsTask();
                 Task<bool> messagesWait = messages.Reader.WaitToReadAsync().AsTask();
                 await Task.WhenAny( Task.Delay( timeToWait, cancellationToken ), reflexesWait, messagesWait );
-                if( await TestPingTimeout() // We exit if we did timeout.
-                    || reflexesWait.IsCompleted //Or if we have a message to send.
-                    || messagesWait.IsCompleted 
-                    || HaveUnackPacketToSend( waitTimeout )
-                    || cancellationToken.IsCancellationRequested )//or if the operation is cancelled.
+                if( IsPingReqTimeout )
+                {
+                    await _clientClose( DisconnectedReason.PingReqTimeout );
+                    return;
+                }
+                if( reflexesWait.IsCompleted //because we have a message in a queue.
+                    || messagesWait.IsCompleted
+                    || HaveUnackPacketToSend( waitTimeout ) // or we have a packet to re-send.
+                    || cancellationToken.IsCancellationRequested )// or the operation is cancelled.
                 {
                     return;
                 }
-                keepAlive -= timeToWait;//So we maybe waited something else than the keepalive (unack packets, timeout).
+                keepAlive -= timeToWait;// Maybe we waited something else than the keepalive (unack packets, timeout).
                 //So we substract the time we waited to the keepalive, and run the whole loop again.
             }
             //keepAlive reached 0. So we must send a ping.
-            await packetSender( m, OutgoingPingReq.Instance );
+            await sender( m, OutgoingPingReq.Instance );
             _stopwatch.Restart();
             _pingRespReflex.WaitingPingResp = true;
             return;
@@ -92,7 +104,7 @@ namespace CK.MQTT
             return packetId != 0 && waitTime < waitTimeout;
         }
 
-        async ValueTask<TimeSpan> ResendUnackPacket( IOutputLogger? m, PacketSender packetSender, TimeSpan waitTimeout )
+        async ValueTask<TimeSpan> ResendAllUnackPacket( IOutputLogger? m, PacketSender packetSender, TimeSpan waitTimeout )
         {
             if( _config.WaitTimeout == Timeout.InfiniteTimeSpan ) return Timeout.InfiniteTimeSpan;//Resend is disabled.
             while( true )

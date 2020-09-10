@@ -14,7 +14,7 @@ namespace CK.MQTT
     /// </summary>
     public class OutputPump
     {
-        public delegate ValueTask OutputProcessor( IOutputLogger? m, OutputPump outputPump, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken );
+        public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken, Func<DisconnectedReason, Task> _clientClose );
         public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
@@ -77,7 +77,7 @@ namespace CK.MQTT
                 {
                     while( !_stopSource.IsCancellationRequested )
                     {
-                        await _outputProcessor( _config.OutputLogger, this, ProcessOutgoingPacket, _reflexes, _messages, _processorStopSource.Token );
+                        await _outputProcessor( _config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, _processorStopSource.Token, _clientClose );
                     }
                     _pipeWriter.Complete();
                 }
@@ -89,7 +89,6 @@ namespace CK.MQTT
                 }
             }
         }
-
 
         async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket )
         {

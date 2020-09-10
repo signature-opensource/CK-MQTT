@@ -32,18 +32,18 @@ namespace CK.MQTT
             where T : class
         {
             (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );
-            return Send<T>( m, output, newPacket, ackReceived );
+            return Send<T>( output, newPacket, ackReceived );
         }
 
-        public static async Task<T?> Send<T>( IActivityMonitor m,
-            OutputPump output,  IOutgoingPacketWithId packet, Task<object?> ackReceived )
+        public static async Task<T?> Send<T>( OutputPump output, IOutgoingPacketWithId packet, Task<object?> ackReceived )
             where T : class
         {
             await output.SendMessageAsync( packet );
             object? res = await ackReceived;
             if( res is null ) return null;
             if( res is T a ) return a;
-            throw new ProtocolViolationException( "Received ack is not of the expected type." );
+            //For exemple: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
+            throw new ProtocolViolationException( "We received a packet id ack from an unexpected packet type." );
         }
     }
 }
