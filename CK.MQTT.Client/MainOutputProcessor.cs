@@ -31,7 +31,12 @@ namespace CK.MQTT
             return true;
         }
 
-        TimeSpan Min( TimeSpan a, TimeSpan b ) => a < b ? a : b;
+        TimeSpan Min( TimeSpan a, TimeSpan b )
+        {
+            if( a == Timeout.InfiniteTimeSpan ) return b;
+            if( b == Timeout.InfiniteTimeSpan ) return a;
+            return a < b ? a : b;
+        }
 
         public async ValueTask OutputProcessor( IOutputLogger? m, OutputPump outputPump, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken )
         {
@@ -45,24 +50,29 @@ namespace CK.MQTT
             if( messageSent ) return; //We sent a packet, but there is maybe more to send.
             //No packet was sent, so we need to wait a new packet.
             //This chunk does a lot of 'slow' things, but we don't care since the output pump have nothing else to do.
+            Debug.Assert( keepAlive.Ticks > 0 );
+            while( keepAlive.Ticks > 0 )
+            {
+                // We compute the time we will have to wait.
+                // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
+                TimeSpan timeToWait = Min( timeToNextResend, keepAlive );// We need to send a PingReq or resending the unack packets...
+                if( _pingRespReflex.WaitingPingResp ) timeToWait = Min( timeToWait, waitTimeout );//... but if we are waiting a PingResp, we may timeout before sending a new packet.
 
-            // We compute the time we will have to wait.
-            // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-            TimeSpan timeToWait = Min( timeToNextResend, keepAlive );// We need to send a PingReq or resending the unack packets...
-            if( _pingRespReflex.WaitingPingResp ) timeToWait = Min( timeToWait, waitTimeout );//... but if we are waiting a PingResp, we may timeout before sending a new packet.
-
-            ValueTask<bool> reflexesWait = reflexes.Reader.WaitToReadAsync();
-            ValueTask<bool> messagesWait = messages.Reader.WaitToReadAsync();
-            await Task.WhenAny( Task.Delay( timeToWait, cancellationToken ), reflexesWait.AsTask(), messagesWait.AsTask() );
-            if( await TestPingTimeout() ) return;//Now, we exit if we did timeout.
-            //Now we need to know if we must send a keepalive.
-            if( reflexesWait.IsCompleted || messagesWait.IsCompleted || HaveUnackPacketToSend(waitTimeout) ) return;//These guy have message available.
-            if( timeToNextResend < keepAlive )
-                //TODO: here, we may have waited a packet to resend, but lost track at how much time we need to wait for the ping.
-
-
-                if( !keepAliveTask.IsCompleted ) return; //if something else than keepAlive is completed, it will be sent when this will be called again.
-                                                         //If the keepalive is completed, we must send a PingReq.
+                Task<bool> reflexesWait = reflexes.Reader.WaitToReadAsync().AsTask();
+                Task<bool> messagesWait = messages.Reader.WaitToReadAsync().AsTask();
+                await Task.WhenAny( Task.Delay( timeToWait, cancellationToken ), reflexesWait, messagesWait );
+                if( await TestPingTimeout() // We exit if we did timeout.
+                    || reflexesWait.IsCompleted //Or if we have a message to send.
+                    || messagesWait.IsCompleted 
+                    || HaveUnackPacketToSend( waitTimeout )
+                    || cancellationToken.IsCancellationRequested )//or if the operation is cancelled.
+                {
+                    return;
+                }
+                keepAlive -= timeToWait;//So we maybe waited something else than the keepalive (unack packets, timeout).
+                //So we substract the time we waited to the keepalive, and run the whole loop again.
+            }
+            //keepAlive reached 0. So we must send a ping.
             await packetSender( m, OutgoingPingReq.Instance );
             _stopwatch.Restart();
             _pingRespReflex.WaitingPingResp = true;
