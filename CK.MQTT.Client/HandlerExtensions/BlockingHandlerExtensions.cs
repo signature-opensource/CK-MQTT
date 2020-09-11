@@ -20,14 +20,6 @@ namespace CK.MQTT.Client.HandlerExtensions
                     FillStatus res = await pipeReader.FillBuffer( buffer, cancellationToken );
                     if( res != FillStatus.Done ) throw new EndOfStreamException();
                     await messageHandler( topic, buffer, qos, retain, cancellationToken );
-                    //TODO:
-                    // Block
-                    //     PipeReader in param (default)
-                    //     ReadOnlyMemory in async
-                    //     ReadOnlySpan in sync
-                    // Non blocking:
-                    // New and we love the GC.
-                    // MemoryPool and disposable message
                 }
             } );
         }
@@ -42,14 +34,6 @@ namespace CK.MQTT.Client.HandlerExtensions
                     FillStatus res = await pipeReader.FillBuffer( buffer, cancellationToken );
                     if( res != FillStatus.Done ) throw new EndOfStreamException();
                     messageHandler( topic, buffer.Span, qos, retain );
-                    //TODO:
-                    // Block
-                    //     PipeReader in param (default)
-                    //     ReadOnlyMemory in async
-                    //     ReadOnlySpan in sync
-                    // Non blocking:
-                    // New and we love the GC.
-                    // MemoryPool and disposable message
                 }
             } );
         }
