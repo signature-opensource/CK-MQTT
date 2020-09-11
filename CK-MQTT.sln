@@ -29,7 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleClientTest", "SimpleC
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Server", "CK.MQTT.Server\CK.MQTT.Server.csproj", "{7A3BC93E-96A9-426D-8458-9DEEF7FB6978}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Basic.Tests", "CK.MQTT.Basic.Tests\CK.MQTT.Basic.Tests.csproj", "{6907007D-52E8-4989-9240-CF4E69A1434F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Basic.Tests", "Tests\CK.MQTT.Basic.Tests\CK.MQTT.Basic.Tests.csproj", "{6907007D-52E8-4989-9240-CF4E69A1434F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
