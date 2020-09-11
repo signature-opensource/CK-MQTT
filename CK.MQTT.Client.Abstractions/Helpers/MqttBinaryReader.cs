@@ -72,7 +72,8 @@ namespace CK.MQTT
             bool result = reader.TryReadMQTTString( out output );
             sequencePosition = reader.Position;
             Debug.Assert( result == (output != null) );
-            return output != null;// TODO: https://github.com/dotnet/roslyn/issues/44080
+            // return result; // TODO when this issue is resolved, simplify this code: https://github.com/dotnet/roslyn/issues/44080
+            return output != null;
         }
 
         

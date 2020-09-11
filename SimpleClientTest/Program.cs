@@ -4,6 +4,7 @@ using CK.Monitoring.Handlers;
 using CK.MQTT;
 using System;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimpleClientTest
@@ -42,7 +43,7 @@ namespace SimpleClientTest
             await Task.Delay( 500 );
         }
 
-        static ValueTask MessageHandlerDelegate( string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain )
+        static ValueTask MessageHandlerDelegate( string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
             System.Console.WriteLine( topic );
             return pipeReader.BurnBytes( payloadLength );
