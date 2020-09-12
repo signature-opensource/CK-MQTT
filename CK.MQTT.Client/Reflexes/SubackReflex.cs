@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -13,7 +14,7 @@ namespace CK.MQTT
         {
             _store = store;
         }
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken )
         {
             if( PacketType.SubscribeAck != (PacketType)header )
             {

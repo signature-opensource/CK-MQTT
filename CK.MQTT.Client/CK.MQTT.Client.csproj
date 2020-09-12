@@ -10,7 +10,4 @@
     <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="OutgoingPackets\v5\" />
-  </ItemGroup>
 </Project>

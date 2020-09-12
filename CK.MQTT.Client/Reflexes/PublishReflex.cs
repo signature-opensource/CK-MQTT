@@ -1,6 +1,7 @@
 using System;
 using System.IO.Pipelines;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -20,7 +21,7 @@ namespace CK.MQTT
         const byte _dupFlag = 1 << 4;
         const byte _retainFlag = 1;
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next )
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )
             {
@@ -42,7 +43,7 @@ namespace CK.MQTT
                     if( qos == QualityOfService.AtMostOnce )
                     {
                         string theTopic = await reader.ReadMQTTString();
-                        await _messageHandler( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain );
+                        await _messageHandler( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                         return;
                     }
                     if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
@@ -54,12 +55,12 @@ namespace CK.MQTT
                 }
                 if( qos == QualityOfService.AtLeastOnce )
                 {
-                    await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain );
+                    await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                     if( !_output.QueueReflexMessage( LifecyclePacketV3.Puback( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishAck, packetId );
                 }
                 if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
                 await _store.StoreId( m, packetId );
-                await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain );
+                await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                 if( !_output.QueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishReceived, packetId );
             }
         }

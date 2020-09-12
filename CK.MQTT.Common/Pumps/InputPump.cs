@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public delegate ValueTask Reflex( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader );
+    public delegate ValueTask Reflex( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken );
 
     /// <summary>
     /// Message pump that do basic processing on the incoming data,
@@ -81,7 +81,7 @@ namespace CK.MQTT
                             _pipeReader.AdvanceTo( position );
                             using( m?.IncomingPacket( header, length ) )
                             {
-                                await CurrentReflex( m, this, header, length, _pipeReader );
+                                await CurrentReflex( m, this, header, length, _pipeReader, _cleanStop.Token );
                             }
                             continue;
                         }

@@ -1,8 +1,11 @@
 using CK.Core;
 using CK.MQTT.Client.HandlerExtensions;
 using System;
+using System.Buffers;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using static CK.Core.Extension.PipeReaderExtensions;
 
 namespace CK.MQTT
 {
@@ -50,5 +53,27 @@ namespace CK.MQTT
         public bool Retain { get; }
 
         public void Dispose() => _disposable.Dispose();
+    }
+
+    public static class DisposableApplicationMessageExtensions
+    {
+        public static async ValueTask<Task> PublishAsync( this IMqtt3Client client, IActivityMonitor m, DisposableApplicationMessage message )
+        {
+            Task task = await client.PublishAsync( m, message.Topic, message.QoS, message.Retain, message.Payload );
+            message.Dispose();
+            return task;
+        }
+
+        public delegate ValueTask DisposableApplicationMessageHandlerDelegate( DisposableApplicationMessage applicationMessage, CancellationToken cancellationToken );
+
+        public static void SetMessageHandler( this IMqtt3Client client, DisposableApplicationMessageHandlerDelegate handler )
+            => client.SetMessageHandler( async ( topic, pipeReader, payloadLength, qos, retain, cancellationToken ) =>
+            {
+                IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
+                Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
+                FillStatus res = await pipeReader.FillBuffer( buffer, cancellationToken );
+                if( res != FillStatus.Done ) throw new EndOfStreamException();
+                await handler( new DisposableApplicationMessage( topic, buffer, qos, retain, memoryOwner ), cancellationToken );
+            } );
     }
 }

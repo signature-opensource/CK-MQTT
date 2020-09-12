@@ -9,18 +9,12 @@ namespace CK.MQTT
 {
     public class MainOutputProcessor
     {
-        readonly MqttClient _client;
         readonly MqttConfiguration _config;
         readonly PacketStore _packetStore;
         readonly PingRespReflex _pingRespReflex;
         readonly Stopwatch _stopwatch = new Stopwatch();
-        public MainOutputProcessor( MqttClient client, MqttConfiguration config, PacketStore packetStore, PingRespReflex pingRespReflex )
-        {
-            _client = client;
-            _config = config;
-            _packetStore = packetStore;
-            _pingRespReflex = pingRespReflex;
-        }
+        public MainOutputProcessor( MqttConfiguration config, PacketStore packetStore, PingRespReflex pingRespReflex )
+            => (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);
 
         bool IsPingReqTimeout => _pingRespReflex.WaitingPingResp && _stopwatch.Elapsed > _config.WaitTimeout;
 

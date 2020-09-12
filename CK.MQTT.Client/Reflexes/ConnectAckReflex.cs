@@ -1,5 +1,6 @@
 using System;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -9,7 +10,7 @@ namespace CK.MQTT
         readonly TaskCompletionSource<ConnectResult> _tcs = new TaskCompletionSource<ConnectResult>();
         public Reflex? Reflex { get; set; }
         public Task<ConnectResult> Task => _tcs.Task;
-        public async ValueTask ProcessIncomingPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader )
+        public async ValueTask ProcessIncomingPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             if( Reflex == null ) throw new NullReferenceException( nameof( Reflex ) );
             if( header != (byte)PacketType.ConnectAck )

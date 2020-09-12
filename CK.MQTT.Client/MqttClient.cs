@@ -88,7 +88,7 @@ namespace CK.MQTT
                 .Build( InvalidPacket );
             _closed = new CancellationTokenSource();
             await _output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-            _output.SetOutputProcessor( new MainOutputProcessor( this, _config, _store, pingRes ).OutputProcessor );
+            _output.SetOutputProcessor( new MainOutputProcessor( _config, _store, pingRes ).OutputProcessor );
             await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeout, _closed.Token ) );
             if( _closed.IsCancellationRequested )
             {
@@ -124,7 +124,7 @@ namespace CK.MQTT
         }
 
 
-        async ValueTask InvalidPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader )
+        async ValueTask InvalidPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             await CloseSelfAsync( DisconnectedReason.ProtocolError );
             throw new ProtocolViolationException();
