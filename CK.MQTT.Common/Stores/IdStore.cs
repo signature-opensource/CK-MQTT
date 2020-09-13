@@ -137,9 +137,9 @@ namespace CK.MQTT
 
         public void Reset()
         {
-            if( _count == 0 ) return;
             lock( _entries )
             {
+                if( _count == 0 ) return;
                 _count = 0;
                 Array.Clear( _entries, 0, _entries.Length );
                 _entries[0] = new Entry();
@@ -148,5 +148,13 @@ namespace CK.MQTT
         }
 
         public bool Empty => _count == 0;
+
+        public void ResetAndCancelTasks()
+        {
+            for( int i = 0; i < _entries.Length; i++ )
+            {
+                _entries[i].TaskCS?.TrySetCanceled();
+            }
+        }
     }
 }

@@ -92,12 +92,12 @@ namespace CK.MQTT
             await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeout, _closed.Token ) );
             if( _closed.IsCancellationRequested )
             {
-                await CloseUser();
+                await CloseNoEvent();
                 return new ConnectResult( ConnectError.RemoteDisconnected );
             }
             if( !connectedTask.IsCompleted )
             {
-                await CloseUser();//We don't want to raise disconnect event if it fail to connect.
+                await CloseNoEvent();
                 return new ConnectResult( ConnectError.Timeout );
             }
             ConnectResult res = await connectedTask;
@@ -141,26 +141,25 @@ namespace CK.MQTT
         readonly object _lock = new object();
         internal async Task CloseSelfAsync( DisconnectedReason reason )
         {
-            lock( _lock )
-            {
-                if( _closed.IsCancellationRequested ) return;
-                _closed.Cancel();
-            }
-            await CloseHandlers();
+            if( !await CloseNoEvent() ) return;
             _config.InputLogger?.ClientSelfClosing( reason );
-            _channel!.Close( _config.InputLogger );
             DisconnectedHandler?.Invoke( reason );
         }
 
-        async Task CloseUser()
+        async Task<bool> CloseNoEvent()
         {
             lock( _lock )
             {
-                if( _closed.IsCancellationRequested ) return;
+                if( _closed.IsCancellationRequested ) return false;
                 _closed.Cancel();
             }
-            await CloseHandlers();//we closed the loop, we can safely use one of it's logger.
+            await CloseHandlers();
             _channel!.Close( _config.InputLogger );
+            if( (_config.DisconnectBehavior & DisconnectBehavior.CancelAcksOnDisconnect) == DisconnectBehavior.CancelAcksOnDisconnect )
+            {
+                _store!.IdStore.ResetAndCancelTasks();
+            }
+            return true;
         }
 
         /// <inheritdoc/>
@@ -175,7 +174,7 @@ namespace CK.MQTT
         {
             ThrowIfNotConnected();
             await _output.SendMessageAsync( OutgoingDisconnect.Instance );
-            await CloseUser();
+            await CloseNoEvent();
         }
 
         public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class

@@ -1,5 +1,4 @@
 using System;
-using System.IO.Pipelines;
 using System.Threading;
 
 namespace CK.MQTT
@@ -16,18 +15,14 @@ namespace CK.MQTT
         /// <param name="keepAlive">If the client didn't sent a packet in the given amount of time, it will send a PingRequest packet.
         /// <br/>0 to disable the KeepAlive mechanism.</param>
         /// <param name="waitTimeout">Time before the client try to resend a packet.</param>
-        /// <param name="attemptCountBeforeGivingUpPacket"></param>
-        /// <param name="inputLogger">The logger to use to log the activities while processing the incoming data.</param>
-        /// <param name="outputLogger">The logger to use to log the activities while processing the outgoing data.</param>
         /// <param name="channelFactory">Factory that create a channel, used to communicated with the broker.</param>
         /// <param name="storeFactory">Factory that create a store, used to store packets.</param>
         /// <param name="storeTransformer">The store transformer allow to modify packet while they are stored, or sent.</param>
-        /// <param name="readerOptions">Options to configurate the <see cref="PipeReader"/>.</param>
-        /// <param name="writerOptions">Options to configurate the <see cref="PipeWriter"/>.</param>
         public MqttConfiguration(
             string connectionString,
             TimeSpan keepAlive = new TimeSpan(),
             TimeSpan? waitTimeout = null,
+            DisconnectBehavior disconnectBehavior = DisconnectBehavior.CancelAcksOnDisconnect,
             ushort attemptCountBeforeGivingUpPacket = 50,
             IMqttChannelFactory? channelFactory = null,
             IStoreFactory? storeFactory = null,
@@ -39,6 +34,7 @@ namespace CK.MQTT
             KeepAlive = keepAlive;
             if( waitTimeout.HasValue && waitTimeout.Value.TotalSeconds <= 0 ) throw new ArgumentException( "WaitTimeout cannot be 0. It would mean that a packet is already timeout when it just has been sent." );
             WaitTimeout = waitTimeout ?? Timeout.InfiniteTimeSpan;
+            DisconnectBehavior = disconnectBehavior;
             AttemptCountBeforeGivingUpPacket = attemptCountBeforeGivingUpPacket;
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
@@ -59,6 +55,8 @@ namespace CK.MQTT
         /// This value is generally used to wait for Server or Client acknowledgements
         /// </summary>
 		public TimeSpan WaitTimeout { get; }
+        public DisconnectBehavior DisconnectBehavior { get; }
+
         //0 to disable
         public ushort AttemptCountBeforeGivingUpPacket { get; }
         public IInputLogger? InputLogger { get; set; }
