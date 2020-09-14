@@ -2,6 +2,7 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
+using CK.MQTT.Client.HandlerExtensions;
 using System;
 using System.IO.Pipelines;
 using System.Threading;

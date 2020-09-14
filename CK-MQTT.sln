@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		FodyWeavers.xml = FodyWeavers.xml
 		NuGet.config = NuGet.config
+		README.md = README.md
 		Common\Shared.props = Common\Shared.props
 		Common\SharedKey.snk = Common\SharedKey.snk
 	EndProjectSection
