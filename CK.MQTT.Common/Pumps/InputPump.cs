@@ -20,7 +20,6 @@ namespace CK.MQTT
         readonly PipeReader _pipeReader;
         readonly Task _readLoop;
         readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
-        Action<IInputLogger?>? _timeoutLogger;
         /// <summary>
         /// Instantiate the <see cref="InputPump"/> and immediatly start to process incoming packets.
         /// </summary>
@@ -96,14 +95,6 @@ namespace CK.MQTT
                         }
                         _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                     }
-                    if( _timeoutLogger != null )
-                    {
-                        using( _config.InputLogger?.ReflexTimeout() )
-                        {
-                            _timeoutLogger( _config.InputLogger );
-                            await _stopClient( DisconnectedReason.SelfDisconnected );
-                        }
-                    }
                     _pipeReader.Complete();
                     _pipeReader.CancelPendingRead();
                 }
@@ -118,15 +109,6 @@ namespace CK.MQTT
                     await _stopClient( DisconnectedReason.UnspecifiedError );
                 }
             }
-        }
-
-        /// <summary>
-        /// Allow <see cref="Reflex"/> to notify they waited too much a packet and timeouted.
-        /// </summary>
-        public void SetTimeout( Action<IInputLogger?> timeoutLogger )
-        {
-            _timeoutLogger = timeoutLogger;
-            _cleanStop.Cancel();
         }
 
         public Task CloseAsync()
