@@ -21,9 +21,11 @@ namespace CK.MQTT
         readonly Task _readLoop;
         readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
         Action<IInputLogger?>? _timeoutLogger;
+
         /// <summary>
-        /// Instantiate the <see cref="InputPump"/> and immediatly start to process incoming packets.
+        /// Instantiates the <see cref="InputPump"/> and immediatly starts to process incoming packets.
         /// </summary>
+        /// <param name="config">The configuration to apply.</param>
         /// <param name="stopClient"><see langword="delegate"/> called when the <see cref="InputPump"/> stops.</param>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
@@ -121,18 +123,22 @@ namespace CK.MQTT
         }
 
         /// <summary>
-        /// Allow <see cref="Reflex"/> to notify they waited too much a packet and timeouted.
+        /// Allow <see cref="Reflex"/> to notify that they waited too long a packet by calling the <paramref name="timeoutLogger"/>.
         /// </summary>
+        /// <param name="timeoutLogger">Call back that will be called on timeout.</param>
         public void SetTimeout( Action<IInputLogger?> timeoutLogger )
         {
             _timeoutLogger = timeoutLogger;
             _cleanStop.Cancel();
         }
 
+        /// <summary>
+        /// Stops the input loop.
+        /// </summary>
+        /// <returns>The task that will be compeleted once the loop has properly ended.</returns>
         public Task CloseAsync()
         {
-            if( _cleanStop.IsCancellationRequested ) return Task.CompletedTask;//Allow to not await ourself.
-            _cleanStop.Cancel();
+            if( !_cleanStop.IsCancellationRequested ) _cleanStop.Cancel();
             return _readLoop;
         }
     }
