@@ -76,27 +76,29 @@ namespace CK.MQTT
             return output != null;
         }
 
-        
-
         /// <summary>
-        /// Skip bytes on a <see cref="PipeReader"/>, usefull when you know the length of some data, but don't care about the content.
+        /// Skip bytes on a <see cref="PipeReader"/>, useful when you know the length of some data, but don't care about the content.
         /// </summary>
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
-        /// <param name="byteCountToBurn">The number of <see cref="byte"/> to burn.</param>
-        /// <returns></returns>
-        public static async ValueTask BurnBytes( this PipeReader reader, int byteCountToBurn )
+        /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
+        /// <returns>The awaitable.</returns>
+        public static async ValueTask SkipBytes( this PipeReader reader, int skipCount )
         {
-            while( byteCountToBurn > 0 ) //"simply" burn the bytes of the packet.
+            while( skipCount > 0 )
             {
                 ReadResult read = await reader.ReadAsync();
                 int bufferLength = (int)read.Buffer.Length;
-                if( bufferLength > byteCountToBurn ) //if the read fetched more data than what we wanted to burn
+                // If the read fetched more data than what we wanted to skip,
+                // we need to advance exactly the amount needed.
+                if( bufferLength > skipCount ) 
                 {
-                    reader.AdvanceTo( read.Buffer.Slice( bufferLength ).Start );//We need to advance exactly the amount needed.
-                    return;//and the job is done.
+                    reader.AdvanceTo( read.Buffer.Slice( bufferLength ).Start );
+                    // And the job is done.
+                    return;
                 }
-                reader.AdvanceTo( read.Buffer.End );//we mark the data as consumed.
-                byteCountToBurn -= bufferLength;
+                // We mark the data as consumed.
+                reader.AdvanceTo( read.Buffer.End );
+                skipCount -= bufferLength;
             };
         }
 

@@ -8,8 +8,11 @@ namespace CK.MQTT
     class ConnectAckReflex
     {
         readonly TaskCompletionSource<ConnectResult> _tcs = new TaskCompletionSource<ConnectResult>();
+
         public Reflex? Reflex { get; set; }
+
         public Task<ConnectResult> Task => _tcs.Task;
+
         public async ValueTask ProcessIncomingPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             if( Reflex == null ) throw new NullReferenceException( nameof( Reflex ) );
@@ -25,7 +28,7 @@ namespace CK.MQTT
             packetSize -= 2;//TODO: The packet size shouldn't be hardcoded here...
             if( packetSize > 0 )
             {
-                await reader.BurnBytes( packetSize );
+                await reader.SkipBytes( packetSize );
                 m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
             }
             sender.CurrentReflex = Reflex;

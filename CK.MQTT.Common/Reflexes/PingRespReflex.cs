@@ -7,13 +7,16 @@ namespace CK.MQTT
 {
     public class PingRespReflex : IReflexMiddleware
     {
-        public PingRespReflex( InputPump incomingMessageHandler )
-        {
-        }
-
         public bool WaitingPingResp { get; set; }
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken )
+        public async ValueTask ProcessIncomingPacketAsync(
+            IInputLogger? m,
+            InputPump sender,
+            byte header,
+            int packetLength,
+            PipeReader pipeReader,
+            Func<ValueTask> next,
+            CancellationToken cancellationToken )
         {
             if( PacketType.PingResponse != (PacketType)header )
             {
@@ -24,7 +27,7 @@ namespace CK.MQTT
             {
                 WaitingPingResp = false;
                 if( packetLength > 0 ) m?.UnparsedExtraBytes( sender, PacketType.PingResponse, 0, packetLength, packetLength );
-                await pipeReader.BurnBytes( packetLength );
+                await pipeReader.SkipBytes( packetLength );
             }
         }
     }

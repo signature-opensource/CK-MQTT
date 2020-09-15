@@ -76,7 +76,7 @@ namespace CK.MQTT
                     {
 
                         m?.UnparsedExtraBytesPacketId( remainingLength );
-                        await pipeReader.BurnBytes( remainingLength );
+                        await pipeReader.SkipBytes( remainingLength );
                     }
                     return output;
                 }

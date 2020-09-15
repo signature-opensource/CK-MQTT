@@ -47,7 +47,7 @@ namespace SimpleClientTest
         static ValueTask MessageHandlerDelegate( string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
             System.Console.WriteLine( topic );
-            return pipeReader.BurnBytes( payloadLength );
+            return pipeReader.SkipBytes( payloadLength );
         }
     }
 }

@@ -78,7 +78,7 @@ namespace CK.MQTT
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
             _input = new InputPump( _config, CloseSelfAsync, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
             _output = new OutputPump( DumbOutputProcessor.OutputProcessor, CloseSelfAsync, _channel.DuplexPipe.Output, _pConfig, _config, _store );
-            PingRespReflex pingRes = new PingRespReflex( _input );
+            PingRespReflex pingRes = new PingRespReflex();
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
                 .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, _output ) )
@@ -159,6 +159,8 @@ namespace CK.MQTT
             {
                 _store!.IdStore.ResetAndCancelTasks();
             }
+            _input = null;
+            _output = null;
             return true;
         }
 
