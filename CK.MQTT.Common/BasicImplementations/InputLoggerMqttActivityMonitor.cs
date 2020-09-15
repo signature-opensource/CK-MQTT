@@ -25,7 +25,7 @@ namespace CK.MQTT
         public void PingReqTimeout() => _m.Error()?.Send( "The broker did not responded PingReq in the given amount of time." );
 
         /// <inheritdoc/>
-        public void ClientSelfClosing( DisconnectedReason reason ) => _m.Info()?.Send( $"Client closing reason: '{reason}.'" );
+        public void InvalidDataReceived( DisconnectedReason reason ) => _m.Info()?.Send( $"Client closing reason: '{reason}.'" );
 
         /// <inheritdoc/>
         public void DoubleFreePacketId( int packetId )

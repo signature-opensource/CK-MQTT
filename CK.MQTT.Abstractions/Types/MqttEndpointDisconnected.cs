@@ -6,18 +6,23 @@ namespace CK.MQTT
 	public enum DisconnectedReason
     {
         /// <summary>
-        /// Disconnected by the remote host.
-        /// This applies only to Clients.
+        /// Non applicable.
+        /// This is used when a connexion cannot be made and, for any reason, the MQTT Client or Server
+        /// must stop: such reason is not propagated to the external world.
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Disconnected by the remote.
         /// </summary>
 		RemoteDisconnected,
 
         /// <summary>
-        /// Disconnected by the endpoint itself.
-        /// This could mean a protocol Disconnect in case of Clients,
-        /// a Stop in case of Servers or an explicit Dispose 
-        /// of the corresponding endpoint instance.
+        /// Explicit disconnection from this side.
+        /// This could mean a protocol "Disconnect" in case of Clients or
+        /// a "Stop" in case for Servers.
         /// </summary>
-		SelfDisconnected,
+		UserDisconnected,
 
         /// <summary>
         /// A protocol error.
@@ -30,7 +35,10 @@ namespace CK.MQTT
         /// </summary>
 		UnspecifiedError,
 
-
+        /// <summary>
+        /// The disconnection is due to a Ping timeout: the server is lost.
+        /// This applies to Client only.
+        /// </summary>
         PingReqTimeout
     }
 }

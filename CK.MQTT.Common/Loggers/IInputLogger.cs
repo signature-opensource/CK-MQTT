@@ -18,7 +18,7 @@ namespace CK.MQTT
         IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos );
         IDisposable? ProcessPacket( PacketType packetType );
         void QueueFullPacketDropped( PacketType packetType, int packetId );
-        void ClientSelfClosing( DisconnectedReason reason );
+        void InvalidDataReceived( DisconnectedReason reason );
         void UnparsedExtraBytes( InputPump incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize );
         void UnparsedExtraBytesPacketId( int unparsedSize );
         void ReadCancelled( int requestedByteCount );

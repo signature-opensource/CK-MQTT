@@ -10,29 +10,26 @@ namespace CK.MQTT
     public delegate ValueTask Reflex( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken );
 
     /// <summary>
-    /// Message pump that do basic processing on the incoming data,
-    /// and delegate the message processing job to the <see cref="Reflex"/>.
+    /// Message pump that does basic processing on the incoming data
+    /// and delegates the message processing job to the <see cref="Reflex"/>.
     /// </summary>
-    public class InputPump
+    public class InputPump : PumpBase
     {
-        readonly MqttConfiguration _config;
-        readonly Func<DisconnectedReason, Task> _stopClient;
+        readonly MqttConfigurationBase _config;
         readonly PipeReader _pipeReader;
-        readonly Task _readLoop;
-        readonly CancellationTokenSource _cleanStop = new CancellationTokenSource();
+
         /// <summary>
-        /// Instantiate the <see cref="InputPump"/> and immediatly start to process incoming packets.
+        /// Initializes an <see cref="InputPump"/> and immediatly starts to process incoming packets.
         /// </summary>
-        /// <param name="stopClient"><see langword="delegate"/> called when the <see cref="InputPump"/> stops.</param>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public InputPump( MqttConfiguration config, Func<DisconnectedReason, Task> stopClient, PipeReader pipeReader, Reflex reflex )
+        public InputPump( Pumppeteer pumppeteer, PipeReader pipeReader, Reflex reflex )
+            : base( pumppeteer )
         {
-            _config = config;
-            _stopClient = stopClient;
+            _config = pumppeteer.Configuration;
             _pipeReader = pipeReader;
             CurrentReflex = reflex;
-            _readLoop = ReadLoop();
+            SetRunningLoop( ReadLoop() );
         }
 
         /// <summary>
@@ -58,11 +55,11 @@ namespace CK.MQTT
             {
                 try
                 {
-                    while( !_cleanStop.IsCancellationRequested )
+                    while( !StopToken.IsCancellationRequested )
                     {
-                        ReadResult read = await _pipeReader.ReadAsync( _cleanStop.Token );
+                        ReadResult read = await _pipeReader.ReadAsync( StopToken );
                         IInputLogger? m = _config.InputLogger;
-                        if( _cleanStop.Token.IsCancellationRequested || read.IsCanceled )
+                        if( StopToken.IsCancellationRequested || read.IsCanceled )
                         {
                             m?.ReadLoopTokenCancelled();
                             break;//The client called the cancel, no need to notify it.
@@ -71,8 +68,7 @@ namespace CK.MQTT
                         if( res == OperationStatus.InvalidData )
                         {
                             m?.InvalidIncomingData();
-                            _cleanStop.Cancel();
-                            await _stopClient( DisconnectedReason.ProtocolError );
+                            await DisconnectAsync( DisconnectedReason.ProtocolError );
                             break;
                         }
                         if( res == OperationStatus.Done )
@@ -80,7 +76,7 @@ namespace CK.MQTT
                             _pipeReader.AdvanceTo( position );
                             using( m?.IncomingPacket( header, length ) )
                             {
-                                await CurrentReflex( m, this, header, length, _pipeReader, _cleanStop.Token );
+                                await CurrentReflex( m, this, header, length, _pipeReader, StopToken );
                             }
                             continue;
                         }
@@ -89,8 +85,7 @@ namespace CK.MQTT
                         {
                             if( read.Buffer.Length == 0 ) m?.EndOfStream();
                             else m?.UnexpectedEndOfStream();
-                            _cleanStop.Cancel();
-                            await _stopClient( DisconnectedReason.RemoteDisconnected );
+                            await DisconnectAsync( DisconnectedReason.RemoteDisconnected );
                             break;
                         }
                         _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
@@ -105,17 +100,10 @@ namespace CK.MQTT
                 catch( Exception e )
                 {
                     _config.InputLogger?.ExceptionOnParsingIncomingData( e );
-                    _cleanStop.Cancel();
-                    await _stopClient( DisconnectedReason.UnspecifiedError );
+                    await DisconnectAsync( DisconnectedReason.UnspecifiedError );
                 }
             }
         }
 
-        public Task CloseAsync()
-        {
-            if( _cleanStop.IsCancellationRequested ) return Task.CompletedTask;//Allow to not await ourself.
-            _cleanStop.Cancel();
-            return _readLoop;
-        }
     }
 }

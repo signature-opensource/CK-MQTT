@@ -1,45 +1,143 @@
+using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
     /// <summary>
-    /// This class plays with an input and an output pump.
+    /// This class manages the lifecycle of a <see cref="InputPump"/>/<see cref="OutputPump"/> pair.
     /// </summary>
-    public abstract class Pumppeteer<TInPump,TOutPump>
-        where TInPump : PumpBase
-        where TOutPump : PumpBase
+    public abstract class Pumppeteer
     {
-        TInPump? _input;
-        TOutPump? _output;
+        // Must never be disposed!
+        internal static readonly CancellationTokenSource _signaled = new CancellationTokenSource( 0 );
+        InputPump? _input;
+        OutputPump? _output;
+        readonly object _closeLock;
+        CancellationTokenSource _closed = _signaled;
+
+        /// <summary>
+        /// Initializes a specialized <see cref="Pumppeteer"/>.
+        /// </summary>
+        /// <param name="configuration">The MQTT basic configuration.</param>
+        protected Pumppeteer( MqttConfigurationBase configuration )
+        {
+            Configuration = configuration;
+            _closeLock = new object();
+        }
+
+        /// <summary>
+        /// Gets the configuration.
+        /// </summary>
+        internal protected MqttConfigurationBase Configuration { get; }
 
         /// <summary>
         /// Gets the input pump.
-        /// Null when <see cref="OpenPumps(TInPump, TOutPump)"/> has not been called or <see cref="ClosePumps"/> has been called last.
+        /// Null when <see cref="OpenPumps"/> has not been called or <see cref="ClosePumps"/> has been called last.
         /// </summary>
-        protected TInPump? InputPump => _input;
+        protected InputPump? InputPump => _input;
 
         /// <summary>
         /// Gets the output pump.
-        /// Null when <see cref="OpenPumps(TInPump, TOutPump)"/> has not been called or <see cref="ClosePumps"/> has been called last.
+        /// Null when <see cref="OpenPumps"/> has not been called or <see cref="ClosePumps"/> has been called last.
         /// </summary>
-        protected TOutPump? OutputPump => _output;
+        protected OutputPump? OutputPump => _output;
 
-        protected void OpenPumps( TInPump input, TOutPump output )
+        /// <summary>
+        /// Exposes a token that is cancelled when this "pumppeteer" is closed.
+        /// </summary>
+        protected CancellationToken CloseToken => _closed.Token;
+
+        /// <summary>
+        /// Initializes the pumps: this "pumpeeter" becomes open.
+        /// There is only 2 ways to close this pumpeeter from now on:
+        /// <list type="bullet">
+        ///     <item>From the outside by calling the <see cref="DisconnectAsync"/> public method.</item>
+        ///     <item>From one of the two pump by calling the <see cref="PumpBase.DisconnectAsync(DisconnectedReason)"/>.</item>
+        /// </list>
+        /// </summary>
+        /// <param name="input">The input pump.</param>
+        /// <param name="output">The output pump.</param>
+        protected void OpenPumps( InputPump input, OutputPump output )
         {
-            if( _input != null ) throw new InvalidOperationException();
+            if( !_closed.IsCancellationRequested ) throw new InvalidOperationException();
             if( input == null ) throw new ArgumentNullException( nameof( input ) );
             if( output == null ) throw new ArgumentNullException( nameof( output ) );
             _input = input;
             _output = output;
+            _closed = new CancellationTokenSource();
         }
 
-        protected Task ClosePumps()
+        async Task<bool> CloseAsync( DisconnectedReason reason )
         {
-
+            lock( _closeLock )
+            {
+                if( _closed.IsCancellationRequested ) return false;
+                _closed.Cancel();
+            }
+            await OnClosingAsync( reason );
+            Debug.Assert( _input != null && _output != null );
+            await Task.WhenAll( _input!.CloseAsync(), _output!.CloseAsync() );
+            _input = null;
+            _output = null;
+            OnClosed( reason );
+            return true;
         }
 
+        /// <summary>
+        /// Gets whether this "pumppeteer" is currently connected.
+        /// </summary>
+        public bool IsConnected => !_closed.IsCancellationRequested;
+
+        /// <summary>
+        /// Called by the input or output pump whenever they need to close the connection to the remote part
+        /// for any reason.
+        /// </summary>
+        /// <param name="reason">The reason of the disconnection.</param>
+        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
+        internal Task<bool> PumpClose( DisconnectedReason reason ) => CloseAsync( reason );
+
+        /// <summary>
+        /// Closed when this "pumppeteer" has been closed.
+        /// This method calls the <see cref="DisconnectedHandler"/> (if any and if the reason is not <see cref="DisconnectedReason.None"/>).
+        /// </summary>
+        /// <param name="reason">The disconnection reason.</param>
+        protected virtual void OnClosed( DisconnectedReason reason )
+        {
+            if( reason != DisconnectedReason.None )
+            {
+                DisconnectedHandler?.Invoke( reason );
+            }
+        }
+
+        /// <summary>
+        /// Called whenever, for any reason, this is closed.
+        /// </summary>
+        public Disconnected? DisconnectedHandler { get; set; }
+
+        /// <summary>
+        /// Called by the external world to explicitly close the connection to the remote.
+        /// </summary>
+        /// <param name="reason">The reason of the disconnection.</param>
+        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
+        public Task<bool> DisconnectAsync() => CloseAsync( DisconnectedReason.UserDisconnected );
+
+        /// <summary>
+        /// This protected method can be called by this specialized "pumppeteer" to explicitly close the connection.
+        /// </summary>
+        /// <param name="reason">The reason of the disconnection.</param>
+        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
+        protected Task<bool> AutoDisconnectAsync( DisconnectedReason reason = DisconnectedReason.None ) => CloseAsync( reason );
+
+        /// <summary>
+        /// Called before the pumps are closed.
+        /// </summary>
+        /// <param name="reason">The disconnection reason.</param>
+        /// <returns>The awaitable.</returns>
+        protected virtual ValueTask OnClosingAsync( DisconnectedReason reason ) => default;
     }
 }

@@ -10,7 +10,7 @@ using System.Diagnostics;
 
 namespace CK.MQTT
 {
-    public class MqttClient : IMqttClient
+    public class MqttClient : Pumppeteer, IMqttClient
     {
         readonly ProtocolConfiguration _pConfig;
 
@@ -18,11 +18,8 @@ namespace CK.MQTT
         readonly MqttConfiguration _config;
         readonly IMqttChannelFactory _channelFactory;
 
-        //change between lifecycles
-        CancellationTokenSource _closed = new CancellationTokenSource( 0 );
+        // Change between Connection/Disconnection.
         IMqttChannel? _channel;
-        InputPump? _input;
-        OutputPump? _output;
         IPacketIdStore? _packetIdStore;
         PacketStore? _store;
         MessageHandlerDelegate _messageHandler;
@@ -33,6 +30,7 @@ namespace CK.MQTT
         /// <param name="config">The config to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
         MqttClient( ProtocolConfiguration pConfig, MqttConfiguration config, MessageHandlerDelegate messageHandler )
+            : base( config )
         {
             _pConfig = pConfig;
             _config = config;
@@ -47,15 +45,13 @@ namespace CK.MQTT
         public static IMqttClient CreateMQTTClient( MqttConfiguration config, MessageHandlerDelegate messageHandler )
             => new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
 
-        [MemberNotNull( nameof( _input ) )]
-        [MemberNotNull( nameof( _output ) )]
         [MemberNotNull( nameof( _packetIdStore ) )]
         [MemberNotNull( nameof( _store ) )]
         void ThrowIfNotConnected()
         {
-            if( _closed.IsCancellationRequested ) throw new InvalidOperationException( "Client is Disconnected." );
-            Debug.Assert( _input != null );
-            Debug.Assert( _output != null );
+            if( !IsConnected ) throw new InvalidOperationException( "Client is Disconnected." );
+            Debug.Assert( InputPump != null );
+            Debug.Assert( OutputPump != null );
             Debug.Assert( _packetIdStore != null );
             Debug.Assert( _store != null );
         }
@@ -76,28 +72,30 @@ namespace CK.MQTT
             _channel = await _channelFactory.CreateAsync( m, _config.ConnectionString );
             ConnectAckReflex connectAckReflex = new ConnectAckReflex();
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            _input = new InputPump( _config, CloseSelfAsync, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
-            _output = new OutputPump( DumbOutputProcessor.OutputProcessor, CloseSelfAsync, _channel.DuplexPipe.Output, _pConfig, _config, _store );
+            var input = new InputPump( this, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
+            var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, _channel.DuplexPipe.Output, _store );
+            OpenPumps( input, output );
             PingRespReflex pingRes = new PingRespReflex();
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
-                .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, _output ) )
-                .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, _output ) )
+                .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, output ) )
+                .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, output ) )
                 .UseMiddleware( new SubackReflex( _store ) )
                 .UseMiddleware( new UnsubackReflex( _store ) )
                 .UseMiddleware( pingRes )
                 .Build( InvalidPacket );
-            _closed = new CancellationTokenSource();
-            await _output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-            _output.SetOutputProcessor( new MainOutputProcessor( _config, _store, pingRes ).OutputProcessor );
-            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeout, _closed.Token ) );
-            if( _closed.IsCancellationRequested )
+
+            await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
+            output.SetOutputProcessor( new MainOutputProcessor( _config, _store, pingRes ).OutputProcessor );
+
+            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeout, CloseToken ) );
+            if( CloseToken.IsCancellationRequested )
             {
-                await CloseNoEvent();
+                await AutoDisconnectAsync();
                 return new ConnectResult( ConnectError.RemoteDisconnected );
             }
             if( !connectedTask.IsCompleted )
             {
-                await CloseNoEvent();
+                await AutoDisconnectAsync();
                 return new ConnectResult( ConnectError.Timeout );
             }
             ConnectResult res = await connectedTask;
@@ -109,7 +107,7 @@ namespace CK.MQTT
             }
             else
             {
-                await SendAllStoredMessages( m, _store, _output );
+                await SendAllStoredMessages( m, _store, output );
             }
             return res;
         }
@@ -126,7 +124,7 @@ namespace CK.MQTT
 
         async ValueTask InvalidPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
-            await CloseSelfAsync( DisconnectedReason.ProtocolError );
+            await AutoDisconnectAsync( DisconnectedReason.ProtocolError );
             throw new ProtocolViolationException();
         }
 
@@ -136,53 +134,31 @@ namespace CK.MQTT
             _messageHandler = messageHandler;
         }
 
-        Task CloseHandlers() => Task.WhenAll( _input!.CloseAsync(), _output!.CloseAsync() );
-
-        readonly object _lock = new object();
-        internal async Task CloseSelfAsync( DisconnectedReason reason )
+        protected override async ValueTask OnClosingAsync( DisconnectedReason reason )
         {
-            if( !await CloseNoEvent() ) return;
-            _config.InputLogger?.ClientSelfClosing( reason );
-            DisconnectedHandler?.Invoke( reason );
+            if( reason == DisconnectedReason.UserDisconnected )
+            {
+                await OutputPump!.SendMessageAsync( OutgoingDisconnect.Instance );
+            }
         }
 
-        async Task<bool> CloseNoEvent()
+        protected override void OnClosed( DisconnectedReason reason )
         {
-            lock( _lock )
-            {
-                if( _closed.IsCancellationRequested ) return false;
-                _closed.Cancel();
-            }
-            await CloseHandlers();
             _channel!.Close( _config.InputLogger );
-            if( (_config.DisconnectBehavior & DisconnectBehavior.CancelAcksOnDisconnect) == DisconnectBehavior.CancelAcksOnDisconnect )
+            _channel = null;
+            if( reason != DisconnectedReason.None
+                && (_config.DisconnectBehavior & DisconnectBehavior.CancelAcksOnDisconnect) == DisconnectBehavior.CancelAcksOnDisconnect )
             {
                 _store!.IdStore.ResetAndCancelTasks();
             }
-            _input = null;
-            _output = null;
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public Disconnected? DisconnectedHandler { get; set; }
-
-        /// <inheritdoc/>
-        public bool IsConnected => !_closed.IsCancellationRequested && (_channel?.IsConnected ?? false);
-
-
-        /// <inheritdoc/>
-        public async ValueTask DisconnectAsync()
-        {
-            ThrowIfNotConnected();
-            await _output.SendMessageAsync( OutgoingDisconnect.Instance );
-            await CloseNoEvent();
+            _store = null;
+            base.OnClosed( reason );
         }
 
         public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class
         {
             ThrowIfNotConnected();
-            return SenderHelper.SendPacket<T>( m, _store, _output, outgoingPacket, _config );
+            return SenderHelper.SendPacket<T>( m, _store, OutputPump!, outgoingPacket, _config );
         }
     }
 }

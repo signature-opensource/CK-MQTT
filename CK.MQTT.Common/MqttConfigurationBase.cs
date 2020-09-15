@@ -23,15 +23,18 @@ namespace CK.MQTT
         /// The store transformer allow to modify packet while they are stored, or sent.
         /// When null, <see cref="DefaultStoreTransformer.Default"/> is used.
         /// </param>
-        public MqttConfigurationBase(
+        /// <param name="outgoingPacketsChannelCapacity">See <see cref="OutgoingPacketsChannelCapacity"/>.</param>
+        protected MqttConfigurationBase(
             TimeSpan? waitTimeout = null,
             IStoreFactory? storeFactory = null,
-            IStoreTransformer? storeTransformer = null )
+            IStoreTransformer? storeTransformer = null,
+            int outgoingPacketsChannelCapacity = 32 )
         {
             if( waitTimeout.HasValue && waitTimeout.Value.TotalSeconds <= 0 ) throw new ArgumentException( "WaitTimeout must be positive." );
             WaitTimeout = waitTimeout ?? Timeout.InfiniteTimeSpan;
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
             StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
+            OutgoingPacketsChannelCapacity = outgoingPacketsChannelCapacity;
         }
 
         /// <summary>
@@ -61,5 +64,12 @@ namespace CK.MQTT
         /// Gets the store transformer to use.
         /// </summary>
         public IStoreTransformer StoreTransformer { get; }
+
+        /// <summary>
+        /// Gets the capacity of the outgoing channel.
+        /// Using a bounded channel enables back pressure handling.
+        /// </summary>
+        public int OutgoingPacketsChannelCapacity { get; }
+
     }
 }

@@ -26,7 +26,12 @@ namespace CK.MQTT
         }
 
         public async ValueTask OutputProcessor(
-            IOutputLogger? m, PacketSender sender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken, Func<DisconnectedReason, Task> _clientClose
+            IOutputLogger? m,
+            PacketSender sender,
+            Channel<IOutgoingPacket> reflexes,
+            Channel<IOutgoingPacket> messages,
+            CancellationToken cancellationToken,
+            Func<DisconnectedReason, Task> _clientClose
         )
         {
             // This is really easy to put bug in this function, thats why this is heavily commented.

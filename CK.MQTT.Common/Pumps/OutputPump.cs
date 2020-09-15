@@ -8,53 +8,48 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// The message pump that serialize the messages to the <see cref="PipeWriter"/>.
-    /// Accept messages concurrently, but it will send them one per one.
+    /// The message pump that serializes the messages to the <see cref="PipeWriter"/>.
+    /// Accept messages concurrently, but send them one per one.
     /// </summary>
-    public class OutputPump
+    public class OutputPump : PumpBase
     {
-        public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken, Func<DisconnectedReason, Task> _clientClose );
+        public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken, Func<DisconnectedReason, Task<bool>> _clientClose );
 
         public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
 
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
         OutputProcessor _outputProcessor;
-        readonly Func<DisconnectedReason, Task> _clientClose;
         readonly PipeWriter _pipeWriter;
         readonly ProtocolConfiguration _pconfig;
-        readonly MqttConfiguration _config;
+        readonly MqttConfigurationBase _config;
         readonly PacketStore _packetStore;
-        readonly Task _writeLoopTask;
-        readonly CancellationTokenSource _stopSource;
         CancellationTokenSource _processorStopSource;
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
-        /// <param name="clientClose">A <see langword="delegate"/> that will be called when the pump close.</param>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="config">The config to use.</param>
         /// <param name="packetStore">The packet store to use to retrieve packets.</param>
-        public OutputPump( OutputProcessor outputProcessor, Func<DisconnectedReason, Task> clientClose, PipeWriter writer, ProtocolConfiguration pconfig, MqttConfiguration config, PacketStore packetStore )
+        public OutputPump( Pumppeteer pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, PacketStore packetStore )
+            : base( pumppeteer )
         {
-            _messages = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
-            _reflexes = Channel.CreateBounded<IOutgoingPacket>( config.ChannelsPacketCount );
-            _clientClose = clientClose;
+            _messages = Channel.CreateBounded<IOutgoingPacket>( pumppeteer.Configuration.OutgoingPacketsChannelCapacity );
+            _reflexes = Channel.CreateBounded<IOutgoingPacket>( pumppeteer.Configuration.OutgoingPacketsChannelCapacity );
             _pipeWriter = writer;
             _pconfig = pconfig;
-            _config = config;
+            _config = pumppeteer.Configuration;
             _packetStore = packetStore;
-            _stopSource = new CancellationTokenSource();
-            SetOutputProcessor( outputProcessor );
-            _writeLoopTask = WriteLoop();
+            _processorStopSource = new CancellationTokenSource();
+            _outputProcessor = initialProcessor;
+            SetRunningLoop( WriteLoop() );
         }
 
-        [MemberNotNull( nameof( _processorStopSource ) )]
         [MemberNotNull( nameof( _outputProcessor ) )]
         public void SetOutputProcessor( OutputProcessor outputProcessor )
         {
-            _processorStopSource?.Cancel();
+            _processorStopSource.Cancel();
             _processorStopSource = new CancellationTokenSource();
             _outputProcessor = outputProcessor;
         }
@@ -77,37 +72,35 @@ namespace CK.MQTT
             {
                 try
                 {
-                    while( !_stopSource.IsCancellationRequested )
+                    while( !StopToken.IsCancellationRequested )
                     {
-                        await _outputProcessor( _config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, _processorStopSource.Token, _clientClose );
+                        await _outputProcessor( _config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, _processorStopSource.Token, DisconnectAsync );
                     }
                     _pipeWriter.Complete();
                 }
                 catch( Exception e )
                 {
                     _config.OutputLogger?.ExceptionInOutputLoop( e );
-                    _stopSource.Cancel();
-                    await _clientClose( DisconnectedReason.UnspecifiedError );
+                    await DisconnectAsync( DisconnectedReason.UnspecifiedError );
                 }
             }
         }
 
         async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket )
         {
-            if( _stopSource.IsCancellationRequested ) return;
+            if( StopToken.IsCancellationRequested ) return;
             using( m?.SendingMessage( ref outgoingPacket, _pconfig.ProtocolLevel ) )
             {
-                await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, _stopSource.Token );
+                await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
                 if( outgoingPacket is IOutgoingPacketWithId packetWithId ) _packetStore.IdStore.PacketSent( m, packetWithId.PacketId );
             }
         }
 
-        public Task CloseAsync()
+        protected override Task OnClosedAsync( Task loop )
         {
-            if( _stopSource.IsCancellationRequested ) return Task.CompletedTask;//Allow to not await ourself.
-            _stopSource.Cancel();
             _processorStopSource?.Cancel();
-            return _writeLoopTask;
+            return loop;
         }
+
     }
 }

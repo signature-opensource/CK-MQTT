@@ -55,6 +55,5 @@ namespace CK.MQTT
 
         public IMqttChannelFactory ChannelFactory { get; }
 
-        public int ChannelsPacketCount { get; } = 32;
     }
 }

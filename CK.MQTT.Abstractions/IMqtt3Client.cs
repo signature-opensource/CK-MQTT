@@ -46,14 +46,15 @@ namespace CK.MQTT
 
         /// <summary>
         /// Disconnect the client.
-        /// Once the client is successfully disconnected, the <see cref="Disconnected"/> event will be fired 
+        /// Once the client is successfully disconnected, the <see cref="Disconnected"/> event will be fired
+        /// with the <see cref="DisconnectedReason.UserDisconnected"/>.
         /// </summary>
-        /// <returns>A <see cref="ValueTask"/> that complete when the client is disconnected.</returns>
+        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
         /// <remarks>
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
         /// for more details about the protocol disconnection
         /// </remarks>
-        ValueTask DisconnectAsync();
+        Task<bool> DisconnectAsync();
     }
 
 }
