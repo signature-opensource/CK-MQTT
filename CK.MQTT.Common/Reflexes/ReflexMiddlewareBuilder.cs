@@ -70,7 +70,7 @@ namespace CK.MQTT
                 //Here some closure black magics. A lot of mind bending stuff happen if you inline this variable, and make it not work.
                 //TODO: A better implementation would not use a closure, to be more explicit.
                 Reflex newMiddleware = ( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c ) //We create a lambda that...
-                    => curr( m, s, h, l, p, () => previousReflex( m, s, h, l, p, c ),c  );// Call current the middleware, with a callback to the previous previous middleware.
+                    => curr( m, s, h, l, p, () => previousReflex( m, s, h, l, p, c ), c );// Call current the middleware, with a callback to the previous previous middleware.
                 lastReflex = newMiddleware;
             }
             return lastReflex;

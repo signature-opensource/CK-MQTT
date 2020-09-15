@@ -11,6 +11,7 @@ namespace CK.MQTT
         readonly IPacketIdStore _packetIdStore;
         readonly PacketStore _store;
         readonly OutputPump _output;
+
         public PublishLifecycleReflex( IPacketIdStore packetIdStore, PacketStore store, OutputPump output )
         {
             _packetIdStore = packetIdStore;
@@ -18,7 +19,14 @@ namespace CK.MQTT
             _output = output;
         }
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken )
+        public async ValueTask ProcessIncomingPacketAsync(
+            IInputLogger? m,
+            InputPump sender,
+            byte header,
+            int packetLength,
+            PipeReader pipeReader,
+            Func<ValueTask> next,
+            CancellationToken cancellationToken )
         {
             PacketType packetType = (PacketType)((header >> 4) << 4);//to remove right bits that may store flags data
             switch( packetType )

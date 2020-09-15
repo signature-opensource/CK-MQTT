@@ -11,11 +11,11 @@ namespace CK.MQTT
 
     /// <summary>
     /// Message pump that do basic processing on the incoming data,
-    /// and delegate the message processing job to the <see cref="Reflex"/>.
+    /// and delegate the message processing job to its <see cref="CurrentReflex"/>.
     /// </summary>
     public class InputPump
     {
-        readonly MqttConfiguration _config;
+        readonly MqttConfigurationBase _config;
         readonly Func<DisconnectedReason, Task> _stopClient;
         readonly PipeReader _pipeReader;
         readonly Task _readLoop;
@@ -28,7 +28,12 @@ namespace CK.MQTT
         /// <param name="config">The configuration to apply.</param>
         /// <param name="stopClient"><see langword="delegate"/> called when the <see cref="InputPump"/> stops.</param>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
-        /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
+        /// <param name="reflex">
+        /// The <see cref="Reflex"/> that will process incoming packets.
+        /// This is the initial value of the <see cref="CurrentReflex"/> and this can be changed later: typically, the client
+        /// uses a first reflex that handles the connection packet and then sets a Reflex that is the "normal" pipeline
+        /// of packet handlers.
+        /// </param>
         public InputPump( MqttConfiguration config, Func<DisconnectedReason, Task> stopClient, PipeReader pipeReader, Reflex reflex )
         {
             _config = config;
@@ -96,7 +101,8 @@ namespace CK.MQTT
                             await _stopClient( DisconnectedReason.RemoteDisconnected );
                             break;
                         }
-                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                        // Mark data observed, so we will wait new data.
+                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End ); 
                     }
                     if( _timeoutLogger != null )
                     {
@@ -134,12 +140,15 @@ namespace CK.MQTT
 
         /// <summary>
         /// Stops the input loop.
+        /// This must be called ONLY from the MqtClient CloseHandlers...
         /// </summary>
         /// <returns>The task that will be compeleted once the loop has properly ended.</returns>
         public Task CloseAsync()
         {
-            if( !_cleanStop.IsCancellationRequested ) _cleanStop.Cancel();
+            if( _cleanStop.IsCancellationRequested ) return Task.CompletedTask;
+            _cleanStop.Cancel();
             return _readLoop;
         }
+
     }
 }

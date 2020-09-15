@@ -6,7 +6,7 @@ namespace CK.MQTT
     /// <summary>
     /// Configuration of a <see cref="IMqtt3Client"/>.
     /// </summary>
-    public class MqttConfiguration
+    public class MqttConfiguration : MqttConfigurationBase
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttConfiguration" /> class.
@@ -27,43 +27,34 @@ namespace CK.MQTT
             IMqttChannelFactory? channelFactory = null,
             IStoreFactory? storeFactory = null,
             IStoreTransformer? storeTransformer = null )
+            : base( waitTimeout, storeFactory, storeTransformer )
         {
             ConnectionString = connectionString;
             if( keepAlive.Milliseconds != 0 ) throw new ArgumentException( "MQTT KeepAlive is in seconds, but this TimeSpan does not have whole seconds." );
             if( keepAlive.TotalSeconds == 0 ) keepAlive = Timeout.InfiniteTimeSpan;
             KeepAlive = keepAlive;
-            if( waitTimeout.HasValue && waitTimeout.Value.TotalSeconds <= 0 ) throw new ArgumentException( "WaitTimeout cannot be 0. It would mean that a packet is already timeout when it just has been sent." );
-            WaitTimeout = waitTimeout ?? Timeout.InfiniteTimeSpan;
             DisconnectBehavior = disconnectBehavior;
             AttemptCountBeforeGivingUpPacket = attemptCountBeforeGivingUpPacket;
             ChannelFactory = channelFactory ?? new TcpChannelFactory();
-            StoreFactory = storeFactory ?? new MemoryStoreFactory();
-            StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
         }
 
         public string ConnectionString { get; }
 
         /// <summary>
-        /// Seconds to wait for the MQTT Keep Alive mechanism
-        /// until a Ping packet is sent to maintain the connection alive
-        /// Default value is 0 seconds, which means Keep Alive disabled
+        /// Gets the time to wait for the MQTT Keep Alive mechanism
+        /// until a Ping packet is sent to maintain the connection alive.
+        /// Default value is 0 seconds, which means that Keep Alive is disabled.
         /// </summary>
         public TimeSpan KeepAlive { get; }
 
-        /// <summary>
-        /// Seconds to wait for an incoming required message until the operation timeouts
-        /// This value is generally used to wait for Server or Client acknowledgements
-        /// </summary>
-		public TimeSpan WaitTimeout { get; }
         public DisconnectBehavior DisconnectBehavior { get; }
 
         //0 to disable
         public ushort AttemptCountBeforeGivingUpPacket { get; }
-        public IInputLogger? InputLogger { get; set; }
-        public IOutputLogger? OutputLogger { get; set; }
+
+
         public IMqttChannelFactory ChannelFactory { get; }
-        public IStoreFactory StoreFactory { get; }
-        public IStoreTransformer StoreTransformer { get; }
+
         public int ChannelsPacketCount { get; } = 32;
     }
 }

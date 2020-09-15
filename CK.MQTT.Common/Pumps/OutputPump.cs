@@ -14,7 +14,9 @@ namespace CK.MQTT
     public class OutputPump
     {
         public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken, Func<DisconnectedReason, Task> _clientClose );
+
         public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
+
         readonly Channel<IOutgoingPacket> _messages;
         readonly Channel<IOutgoingPacket> _reflexes;
         OutputProcessor _outputProcessor;
@@ -26,8 +28,9 @@ namespace CK.MQTT
         readonly Task _writeLoopTask;
         readonly CancellationTokenSource _stopSource;
         CancellationTokenSource _processorStopSource;
+
         /// <summary>
-        /// Instantiate a new <see cref="OutputPump"/>.
+        /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="clientClose">A <see langword="delegate"/> that will be called when the pump close.</param>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
