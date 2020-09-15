@@ -8,7 +8,7 @@ namespace CK.MQTT
     public static class SenderHelper
     {
         public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, PacketStore messageStore, OutputPump output,
-            IOutgoingPacketWithId packet, MqttConfiguration config )
+            IOutgoingPacketWithId packet, MqttConfigurationBase config )
             where T : class
             => packet.Qos switch
             {

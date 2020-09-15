@@ -11,11 +11,11 @@ namespace CK.MQTT
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttConfiguration" /> class.
         /// </summary>
-        /// <param name="waitTimeout">
-        /// Time before the a non acknowledged packet will be sent again. When not null, it must be positive (Zero
-        /// would mean that a packet is already timeout when it just has been sent).
-        /// Default to <see cref="Timeout.InfiniteTimeSpan"/>.
+        /// <param name="waitTimeoutMilliseconds">
+        /// Time to wait before a non acknowledged packet is resent. Must be greater than 20 ms.
+        /// Defaults to 5 seconds.
         /// </param>
+        /// <param name="attemptCountBeforeGivingUpPacket">See <see cref="AttemptCountBeforeGivingUpPacket"/>.</param>
         /// <param name="storeFactory">
         /// Factory that create a store, used to store packets. When null, <see cref="MemoryStoreFactory"/> is used.
         /// </param>
@@ -25,23 +25,27 @@ namespace CK.MQTT
         /// </param>
         /// <param name="outgoingPacketsChannelCapacity">See <see cref="OutgoingPacketsChannelCapacity"/>.</param>
         protected MqttConfigurationBase(
-            TimeSpan? waitTimeout = null,
+            int waitTimeoutMilliseconds = 5_000,
+            ushort attemptCountBeforeGivingUpPacket = 50,
             IStoreFactory? storeFactory = null,
             IStoreTransformer? storeTransformer = null,
             int outgoingPacketsChannelCapacity = 32 )
         {
-            if( waitTimeout.HasValue && waitTimeout.Value.TotalSeconds <= 0 ) throw new ArgumentException( "WaitTimeout must be positive." );
-            WaitTimeout = waitTimeout ?? Timeout.InfiniteTimeSpan;
+            if( waitTimeoutMilliseconds <= 20 ) throw new ArgumentException( "waitTimeoutMilliseconds must be greater than 20." );
+            WaitTimeoutMilliseconds = waitTimeoutMilliseconds;
             StoreFactory = storeFactory ?? new MemoryStoreFactory();
             StoreTransformer = storeTransformer ?? DefaultStoreTransformer.Default;
             OutgoingPacketsChannelCapacity = outgoingPacketsChannelCapacity;
+            AttemptCountBeforeGivingUpPacket = attemptCountBeforeGivingUpPacket;
         }
 
         /// <summary>
-        /// Gets the time to wait for an incoming required message until the operation timeouts.
-        /// This value is generally used to wait for Server or Client acknowledgements.
+        /// Time to wait before a non acknowledged packet is resent.
+        /// Defaults to 5 seconds (and always greater than 20 ms).
+        /// To disable this (but please be sure to understand the consequences), use
+        /// the <see cref="int.MaxValue"/> special value.
         /// </summary>
-		public TimeSpan WaitTimeout { get; }
+		public int WaitTimeoutMilliseconds { get; }
 
         /// <summary>
         /// Gets or sets the input logger to use. This can be changed at any moment.
@@ -68,8 +72,23 @@ namespace CK.MQTT
         /// <summary>
         /// Gets the capacity of the outgoing channel.
         /// Using a bounded channel enables back pressure handling.
+        /// Defaults to 32.
         /// </summary>
         public int OutgoingPacketsChannelCapacity { get; }
+
+        /// <summary>
+        /// Gets the maximal number of retries to send the same packet
+        /// before giving up.
+        /// <para>
+        /// Setting it to 0 disables this check but this should be avoided (the default
+        /// is 50) since this is a simple (yet effective) "poisonous message" detection:
+        /// this gracefully handles a firewall that blocks a packet or a remote that
+        /// repeatedly fails on a packet, avoiding such poisonous packets to remain in
+        /// the system.
+        /// </para>
+        /// </summary>
+        public ushort AttemptCountBeforeGivingUpPacket { get; }
+
 
     }
 }

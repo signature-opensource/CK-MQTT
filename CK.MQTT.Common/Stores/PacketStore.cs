@@ -16,8 +16,7 @@ namespace CK.MQTT
     {
         public IdStore IdStore { get; }
 
-
-        protected PacketStore( ProtocolConfiguration pConfig, MqttConfiguration config, int packetIdMaxValue )
+        protected PacketStore( ProtocolConfiguration pConfig, MqttConfigurationBase config, int packetIdMaxValue )
         {
             IdStore = new IdStore( packetIdMaxValue, config );
             PConfig = pConfig;
@@ -25,7 +24,8 @@ namespace CK.MQTT
         }
 
         protected ProtocolConfiguration PConfig { get; }
-        protected MqttConfiguration Config { get; }
+
+        protected MqttConfigurationBase Config { get; }
 
         /// <summary>
         /// Store a <see cref="IOutgoingPacketWithId"/> in the session, return a <see cref="IOutgoingPacket"/>.

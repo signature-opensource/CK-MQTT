@@ -43,11 +43,11 @@ namespace CK.MQTT
         readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
 
         /// <summary>
-        /// Instantiate a new <see cref="MemoryPacketStore"/>.
+        /// Instantiates a new <see cref="MemoryPacketStore"/>.
         /// </summary>
         /// <param name="config">The config of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
-        public MemoryPacketStore( ProtocolConfiguration pConfig, MqttConfiguration config, int packetIdMaxValue )
+        public MemoryPacketStore( ProtocolConfiguration pConfig, MqttConfigurationBase config, int packetIdMaxValue )
             : base( pConfig, config, packetIdMaxValue )
         {
         }

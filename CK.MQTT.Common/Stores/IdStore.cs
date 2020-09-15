@@ -25,7 +25,7 @@ namespace CK.MQTT
         /// </summary>
         int _count = 0;
         readonly int _maxPacketId;
-        readonly MqttConfiguration _config;
+        readonly MqttConfigurationBase _config;
         readonly Stopwatch _stopwatch = new Stopwatch();
         string DebuggerDisplay
         {
@@ -37,11 +37,10 @@ namespace CK.MQTT
             }
         }
 
-        public IdStore( int packetIdMaxValue, MqttConfiguration config )
+        public IdStore( int packetIdMaxValue, MqttConfigurationBase config )
         {
             _entries = new Entry[64];
             _maxPacketId = packetIdMaxValue;
-            _config = config;
             _config = config;
             _stopwatch.Start();
         }
@@ -72,13 +71,14 @@ namespace CK.MQTT
                 return true;
             }
         }
+
         public void PacketSent( IOutputLogger? m, int packetId )
         {
             lock( _entries )
             {
                 _entries[packetId - 1].EmissionTime = _stopwatch.Elapsed;
                 int count = ++_entries[packetId - 1].TryCount;
-                if( count == _config.AttemptCountBeforeGivingUpPacket && _config.AttemptCountBeforeGivingUpPacket > 0 )
+                if( count == _config.AttemptCountBeforeGivingUpPacket && count > 0 )
                 {
                     m?.PacketMarkedPoisoned( packetId, count );
                 }
@@ -103,13 +103,14 @@ namespace CK.MQTT
             return true;
         }
 
-        public (int packetId, TimeSpan waitTime) GetOldestPacket()
+        public (int packetId, int waitTime) GetOldestPacket()
         {
             Entry smallest = new Entry
             {
                 EmissionTime = TimeSpan.MaxValue
             };
-            int smallIndex = -1;//if not assigned, will return 0 (invalid packet id)
+            // If not assigned, will return 0 (invalid packet id).
+            int smallIndex = -1;
             ushort confTryCount = _config.AttemptCountBeforeGivingUpPacket;
             for( int i = 0; i < _count; i++ )
             {
@@ -122,7 +123,7 @@ namespace CK.MQTT
                     smallIndex = i;
                 }
             }
-            return (smallIndex + 1, _stopwatch.Elapsed - smallest.EmissionTime);
+            return (smallIndex + 1,  (int)((_stopwatch.Elapsed - smallest.EmissionTime).Ticks / TimeSpan.TicksPerMillisecond));
         }
 
         void EnsureSlotsAvailable( int count )

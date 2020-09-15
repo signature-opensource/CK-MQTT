@@ -87,7 +87,7 @@ namespace CK.MQTT
             await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
             output.SetOutputProcessor( new MainOutputProcessor( _config, _store, pingRes ).OutputProcessor );
 
-            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeout, CloseToken ) );
+            await Task.WhenAny( connectedTask, Task.Delay( _config.WaitTimeoutMilliseconds, CloseToken ) );
             if( CloseToken.IsCancellationRequested )
             {
                 await AutoDisconnectAsync();
