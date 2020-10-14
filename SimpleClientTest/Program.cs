@@ -37,7 +37,7 @@ namespace SimpleClientTest
             var returnSub = await await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ), new Subscription( "/test122/#", QualityOfService.ExactlyOnce ) );
             await await client.PublishAsync( m, "/test4712/42", QualityOfService.ExactlyOnce, false, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) );
             await await client.UnsubscribeAsync( m, "test" );
-            await Task.Delay( 300000 );
+            await Task.Delay( 3000 );
             await client.DisconnectAsync();
             await Task.Delay( 3000 );
             result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );

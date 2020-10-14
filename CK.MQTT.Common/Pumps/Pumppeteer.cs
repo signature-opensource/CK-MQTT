@@ -14,7 +14,7 @@ namespace CK.MQTT
     public abstract class Pumppeteer
     {
         // Must never be disposed!
-        internal static readonly CancellationTokenSource _signaled = new CancellationTokenSource( 0 );
+        static readonly CancellationTokenSource _signaled = new CancellationTokenSource( 0 );
         InputPump? _input;
         OutputPump? _output;
         readonly object _closeLock;
@@ -65,10 +65,8 @@ namespace CK.MQTT
         protected void OpenPumps( InputPump input, OutputPump output )
         {
             if( !_closed.IsCancellationRequested ) throw new InvalidOperationException();
-            if( input == null ) throw new ArgumentNullException( nameof( input ) );
-            if( output == null ) throw new ArgumentNullException( nameof( output ) );
-            _input = input;
-            _output = output;
+            _input = input ?? throw new ArgumentNullException( nameof( input ) );
+            _output = output ?? throw new ArgumentNullException( nameof( output ) );
             _closed = new CancellationTokenSource();
         }
 

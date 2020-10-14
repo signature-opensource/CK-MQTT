@@ -13,7 +13,7 @@ namespace CK.MQTT
     {
         readonly Pumppeteer _pumppeteer;
         Task? _readLoop;
-        CancellationTokenSource _stopSource = Pumppeteer._signaled;
+        readonly CancellationTokenSource _stopSource = new CancellationTokenSource();
 
         private protected PumpBase( Pumppeteer pumppeteer )
         {
