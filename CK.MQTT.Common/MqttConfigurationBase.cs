@@ -14,6 +14,7 @@ namespace CK.MQTT
         /// <param name="waitTimeoutMilliseconds">
         /// Time to wait before a non acknowledged packet is resent. Must be greater than 20 ms.
         /// Defaults to 5 seconds.
+        /// Use <see cref="int.MaxValue"/> to disable the timeout.
         /// </param>
         /// <param name="attemptCountBeforeGivingUpPacket">See <see cref="AttemptCountBeforeGivingUpPacket"/>.</param>
         /// <param name="storeFactory">

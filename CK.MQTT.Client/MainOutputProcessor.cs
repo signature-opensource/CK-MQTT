@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Channels;
@@ -16,22 +17,18 @@ namespace CK.MQTT
         public MainOutputProcessor( MqttConfiguration config, PacketStore packetStore, PingRespReflex pingRespReflex )
             => (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);
 
-        bool IsPingReqTimeout => _pingRespReflex.WaitingPingResp && _stopwatch.Elapsed.TotalMilliseconds > _config.WaitTimeoutMilliseconds;
-
-        int Min( int a, int b )
-        {
-            if( a == int.MaxValue ) return b;
-            if( b == int.MaxValue ) return a;
-            return a < b ? a : b;
-        }
+        bool IsPingReqTimeout =>
+            _pingRespReflex.WaitingPingResp
+            && _stopwatch.Elapsed.TotalMilliseconds > _config.WaitTimeoutMilliseconds
+            && _config.WaitTimeoutMilliseconds != int.MaxValue; //We never timeout if it's configured to int.MaxValue.
 
         public async ValueTask OutputProcessor(
             IOutputLogger? m,
             PacketSender sender,
             Channel<IOutgoingPacket> reflexes,
             Channel<IOutgoingPacket> messages,
-            CancellationToken cancellationToken,
-            Func<DisconnectedReason, Task> _clientClose
+            Func<DisconnectedReason, Task> _clientClose,
+            CancellationToken cancellationToken
         )
         {
             // This is really easy to put bug in this function, thats why this is heavily commented.
@@ -57,13 +54,13 @@ namespace CK.MQTT
             // We need to wait for a new packet to send, or send a PingReq if didn't sent a message for too long and check if the broker did answer.
             // This chunk does a lot of 'slow' things, but we don't care since the output pump have nothing else to do.
 
-            // Loop until we reached the time to send the keepalive.
+            // Loop until we reached the time to send a packet.
             // Or if keepalive is disabled (infinite), in this case, we don't want to exit this loop until a packet to send is available
             while( keepAlive > 0 || keepAlive != int.MaxValue )
             {
                 // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-                int timeToWait = Min( timeToNextResend, keepAlive );
-                if( _pingRespReflex.WaitingPingResp ) timeToWait = Min( timeToWait, waitTimeout );
+                int timeToWait = Math.Min( timeToNextResend, keepAlive );
+                if( _pingRespReflex.WaitingPingResp ) timeToWait = Math.Min( timeToWait, waitTimeout );
 
                 Task<bool> reflexesWait = reflexes.Reader.WaitToReadAsync().AsTask();
                 Task<bool> messagesWait = messages.Reader.WaitToReadAsync().AsTask();
@@ -80,8 +77,9 @@ namespace CK.MQTT
                 {
                     return;
                 }
-                keepAlive -= timeToWait;// Maybe we waited something else than the keepalive (unack packets, timeout).
-                //So we substract the time we waited to the keepalive, and run the whole loop again.
+                if( keepAlive != int.MaxValue ) keepAlive -= timeToWait;
+                // Maybe we waited something else than the keepalive (unack packets, timeout).
+                // So we substract the time we waited to the keepalive, and run the whole loop again.
             }
             //keepAlive reached 0. So we must send a ping.
             await sender( m, OutgoingPingReq.Instance );

@@ -12,6 +12,12 @@ namespace System.IO.Pipelines
             Output = PipeWriter.Create( stream, writerOptions );
         }
 
+        public DuplexPipe( PipeReader input, PipeWriter output )
+        {
+            Input = input;
+            Output = output;
+        }
+
         public PipeReader Input { get; }
 
         public PipeWriter Output { get; }

@@ -16,7 +16,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
             Span<byte> memory1 = pw.GetSpan( 1 );
             memory1[0] = 42;
             Span<byte> memory2 = pw.GetSpan( 1 );
-            memory2[2].Should().Be( 42 );
+            memory2[0].Should().Be( 42 );
         }
     }
 }
