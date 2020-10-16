@@ -7,11 +7,13 @@ using CK.Core;
 using System.Threading;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
+using CK.MQTT.Client;
 
 namespace CK.MQTT
 {
     public class MqttClient : Pumppeteer, IMqttClient
     {
+        public static MqttClientFactory Factory { get; } = new MqttClientFactory();
         readonly ProtocolConfiguration _pConfig;
 
         //Dont change between lifecycles
@@ -29,7 +31,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The config to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        MqttClient( ProtocolConfiguration pConfig, MqttConfiguration config, MessageHandlerDelegate messageHandler )
+        internal MqttClient( ProtocolConfiguration pConfig, MqttConfiguration config, MessageHandlerDelegate messageHandler )
             : base( config )
         {
             _pConfig = pConfig;
@@ -37,13 +39,6 @@ namespace CK.MQTT
             _messageHandler = messageHandler;
             _channelFactory = config.ChannelFactory;
         }
-
-        public static IMqtt3Client CreateMQTT3Client( MqttConfiguration config, MessageHandlerDelegate messageHandler ) =>
-            new MqttClient( ProtocolConfiguration.Mqtt3, config, messageHandler );
-        public static IMqtt5Client CreateMQTT5Client( MqttConfiguration config, MessageHandlerDelegate messageHandler ) =>
-            new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
-        public static IMqttClient CreateMQTTClient( MqttConfiguration config, MessageHandlerDelegate messageHandler )
-            => new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
 
         [MemberNotNull( nameof( _packetIdStore ) )]
         [MemberNotNull( nameof( _store ) )]

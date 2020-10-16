@@ -9,7 +9,7 @@ namespace CK.MQTT.Client.Tests
         public static (IMqtt3Client client, TestChannel testChannel) CreateMQTT3Client( MessageHandlerDelegate messageHandlerDelegate )
         {
             TestChannel channel = new TestChannel();
-            IMqtt3Client client = MqttClient.CreateMQTT3Client(
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client(
                 new MqttConfiguration( "", waitTimeoutMilliseconds: int.MaxValue, channelFactory: new TestChannelFactory( channel ) ),
                 messageHandlerDelegate
             );
