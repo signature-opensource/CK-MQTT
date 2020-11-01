@@ -29,7 +29,7 @@ namespace CK.MQTT
         public static int CompactByteCount( this int packetLength )
         {
             int i = 0;
-            while( packetLength >= 0x80 ) //TODO: i bet there is a way to do this without a loop.
+            while( packetLength >= 0x80 ) // I think unrolling this loop in code could produce more straightforward code... It require only 3 ifs.
             {
                 i++;
                 packetLength >>= 7;

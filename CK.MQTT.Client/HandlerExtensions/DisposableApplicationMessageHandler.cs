@@ -43,7 +43,7 @@ namespace CK.MQTT
             {
                 IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
                 Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
-                FillStatus res = await pipe.FillBuffer( buffer, cancelToken );
+                FillStatus res = await pipe.CopyToBuffer( buffer, cancelToken );
                 if( res != FillStatus.Done ) throw new EndOfStreamException();
                 await _messageHandler( new DisposableApplicationMessage( topic, buffer, qos, retain, memoryOwner ), cancelToken );
             }

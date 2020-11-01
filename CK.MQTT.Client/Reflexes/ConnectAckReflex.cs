@@ -25,8 +25,7 @@ namespace CK.MQTT
             if( !read.HasValue ) return;
             ConnectAck.Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
             reader.AdvanceTo( position );
-            packetSize -= 2;//TODO: The packet size shouldn't be hardcoded here...
-            if( packetSize > 0 )
+            if( packetSize > 2 )
             {
                 await reader.SkipBytes( packetSize );
                 m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );

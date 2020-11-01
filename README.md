@@ -17,3 +17,6 @@ Monitor on IInputLogger.
 Behavior:
 Cancel all tasks if reconnecting with new connection. (behavior, "throw if lost session" ?)
 Reconnect on connection lost.
+
+To improve tests:
+We can tests exact timings and some race conditions if we abstract Task.Delay and Stopwatch.
