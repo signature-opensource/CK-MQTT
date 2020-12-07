@@ -55,7 +55,7 @@ namespace CK.MQTT.Client.Tests
                 }
                 catch( Exception e )
                 {
-                    if( i == 1 ) e.Should().BeOfType<ProtocolViolationException>();
+                    e.Should().BeOfType<ProtocolViolationException>();
                 }
             }
             pcktReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();

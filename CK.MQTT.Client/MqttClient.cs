@@ -43,27 +43,29 @@ namespace CK.MQTT
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
-
+            // We may get disconnected concurrently by one of the pump.
+            // The disconnect set these fields to null so we capture them now.
+            (PacketStore store, IPacketIdStore packetIdStore) = (_store, _packetIdStore);
             _channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
             ConnectAckReflex connectAckReflex = new ConnectAckReflex();
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
             var input = new InputPump( this, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
-            var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, _channel.DuplexPipe.Output, _store );
+            var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, _channel.DuplexPipe.Output, store );
             OpenPumps( input, output );
             PingRespReflex pingRes = new PingRespReflex();
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
-                .UseMiddleware( new PublishReflex( _packetIdStore, OnMessage, output ) )
-                .UseMiddleware( new PublishLifecycleReflex( _packetIdStore, _store, output ) )
-                .UseMiddleware( new SubackReflex( _store ) )
-                .UseMiddleware( new UnsubackReflex( _store ) )
+                .UseMiddleware( new PublishReflex( packetIdStore, OnMessage, output ) )
+                .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
+                .UseMiddleware( new SubackReflex( store ) )
+                .UseMiddleware( new UnsubackReflex( store ) )
                 .UseMiddleware( pingRes )
                 .Build( InvalidPacket );
 
             await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-            output.SetOutputProcessor( new MainOutputProcessor( _config, _store, pingRes ).OutputProcessor );
+            output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
             Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
             await Task.WhenAny( connectedTask, timeout );
-            if( connectedTask.Exception is not null ) throw connectedTask.Exception;
+            if( connectedTask.Exception is not null ) throw connectedTask.Exception.InnerException ?? connectedTask.Exception;
             if( CloseToken.IsCancellationRequested )
             {
                 await AutoDisconnectAsync();
@@ -83,13 +85,13 @@ namespace CK.MQTT
             }
             if( res.SessionState == SessionState.CleanSession )
             {
-                ValueTask task = _packetIdStore.ResetAsync();
-                await _store.ResetAsync();
+                ValueTask task = packetIdStore.ResetAsync();
+                await store.ResetAsync();
                 await task;
             }
             else
             {
-                await SendAllStoredMessages( m, _store, output );
+                await SendAllStoredMessages( m, store, output );
             }
             return res;
         }

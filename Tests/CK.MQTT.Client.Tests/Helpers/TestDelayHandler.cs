@@ -7,13 +7,17 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     class TestDelayHandler : IDelayHandler, IStopwatchFactory
     {
-        List<DelayTask> Delays { get; } = new List<DelayTask>();
-        List<Stopwatch> Stopwatches { get; } = new List<Stopwatch>();
+        readonly object _lock = new object();
+        List<DelayTask> _delays { get; } = new List<DelayTask>();
+        List<Stopwatch> _stopwatches { get; } = new List<Stopwatch>();
 
         public void IncrementTime( TimeSpan timeSpan )
         {
-            Stopwatches.ForEach( s => s.IncrementTime( timeSpan ) );
-            Delays.ForEach( s => s.AdvanceTime( timeSpan ) );
+            lock( _lock )
+            {
+                _stopwatches.ForEach( s => s.IncrementTime( timeSpan ) );
+                _delays.ForEach( s => s.AdvanceTime( timeSpan ) );
+            }
         }
 
         class DelayTask
@@ -69,7 +73,10 @@ namespace CK.MQTT.Client.Tests.Helpers
         public IStopwatch Create()
         {
             Stopwatch stopwatch = new();
-            Stopwatches.Add( stopwatch );
+            lock( _lock )
+            {
+                _stopwatches.Add( stopwatch );
+            }
             return stopwatch;
         }
 
@@ -82,7 +89,10 @@ namespace CK.MQTT.Client.Tests.Helpers
         public Task Delay( TimeSpan delay, CancellationToken cancellationToken )
         {
             var delayTask = new DelayTask( delay, cancellationToken );
-            Delays.Add( delayTask );
+            lock( _lock )
+            {
+                _delays.Add( delayTask );
+            }
             return delayTask.TaskCompletionSource.Task;
         }
 
