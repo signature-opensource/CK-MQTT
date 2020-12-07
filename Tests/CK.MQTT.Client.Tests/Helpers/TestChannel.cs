@@ -1,4 +1,3 @@
-using System;
 using System.IO.Pipelines;
 
 namespace CK.MQTT.Client.Tests
@@ -12,20 +11,15 @@ namespace CK.MQTT.Client.Tests
             DuplexPipe = new DuplexPipe( input.Reader, output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
         }
+
         public bool IsConnected { get; private set; } = true;
 
         public IDuplexPipe DuplexPipe { get; }
 
         public IDuplexPipe TestDuplexPipe { get; set; }
 
-        public void Close( IInputLogger m )
-        {
-            throw new NotImplementedException();
-        }
+        public void Close( IInputLogger? m ) { }
 
-        public void Dispose()
-        {
-            throw new NotImplementedException();
-        }
+        public void Dispose() { }
     }
 }

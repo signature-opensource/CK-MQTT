@@ -8,7 +8,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1A5ABB89-2797-4946-8D46-F07144F616F3}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		Common\BannedSymbols.txt = Common\BannedSymbols.txt
 		FodyWeavers.xml = FodyWeavers.xml
+		Common\Mqtt.props = Common\Mqtt.props
 		NuGet.config = NuGet.config
 		README.md = README.md
 		Common\Shared.props = Common\Shared.props
@@ -32,7 +34,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Server", "CK.MQTT.S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Basic.Tests", "Tests\CK.MQTT.Basic.Tests\CK.MQTT.Basic.Tests.csproj", "{6907007D-52E8-4989-9240-CF4E69A1434F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.MQTT.Client.Tests", "Tests\CK.MQTT.Client.Tests\CK.MQTT.Client.Tests.csproj", "{3BAE478E-3814-4088-8353-C7A227BDFAF9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client.Tests", "Tests\CK.MQTT.Client.Tests\CK.MQTT.Client.Tests.csproj", "{3BAE478E-3814-4088-8353-C7A227BDFAF9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

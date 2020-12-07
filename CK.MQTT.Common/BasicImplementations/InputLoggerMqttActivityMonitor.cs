@@ -16,10 +16,7 @@ namespace CK.MQTT
         /// Instantiate this wrapper.
         /// </summary>
         /// <param name="m">The <see cref="IActivityMonitor"/> to wrap.</param>
-        public InputLoggerMqttActivityMonitor( IActivityMonitor m )
-        {
-            _m = m;
-        }
+        public InputLoggerMqttActivityMonitor( IActivityMonitor m ) => _m = m;
 
         /// <inheritdoc/>
         public void PingReqTimeout() => _m.Error()?.Send( "The broker did not responded PingReq in the given amount of time." );

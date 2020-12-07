@@ -13,8 +13,8 @@ namespace CK.MQTT
             PacketSender packetSender,
             Channel<IOutgoingPacket> reflexes,
             Channel<IOutgoingPacket> messages,
-            CancellationToken cancellationToken,
-            Func<DisconnectedReason, Task> _clientClose
+            Func<DisconnectedReason, Task> clientClose,
+            CancellationToken cancellationToken
         )
         {
             if( reflexes.Reader.TryRead( out IOutgoingPacket packet ) || messages.Reader.TryRead( out packet ) )

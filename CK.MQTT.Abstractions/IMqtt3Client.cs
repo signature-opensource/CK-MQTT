@@ -1,4 +1,7 @@
 using CK.Core;
+using System;
+using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -18,7 +21,7 @@ namespace CK.MQTT
         /// </summary>
         bool IsConnected { get; }
 
-        void SetMessageHandler( MessageHandlerDelegate messageHandler );
+        void SetMessageHandler( Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler );
 
         /// <summary>
         /// Connect the <see cref="IMqtt3Client"/> to a Broker.
@@ -54,7 +57,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
         /// for more details about the protocol disconnection
         /// </remarks>
-        Task<bool> DisconnectAsync();
+        Task<bool> DisconnectAsync( IActivityMonitor m, bool deleteSession, bool cancelAckTasks );
     }
 
 }

@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -13,9 +11,16 @@ namespace CK.MQTT
         readonly MqttConfiguration _config;
         readonly PacketStore _packetStore;
         readonly PingRespReflex _pingRespReflex;
-        readonly Stopwatch _stopwatch = new Stopwatch();
+        readonly IStopwatch _stopwatch;
         public MainOutputProcessor( MqttConfiguration config, PacketStore packetStore, PingRespReflex pingRespReflex )
-            => (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);
+        {
+            if(packetStore == null)
+            {
+
+            }
+            _stopwatch = config.StopwatchFactory.Create();
+            (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);
+        }
 
         bool IsPingReqTimeout =>
             _pingRespReflex.WaitingPingResp
@@ -27,16 +32,15 @@ namespace CK.MQTT
             PacketSender sender,
             Channel<IOutgoingPacket> reflexes,
             Channel<IOutgoingPacket> messages,
-            Func<DisconnectedReason, Task> _clientClose,
-            CancellationToken cancellationToken
-        )
+            Func<DisconnectedReason, Task> clientClose,
+            CancellationToken cancellationToken )
         {
             // This is really easy to put bug in this function, thats why this is heavily commented.
             // This function will be called again immediatly upon return, if the client is not closing.
 
             if( IsPingReqTimeout ) // Because we are in a loop, this will be called immediatly after a return. Keep this in mind.
             {
-                await _clientClose( DisconnectedReason.PingReqTimeout );
+                await clientClose( DisconnectedReason.PingReqTimeout );
                 return;
             }
             // Because the config can change dynamically, we copy these values to avoid bugs.
@@ -64,10 +68,10 @@ namespace CK.MQTT
 
                 Task<bool> reflexesWait = reflexes.Reader.WaitToReadAsync().AsTask();
                 Task<bool> messagesWait = messages.Reader.WaitToReadAsync().AsTask();
-                await Task.WhenAny( Task.Delay( timeToWait, cancellationToken ), reflexesWait, messagesWait );
+                await Task.WhenAny( _config.DelayHandler.Delay( timeToWait, cancellationToken ), reflexesWait, messagesWait );
                 if( IsPingReqTimeout )
                 {
-                    await _clientClose( DisconnectedReason.PingReqTimeout );
+                    await clientClose( DisconnectedReason.PingReqTimeout );
                     return;
                 }
                 if( reflexesWait.IsCompleted //because we have a message in a queue.

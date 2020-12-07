@@ -13,7 +13,7 @@ namespace CK.MQTT
     /// </summary>
     public class OutputPump : PumpBase
     {
-        public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, CancellationToken cancellationToken, Func<DisconnectedReason, Task<bool>> _clientClose );
+        public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, Func<DisconnectedReason, Task<bool>> clientClose, CancellationToken cancellationToken );
 
         public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
 
@@ -24,25 +24,20 @@ namespace CK.MQTT
         readonly ProtocolConfiguration _pconfig;
         readonly MqttConfigurationBase _config;
         readonly PacketStore _packetStore;
-        CancellationTokenSource _processorStopSource;
+        CancellationTokenSource _processorStopSource = new CancellationTokenSource();
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
-        /// <param name="config">The config to use.</param>
         /// <param name="packetStore">The packet store to use to retrieve packets.</param>
         public OutputPump( Pumppeteer pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, PacketStore packetStore )
             : base( pumppeteer )
         {
-            _messages = Channel.CreateBounded<IOutgoingPacket>( pumppeteer.Configuration.OutgoingPacketsChannelCapacity );
-            _reflexes = Channel.CreateBounded<IOutgoingPacket>( pumppeteer.Configuration.OutgoingPacketsChannelCapacity );
-            _pipeWriter = writer;
-            _pconfig = pconfig;
-            _config = pumppeteer.Configuration;
-            _packetStore = packetStore;
-            _processorStopSource = new CancellationTokenSource();
-            _outputProcessor = initialProcessor;
+
+            (_pipeWriter, _pconfig, _config, _packetStore, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, packetStore, initialProcessor);
+            _messages = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
+            _reflexes = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
             SetRunningLoop( WriteLoop() );
         }
 
@@ -74,7 +69,7 @@ namespace CK.MQTT
                 {
                     while( !StopToken.IsCancellationRequested )
                     {
-                        await _outputProcessor( _config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, _processorStopSource.Token, DisconnectAsync );
+                        await _outputProcessor( _config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, DisconnectAsync, _processorStopSource.Token );
                     }
                     _pipeWriter.Complete();
                 }

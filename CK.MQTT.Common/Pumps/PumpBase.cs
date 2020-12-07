@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,10 +12,7 @@ namespace CK.MQTT
         Task? _readLoop;
         readonly CancellationTokenSource _stopSource = new CancellationTokenSource();
 
-        private protected PumpBase( Pumppeteer pumppeteer )
-        {
-            _pumppeteer = pumppeteer;
-        }
+        private protected PumpBase( Pumppeteer pumppeteer ) => _pumppeteer = pumppeteer;
 
         /// <summary>
         /// Gets the token that drives the run of this pump.

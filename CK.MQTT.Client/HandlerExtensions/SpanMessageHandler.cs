@@ -11,7 +11,7 @@ namespace CK.MQTT
     public static class SpanMessageHandler
     {
         public delegate void SpanMessageHandlerDelegate( string topic, ReadOnlySpan<byte> buffer, QualityOfService qos, bool retain );
-
+        
         class HandlerClosure
         {
             readonly SpanMessageHandlerDelegate _messageHandler;
@@ -31,17 +31,17 @@ namespace CK.MQTT
                 }
             }
         }
-        public static void SetMessageHandler( this IMqtt3Client client, SpanMessageHandlerDelegate messageHandler )
-            => client.SetMessageHandler( new HandlerClosure( messageHandler ).HandleMessage );
+        public static void SetMessageHandler( this IMqtt3Client @this, SpanMessageHandlerDelegate messageHandler )
+            => @this.SetMessageHandler( new HandlerClosure( messageHandler ).HandleMessage );
 
-        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory factory, MqttConfiguration config, SpanMessageHandlerDelegate messageHandler )
-            => factory.CreateMQTT3Client( config, new HandlerClosure( messageHandler ).HandleMessage );
+        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this, MqttConfiguration config, SpanMessageHandlerDelegate messageHandler )
+            => @this.CreateMQTT3Client( config, new HandlerClosure( messageHandler ).HandleMessage );
 
-        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory factory, MqttConfiguration config, SpanMessageHandlerDelegate messageHandler )
-            => factory.CreateMQTT5Client( config, new HandlerClosure( messageHandler ).HandleMessage );
+        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttConfiguration config, SpanMessageHandlerDelegate messageHandler )
+            => @this.CreateMQTT5Client( config, new HandlerClosure( messageHandler ).HandleMessage );
 
-        public static IMqttClient CreateMQTTClient( this MqttClientFactory factory, MqttConfiguration config, SpanMessageHandlerDelegate messageHandler )
-            => factory.CreateMQTTClient( config, new HandlerClosure( messageHandler ).HandleMessage );
+        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttConfiguration config, SpanMessageHandlerDelegate messageHandler )
+            => @this.CreateMQTTClient( config, new HandlerClosure( messageHandler ).HandleMessage );
 
     }
 }

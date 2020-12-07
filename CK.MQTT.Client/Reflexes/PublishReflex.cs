@@ -9,10 +9,10 @@ namespace CK.MQTT
     class PublishReflex : IReflexMiddleware
     {
         readonly IPacketIdStore _store;
-        readonly MessageHandlerDelegate _messageHandler;
+        readonly Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
         readonly OutputPump _output;
 
-        public PublishReflex( IPacketIdStore store, MessageHandlerDelegate messageHandler, OutputPump output )
+        public PublishReflex( IPacketIdStore store, Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
         {
             _store = store;
             _messageHandler = messageHandler;

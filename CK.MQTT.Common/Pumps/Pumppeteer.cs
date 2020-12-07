@@ -1,8 +1,4 @@
-using CK.Core;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,18 +13,14 @@ namespace CK.MQTT
         static readonly CancellationTokenSource _signaled = new CancellationTokenSource( 0 );
         InputPump? _input;
         OutputPump? _output;
-        readonly object _closeLock;
+        readonly object _closeLock = new object();
         CancellationTokenSource _closed = _signaled;
 
         /// <summary>
         /// Initializes a specialized <see cref="Pumppeteer"/>.
         /// </summary>
         /// <param name="configuration">The MQTT basic configuration.</param>
-        protected Pumppeteer( MqttConfigurationBase configuration )
-        {
-            Configuration = configuration;
-            _closeLock = new object();
-        }
+        protected Pumppeteer( MqttConfigurationBase configuration ) => Configuration = configuration;
 
         /// <summary>
         /// Gets the configuration.
@@ -70,7 +62,7 @@ namespace CK.MQTT
             _closed = new CancellationTokenSource();
         }
 
-        async Task<bool> CloseAsync( DisconnectedReason reason )
+        protected async Task<bool> CloseAsync( DisconnectedReason reason )
         {
             lock( _closeLock )
             {
@@ -78,10 +70,8 @@ namespace CK.MQTT
                 _closed.Cancel();
             }
             await OnClosingAsync( reason );
-            Debug.Assert( _input != null && _output != null );
             await Task.WhenAll( _input!.CloseAsync(), _output!.CloseAsync() );
-            _input = null;
-            _output = null;
+            (_input, _output) = (null, null);
             OnClosed( reason );
             return true;
         }
@@ -106,10 +96,7 @@ namespace CK.MQTT
         /// <param name="reason">The disconnection reason.</param>
         protected virtual void OnClosed( DisconnectedReason reason )
         {
-            if( reason != DisconnectedReason.None )
-            {
-                DisconnectedHandler?.Invoke( reason );
-            }
+            if( reason != DisconnectedReason.None ) DisconnectedHandler?.Invoke( reason );
         }
 
         /// <summary>
@@ -117,19 +104,7 @@ namespace CK.MQTT
         /// </summary>
         public Disconnected? DisconnectedHandler { get; set; }
 
-        /// <summary>
-        /// Called by the external world to explicitly close the connection to the remote.
-        /// </summary>
-        /// <param name="reason">The reason of the disconnection.</param>
-        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        public Task<bool> DisconnectAsync() => CloseAsync( DisconnectedReason.UserDisconnected );
 
-        /// <summary>
-        /// This protected method can be called by this specialized "pumppeteer" to explicitly close the connection.
-        /// </summary>
-        /// <param name="reason">The reason of the disconnection.</param>
-        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        protected Task<bool> AutoDisconnectAsync( DisconnectedReason reason = DisconnectedReason.None ) => CloseAsync( reason );
 
         /// <summary>
         /// Called before the pumps are closed.

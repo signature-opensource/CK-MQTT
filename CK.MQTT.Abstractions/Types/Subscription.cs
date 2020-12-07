@@ -1,5 +1,6 @@
 namespace CK.MQTT
 {
+
     /// <summary>
     /// Represent a subscription to a topic.
     /// <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800444_Toc384800436">See documentation for more information.</a>

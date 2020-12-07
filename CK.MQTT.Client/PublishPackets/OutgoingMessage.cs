@@ -24,8 +24,10 @@ namespace CK.MQTT
         /// <param name="retain">The retain flag.</param>
         /// <param name="topic">The message topic.</param>
         /// <param name="qos">The message qos.</param>
-        protected OutgoingMessage(string topic, QualityOfService qos, bool retain,
-			string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null) //properties 
+        protected OutgoingMessage(
+            string topic, QualityOfService qos, bool retain,
+			string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null
+        ) //properties 
 		{
             //Compute properties size.
             if( responseTopic != null )

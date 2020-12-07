@@ -67,10 +67,12 @@ namespace CK.MQTT
             foreach( var curr in _reflexes.Reverse<ReflexMiddleware>() )
             {
                 Reflex previousReflex = lastReflex;
-                //Here some closure black magics. A lot of mind bending stuff happen if you inline this variable, and make it not work.
-                //TODO: A better implementation would not use a closure, to be more explicit.
-                Reflex newMiddleware = ( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c ) //We create a lambda that...
-                    => curr( m, s, h, l, p, () => previousReflex( m, s, h, l, p, c ), c );// Call current the middleware, with a callback to the previous previous middleware.
+                // Here some closure black magics: Some mind bending stuff happen if you inline this variable, and make it not work.
+                // (It mean I forgott how this works)
+                // TODO: To improve readability, explicit the closure with a class.
+                Reflex newMiddleware = ( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c ) // We create a lambda that...
+                // Call current the middleware, with a callback to the previous previous middleware.
+                    => curr( m, s, h, l, p, () => previousReflex( m, s, h, l, p, c ), c );
                 lastReflex = newMiddleware;
             }
             return lastReflex;

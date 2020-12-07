@@ -32,8 +32,7 @@ namespace CK.MQTT
         /// <param name="length"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public static bool TryReadUtf8String(
-            ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
+        public static bool TryReadUtf8String( ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
             ReadOnlySpan<byte> span = reader.UnreadSpan;
             if( span.Length < length )
@@ -48,8 +47,7 @@ namespace CK.MQTT
         /// <summary>
         /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
         /// </summary>
-        static bool TryReadMultisegmentUtf8String(
-            ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
+        static bool TryReadMultisegmentUtf8String( ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
             Debug.Assert( reader.UnreadSpan.Length < length );
 

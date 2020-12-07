@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO.Pipelines;
-using System.Text;
-using System.Threading;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using CK.Core;
 using CK.Core.Extension;
 
 namespace CK.MQTT.Client.Tests.Helpers
@@ -11,56 +11,53 @@ namespace CK.MQTT.Client.Tests.Helpers
     /// <summary>
     /// Allow to test the client with weird packet without hacking a the server code.
     /// </summary>
-    class PacketReplayer
+    class PacketReplayer : IMqttChannelFactory
     {
-        public enum PacketDirection
+        readonly Queue<TestPacket> _packets;
+        public PacketReplayer( Queue<TestPacket> packets )
         {
-            ToServer,
-            ToClient
-        }
-        public struct TestPacket
-        {
-            public ReadOnlyMemory<byte> Buffer;
-            public PacketDirection PacketDirection;
-            public TestPacket( ReadOnlyMemory<byte> buffer, PacketDirection packetDirection )
-            {
-                Buffer = buffer;
-                PacketDirection = packetDirection;
-            }
-
-        }
-
-        readonly TestChannel _testChannel;
-        readonly IAsyncEnumerable<TestPacket> _packets;
-        readonly Task _workLoop;
-        public PacketReplayer( TestChannel testChannel, IAsyncEnumerable<TestPacket> packets )
-        {
-            _testChannel = testChannel;
             _packets = packets;
-            _workLoop = WorkLoop();
         }
-
-        async Task WorkLoop()
+        public TestDelayHandler TestDelayHandler { get; } = new();
+        public Task? LastWorkTask { get; private set; }
+        async Task WorkLoop( TestChannel testChannel )
         {
-            await foreach( TestPacket packet in _packets )
+            while( _packets.Count > 0 )
             {
+                TestPacket packet = _packets.Peek();
                 if( packet.PacketDirection == PacketDirection.ToClient )
                 {
-                    await _testChannel.TestDuplexPipe.Output.WriteAsync( packet.Buffer );
+                    await testChannel.TestDuplexPipe.Output.WriteAsync( packet.Buffer );
                 }
                 if( packet.PacketDirection == PacketDirection.ToServer )
                 {
-                    int readCount = 0;
-                    while( readCount < packet.Buffer.Length )
-                    {
-                        Memory<byte> buffer = new byte[packet.Buffer.Length];
-                        var res = await _testChannel.TestDuplexPipe.Input.CopyToBuffer( buffer, default );
-                        if( res == PipeReaderExtensions.FillStatus.Canceled ) throw new OperationCanceledException();
-                        if(res == PipeReaderExtensions.FillStatus.Done )
-                    }
+                    Memory<byte> buffer = new byte[packet.Buffer.Length];
+                    PipeReaderExtensions.FillStatus status = await testChannel.TestDuplexPipe.Input.CopyToBuffer( buffer, default );
+                    if( status != PipeReaderExtensions.FillStatus.Done ) throw new EndOfStreamException();
+                    if( !buffer.Span.SequenceEqual( packet.Buffer.Span ) ) throw new InvalidDataException();
                 }
+                TestDelayHandler.IncrementTime( packet.OperationTime );
+                _packets.Dequeue();
+                await Task.Yield();
             }
         }
 
+        public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor m, string connectionString )
+        {
+            if( LastWorkTask != null )
+            {
+                try
+                {
+                    await LastWorkTask;
+                }
+                catch( Exception )
+                {
+
+                }
+            }
+            TestChannel channel = new();
+            LastWorkTask = WorkLoop( channel );
+            return channel;
+        }
     }
 }

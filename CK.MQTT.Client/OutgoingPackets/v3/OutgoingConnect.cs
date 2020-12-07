@@ -45,9 +45,10 @@ namespace CK.MQTT
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )
         {
             Debug.Assert( maximumPacketSize <= 268435455 );
-            (_pConf, _mConf, _creds, _lastWill) = (pConf, mConf, creds, lastWill); //args
-            (_sessionExpiryInterval, _receiveMaximum, _maximumPacketSize, _topicAliasMaximum) = (sessionExpiryInterval, receiveMaximum, maximumPacketSize, topicAliasMaximum);  //optional args 1.
-            (_requestResponseInformation, _requestProblemInformation, _userProperties, _extendedAuth) = (requestResponseInfo, requestProblemInfo, userProperties, extendedAuth); //optional args 1.
+            (_pConf, _mConf, _creds, _lastWill, _sessionExpiryInterval, _receiveMaximum, _maximumPacketSize,
+                _topicAliasMaximum, _requestResponseInformation, _requestProblemInformation, _userProperties, _extendedAuth)
+            = (pConf, mConf, creds, lastWill, sessionExpiryInterval, receiveMaximum, maximumPacketSize,
+                topicAliasMaximum, requestResponseInfo, requestProblemInfo, userProperties, extendedAuth);
             _flags = ByteFlag( creds, lastWill );
             _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
 

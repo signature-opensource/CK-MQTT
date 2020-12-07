@@ -38,7 +38,7 @@ namespace CK.MQTT
             while( !success )
             {
                 m.Warn()?.Send( "No PacketId available, awaiting until one is free." );
-                await Task.Delay( waitTime );
+                await Config.DelayHandler.Delay( waitTime );
                 if( waitTime < 5000 ) waitTime += 500;
                 success = IdStore.TryGetId( out packetId, out idFreedAwaiter );
             }
@@ -63,12 +63,15 @@ namespace CK.MQTT
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
 
-        public async ValueTask<QualityOfService> DiscardMessageByIdAsync( IInputLogger? m, int packetId, object? packet = null )
+        public async ValueTask<QualityOfService> OnMessageAck( IInputLogger? m, int packetId, object? ackPacket = null )
         {
-            var qos = await DoDiscardMessage( m, packetId );
+            QualityOfService qos = await DoDiscardMessage( m, packetId );
+            // There is 2 different QoS that have an ack:
+            //  - At Least Once: The packetId is available after the ack.
+            //  - Exactly Once: The packetId is freed later, with DiscardPacketIdAsync.
             if( qos == QualityOfService.AtLeastOnce )
             {
-                IdStore.FreeId( m, packetId, packet );
+                IdStore.OnAck( m, packetId, ackPacket );
             }
             return qos;
         }
@@ -77,10 +80,7 @@ namespace CK.MQTT
 
         internal async ValueTask DiscardPacketIdAsync( IInputLogger? m, int packetId )
         {
-            if( !IdStore.FreeId( m, packetId ) )
-            {
-                m?.DoubleFreePacketId( packetId ); //TODO: maybe this should be a Protocol Error and disconnect ?
-            }
+            IdStore.OnAck( m, packetId );
             await DoDiscardPacketIdAsync( m, packetId );
             return;
         }

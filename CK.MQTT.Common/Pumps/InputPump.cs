@@ -26,9 +26,7 @@ namespace CK.MQTT
         public InputPump( Pumppeteer pumppeteer, PipeReader pipeReader, Reflex reflex )
             : base( pumppeteer )
         {
-            _config = pumppeteer.Configuration;
-            _pipeReader = pipeReader;
-            CurrentReflex = reflex;
+            (_config, _pipeReader, CurrentReflex) = (pumppeteer.Configuration, pipeReader, reflex);
             SetRunningLoop( ReadLoop() );
         }
 
@@ -39,7 +37,7 @@ namespace CK.MQTT
 
         OperationStatus TryParsePacketHeader( ReadOnlySequence<byte> sequence, out byte header, out int length, out SequencePosition position )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( sequence );
+            SequenceReader<byte> reader = new( sequence );
             length = 0;
             if( !reader.TryRead( out header ) )
             {
@@ -64,7 +62,8 @@ namespace CK.MQTT
                             m?.ReadLoopTokenCancelled();
                             break;//The client called the cancel, no need to notify it.
                         }
-                        OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position ); //this guy require 2-5 bytes
+                        //The packet header require 2-5 bytes
+                        OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position );
                         if( res == OperationStatus.InvalidData )
                         {
                             m?.InvalidIncomingData();
@@ -93,7 +92,7 @@ namespace CK.MQTT
                     _pipeReader.Complete();
                     _pipeReader.CancelPendingRead();
                 }
-                catch(OperationCanceledException e)
+                catch( OperationCanceledException e )
                 {
                     _config.InputLogger?.LoopCanceledException( e );
                 }
