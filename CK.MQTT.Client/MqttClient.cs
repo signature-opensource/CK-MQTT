@@ -43,14 +43,14 @@ namespace CK.MQTT
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
+            _channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
             // We may get disconnected concurrently by one of the pump.
             // The disconnect set these fields to null so we capture them now.
-            (PacketStore store, IPacketIdStore packetIdStore) = (_store, _packetIdStore);
-            _channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
+            (PacketStore store, IPacketIdStore packetIdStore, IMqttChannel channel) = (_store, _packetIdStore, _channel);
             ConnectAckReflex connectAckReflex = new ConnectAckReflex();
             Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            var input = new InputPump( this, _channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
-            var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, _channel.DuplexPipe.Output, store );
+            var input = new InputPump( this, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
+            var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, channel.DuplexPipe.Output, store );
             OpenPumps( input, output );
             PingRespReflex pingRes = new PingRespReflex();
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
@@ -136,9 +136,10 @@ namespace CK.MQTT
 
         public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class
         {
+            (PacketStore? store, IPacketIdStore? packetIdStore, IMqttChannel? channel) = (_store, _packetIdStore, _channel);
             if( !IsConnected ) throw new InvalidOperationException( "Client is Disconnected." );
-            Debug.Assert( InputPump != null && OutputPump != null && _packetIdStore != null && _store != null );
-            return SenderHelper.SendPacket<T>( m, _store, OutputPump, outgoingPacket, _config );
+            Debug.Assert( InputPump != null && OutputPump != null && packetIdStore != null && store != null );
+            return SenderHelper.SendPacket<T>( m, store, OutputPump, outgoingPacket, _config );
         }
 
         /// <summary>

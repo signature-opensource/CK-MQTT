@@ -28,6 +28,7 @@ namespace CK.MQTT
                 Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
                 reader.AdvanceTo( position );
                 if( state > 1 ) throw new ProtocolViolationException( "Connect Acknowledge Flags byte should never be greater than 1." );
+                if( code > 5 ) throw new ProtocolViolationException( "Connect return code should be between 0 and 5." );
                 if( packetSize > 2 )
                 {
                     await reader.SkipBytes( packetSize );
