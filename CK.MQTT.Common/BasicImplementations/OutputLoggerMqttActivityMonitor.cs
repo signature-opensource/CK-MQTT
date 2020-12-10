@@ -31,5 +31,8 @@ namespace CK.MQTT
 
         public IDisposable? SendingMessage( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel )
             => _m.OpenInfo()?.Send( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )}." );
+
+        public IDisposable? SendingMessageWithId( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel, int packetId )
+            => _m.OpenInfo()?.Send( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )} with packet ID {packetId}." );
     }
 }

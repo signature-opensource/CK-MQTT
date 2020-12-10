@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.IO.Pipelines;
 using System.Net;
@@ -8,12 +9,14 @@ namespace CK.MQTT
 {
     class PublishReflex : IReflexMiddleware
     {
+        readonly MqttConfiguration _mqttConfiguration;
         readonly IPacketIdStore _store;
-        readonly Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
+        readonly Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
         readonly OutputPump _output;
 
-        public PublishReflex( IPacketIdStore store, Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
+        public PublishReflex( MqttConfiguration mqttConfiguration, IPacketIdStore store, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
         {
+            _mqttConfiguration = mqttConfiguration;
             _store = store;
             _messageHandler = messageHandler;
             _output = output;
@@ -42,11 +45,11 @@ namespace CK.MQTT
                     if( read.IsCanceled ) return;
                     if( qos == QualityOfService.AtMostOnce )
                     {
-                        string theTopic = await reader.ReadMQTTString();
-                        await _messageHandler( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
+                        string theTopic = await reader.ReadMQTTString( packetLength );
+                        await _messageHandler( _mqttConfiguration.OnInputMonitor, theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                         return;
                     }
-                    if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
+                    if( Publish.ParsePublishWithPacketId( read.Buffer, packetLength, out topic, out packetId, out SequencePosition position ) )
                     {
                         reader.AdvanceTo( position );
                         break;
@@ -55,12 +58,12 @@ namespace CK.MQTT
                 }
                 if( qos == QualityOfService.AtLeastOnce )
                 {
-                    await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+                    await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                     if( !_output.QueueReflexMessage( LifecyclePacketV3.Puback( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishAck, packetId );
                 }
                 if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
                 await _store.StoreId( m, packetId );
-                await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+                await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                 if( !_output.QueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishReceived, packetId );
             }
         }

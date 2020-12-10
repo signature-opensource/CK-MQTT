@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Buffers;
 using System.IO;
@@ -10,8 +11,8 @@ namespace CK.MQTT
 {
     public static class SpanMessageHandler
     {
-        public delegate void SpanMessageHandlerDelegate( string topic, ReadOnlySpan<byte> buffer, QualityOfService qos, bool retain );
-        
+        public delegate void SpanMessageHandlerDelegate( IActivityMonitor m, string topic, ReadOnlySpan<byte> buffer, QualityOfService qos, bool retain );
+
         class HandlerClosure
         {
             readonly SpanMessageHandlerDelegate _messageHandler;
@@ -20,14 +21,14 @@ namespace CK.MQTT
             {
                 _messageHandler = messageHandler;
             }
-            public async ValueTask HandleMessage( string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
+            public async ValueTask HandleMessage( IActivityMonitor m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
             {
                 using( IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength ) )
                 {
                     Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
                     FillStatus res = await pipe.CopyToBuffer( buffer, cancelToken );
                     if( res != FillStatus.Done ) throw new EndOfStreamException();
-                    _messageHandler( topic, buffer.Span, qos, retain );
+                    _messageHandler( m, topic, buffer.Span, qos, retain );
                 }
             }
         }

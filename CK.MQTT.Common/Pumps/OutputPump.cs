@@ -61,6 +61,13 @@ namespace CK.MQTT
             await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
 
+        public async Task SendMessageAsync( IOutgoingPacketWithId item )
+        {
+            var wrapper = new AwaitableOutgoingPacketWithIdWrapper( item );
+            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
+            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
+        }
+
         async Task WriteLoop()
         {
             using( _config.OutputLogger?.OutputLoopStarting() )
@@ -84,11 +91,22 @@ namespace CK.MQTT
         async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket )
         {
             if( StopToken.IsCancellationRequested ) return;
-            using( m?.SendingMessage( ref outgoingPacket, _pconfig.ProtocolLevel ) )
+            if( outgoingPacket is IOutgoingPacketWithId packetWithId )
             {
-                await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
-                if( outgoingPacket is IOutgoingPacketWithId packetWithId ) _packetStore.IdStore.PacketSent( m, packetWithId.PacketId );
+                using( m?.SendingMessageWithId( ref outgoingPacket, _pconfig.ProtocolLevel, packetWithId.PacketId ) )
+                {
+                    await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
+                    _packetStore.IdStore.PacketSent( m, packetWithId.PacketId );
+                }
             }
+            else
+            {
+                using( m?.SendingMessage( ref outgoingPacket, _pconfig.ProtocolLevel ) )
+                {
+                    await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
+                }
+            }
+
         }
 
         protected override Task OnClosedAsync( Task loop )

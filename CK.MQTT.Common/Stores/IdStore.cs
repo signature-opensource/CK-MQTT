@@ -124,8 +124,13 @@ namespace CK.MQTT
         {
             lock( _entries )
             {
+                if( packetId > _count ) throw new ProtocolViolationException( "The sender sent a packet id that does not exist." );
                 Entry entry = _entries[packetId - 1];
-                if( entry.EmissionTime == default ) throw new ProtocolViolationException( "Ack of an unknown packet id." );
+                if( entry.EmissionTime == default )
+                {
+                    if( entry.TaskCS != null ) throw new InvalidOperationException( "Store did not knew that this packet was sent." );
+                    throw new ProtocolViolationException( $"Ack of an unknown packet id '{packetId}'." );
+                }
                 // Considering the following scenario:
                 // The line latency is really high.
                 // We send SUBSCRIBE packetId: 1

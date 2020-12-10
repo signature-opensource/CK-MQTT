@@ -13,7 +13,7 @@ When this ValueTask is completed, the client guarantee that it will retry to sen
 
 
 TODO:
-Monitor on IInputLogger.
+There is 3 monitors instead of 2.
 Behavior:
 Cancel all tasks if reconnecting with new connection. (behavior, "throw if lost session" ?)
 Reconnect on connection lost.

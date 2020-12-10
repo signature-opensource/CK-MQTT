@@ -3,6 +3,7 @@ using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
 using System.IO.Pipelines;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,12 +23,15 @@ namespace SimpleClientTest
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Debug;
             var m = new ActivityMonitor( "main" );
-            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "localhost:1883" )
+            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "test.mosquitto.org:1883" )
             {
                 InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor( "input" ) ),
-                OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "output" ) )
+                OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "output" ) ),
+                KeepAliveSeconds = 0
             }, MessageHandlerDelegate );
             var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
+            var res = await await client.SubscribeAsync( m, new Subscription( "#", QualityOfService.AtMostOnce ) );
+            await Task.Delay( 500000 );
             //if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
             //{
             //    throw new Exception();
@@ -42,9 +46,9 @@ namespace SimpleClientTest
             //await Task.Delay( 500 );
         }
 
-        static ValueTask MessageHandlerDelegate( string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
+        static ValueTask MessageHandlerDelegate( IActivityMonitor m, string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
-            System.Console.WriteLine( topic );
+            m.Info( "********" + topic + "********payload" + payloadLength );
             return pipeReader.SkipBytes( payloadLength );
         }
     }

@@ -19,14 +19,14 @@ namespace CK.MQTT
         IMqttChannel? _channel;
         IPacketIdStore? _packetIdStore;
         PacketStore? _store;
-        Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
+        Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
         /// <summary>
         /// Instantiate the <see cref="MqttClient"/> with the given configuration.
         /// </summary>
         /// <param name="config">The config to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        internal MqttClient( ProtocolConfiguration protocolConfig, MqttConfiguration config, Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        internal MqttClient( ProtocolConfiguration protocolConfig, MqttConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             : base( config )
             => (_pConfig, _config, _messageHandler) = (protocolConfig, config, messageHandler);
 
@@ -36,8 +36,8 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="msg"></param>
         /// <returns></returns>
-        ValueTask OnMessage( string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
-            => _messageHandler( topic, pipeReader, payloadLength, qos, retain, cancellationToken );
+        ValueTask OnMessage( IActivityMonitor m, string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
+            => _messageHandler( m, topic, pipeReader, payloadLength, qos, retain, cancellationToken );
 
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
@@ -54,7 +54,7 @@ namespace CK.MQTT
             OpenPumps( input, output );
             PingRespReflex pingRes = new PingRespReflex();
             connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
-                .UseMiddleware( new PublishReflex( packetIdStore, OnMessage, output ) )
+                .UseMiddleware( new PublishReflex( _config, packetIdStore, OnMessage, output ) )
                 .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
                 .UseMiddleware( new SubackReflex( store ) )
                 .UseMiddleware( new UnsubackReflex( store ) )
@@ -113,7 +113,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public void SetMessageHandler( Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        public void SetMessageHandler( Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
         {
             _messageHandler = messageHandler;
         }

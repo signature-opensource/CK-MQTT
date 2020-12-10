@@ -21,7 +21,7 @@ namespace CK.MQTT
         /// </summary>
         bool IsConnected { get; }
 
-        void SetMessageHandler( Func<string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler );
+        void SetMessageHandler( Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler );
 
         /// <summary>
         /// Connect the <see cref="IMqtt3Client"/> to a Broker.

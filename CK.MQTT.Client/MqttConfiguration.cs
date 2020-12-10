@@ -1,3 +1,5 @@
+using CK.Core;
+
 namespace CK.MQTT
 {
     /// <summary>
@@ -26,6 +28,7 @@ namespace CK.MQTT
         public DisconnectBehavior DisconnectBehavior { get; init; } = DisconnectBehavior.Nothing;
 
         public IMqttChannelFactory ChannelFactory { get; init; } = new TcpChannelFactory();
+        public IActivityMonitor OnInputMonitor { get; init; } = new ActivityMonitor();
 
     }
 }
