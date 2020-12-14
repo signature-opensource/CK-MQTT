@@ -29,7 +29,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 // If the continuation is synchronous, it may avoid concurrencies issues that we want to catch.
                 TaskCompletionSource = new( TaskCreationOptions.RunContinuationsAsynchronously );
-                cancellationToken.Register( () => TaskCompletionSource.SetCanceled() );
+                cancellationToken.Register( () => TaskCompletionSource.TrySetCanceled() );
                 TimeUntilCompletion = timeUntilCompletion;
             }
 
@@ -37,7 +37,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 if( TaskCompletionSource.Task.IsCompleted ) return;
                 TimeUntilCompletion -= timeSpan;
-                if( timeSpan.Ticks < 0 ) TaskCompletionSource.SetResult( null );
+                if( TimeUntilCompletion.Ticks < 0 ) TaskCompletionSource.SetResult( null );
             }
         }
 

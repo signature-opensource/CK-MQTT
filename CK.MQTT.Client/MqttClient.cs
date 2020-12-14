@@ -60,55 +60,64 @@ namespace CK.MQTT
             if( IsConnected ) throw new InvalidOperationException( "This client is already connected." );
             using( m.OpenTrace( "Connecting..." ) )
             {
-                (PacketStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
-                IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
-                ConnectAckReflex connectAckReflex = new ConnectAckReflex();
-                Task<ConnectResult> connectedTask = connectAckReflex.Task;
-                var input = new InputPump( this, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
-                var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, channel.DuplexPipe.Output, store );
-                OpenPumps( m, new ClientState( input, output, channel, packetIdStore, store ) );
-                PingRespReflex pingRes = new PingRespReflex();
-                connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
-                    .UseMiddleware( new PublishReflex( _config, packetIdStore, OnMessage, output ) )
-                    .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
-                    .UseMiddleware( new SubackReflex( store ) )
-                    .UseMiddleware( new UnsubackReflex( store ) )
-                    .UseMiddleware( pingRes )
-                    .Build( InvalidPacket );
+                try
+                {
+                    (PacketStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
+                    IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
+                    ConnectAckReflex connectAckReflex = new ConnectAckReflex();
+                    Task<ConnectResult> connectedTask = connectAckReflex.Task;
+                    var input = new InputPump( this, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
+                    var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, channel.DuplexPipe.Output, store );
+                    OpenPumps( m, new ClientState( input, output, channel, packetIdStore, store ) );
+                    PingRespReflex pingRes = new PingRespReflex();
+                    connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
+                        .UseMiddleware( new PublishReflex( _config, packetIdStore, OnMessage, output ) )
+                        .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
+                        .UseMiddleware( new SubackReflex( store ) )
+                        .UseMiddleware( new UnsubackReflex( store ) )
+                        .UseMiddleware( pingRes )
+                        .Build( InvalidPacket );
 
-                await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-                output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
-                Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
-                await Task.WhenAny( connectedTask, timeout );
-                if( connectedTask.Exception is not null ) throw connectedTask.Exception.InnerException ?? connectedTask.Exception;
-                if( CloseToken.IsCancellationRequested )
-                {
-                    await AutoDisconnectAsync();
-                    return new ConnectResult( ConnectError.RemoteDisconnected );
+                    await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
+                    output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
+                    Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
+                    await Task.WhenAny( connectedTask, timeout );
+                    if( connectedTask.Exception is not null ) throw connectedTask.Exception.InnerException ?? connectedTask.Exception;
+                    if( CloseToken.IsCancellationRequested )
+                    {
+                        await AutoDisconnectAsync();
+                        return new ConnectResult( ConnectError.RemoteDisconnected );
+                    }
+                    if( !connectedTask.IsCompleted )
+                    {
+                        await AutoDisconnectAsync();
+                        return new ConnectResult( ConnectError.Timeout );
+                    }
+                    ConnectResult res = await connectedTask;
+                    bool askedCleanSession = credentials?.CleanSession ?? true;
+                    if( askedCleanSession && res.SessionState != SessionState.CleanSession )
+                    {
+                        await AutoDisconnectAsync();
+                        throw new ProtocolViolationException( "We asked for a clean session but broker's CONNACK had SessionPresent bit set." );
+                    }
+                    if( res.SessionState == SessionState.CleanSession )
+                    {
+                        ValueTask task = packetIdStore.ResetAsync();
+                        await store.ResetAsync();
+                        await task;
+                    }
+                    else
+                    {
+                        await SendAllStoredMessages( m, store, output );
+                    }
+                    return res;
                 }
-                if( !connectedTask.IsCompleted )
+                catch( Exception e )
                 {
-                    await AutoDisconnectAsync();
-                    return new ConnectResult( ConnectError.Timeout );
+                    m.Error( "Error while connecting, closing client.", e );
+                    await CloseAsync( DisconnectedReason.None );
+                    throw;
                 }
-                ConnectResult res = await connectedTask;
-                bool askedCleanSession = credentials?.CleanSession ?? true;
-                if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-                {
-                    await AutoDisconnectAsync();
-                    throw new ProtocolViolationException( "We asked for a clean session but broker's CONNACK had SessionPresent bit set." );
-                }
-                if( res.SessionState == SessionState.CleanSession )
-                {
-                    ValueTask task = packetIdStore.ResetAsync();
-                    await store.ResetAsync();
-                    await task;
-                }
-                else
-                {
-                    await SendAllStoredMessages( m, store, output );
-                }
-                return res;
             }
         }
 

@@ -108,14 +108,14 @@ namespace CK.MQTT.Client.Tests
                 msg.Dispose();
                 return new ValueTask();
             } );
-            Task connectTask = client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-            connectTask.IsFaulted.Should().BeFalse();
+            Task<ConnectResult> connectTask = client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            connectTask.IsCompleted.Should().BeFalse();
+            await pcktReplayer.LastWorkTask!;
             pcktReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
-            connectTask.IsFaulted.Should().BeFalse();
+            await Task.WhenAny( connectTask, Task.Delay( 50 ) );
+            connectTask.IsCompleted.Should().BeFalse();
             pcktReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
-            await Task.Yield(); //Is this usefull ?
-            await Task.Delay( 10 );
-            connectTask.IsFaulted.Should().BeTrue();
+            (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );
         }
 
         [Test]
