@@ -46,10 +46,16 @@ namespace SimpleClientTest
             //await Task.Delay( 500 );
         }
 
-        static ValueTask MessageHandlerDelegate( IActivityMonitor m, string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
+        static bool first = true;
+        async static ValueTask MessageHandlerDelegate( IActivityMonitor m, string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
+            if( first )
+            {
+                await Task.Delay( 5000 );
+                first = false;
+            }
             m.Info( "********" + topic + "********payload" + payloadLength );
-            return pipeReader.SkipBytes( payloadLength );
+            await pipeReader.SkipBytes( payloadLength );
         }
     }
 }

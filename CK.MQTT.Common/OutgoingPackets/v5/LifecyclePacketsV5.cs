@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace CK.MQTT.Common.OutgoingPackets.v5
+namespace CK.MQTT
 {
     public sealed class LifecyclePacketsV5 : SimpleOutgoingPacket, IOutgoingPacketWithId
     {

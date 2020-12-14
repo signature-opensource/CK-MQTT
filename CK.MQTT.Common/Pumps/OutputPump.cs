@@ -31,7 +31,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="packetStore">The packet store to use to retrieve packets.</param>
-        public OutputPump( Pumppeteer pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, PacketStore packetStore )
+        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, PacketStore packetStore )
             : base( pumppeteer )
         {
 

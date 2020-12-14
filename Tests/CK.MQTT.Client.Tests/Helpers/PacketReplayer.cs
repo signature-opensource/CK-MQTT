@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,30 +15,43 @@ namespace CK.MQTT.Client.Tests.Helpers
     class PacketReplayer : IMqttChannelFactory
     {
         readonly Queue<TestPacket> _packets;
-        public PacketReplayer( Queue<TestPacket> packets )
+        readonly bool _manualMode;
+        TestChannel? _channel;
+        public PacketReplayer( Queue<TestPacket> packets, bool manualMode = false )
         {
             _packets = packets;
+            _manualMode = manualMode;
         }
         public TestDelayHandler TestDelayHandler { get; } = new();
         public Task? LastWorkTask { get; private set; }
-        async Task WorkLoop( TestChannel testChannel )
+        public async Task NextAsync( Task writingTask )
+        {
+            if( !_manualMode ) throw new InvalidOperationException( "Cannot move mannualy when not started in manual mode." );
+            await Task.WhenAll( WorkLoop(), writingTask );
+        }
+        async Task WorkLoop()
         {
             while( _packets.Count > 0 )
             {
                 TestPacket packet = _packets.Peek();
-                if( packet.PacketDirection == PacketDirection.ToClient )
+                if( packet.Buffer.Length > 0 )
                 {
-                    await testChannel.TestDuplexPipe.Output.WriteAsync( packet.Buffer );
-                }
-                if( packet.PacketDirection == PacketDirection.ToServer )
-                {
-                    Memory<byte> buffer = new byte[packet.Buffer.Length];
-                    PipeReaderExtensions.FillStatus status = await testChannel.TestDuplexPipe.Input.CopyToBuffer( buffer, default );
-                    if( status != PipeReaderExtensions.FillStatus.Done ) throw new EndOfStreamException();
-                    if( !buffer.Span.SequenceEqual( packet.Buffer.Span ) ) throw new InvalidDataException();
+
+                    if( packet.PacketDirection == PacketDirection.ToClient )
+                    {
+                        await _channel!.TestDuplexPipe.Output.WriteAsync( packet.Buffer );
+                    }
+                    if( packet.PacketDirection == PacketDirection.ToServer )
+                    {
+                        Memory<byte> buffer = new byte[packet.Buffer.Length];
+                        PipeReaderExtensions.FillStatus status = await _channel!.TestDuplexPipe.Input.CopyToBuffer( buffer, default );
+                        if( status != PipeReaderExtensions.FillStatus.Done ) throw new EndOfStreamException();
+                        if( !buffer.Span.SequenceEqual( packet.Buffer.Span ) ) throw new InvalidDataException();
+                    }
                 }
                 TestDelayHandler.IncrementTime( packet.OperationTime );
                 _packets.Dequeue();
+                if( _manualMode ) return;
                 await Task.Yield();
             }
         }
@@ -55,9 +69,9 @@ namespace CK.MQTT.Client.Tests.Helpers
 
                 }
             }
-            TestChannel channel = new();
-            LastWorkTask = WorkLoop( channel );
-            return channel;
+            _channel = new();
+            if( !_manualMode ) LastWorkTask = WorkLoop();
+            return _channel;
         }
     }
 }

@@ -1,3 +1,4 @@
+using CK.Core;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
@@ -5,45 +6,37 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    /// <summary>
-    /// This class manages the lifecycle of a <see cref="InputPump"/>/<see cref="OutputPump"/> pair.
-    /// </summary>
-    public abstract class Pumppeteer
+
+    public abstract class Pumppeteer<T> : PumppeteerBase where T : Pumppeteer<T>.StateHolder
     {
-        // Must never be disposed!
-        static readonly CancellationTokenSource _signaled = new CancellationTokenSource( 0 );
-        InputPump? _input;
-        OutputPump? _output;
-        readonly object _closeLock = new object();
-        CancellationTokenSource _closed = _signaled;
+        /// <summary>
+        /// State that is set to <see langword="null"/> when the <see cref="Pumppeteer{T}"/> is closed.
+        /// </summary>
+        public class StateHolder
+        {
+            /// <summary>
+            /// The input pump.
+            /// <see langword="null"/> when <see cref="OpenPumps"/> has not been called or <see cref="ClosePumps"/> has been called last.
+            /// </summary>
+            public readonly InputPump Input;
+
+            /// <summary>
+            /// Gets the output pump.
+            /// <see langword="null"/> when <see cref="OpenPumps"/> has not been called or <see cref="ClosePumps"/> has been called last.
+            /// </summary>
+            public readonly OutputPump OutputPump;
+            public StateHolder( InputPump input, OutputPump output ) => (Input, OutputPump) = (input, output);
+        }
 
         /// <summary>
-        /// Initializes a specialized <see cref="Pumppeteer"/>.
+        /// Initializes a specialized <see cref="PumppeteerBase"/>.
         /// </summary>
         /// <param name="configuration">The MQTT basic configuration.</param>
-        protected Pumppeteer( MqttConfigurationBase configuration ) => Configuration = configuration;
+        protected Pumppeteer( MqttConfigurationBase configuration ) : base( configuration ) { }
 
-        /// <summary>
-        /// Gets the configuration.
-        /// </summary>
-        internal protected MqttConfigurationBase Configuration { get; }
+        T? _state;
 
-        /// <summary>
-        /// Gets the input pump.
-        /// Null when <see cref="OpenPumps"/> has not been called or <see cref="ClosePumps"/> has been called last.
-        /// </summary>
-        protected InputPump? InputPump => _input;
-
-        /// <summary>
-        /// Gets the output pump.
-        /// Null when <see cref="OpenPumps"/> has not been called or <see cref="ClosePumps"/> has been called last.
-        /// </summary>
-        protected OutputPump? OutputPump => _output;
-
-        /// <summary>
-        /// Exposes a token that is cancelled when this "pumppeteer" is closed.
-        /// </summary>
-        protected CancellationToken CloseToken => _closed.Token;
+        protected T? State => _state;
 
         /// <summary>
         /// Initializes the pumps: this "pumpeeter" becomes open.
@@ -53,65 +46,25 @@ namespace CK.MQTT
         ///     <item>From one of the two pump by calling the <see cref="PumpBase.DisconnectAsync(DisconnectedReason)"/>.</item>
         /// </list>
         /// </summary>
-        /// <param name="input">The input pump.</param>
-        /// <param name="output">The output pump.</param>
-        protected void OpenPumps( InputPump input, OutputPump output )
+        protected void OpenPumps( IActivityMonitor m, T newState )
         {
-            if( !_closed.IsCancellationRequested ) throw new InvalidOperationException();
-            _input = input ?? throw new ArgumentNullException( nameof( input ) );
-            _output = output ?? throw new ArgumentNullException( nameof( output ) );
-            _closed = new CancellationTokenSource();
-        }
-
-        protected async Task<bool> CloseAsync( DisconnectedReason reason )
-        {
-            lock( _closeLock )
+            using( m.OpenInfo( "Opening pumps." ) )
             {
-                if( _closed.IsCancellationRequested ) return false;
-                _closed.Cancel();
+                Open();
+                _state = newState;
             }
-            await OnClosingAsync( reason );
-            await Task.WhenAll( _input!.CloseAsync(), _output!.CloseAsync() );
-            (_input, _output) = (null, null);
-            OnClosed( reason );
-            return true;
         }
 
-        /// <summary>
-        /// Gets whether this "pumppeteer" is currently connected.
-        /// </summary>
-        public bool IsConnected => !_closed.IsCancellationRequested;
-
-        /// <summary>
-        /// Called by the input or output pump whenever they need to close the connection to the remote part
-        /// for any reason.
-        /// </summary>
-        /// <param name="reason">The reason of the disconnection.</param>
-        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        internal Task<bool> PumpClose( DisconnectedReason reason ) => CloseAsync( reason );
-
-        /// <summary>
-        /// Closed when this "pumppeteer" has been closed.
-        /// This method calls the <see cref="DisconnectedHandler"/> (if any and if the reason is not <see cref="DisconnectedReason.None"/>).
-        /// </summary>
-        /// <param name="reason">The disconnection reason.</param>
-        protected virtual void OnClosed( DisconnectedReason reason )
+        protected override async ValueTask OnClosed( DisconnectedReason reason )
         {
-            if( reason != DisconnectedReason.None ) DisconnectedHandler?.Invoke( reason );
+            StateHolder state = _state!;
+            await Task.WhenAll( state.Input.CloseAsync(), state.OutputPump.CloseAsync() );
+            await base.OnClosed( reason );
+            _state = null;
         }
 
-        /// <summary>
-        /// Called whenever, for any reason, this is closed.
-        /// </summary>
-        public Disconnected? DisconnectedHandler { get; set; }
 
 
 
-        /// <summary>
-        /// Called before the pumps are closed.
-        /// </summary>
-        /// <param name="reason">The disconnection reason.</param>
-        /// <returns>The awaitable.</returns>
-        protected virtual ValueTask OnClosingAsync( DisconnectedReason reason ) => default;
     }
 }

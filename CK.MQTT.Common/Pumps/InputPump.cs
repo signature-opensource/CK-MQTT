@@ -23,7 +23,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public InputPump( Pumppeteer pumppeteer, PipeReader pipeReader, Reflex reflex )
+        public InputPump( PumppeteerBase pumppeteer, PipeReader pipeReader, Reflex reflex )
             : base( pumppeteer )
         {
             (_config, _pipeReader, CurrentReflex) = (pumppeteer.Configuration, pipeReader, reflex);

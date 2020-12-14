@@ -9,16 +9,31 @@ using System.Diagnostics;
 
 namespace CK.MQTT
 {
-    public class MqttClient : Pumppeteer, IMqttClient
+    public class MqttClient : Pumppeteer<MqttClient.ClientState>, IMqttClient
     {
+        /// <summary>
+        /// Allow to atomically get/set multiple fields.
+        /// </summary>
+        public class ClientState : StateHolder
+        {
+            public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IPacketIdStore packetIdStore, PacketStore store ) : base( input, output )
+            {
+                Channel = channel;
+                PacketIdStore = packetIdStore;
+                Store = store;
+            }
+            public readonly IMqttChannel Channel;
+            public readonly IPacketIdStore PacketIdStore;
+            public readonly PacketStore Store;
+        }
+
+        /// <summary>
+        /// Factory to use to create a MQTT Client.
+        /// </summary>
         public static MqttClientFactory Factory { get; } = new MqttClientFactory();
 
         readonly ProtocolConfiguration _pConfig;
         readonly MqttConfiguration _config;
-        // Change between Connection/Disconnection.
-        IMqttChannel? _channel;
-        IPacketIdStore? _packetIdStore;
-        PacketStore? _store;
         Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
         /// <summary>
@@ -42,58 +57,59 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
-            (_store, _packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
-            _channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
-            // We may get disconnected concurrently by one of the pump.
-            // The disconnect set these fields to null so we capture them now.
-            (PacketStore store, IPacketIdStore packetIdStore, IMqttChannel channel) = (_store, _packetIdStore, _channel);
-            ConnectAckReflex connectAckReflex = new ConnectAckReflex();
-            Task<ConnectResult> connectedTask = connectAckReflex.Task;
-            var input = new InputPump( this, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
-            var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, channel.DuplexPipe.Output, store );
-            OpenPumps( input, output );
-            PingRespReflex pingRes = new PingRespReflex();
-            connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
-                .UseMiddleware( new PublishReflex( _config, packetIdStore, OnMessage, output ) )
-                .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
-                .UseMiddleware( new SubackReflex( store ) )
-                .UseMiddleware( new UnsubackReflex( store ) )
-                .UseMiddleware( pingRes )
-                .Build( InvalidPacket );
+            if( IsConnected ) throw new InvalidOperationException( "This client is already connected." );
+            using( m.OpenTrace( "Connecting..." ) )
+            {
+                (PacketStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
+                IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
+                ConnectAckReflex connectAckReflex = new ConnectAckReflex();
+                Task<ConnectResult> connectedTask = connectAckReflex.Task;
+                var input = new InputPump( this, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
+                var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, channel.DuplexPipe.Output, store );
+                OpenPumps( m, new ClientState( input, output, channel, packetIdStore, store ) );
+                PingRespReflex pingRes = new PingRespReflex();
+                connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
+                    .UseMiddleware( new PublishReflex( _config, packetIdStore, OnMessage, output ) )
+                    .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
+                    .UseMiddleware( new SubackReflex( store ) )
+                    .UseMiddleware( new UnsubackReflex( store ) )
+                    .UseMiddleware( pingRes )
+                    .Build( InvalidPacket );
 
-            await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-            output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
-            Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
-            await Task.WhenAny( connectedTask, timeout );
-            if( connectedTask.Exception is not null ) throw connectedTask.Exception.InnerException ?? connectedTask.Exception;
-            if( CloseToken.IsCancellationRequested )
-            {
-                await AutoDisconnectAsync();
-                return new ConnectResult( ConnectError.RemoteDisconnected );
+                await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
+                output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
+                Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
+                await Task.WhenAny( connectedTask, timeout );
+                if( connectedTask.Exception is not null ) throw connectedTask.Exception.InnerException ?? connectedTask.Exception;
+                if( CloseToken.IsCancellationRequested )
+                {
+                    await AutoDisconnectAsync();
+                    return new ConnectResult( ConnectError.RemoteDisconnected );
+                }
+                if( !connectedTask.IsCompleted )
+                {
+                    await AutoDisconnectAsync();
+                    return new ConnectResult( ConnectError.Timeout );
+                }
+                ConnectResult res = await connectedTask;
+                bool askedCleanSession = credentials?.CleanSession ?? true;
+                if( askedCleanSession && res.SessionState != SessionState.CleanSession )
+                {
+                    await AutoDisconnectAsync();
+                    throw new ProtocolViolationException( "We asked for a clean session but broker's CONNACK had SessionPresent bit set." );
+                }
+                if( res.SessionState == SessionState.CleanSession )
+                {
+                    ValueTask task = packetIdStore.ResetAsync();
+                    await store.ResetAsync();
+                    await task;
+                }
+                else
+                {
+                    await SendAllStoredMessages( m, store, output );
+                }
+                return res;
             }
-            if( !connectedTask.IsCompleted )
-            {
-                await AutoDisconnectAsync();
-                return new ConnectResult( ConnectError.Timeout );
-            }
-            ConnectResult res = await connectedTask;
-            bool askedCleanSession = credentials?.CleanSession ?? true;
-            if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-            {
-                await AutoDisconnectAsync();
-                throw new ProtocolViolationException( "We asked for a clean session but broker's CONNACK had SessionPresent bit set." );
-            }
-            if( res.SessionState == SessionState.CleanSession )
-            {
-                ValueTask task = packetIdStore.ResetAsync();
-                await store.ResetAsync();
-                await task;
-            }
-            else
-            {
-                await SendAllStoredMessages( m, store, output );
-            }
-            return res;
         }
 
         async static Task SendAllStoredMessages( IActivityMonitor m, PacketStore store, OutputPump output )
@@ -122,24 +138,22 @@ namespace CK.MQTT
         {
             if( reason == DisconnectedReason.UserDisconnected )
             {
-                await OutputPump!.SendMessageAsync( OutgoingDisconnect.Instance );
+                await State!.OutputPump.SendMessageAsync( OutgoingDisconnect.Instance );
             }
         }
 
-        protected override void OnClosed( DisconnectedReason reason )
+        protected override ValueTask OnClosed( DisconnectedReason reason )
         {
-            _channel!.Close( _config.InputLogger );
-            _channel = null;
-            _store = null;
-            base.OnClosed( reason );
+            State!.Channel.Close( _config.InputLogger );
+            return base.OnClosed( reason );
         }
 
         public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class
         {
-            (PacketStore? store, IPacketIdStore? packetIdStore, IMqttChannel? channel) = (_store, _packetIdStore, _channel);
+            ClientState? state = State;
             if( !IsConnected ) throw new InvalidOperationException( "Client is Disconnected." );
-            Debug.Assert( InputPump != null && OutputPump != null && packetIdStore != null && store != null );
-            return SenderHelper.SendPacket<T>( m, store, OutputPump, outgoingPacket, _config );
+            if( state is null ) throw new NullReferenceException();
+            return SenderHelper.SendPacket<T>( m, state.Store, state.OutputPump, outgoingPacket );
         }
 
         /// <summary>
@@ -149,8 +163,11 @@ namespace CK.MQTT
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
         public Task<bool> DisconnectAsync( IActivityMonitor m, bool clearSession, bool cancelAckTasks )
         {
+            ClientState? state = State;
             if( clearSession && !cancelAckTasks ) throw new ArgumentException( "When the session is cleared, the ACK tasks must be canceled too." );
-            if( cancelAckTasks ) _store!.IdStore.CancelAllAcks( m );
+            if( !IsConnected ) return Task.FromResult( false );
+            if( state is null ) throw new NullReferenceException();
+            if( cancelAckTasks ) state!.Store.IdStore.CancelAllAcks( m );
             return CloseAsync( DisconnectedReason.UserDisconnected );
         }
 
