@@ -30,7 +30,8 @@ namespace SimpleClientTest
                 KeepAliveSeconds = 0
             }, MessageHandlerDelegate );
             var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
-            var res = await await client.SubscribeAsync( m, new Subscription( "#", QualityOfService.AtMostOnce ) );
+            await await client.PublishAsync( m, new DisposableApplicationMessage( "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false ) )
+            //var res = await await client.SubscribeAsync( m, new Subscription( "#", QualityOfService.AtMostOnce ) );
             await Task.Delay( 500000 );
             //if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
             //{
