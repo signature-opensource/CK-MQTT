@@ -1,10 +1,11 @@
 using CK.MQTT.Client.Tests.Helpers;
+using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-
+using static CK.Testing.MonitorTestHelper;
 namespace CK.MQTT.Client.Tests
 {
     public class PublishTests
@@ -12,30 +13,54 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task simple_publish_qos0_works()
         {
-            Scenario.ConnectedClient();
-            //There is an issue with DisposableMessage:
-            //It must be instantiated with a IDisposable. But it's the handler who need this IDisposable.
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new List<TestPacket>()
+            {
+                TestPacket.Outgoing("3018000a7465737420746f70696374657374207061796c6f6164")
+            } );
+
+            await await client.PublishAsync( TestHelper.Monitor, new NewApplicationMessage(
+                "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false )
+            );
+            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
 
         [Test]
         public async Task simple_publish_qos1_works()
         {
-            throw new NotImplementedException();
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new List<TestPacket>()
+            {
+                TestPacket.Outgoing("321a000a7465737420746f706963000174657374207061796c6f6164"),
+                TestPacket.Incoming("40020001")
+            } );
+
+            await await client.PublishAsync( TestHelper.Monitor, new NewApplicationMessage(
+                "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtLeastOnce, false )
+            );
+            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
 
         [Test]
         public async Task simple_publish_qos2_works()
         {
-            throw new NotImplementedException();
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new List<TestPacket>()
+            {
+                TestPacket.Outgoing("341a000a7465737420746f706963000174657374207061796c6f6164"),
+                TestPacket.Incoming("50020001"),
+                TestPacket.Outgoing("62020001"),
+                TestPacket.Incoming("70020001")
+            } );
+
+            await await client.PublishAsync( TestHelper.Monitor, new NewApplicationMessage(
+                "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.ExactlyOnce, false )
+            );
+            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
 
         [Test]
         public async Task todo()
         {
             throw new NotImplementedException();
-            // does the broker should respect the order ? (PUB A then PUB A, can it respond ACK B then ACK A ? )
             // test the case where a bad packet block a packet (cycling the ID don't reuse the blocked packet ID.)
-            // if the response order should be respected, then we can resend packets immediatly after the response of a packet sent later.a
         }
     }
 }

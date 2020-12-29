@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +35,7 @@ namespace CK.MQTT
         readonly TaskCompletionSource<object?> _taskCompletionSource = new TaskCompletionSource<object?>();
         public AwaitableOutgoingPacketWithIdWrapper( IOutgoingPacketWithId outgoingPacket )
         {
+            Debug.Assert( outgoingPacket.PacketId != 0 );
             _outgoingPacket = outgoingPacket;
         }
 

@@ -62,7 +62,10 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         protected override ValueTask DoDiscardPacketIdAsync( IInputLogger? m, int packetId )
-            => new ValueTask(); //nothing to do, the packet id is not persisted.
+        {
+            _packets.Remove( packetId );
+            return new ValueTask();
+        }
 
         /// <inheritdoc/>
         protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )

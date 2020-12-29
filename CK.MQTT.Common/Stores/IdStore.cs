@@ -19,9 +19,6 @@ namespace CK.MQTT
             /// <see langword="null"/> null when the entry is free, or the packet is in an uncertain state.
             /// </summary>
             public TaskCompletionSource<object?>? TaskCS;
-            /// <summary>
-            /// When <see langword="default"/> it mean the entry is empty.
-            /// </summary>
             public TimeSpan EmissionTime;
             public char DebuggerDisplay => TaskCS == null ? '-' : 'X'; //Todo: change and show incertain state
         }
@@ -81,11 +78,13 @@ namespace CK.MQTT
             }
         }
 
-        public void PacketSent( IOutputLogger? m, int packetId )
+        public void SendingPacket( IOutputLogger? m, int packetId )
         {
             lock( _entries )
             {
-                _entries[packetId - 1].EmissionTime = _stopwatch.Elapsed;
+                TimeSpan elapsed = _stopwatch.Elapsed;
+                // I want to avoid having a TimeSpan being equal to default, which mean the value is uninitialized.
+                _entries[packetId - 1].EmissionTime = elapsed.Ticks > 0 ? elapsed : new TimeSpan( 1 );
                 int count = ++_entries[packetId - 1].TryCount;
                 if( count > 1 )
                 {
@@ -137,6 +136,7 @@ namespace CK.MQTT
                 // We resend SUBSCRIBE packetId: 1
                 // We receive SUBACK packetId: 1.
                 // Right now, there may be another SUBACK incoming, so we must not free the packetId 1 right now.
+                // YES, the MQTT spec says that you can reuse it now, but the spec is wrong.
                 CleanUncertainPacketId( m, _entries[packetId - 1].EmissionTime );
                 if( entry.TryCount > 1 )
                 {

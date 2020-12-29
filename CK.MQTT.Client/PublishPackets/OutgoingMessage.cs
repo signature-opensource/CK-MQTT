@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,9 +27,9 @@ namespace CK.MQTT
         /// <param name="qos">The message qos.</param>
         protected OutgoingMessage(
             string topic, QualityOfService qos, bool retain,
-			string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null
+            string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null
         ) //properties 
-		{
+        {
             //Compute properties size.
             if( responseTopic != null )
             {
@@ -49,8 +50,21 @@ namespace CK.MQTT
             _correlationDataWriter = correlationDataWriter;
         }
 
+        int _packetId = 0;
         /// <inheritdoc/>
-        public int PacketId { get; set; }
+        public int PacketId
+        {
+            get
+            {
+                Debug.Assert( _packetId != 0, "Packet ID should be intialized before read." );
+                return _packetId;
+            }
+            set
+            {
+                Debug.Assert( value != 0 );
+                _packetId = value;
+            }
+        }
 
         /// <inheritdoc/>
         public QualityOfService Qos { get; }

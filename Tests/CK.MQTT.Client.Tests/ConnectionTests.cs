@@ -74,9 +74,9 @@ namespace CK.MQTT.Client.Tests
                 packets.Enqueue( TestPacket.Incoming( "200200" + BitConverter.ToString( new byte[] { i } ) ) );
             }
 
-            PacketReplayer pcktReplayer = new( packets );
+            PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -93,7 +93,7 @@ namespace CK.MQTT.Client.Tests
                     e.Should().BeOfType<ProtocolViolationException>();
                 }
             }
-            pcktReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
+            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
 
         [Test]
@@ -101,21 +101,22 @@ namespace CK.MQTT.Client.Tests
         {
             Queue<TestPacket> packets = new();
             packets.Enqueue( TestPacket.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" ) );
-            PacketReplayer pcktReplayer = new( packets );
+            PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
             } );
             Task<ConnectResult> connectTask = client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
             connectTask.IsCompleted.Should().BeFalse();
-            await pcktReplayer.LastWorkTask!;
-            pcktReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
+            await packetReplayer.LastWorkTask!;
+            packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
             await Task.WhenAny( connectTask, Task.Delay( 50 ) );
             connectTask.IsCompleted.Should().BeFalse();
-            pcktReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
+            packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
             (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );
+            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
 
         [Test]
@@ -124,9 +125,9 @@ namespace CK.MQTT.Client.Tests
             Queue<TestPacket> packets = new();
             packets.Enqueue( TestPacket.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" ) );
             packets.Enqueue( TestPacket.Incoming( "20020000" ) );
-            PacketReplayer pcktReplayer = new( packets );
+            PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -142,6 +143,7 @@ namespace CK.MQTT.Client.Tests
                 e.Should().BeOfType<InvalidOperationException>();
                 e.Message.Should().Be( "This client is already connected." );
             }
+            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
 
         [Test]
@@ -153,9 +155,9 @@ namespace CK.MQTT.Client.Tests
             packets.Enqueue( TestPacket.Incoming( "20021000" ) ); // Invalid response.
             packets.Enqueue( connectPacket );
             packets.Enqueue( TestPacket.Incoming( "20020000" ) ); // Valid response.
-            PacketReplayer pcktReplayer = new( packets );
+            PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -171,7 +173,7 @@ namespace CK.MQTT.Client.Tests
             }
             ConnectResult res2 = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
             res2.ConnectError.Should().Be( ConnectError.Ok );
-            pcktReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
+            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
     }
 }

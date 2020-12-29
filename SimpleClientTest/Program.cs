@@ -2,6 +2,7 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
@@ -23,39 +24,23 @@ namespace SimpleClientTest
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Debug;
             var m = new ActivityMonitor( "main" );
-            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "test.mosquitto.org:1883" )
+            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "localhost:1883" )
             {
                 InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor( "input" ) ),
                 OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "output" ) ),
                 KeepAliveSeconds = 0
             }, MessageHandlerDelegate );
+            Stopwatch stopwatch = new Stopwatch();
             var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
-            await await client.PublishAsync( m, new DisposableApplicationMessage( "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false ) )
-            //var res = await await client.SubscribeAsync( m, new Subscription( "#", QualityOfService.AtMostOnce ) );
-            await Task.Delay( 500000 );
-            //if( result.ConnectReturnCode != ConnectReturnCode.Accepted )
-            //{
-            //    throw new Exception();
-            //}
-            //var returnSub = await await client.SubscribeAsync( m, new Subscription( "/test4712/#", QualityOfService.AtMostOnce ), new Subscription( "/test122/#", QualityOfService.ExactlyOnce ) );
-            //await await client.PublishAsync( m, "/test4712/42", QualityOfService.ExactlyOnce, false, () => 0, ( p, c ) => new ValueTask<IOutgoingPacket.WriteResult>( IOutgoingPacket.WriteResult.Written ) );
-            //await await client.UnsubscribeAsync( m, "test" );
-            //await Task.Delay( 3000 );
-            //await client.DisconnectAsync();
-            //await Task.Delay( 3000 );
-            //result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", false ) );
-            //await Task.Delay( 500 );
+            var payload = Encoding.UTF8.GetBytes( "test payload" );
+            for( int i = 0; i < 100000; i++ )
+            {
+                await await client.PublishAsync( m, "test topic", QualityOfService.ExactlyOnce, false, payload );
+            }
         }
 
-        static bool first = true;
         async static ValueTask MessageHandlerDelegate( IActivityMonitor m, string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
-            if( first )
-            {
-                await Task.Delay( 5000 );
-                first = false;
-            }
-            m.Info( "********" + topic + "********payload" + payloadLength );
             await pipeReader.SkipBytes( payloadLength );
         }
     }

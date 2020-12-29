@@ -78,7 +78,7 @@ namespace CK.MQTT
                         .UseMiddleware( pingRes )
                         .Build( InvalidPacket );
 
-                    await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
+                    await output.SendMessageWithoutPacketIdAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
                     output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
                     await Task.WhenAny( connectedTask, timeout );
@@ -126,7 +126,7 @@ namespace CK.MQTT
             IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store.GetAllMessagesAsync( m );
             await foreach( IOutgoingPacketWithId msg in msgs )
             {
-                await output.SendMessageAsync( msg );
+                await output.SendMessageWithPacketIdAsync( msg );
             }
         }
 
@@ -147,7 +147,7 @@ namespace CK.MQTT
         {
             if( reason == DisconnectedReason.UserDisconnected )
             {
-                await State!.OutputPump.SendMessageAsync( OutgoingDisconnect.Instance );
+                await State!.OutputPump.SendMessageWithoutPacketIdAsync( OutgoingDisconnect.Instance );
             }
         }
 

@@ -116,8 +116,7 @@ namespace CK.MQTT
                 // Wait the right amount of time.
                 if( waitTime < waitTimeout ) return waitTimeout - waitTime;
                 await packetSender( m, await _packetStore.GetMessageByIdAsync( m, packetId ) );
-                //We reset the timer, or this packet will be picked up again.
-                _packetStore.IdStore.PacketSent( m, packetId );
+
             }
         }
     }

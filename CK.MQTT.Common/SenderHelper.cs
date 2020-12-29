@@ -19,12 +19,12 @@ namespace CK.MQTT
             };
 
         static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor m,
-            OutputPump output, IOutgoingPacketWithId msg )
+            OutputPump output, IOutgoingPacket msg )
             where T : class
         {
             using( m.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
             {
-                await output.SendMessageAsync( msg );
+                await output.SendMessageWithoutPacketIdAsync( msg );
                 return Task.FromResult<T?>( null );
             }
         }
@@ -40,7 +40,7 @@ namespace CK.MQTT
         static async Task<T?> Send<T>( OutputPump output, IOutgoingPacketWithId packet, Task<object?> ackReceived )
             where T : class
         {
-            await output.SendMessageAsync( packet );
+            await output.SendMessageWithPacketIdAsync( packet );
             object? res = await ackReceived;
             if( res is null ) return null;
             if( res is T a ) return a;

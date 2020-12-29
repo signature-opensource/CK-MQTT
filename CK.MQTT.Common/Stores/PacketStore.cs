@@ -80,8 +80,8 @@ namespace CK.MQTT
 
         internal async ValueTask DiscardPacketIdAsync( IInputLogger? m, int packetId )
         {
-            IdStore.OnAck( m, packetId );
             await DoDiscardPacketIdAsync( m, packetId );
+            IdStore.OnAck( m, packetId );
             return;
         }
 

@@ -30,7 +30,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="reason">The reason of the disconnection.</param>
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        private protected Task<bool> DisconnectAsync( DisconnectedReason reason )
+        public Task<bool> DisconnectAsync( DisconnectedReason reason )
         {
             _stopSource.Cancel();
             return _pumppeteer.PumpClose( reason );

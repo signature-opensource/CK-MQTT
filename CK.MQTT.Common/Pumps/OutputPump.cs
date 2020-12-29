@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading;
@@ -54,15 +55,16 @@ namespace CK.MQTT
         public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        public async Task SendMessageAsync( IOutgoingPacket item )
+        public async Task SendMessageWithoutPacketIdAsync( IOutgoingPacket item )
         {
             var wrapper = new AwaitableOutgoingPacketWrapper( item );
             await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
             await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
 
-        public async Task SendMessageAsync( IOutgoingPacketWithId item )
+        public async Task SendMessageWithPacketIdAsync( IOutgoingPacketWithId item )
         {
+            Debug.Assert( item.PacketId != 0 );
             var wrapper = new AwaitableOutgoingPacketWithIdWrapper( item );
             await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
             await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
@@ -95,8 +97,10 @@ namespace CK.MQTT
             {
                 using( m?.SendingMessageWithId( ref outgoingPacket, _pconfig.ProtocolLevel, packetWithId.PacketId ) )
                 {
+                    _packetStore.IdStore.SendingPacket( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet.
+                    // Explanation:
+                    // Sometimes, the receiver and input loop is faster than simply running "SendingPacket".
                     await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
-                    _packetStore.IdStore.PacketSent( m, packetWithId.PacketId );
                 }
             }
             else
