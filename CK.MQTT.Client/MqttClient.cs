@@ -55,7 +55,7 @@ namespace CK.MQTT
             => _messageHandler( m, topic, pipeReader, payloadLength, qos, retain, cancellationToken );
 
         /// <inheritdoc/>
-        public async Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
+        public async Task<ConnectResult> ConnectAsync( IActivityMonitor? m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             if( IsConnected ) throw new InvalidOperationException( "This client is already connected." );
             using( m.OpenTrace( "Connecting..." ) )
@@ -121,7 +121,7 @@ namespace CK.MQTT
             }
         }
 
-        async static Task SendAllStoredMessages( IActivityMonitor m, PacketStore store, OutputPump output )
+        async static Task SendAllStoredMessages( IActivityMonitor? m, PacketStore store, OutputPump output )
         {
             IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store.GetAllMessagesAsync( m );
             await foreach( IOutgoingPacketWithId msg in msgs )
@@ -157,7 +157,7 @@ namespace CK.MQTT
             return base.OnClosed( reason );
         }
 
-        public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class
+        public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacketWithId outgoingPacket ) where T : class
         {
             ClientState? state = State;
             if( !IsConnected ) throw new InvalidOperationException( "Client is Disconnected." );
@@ -170,7 +170,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="reason">The reason of the disconnection.</param>
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        public Task<bool> DisconnectAsync( IActivityMonitor m, bool clearSession, bool cancelAckTasks )
+        public Task<bool> DisconnectAsync( IActivityMonitor? m, bool clearSession, bool cancelAckTasks )
         {
             ClientState? state = State;
             if( clearSession && !cancelAckTasks ) throw new ArgumentException( "When the session is cleared, the ACK tasks must be canceled too." );

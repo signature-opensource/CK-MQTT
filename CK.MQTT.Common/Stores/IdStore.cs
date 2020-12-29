@@ -5,6 +5,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Threading.Tasks;
 
+#nullable enable
+
 namespace CK.MQTT
 {
     [DebuggerDisplay( "Count = {_count} {DebuggerDisplay}" )]
@@ -151,7 +153,7 @@ namespace CK.MQTT
             }
         }
 
-        public void CancelAllAcks( IActivityMonitor m )
+        public void CancelAllAcks( IActivityMonitor? m )
         {
             lock( _entries )
             {
@@ -159,7 +161,7 @@ namespace CK.MQTT
                 {
                     for( int i = 0; i < _entries.Length; i++ )
                     {
-                        m.OpenTrace( $"Cancelling task for packet id {i + 1}." );
+                        m.Trace( $"Cancelling task for packet id {i + 1}." );
                         _entries[i].TaskCS!.SetCanceled();
                     }
                 }

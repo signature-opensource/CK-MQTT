@@ -31,13 +31,13 @@ namespace CK.MQTT
         /// Store a <see cref="IOutgoingPacketWithId"/> in the session, return a <see cref="IOutgoingPacket"/>.
         /// </summary>
         /// <returns>A <see cref="IOutgoingPacket"/> that can be sent on the wire.</returns>
-        internal async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
+        internal async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet )
         {
             bool success = IdStore.TryGetId( out int packetId, out Task<object?>? idFreedAwaiter );
             int waitTime = 500;
             while( !success )
             {
-                m.Warn()?.Send( "No PacketId available, awaiting until one is free." );
+                m?.Warn( "No PacketId available, awaiting until one is free." );
                 await Config.DelayHandler.Delay( waitTime );
                 if( waitTime < 5000 ) waitTime += 500;
                 success = IdStore.TryGetId( out packetId, out idFreedAwaiter );
@@ -51,17 +51,17 @@ namespace CK.MQTT
             }
         }
 
-        public async ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> GetAllMessagesAsync( IActivityMonitor m )
+        public async ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> GetAllMessagesAsync( IActivityMonitor? m )
             => (await DoGetAllMessagesAsync( m )).Select( s => Config.StoreTransformer.PacketTransformerOnRestore( s ) );
 
-        protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor m );
+        protected abstract ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor? m );
 
         public async ValueTask<IOutgoingPacketWithId> GetMessageByIdAsync( IOutputLogger? m, int packetId )
             => Config.StoreTransformer.PacketTransformerOnRestore( await DoGetMessageByIdAsync( m, packetId ) );
 
         protected abstract ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IOutputLogger? m, int packetId );
 
-        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet );
+        protected abstract ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet );
 
         public async ValueTask<QualityOfService> OnMessageAck( IInputLogger? m, int packetId, object? ackPacket = null )
         {

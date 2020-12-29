@@ -40,7 +40,7 @@ namespace CK.MQTT
             catch( Exception e )
             {
                 _tcs.SetException( e );
-                throw e;
+                throw;
             }
         }
 

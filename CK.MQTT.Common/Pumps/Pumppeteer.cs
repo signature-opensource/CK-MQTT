@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
+#nullable enable
 
 namespace CK.MQTT
 {
@@ -46,9 +47,9 @@ namespace CK.MQTT
         ///     <item>From one of the two pump by calling the <see cref="PumpBase.DisconnectAsync(DisconnectedReason)"/>.</item>
         /// </list>
         /// </summary>
-        protected void OpenPumps( IActivityMonitor m, T newState )
+        protected void OpenPumps( IActivityMonitor? m, T newState )
         {
-            using( m.OpenInfo( "Opening pumps." ) )
+            using( m?.OpenInfo( "Opening pumps." ) )
             {
                 Open();
                 _state = newState;

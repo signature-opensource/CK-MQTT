@@ -43,9 +43,9 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the connection protocol.
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( IActivityMonitor m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor? m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 
-        ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, IOutgoingPacketWithId outgoingPacket ) where T : class;
+        ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacketWithId outgoingPacket ) where T : class;
 
         /// <summary>
         /// Disconnect the client.
@@ -57,7 +57,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
         /// for more details about the protocol disconnection
         /// </remarks>
-        Task<bool> DisconnectAsync( IActivityMonitor m, bool deleteSession, bool cancelAckTasks );
+        Task<bool> DisconnectAsync( IActivityMonitor? m, bool deleteSession, bool cancelAckTasks );
     }
 
 }

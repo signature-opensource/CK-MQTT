@@ -56,7 +56,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             }
         }
 
-        public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor m, string connectionString )
+        public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
         {
             if( LastWorkTask != null )
             {

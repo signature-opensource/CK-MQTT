@@ -7,6 +7,7 @@ using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+#nullable enable
 
 namespace SimpleClientTest
 {
@@ -26,16 +27,16 @@ namespace SimpleClientTest
             var m = new ActivityMonitor( "main" );
             var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "localhost:1883" )
             {
-                InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor( "input" ) ),
-                OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "output" ) ),
+                InputLogger = null,
+                OutputLogger = null,
                 KeepAliveSeconds = 0
             }, MessageHandlerDelegate );
             Stopwatch stopwatch = new Stopwatch();
-            var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
+            var result = await client.ConnectAsync( null, new MqttClientCredentials( "CKMqttTest", true ) );
             var payload = Encoding.UTF8.GetBytes( "test payload" );
-            for( int i = 0; i < 100000; i++ )
+            for( int i = 0; i < 20000; i++ )
             {
-                await await client.PublishAsync( m, "test topic", QualityOfService.ExactlyOnce, false, payload );
+                await await client.PublishAsync( null, "test topic", QualityOfService.ExactlyOnce, false, payload );
             }
         }
 

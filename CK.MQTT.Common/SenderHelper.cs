@@ -7,7 +7,7 @@ namespace CK.MQTT
 {
     public static class SenderHelper
     {
-        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m,
+        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m,
             PacketStore messageStore, OutputPump output, IOutgoingPacketWithId packet )
             where T : class
             => packet.Qos switch
@@ -18,7 +18,7 @@ namespace CK.MQTT
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor m,
+        static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor? m,
             OutputPump output, IOutgoingPacket msg )
             where T : class
         {
@@ -29,7 +29,7 @@ namespace CK.MQTT
             }
         }
 
-        static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m,
+        static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor? m,
             OutputPump output, PacketStore messageStore, IOutgoingPacketWithId msg )
             where T : class
         {
