@@ -22,7 +22,7 @@ namespace CK.MQTT
             OutputPump output, IOutgoingPacket msg )
             where T : class
         {
-            using( m.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
+            using( m?.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
             {
                 await output.SendMessageWithoutPacketIdAsync( msg );
                 return Task.FromResult<T?>( null );

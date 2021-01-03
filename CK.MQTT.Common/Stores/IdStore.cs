@@ -15,14 +15,13 @@ namespace CK.MQTT
         [DebuggerDisplay( "{DebuggerDisplay} {NextFreeId}" )]
         struct Entry
         {
-            public int NextFreeId;
-            public ushort TryCount;
-            /// <summary>
-            /// <see langword="null"/> null when the entry is free, or the packet is in an uncertain state.
-            /// </summary>
             public TaskCompletionSource<object?>? TaskCS;
             public TimeSpan EmissionTime;
-            public char DebuggerDisplay => TaskCS == null ? '-' : 'X'; //Todo: change and show incertain state
+            public int NextFreeId;
+            public ushort TryCount;
+
+            public bool Acked => TaskCS == null;
+            public char DebuggerDisplay => EmissionTime == default ? '-' : Acked ? '?' : 'X';
         }
 
         Entry[] _entries;
@@ -57,7 +56,7 @@ namespace CK.MQTT
         {
             lock( _entries )
             {
-                if( _nextFreeId == 0 ) // When 0 it mean there are no 
+                if( _nextFreeId == 0 ) // When 0 it mean there are no id
                 {
                     if( _count == _maxPacketId )
                     {
@@ -107,9 +106,9 @@ namespace CK.MQTT
             for( ushort i = 0; i < _entries.Length; i++ )
             {
                 Entry entry = _entries[i];
-                if( entry.TryCount > 1 && entry.TaskCS == null )
+                if( entry.TryCount > 1 && entry.Acked )
                 {
-                    if( entry.EmissionTime > timeSpan )
+                    if( entry.EmissionTime < timeSpan )
                     {
                         FreeId( m, i + 1 );
                     }
@@ -157,11 +156,11 @@ namespace CK.MQTT
         {
             lock( _entries )
             {
-                using( m.OpenTrace( "Cancelling all ack's tasks." ) )
+                using( m?.OpenTrace( "Cancelling all ack's tasks." ) )
                 {
                     for( int i = 0; i < _entries.Length; i++ )
                     {
-                        m.Trace( $"Cancelling task for packet id {i + 1}." );
+                        m?.Trace( $"Cancelling task for packet id {i + 1}." );
                         _entries[i].TaskCS!.SetCanceled();
                     }
                 }
@@ -176,34 +175,40 @@ namespace CK.MQTT
             m?.FreedPacketId( packetId );// This may want to free the packet we are freeing. So it must be ran after the free process.
         }
 
-        public (int packetId, int waitTime) GetOldestPacket()
+        public (int packetId, int waitTime) GetOldestUnackedPacket()
         {
-            Entry smallest = new Entry
+            lock( _entries )
             {
-                EmissionTime = TimeSpan.MaxValue
-            };
-            // If not assigned, will return 0 (invalid packet id).
-            int smallIndex = -1;
-            ushort confTryCount = _config.AttemptCountBeforeGivingUpPacket;
-            for( int i = 0; i < _count; i++ )
-            {
-                Entry entry = _entries[i];
-                if( entry.EmissionTime != default
-                    && entry.EmissionTime <= smallest.EmissionTime
-                    && (entry.TryCount != confTryCount || confTryCount == 0) )
+                Entry smallest = new Entry
                 {
-                    smallest = entry;
-                    smallIndex = i;
+                    EmissionTime = TimeSpan.MaxValue
+                };
+                // If not assigned, will return 0 (invalid packet id).
+                int smallIndex = -1;
+                ushort confTryCount = _config.AttemptCountBeforeGivingUpPacket;
+                for( int i = 0; i < _count; i++ )
+                {
+                    Entry entry = _entries[i];
+                    if( entry.EmissionTime != default
+                        && !entry.Acked
+                        && entry.EmissionTime <= smallest.EmissionTime
+                        && (entry.TryCount != confTryCount || confTryCount == 0) )
+                    {
+                        smallest = entry;
+                        smallIndex = i;
+                    }
                 }
+                return (smallIndex + 1, (int)((_stopwatch.Elapsed - smallest.EmissionTime).Ticks / TimeSpan.TicksPerMillisecond));
             }
-            return (smallIndex + 1, (int)((_stopwatch.Elapsed - smallest.EmissionTime).Ticks / TimeSpan.TicksPerMillisecond));
         }
 
         void EnsureSlotsAvailable( int count )
         {
             if( _entries.Length < count )
             {
-                Entry[] newEntries = new Entry[count * 2];
+                int newCount = count * 2;
+                if( count * 2 > _maxPacketId ) newCount = _maxPacketId;
+                Entry[] newEntries = new Entry[newCount];
                 _entries.CopyTo( newEntries, 0 );
                 _entries = newEntries;
             }

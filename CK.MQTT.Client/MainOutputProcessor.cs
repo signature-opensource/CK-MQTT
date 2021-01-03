@@ -97,7 +97,7 @@ namespace CK.MQTT
 
         bool HaveUnackPacketToSend( int waitTimeout )
         {
-            (int packetId, int waitTime) = _packetStore.IdStore.GetOldestPacket();
+            (int packetId, int waitTime) = _packetStore.IdStore.GetOldestUnackedPacket();
             return packetId != 0 && waitTime < waitTimeout;
         }
 
@@ -110,7 +110,7 @@ namespace CK.MQTT
             }
             while( true )
             {
-                (int packetId, int waitTime) = _packetStore.IdStore.GetOldestPacket();
+                (int packetId, int waitTime) = _packetStore.IdStore.GetOldestUnackedPacket();
                 // 0 means that there is no packet in the store. So we don't want to wake up the loop to resend packets.
                 if( packetId == 0 ) return int.MaxValue;
                 // Wait the right amount of time.

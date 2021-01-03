@@ -58,7 +58,7 @@ namespace CK.MQTT
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor? m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null )
         {
             if( IsConnected ) throw new InvalidOperationException( "This client is already connected." );
-            using( m.OpenTrace( "Connecting..." ) )
+            using( m?.OpenTrace( "Connecting..." ) )
             {
                 try
                 {
@@ -114,7 +114,7 @@ namespace CK.MQTT
                 }
                 catch( Exception e )
                 {
-                    m.Error( "Error while connecting, closing client.", e );
+                    m?.Error( "Error while connecting, closing client.", e );
                     await CloseAsync( DisconnectedReason.None );
                     throw;
                 }

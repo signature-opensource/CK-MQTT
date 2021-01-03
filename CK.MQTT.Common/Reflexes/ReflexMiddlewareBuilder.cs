@@ -63,19 +63,20 @@ namespace CK.MQTT
         /// <param name="lastReflex">The 'next' of the last <see cref="ReflexMiddleware"/> will be this delegate.</param>
         /// <returns>The middleware chain built as a <see cref="Reflex"/>.</returns>
         public Reflex Build( Reflex lastReflex )
+            => _reflexes.Reverse<ReflexMiddleware>()
+            .Aggregate( lastReflex, ( previous, current ) => new Closure( current, previous ).Run );
+
+
+        readonly struct Closure
         {
-            foreach( var curr in _reflexes.Reverse<ReflexMiddleware>() )
+            readonly ReflexMiddleware _current;
+            readonly Reflex _previous;
+            public Closure( ReflexMiddleware current, Reflex previous ) => (_current, _previous) = (current, previous);
+            public ValueTask Run( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c )
             {
-                Reflex previousReflex = lastReflex;
-                // Here some closure black magics: Some mind bending stuff happen if you inline this variable, and make it not work.
-                // (It mean I forgott how this works)
-                // TODO: To improve readability, explicit the closure with a class.
-                Reflex newMiddleware = ( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c ) // We create a lambda that...
-                // Call current the middleware, with a callback to the previous previous middleware.
-                    => curr( m, s, h, l, p, () => previousReflex( m, s, h, l, p, c ), c );
-                lastReflex = newMiddleware;
+                Reflex previous = _previous;
+                return _current( m, s, h, l, p, () => previous( m, s, h, l, p, c ), c );
             }
-            return lastReflex;
         }
     }
 }

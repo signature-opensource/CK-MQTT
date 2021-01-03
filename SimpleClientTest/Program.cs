@@ -2,6 +2,7 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text;
@@ -34,7 +35,7 @@ namespace SimpleClientTest
             Stopwatch stopwatch = new Stopwatch();
             var result = await client.ConnectAsync( null, new MqttClientCredentials( "CKMqttTest", true ) );
             var payload = Encoding.UTF8.GetBytes( "test payload" );
-            for( int i = 0; i < 20000; i++ )
+            for( int i = 0; i < 200000; i++ )
             {
                 await await client.PublishAsync( null, "test topic", QualityOfService.ExactlyOnce, false, payload );
             }
