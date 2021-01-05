@@ -7,8 +7,8 @@ namespace CK.MQTT
 {
     public static class SenderHelper
     {
-        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor m, PacketStore messageStore, OutgoingMessageHandler output,
-            IOutgoingPacketWithId packet, MqttConfiguration config )
+        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m,
+            PacketStore messageStore, OutputPump output, IOutgoingPacketWithId packet )
             where T : class
             => packet.Qos switch
             {
@@ -18,32 +18,34 @@ namespace CK.MQTT
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        public static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor m, OutgoingMessageHandler output, IOutgoingPacketWithId msg )
+        static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor? m,
+            OutputPump output, IOutgoingPacket msg )
             where T : class
         {
-            using( m.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
+            using( m?.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
             {
-                await output.SendMessageAsync( msg );
+                await output.SendMessageWithoutPacketIdAsync( msg );
                 return Task.FromResult<T?>( null );
             }
         }
 
-        public static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor m, OutgoingMessageHandler output, PacketStore messageStore, IOutgoingPacketWithId msg )
+        static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor? m,
+            OutputPump output, PacketStore messageStore, IOutgoingPacketWithId msg )
             where T : class
         {
             (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );
-            return Send<T>( m, output, newPacket, ackReceived );
+            return Send<T>( output, newPacket, ackReceived );
         }
 
-        public static async Task<T?> Send<T>( IActivityMonitor m,
-            OutgoingMessageHandler output,  IOutgoingPacketWithId packet, Task<object?> ackReceived )
+        static async Task<T?> Send<T>( OutputPump output, IOutgoingPacketWithId packet, Task<object?> ackReceived )
             where T : class
         {
-            await await output.SendMessageAsync( packet );
+            await output.SendMessageWithPacketIdAsync( packet );
             object? res = await ackReceived;
             if( res is null ) return null;
             if( res is T a ) return a;
-            throw new ProtocolViolationException( "Received ack is not of the expected type." );
+            //For exemple: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
+            throw new ProtocolViolationException( "We received a packet id ack from an unexpected packet type." );
         }
     }
 }

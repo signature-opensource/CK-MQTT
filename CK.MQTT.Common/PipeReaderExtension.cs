@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 using System.Buffers;
 using System.IO;
@@ -8,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public static class PipeReaderExtension
+    public static class CKPipeReaderExtensions
     {
         /// <summary>
         /// Return a read with a buffer containing at least the given amount of bytes.
@@ -77,7 +76,7 @@ namespace CK.MQTT
                     {
 
                         m?.UnparsedExtraBytesPacketId( remainingLength );
-                        await pipeReader.BurnBytes( remainingLength );
+                        await pipeReader.SkipBytes( remainingLength );
                     }
                     return output;
                 }

@@ -12,7 +12,7 @@ namespace CK.MQTT
 {
     /// <summary>
     /// In memory implementation of<see cref="PacketStore"/>.
-    /// This class DONT persist the data, if the process is killed, data is lost !
+    /// This class DONT persist the data !!!
     /// </summary>
     public class MemoryPacketStore : PacketStore
     {
@@ -31,9 +31,9 @@ namespace CK.MQTT
 
             public QualityOfService Qos { get; set; }
 
-            public int Size => _buffer.Length;
+            public int GetSize( ProtocolLevel protocolLevel ) => _buffer.Length;
 
-            public async ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken )
+            public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
             {
                 await writer.WriteAsync( _buffer );
                 return WriteResult.Written;
@@ -43,12 +43,12 @@ namespace CK.MQTT
         readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
 
         /// <summary>
-        /// Instantiate a new <see cref="MemoryPacketStore"/>.
+        /// Instantiates a new <see cref="MemoryPacketStore"/>.
         /// </summary>
         /// <param name="config">The config of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
-        public MemoryPacketStore( MqttConfiguration config, int packetIdMaxValue )
-            : base( config, packetIdMaxValue )
+        public MemoryPacketStore( ProtocolConfiguration pConfig, MqttConfigurationBase config, int packetIdMaxValue )
+            : base( pConfig, config, packetIdMaxValue )
         {
         }
 
@@ -62,17 +62,21 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         protected override ValueTask DoDiscardPacketIdAsync( IInputLogger? m, int packetId )
-            => new ValueTask(); //nothing to do, the packet id is not persisted.
+        {
+            _packets.Remove( packetId );
+            return new ValueTask();
+        }
 
         /// <inheritdoc/>
-        protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor m, IOutgoingPacketWithId packet )
+        protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet )
         {
             if( _packets.ContainsKey( packet.PacketId ) ) throw new InvalidOperationException( $"Packet Id was badly choosen. Did you restored it's state correctly ?" );
-            m.Trace()?.Send( $"Allocating {packet.Size} bytes to persist {packet}." );
+            int packetSize = packet.GetSize( PConfig.ProtocolLevel );
+            m?.Trace( $"Allocating {packetSize} bytes to persist {packet}." );
             //TODO: https://github.com/signature-opensource/CK-MQTT/issues/12
-            byte[] arr = new byte[packet.Size];//Some packet can be written only once. So we need to allocate memory for them.
+            byte[] arr = new byte[packetSize];//Some packet can be written only once. So we need to allocate memory for them.
             PipeWriter pipe = PipeWriter.Create( new MemoryStream( arr ) );//And write their content to this memory.
-            if( await packet.WriteAsync( pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            if( await packet.WriteAsync( PConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             var newPacket = new OutgoingStoredPacket( packet.PacketId, packet.Qos, arr );
             _packets.Add( packet.PacketId, newPacket );
             return newPacket;
@@ -90,7 +94,7 @@ namespace CK.MQTT
             => new ValueTask<IOutgoingPacketWithId>( _packets[packetId] );
 
         /// <inheritdoc/>
-        protected override ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor m )
+        protected override ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor? m )
             => new ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>>( _packets.Select( s => (IOutgoingPacketWithId)s.Value ).ToAsyncEnumerable() );
     }
 }

@@ -16,14 +16,14 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public override int Size => 4;
+        public override int GetSize( ProtocolLevel protocolLevel ) => 4;
 
         /// <inheritdoc/>
-        protected override void Write( Span<byte> span )
-        {
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
+		{
             span[0] = _header;
             span[1] = 2;
-            span[2..].WriteUInt16( (ushort)PacketId );
+            span[2..].WriteBigEndianUInt16( (ushort)PacketId );
         }
 
         public static IOutgoingPacketWithId Pubrel( int packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishRelease | 0b0010, packetId );

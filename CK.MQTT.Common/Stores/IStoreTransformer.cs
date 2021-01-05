@@ -1,5 +1,4 @@
 using System;
-using static CK.MQTT.PacketStore;
 
 namespace CK.MQTT
 {

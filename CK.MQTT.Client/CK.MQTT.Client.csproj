@@ -1,15 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\Common\Shared.props" />
+  <Import Project="..\Common\Mqtt.props" />
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="OutgoingPackets\v5\" />
-  </ItemGroup>
 </Project>

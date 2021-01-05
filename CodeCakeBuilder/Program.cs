@@ -10,7 +10,7 @@ namespace CodeCake
         /// instead of using the default lookup to "Solution/Builder/bin/[Configuration]/[targetFramework]" folder.
         /// Check of this argument uses <see cref="StringComparer.OrdinalIgnoreCase"/>.
         /// </summary>
-        const string SolutionDirectoryIsCurrentDirectoryParameter = "SolutionDirectoryIsCurrentDirectory";
+        const string _solutionDirectoryIsCurrentDirectoryParameter = "SolutionDirectoryIsCurrentDirectory";
 
         /// <summary>
         /// CodeCakeBuilder entry point. This is a default, simple, implementation that can 
@@ -20,11 +20,11 @@ namespace CodeCake
         /// <returns>An error code (typically negative), 0 on success.</returns>
         static int Main( string[] args )
         {
-            string solutionDirectory = args.Contains( SolutionDirectoryIsCurrentDirectoryParameter, StringComparer.OrdinalIgnoreCase )
+            string solutionDirectory = args.Contains( _solutionDirectoryIsCurrentDirectoryParameter, StringComparer.OrdinalIgnoreCase )
                                         ? Environment.CurrentDirectory
                                         : null;
             CodeCakeApplication app = new CodeCakeApplication( solutionDirectory );
-            RunResult result = app.Run( args.Where( a => !StringComparer.OrdinalIgnoreCase.Equals( a, SolutionDirectoryIsCurrentDirectoryParameter ) ) );
+            RunResult result = app.Run( args.Where( a => !StringComparer.OrdinalIgnoreCase.Equals( a, _solutionDirectoryIsCurrentDirectoryParameter ) ) );
             if( result.InteractiveMode == InteractiveMode.Interactive )
             {
                 Console.WriteLine();

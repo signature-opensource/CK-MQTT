@@ -12,24 +12,25 @@ namespace CK.MQTT
         /// <summary>
         /// Allow to write synchronously to the input buffer.
         /// </summary>
+        /// <param name="protocolLevel"></param>
         /// <param name="buffer">The buffer to modify.</param>
-        protected abstract void Write( Span<byte> buffer );
+        protected abstract void Write( ProtocolLevel protocolLevel, Span<byte> buffer);
 
-        void Write( PipeWriter pw )
+        void Write( ProtocolLevel protocolLevel, PipeWriter pw )
         {
-            Write( pw.GetSpan( Size ) );
-            pw.Advance( Size );
+            Write( protocolLevel, pw.GetSpan(GetSize(protocolLevel)));
+            pw.Advance( GetSize( protocolLevel ) );
         }
 
         /// <inheritdoc/>
-        public async ValueTask<WriteResult> WriteAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
-            Write( pw );
+            Write( protocolLevel, pw );
             await pw.FlushAsync( cancellationToken ).AsNonGenericValueTask();
             return WriteResult.Written;
         }
 
         /// <inheritdoc/>
-        public abstract int Size { get; }
+        public abstract int GetSize( ProtocolLevel protocolLevel );
     }
 }

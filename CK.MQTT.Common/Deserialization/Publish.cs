@@ -20,10 +20,11 @@ namespace CK.MQTT
         /// <returns>true if there was enough data, false if more data is required.</returns>
         public static bool ParsePublishWithPacketId(
             ReadOnlySequence<byte> buffer,
+            int packetLength,
             [NotNullWhen( true )] out string? topic, out ushort packetId, out SequencePosition position )
         {
             SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
-            if( !reader.TryReadMQTTString( out topic ) )
+            if( !reader.TryReadMQTTString( packetLength, out topic ) )
             {
                 packetId = 0;
                 position = reader.Position;

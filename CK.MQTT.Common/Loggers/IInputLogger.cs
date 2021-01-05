@@ -1,8 +1,6 @@
+using CK.Core;
 using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -12,22 +10,22 @@ namespace CK.MQTT
         IDisposable? InputLoopStarting();
         void ReadLoopTokenCancelled();
         void InvalidIncomingData();
-        void ExceptionOnParsingIncomingData(Exception e);
+        void ExceptionOnParsingIncomingData( Exception e );
         void LoopCanceledException( Exception e );
         IDisposable? ReflexTimeout();
         IDisposable? IncomingPacket( byte header, int length );
         void EndOfStream();
         void UnexpectedEndOfStream();
-        IDisposable? ProcessPublishPacket( IncomingMessageHandler sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos );
+        IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos );
         IDisposable? ProcessPacket( PacketType packetType );
         void QueueFullPacketDropped( PacketType packetType, int packetId );
-        void ClientSelfClosing( DisconnectedReason reason );
-        void UnparsedExtraBytes( IncomingMessageHandler incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize );
+        void InvalidDataReceived( DisconnectedReason reason );
+        void UnparsedExtraBytes( InputPump incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize );
         void UnparsedExtraBytesPacketId( int unparsedSize );
         void ReadCancelled( int requestedByteCount );
         void UnexpectedEndOfStream( int requestedByteCount, int availableByteCount );
         void PingReqTimeout();
-        void DoubleFreePacketId(int packetId);
+        void DoubleFreePacketId( int packetId );
         void FreedPacketId( int packetId );
     }
 }

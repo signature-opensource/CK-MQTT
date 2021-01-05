@@ -1,5 +1,6 @@
 using System;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -8,11 +9,8 @@ namespace CK.MQTT
     {
         readonly PacketStore _store;
 
-        public UnsubackReflex( PacketStore store )
-        {
-            _store = store;
-        }
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, IncomingMessageHandler sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next )
+        public UnsubackReflex( PacketStore store ) => _store = store;
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken )
         {
             if( PacketType.UnsubscribeAck != (PacketType)header )
             {
@@ -22,7 +20,7 @@ namespace CK.MQTT
             using( m?.ProcessPacket( PacketType.UnsubscribeAck ) )
             {
                 ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
-                await _store.DiscardMessageByIdAsync( m, packetId );
+                await _store.OnMessageAck( m, packetId );
             }
         }
     }

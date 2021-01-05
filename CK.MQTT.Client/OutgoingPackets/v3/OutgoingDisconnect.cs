@@ -15,11 +15,14 @@ namespace CK.MQTT
         public static OutgoingDisconnect Instance { get; } = new OutgoingDisconnect();
 
         /// <inheritdoc/>
-        public override int Size => 2;
+        public override int GetSize( ProtocolLevel protocolLevel )
+        {
+            return 2;
+        }
 
         /// <inheritdoc/>
-        protected override void Write( Span<byte> span )
-        {
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
+		{
             span[0] = (byte)PacketType.Disconnect;
             span[1] = 0;
         }

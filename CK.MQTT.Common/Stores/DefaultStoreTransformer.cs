@@ -3,7 +3,6 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.MQTT.IOutgoingPacket;
-using static CK.MQTT.PacketStore;
 
 namespace CK.MQTT
 {
@@ -13,10 +12,7 @@ namespace CK.MQTT
         {
             private readonly PipeWriter _pw;
             bool _firstWrite = true;
-            public PipeWriterWrapper( PipeWriter pw )
-            {
-                _pw = pw;
-            }
+            public PipeWriterWrapper( PipeWriter pw ) => _pw = pw;
 
             public override void Advance( int bytes )
             {
@@ -43,20 +39,18 @@ namespace CK.MQTT
         {
             readonly IOutgoingPacketWithId _packet;
 
-            public PacketWrapper( IOutgoingPacketWithId packet )
-            {
-                _packet = packet;
-            }
+            public PacketWrapper( IOutgoingPacketWithId packet ) => _packet = packet;
 
             public int PacketId { get => _packet.PacketId; set => _packet.PacketId = value; }
 
             public QualityOfService Qos => _packet.Qos;
 
-            public int Size => _packet.Size;
+            public int GetSize( ProtocolLevel protocolLevel ) => _packet.GetSize( protocolLevel );
 
-            public ValueTask<WriteResult> WriteAsync( PipeWriter writer, CancellationToken cancellationToken ) => _packet.WriteAsync( new PipeWriterWrapper( writer ), cancellationToken );
+            public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
+                => _packet.WriteAsync( protocolLevel, new PipeWriterWrapper( writer ), cancellationToken );
 
-            public override string ToString() => $"DefaultStoreTransformer({_packet})";
+            public override string ToString() => $"DefaultStoreTransformer({_packet})"; //Helps debugging.
         }
 
         static byte TransformerLogic( byte header )
