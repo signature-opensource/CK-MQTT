@@ -88,7 +88,7 @@ namespace CodeCake
             protected override IEnumerable<ArtifactFeed> GetRemoteFeeds()
             {
                 if( GlobalInfo.Version.PackageQuality >= PackageQuality.ReleaseCandidate ) yield return new RemoteFeed( this, "nuget.org", "https://api.nuget.org/v3/index.json", "NUGET_ORG_PUSH_API_KEY" );
-                yield return new SignatureVSTSFeed( this, "Signature-OpenSource", "Default", null );
+                yield return new SignatureVSTSFeed( this, "Signature-OpenSource", "NetCore3", "Feeds" );
             }
 
             /// <summary>
