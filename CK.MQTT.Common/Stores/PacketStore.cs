@@ -14,11 +14,11 @@ namespace CK.MQTT
     /// </summary>
     public abstract class PacketStore
     {
-        public IdStore IdStore { get; }
+        public MqttIdStore IdStore { get; }
 
         protected PacketStore( ProtocolConfiguration pConfig, MqttConfigurationBase config, int packetIdMaxValue )
         {
-            IdStore = new IdStore( packetIdMaxValue, config );
+            IdStore = new MqttIdStore( packetIdMaxValue, config );
             PConfig = pConfig;
             Config = config;
         }

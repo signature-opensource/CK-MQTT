@@ -22,6 +22,8 @@ namespace CK.MQTT
         /// <summary>
         /// Represents the QoS level 2 (exactly once delivery)
         /// </summary>
-        ExactlyOnce = 0x02
+        ExactlyOnce = 0x02,
+
+        Mask = 0x03
     }
 }

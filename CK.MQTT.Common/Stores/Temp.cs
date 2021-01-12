@@ -6,6 +6,8 @@ namespace CK.MQTT.Common.Stores
 {
     class Temp
     {
+        //REDO LOCK.
+
         [DebuggerDisplay( "{DebuggerDisplay} {NextFreeId}" )]
         struct Entry
         {
@@ -17,25 +19,7 @@ namespace CK.MQTT.Common.Stores
             public bool Acked => TaskCS == null;
             public char DebuggerDisplay => EmissionTime == default ? '-' : Acked ? '?' : 'X';
         }
-        public void SendingPacket( IOutputLogger? m, int packetId )
-        {
-            lock( _entries )
-            {
-                TimeSpan elapsed = _stopwatch.Elapsed;
-                // I want to avoid having a TimeSpan being equal to default, which mean the value is uninitialized.
-                _entries[packetId - 1].EmissionTime = elapsed.Ticks > 0 ? elapsed : new TimeSpan( 1 );
-                int count = ++_entries[packetId - 1].TryCount;
-                if( count > 1 )
-                {
-                    _haveUncertainPacketId = true;
-                }
-                if( count == _config.AttemptCountBeforeGivingUpPacket && count > 0 )
-                {
-                    _entries[packetId - 1].TaskCS!.SetCanceled();
-                    m?.PacketMarkedPoisoned( packetId, count );
-                }
-            }
-        }
+        
 
         void CleanUncertainPacketId( IInputLogger? m, TimeSpan timeSpan )
         {
