@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace CK.MQTT
 {
-    class IdStore<T> where T : notnull
+    class IdStore<T> where T : struct
     {
         // This is a doubly linked list.
         // There is a cursor, named '_oldestIdAllocated' that point to the oldest ID allocated.
@@ -25,9 +25,9 @@ namespace CK.MQTT
         }
 
         internal Entry[] _entries = new Entry[64];
-        int _oldestIdAllocated = 0;
-        int _tail = 0;
-        int _head = 0;
+        internal int _oldestIdAllocated = 0;
+        internal int _tail = 0;
+        internal int _head = 0;
         /// <summary>
         /// Current count of Entries.
         /// </summary>
@@ -36,7 +36,7 @@ namespace CK.MQTT
 
         public IdStore( int packetIdMaxValue ) => _maxPacketId = packetIdMaxValue;
 
-        internal bool CreateNewId( out int packetId, out T? result )
+        internal bool CreateNewId( out int packetId, out T result )
         {
             ref Entry oldHead = ref _entries[_head - 1];
             if( _oldestIdAllocated == _tail ) // The oldest packet we sent is also the tail. It mean there are no packet Id available.
@@ -95,6 +95,7 @@ namespace CK.MQTT
 #endif
             _entries[packetId - 1].NextId = _tail;
             _entries[packetId - 1].PreviousId = 0;
+            _entries[packetId - 1].Content = default;
             _entries[_tail - 1].PreviousId = packetId;
             _tail = packetId;
             m?.FreedPacketId( packetId );// This may want to free the packet we are freeing. So it must be ran after the free process.
