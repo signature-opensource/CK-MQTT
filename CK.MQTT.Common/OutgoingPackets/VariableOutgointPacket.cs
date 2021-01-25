@@ -14,11 +14,11 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public override int GetSize( ProtocolLevel protocolLevel ) => GetRemainingSize( protocolLevel ).CompactByteCount() + 1 + GetRemainingSize( protocolLevel );
 
-        protected abstract void WriteContent( ProtocolLevel protocolLevel, Span<byte> buffer);
+        protected abstract void WriteContent( ProtocolLevel protocolLevel, Span<byte> buffer );
 
         /// <inheritdoc/>
-        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
-		{
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span )
+        {
             span[0] = Header;
             span = span[1..].WriteVariableByteInteger( GetRemainingSize( protocolLevel ) );
             WriteContent( protocolLevel, span );

@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace CK.MQTT
@@ -26,7 +26,7 @@ namespace CK.MQTT
             if( hasReason || hasUserProperties )
             {  // property: 1 byte + property content
                 if( hasReason ) _propertiesSize += 1 + reasonString.MQTTSize();
-                if( hasUserProperties ) _propertiesSize += userProperties.Sum( s => s.Size);
+                if( hasUserProperties ) _propertiesSize += userProperties.Sum( s => s.Size );
                 _contentSize += _propertiesSize + _propertiesSize.CompactByteCount();
             }
             _getSize = GetSize( ProtocolLevel.MQTT5 ) + 1 + _contentSize.CompactByteCount() + _contentSize;
@@ -42,8 +42,8 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public override int GetSize( ProtocolLevel protocolLevel ) => _getSize;
 
-        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
-		{
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span )
+        {
             bool hasReason = !string.IsNullOrEmpty( _reasonString );
             bool hasUserProperties = _userProperties.Count > 0;
             span[0] = _header;

@@ -1,11 +1,11 @@
+using CK.Core;
+using CK.Core.Extension;
 using System;
 using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using CK.Core;
-using CK.Core.Extension;
 
 namespace CK.MQTT
 {

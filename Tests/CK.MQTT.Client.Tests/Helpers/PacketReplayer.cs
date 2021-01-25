@@ -1,11 +1,10 @@
+using CK.Core;
+using CK.Core.Extension;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using CK.Core;
-using CK.Core.Extension;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {

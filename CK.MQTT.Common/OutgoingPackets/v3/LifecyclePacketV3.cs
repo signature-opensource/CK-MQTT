@@ -19,8 +19,8 @@ namespace CK.MQTT
         public override int GetSize( ProtocolLevel protocolLevel ) => 4;
 
         /// <inheritdoc/>
-        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
-		{
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span )
+        {
             span[0] = _header;
             span[1] = 2;
             span[2..].WriteBigEndianUInt16( (ushort)PacketId );

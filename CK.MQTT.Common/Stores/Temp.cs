@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace CK.MQTT.Common.Stores
 {
@@ -19,7 +17,7 @@ namespace CK.MQTT.Common.Stores
             public bool Acked => TaskCS == null;
             public char DebuggerDisplay => EmissionTime == default ? '-' : Acked ? '?' : 'X';
         }
-        
+
 
         void CleanUncertainPacketId( IInputLogger? m, TimeSpan timeSpan )
         {
