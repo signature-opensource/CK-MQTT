@@ -11,7 +11,7 @@ namespace CK.MQTT
         {
             if( resetStore )
             {
-                _stores[storeId] = (new MemoryPacketStore(pConfig, config, ushort.MaxValue ), new MemoryPacketIdStore());
+                _stores[storeId] = (new MemoryPacketStore( pConfig, config, ushort.MaxValue ), new MemoryPacketIdStore());
             }
             return new ValueTask<(IPacketStore, IPacketIdStore)>( _stores[storeId] );
         }

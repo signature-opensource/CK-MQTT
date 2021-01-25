@@ -1,7 +1,6 @@
 using CK.Core;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -13,38 +12,13 @@ namespace CK.MQTT
     /// This class have no way to be closed/disposed, when a method complete, the packet should be persisted.
     /// If not, it WILL result in data loss. (Because of a power outage for exemple).
     /// </summary>
-    public abstract class PacketStore
+    public abstract class IPacketStore
     {
-        public MqttIdStore<IMemoryOwner<byte>> IdStore { get; }
-
-        protected PacketStore( ProtocolConfiguration pConfig, MqttConfigurationBase config, int packetIdMaxValue )
-        {
-            IdStore = new( packetIdMaxValue, config );
-            PConfig = pConfig;
-            Config = config;
-        }
-
-        protected ProtocolConfiguration PConfig { get; }
-
-        protected MqttConfigurationBase Config { get; }
-
-        /// <summary>
         /// Store a <see cref="IOutgoingPacketWithId"/> in the session, return a <see cref="IOutgoingPacket"/>.
         /// </summary>
         /// <returns>A <see cref="IOutgoingPacket"/> that can be sent on the wire.</returns>
         internal async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet )
         {
-            //bool success = IdStore.TryGetId( out int packetId, out Task<object?>? idFreedAwaiter );
-            //int waitTime = 500;
-            //while( !success )
-            //{
-            //    m?.Warn( "No PacketId available, awaiting until one is free." );
-            //    await Config.DelayHandler.Delay( waitTime );
-            //    if( waitTime < 5000 ) waitTime += 500;
-            //    success = IdStore.TryGetId( out packetId, out idFreedAwaiter );
-            //}
-            //Debug.Assert( idFreedAwaiter != null );
-            //packet.PacketId = (ushort)packetId;
             using( m?.OpenTrace()?.Send( $"{nameof( IdStore )} determined new packet id would be {packetId}." ) )
             {
                 var newPacket = await DoStoreMessageAsync( m, packet );

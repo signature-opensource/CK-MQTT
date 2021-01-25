@@ -3,11 +3,8 @@ using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 #nullable enable

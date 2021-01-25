@@ -15,8 +15,8 @@ namespace CK.MQTT
             return 2;
         }
 
-        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
-		{
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span )
+        {
             span[0] = (byte)PacketType.PingRequest;
             span[1] = 0;
         }

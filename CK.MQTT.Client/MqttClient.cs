@@ -1,20 +1,19 @@
-using System;
-using System.Net;
-using System.Threading.Tasks;
-using System.IO.Pipelines;
-using System.Collections.Generic;
 using CK.Core;
+using System;
+using System.Collections.Generic;
+using System.IO.Pipelines;
+using System.Net;
 using System.Threading;
-using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class MqttClient : Pumppeteer<MqttClient.ClientState>, IMqttClient
+    internal class MqttClient : Pumppeteer<MqttClient.ClientState>, IMqttClient
     {
         /// <summary>
         /// Allow to atomically get/set multiple fields.
         /// </summary>
-        public class ClientState : StateHolder
+        internal class ClientState : StateHolder
         {
             public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IPacketIdStore packetIdStore, IPacketStore store ) : base( input, output )
             {
