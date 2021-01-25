@@ -16,7 +16,7 @@ namespace CK.MQTT
         /// </summary>
         public class ClientState : StateHolder
         {
-            public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IPacketIdStore packetIdStore, PacketStore store ) : base( input, output )
+            public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IPacketIdStore packetIdStore, IPacketStore store ) : base( input, output )
             {
                 Channel = channel;
                 PacketIdStore = packetIdStore;
@@ -24,7 +24,7 @@ namespace CK.MQTT
             }
             public readonly IMqttChannel Channel;
             public readonly IPacketIdStore PacketIdStore;
-            public readonly PacketStore Store;
+            public readonly IPacketStore Store;
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace CK.MQTT
             {
                 try
                 {
-                    (PacketStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
+                    (IPacketStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
                     IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
                     ConnectAckReflex connectAckReflex = new ConnectAckReflex();
                     Task<ConnectResult> connectedTask = connectAckReflex.Task;
@@ -121,7 +121,7 @@ namespace CK.MQTT
             }
         }
 
-        async static Task SendAllStoredMessages( IActivityMonitor? m, PacketStore store, OutputPump output )
+        async static Task SendAllStoredMessages( IActivityMonitor? m, IPacketStore store, OutputPump output )
         {
             IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store.GetAllMessagesAsync( m );
             await foreach( IOutgoingPacketWithId msg in msgs )

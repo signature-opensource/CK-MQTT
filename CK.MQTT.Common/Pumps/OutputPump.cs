@@ -24,7 +24,7 @@ namespace CK.MQTT
         readonly PipeWriter _pipeWriter;
         readonly ProtocolConfiguration _pconfig;
         readonly MqttConfigurationBase _config;
-        readonly PacketStore _packetStore;
+        readonly IPacketStore _packetStore;
         CancellationTokenSource _processorStopSource = new CancellationTokenSource();
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="packetStore">The packet store to use to retrieve packets.</param>
-        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, PacketStore packetStore )
+        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, IPacketStore packetStore )
             : base( pumppeteer )
         {
 

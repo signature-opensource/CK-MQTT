@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 #nullable enable
 
-namespace CK.MQTT
+namespace CK.MQTT.Stores
 {
     class IdStore<T> where T : struct
     {
@@ -24,17 +24,42 @@ namespace CK.MQTT
             public T Content;
         }
 
-        internal Entry[] _entries = new Entry[64];
+        internal Entry[] _entries;
+        /// <summary>
+        /// When 0, all IDs are free.
+        /// </summary>
         internal int _oldestIdAllocated = 0;
-        internal int _tail = 0;
-        internal int _head = 0;
+        internal int _tail;
+        internal int _head;
         /// <summary>
         /// Current count of Entries.
         /// </summary>
-        int _count = 1;
+        int _count;
         readonly int _maxPacketId;
 
-        public IdStore( int packetIdMaxValue ) => _maxPacketId = packetIdMaxValue;
+        public IdStore( int packetIdMaxValue, int startSize )
+        {
+            if( startSize <= 0 || startSize > packetIdMaxValue )
+            {
+                throw new ArgumentOutOfRangeException( $"{nameof( startSize )} must be greater than 0 and smaller than {packetIdMaxValue}" );
+            }
+            _maxPacketId = packetIdMaxValue;
+            _entries = new Entry[startSize];
+            for( int i = 0; i < startSize - 1; i++ )
+            {
+                _entries[i] = new Entry()
+                {
+                    NextId = i + 2, // Packet ID start by 1, and we want to target the next entry.
+                    PreviousId = i  // So 'i' as is not incremented is the previous packet id.
+                };
+            }
+            _entries[startSize - 1] = new Entry()
+            {
+                PreviousId = startSize - 1
+            };
+            _head = 1;
+            _tail = startSize;
+        }
 
         internal bool CreateNewId( out int packetId, out T result )
         {
@@ -93,6 +118,7 @@ namespace CK.MQTT
                 if( curr == 0 ) throw new InvalidOperationException( "Id was not allocated." );
             }
 #endif
+            if( packetId == _oldestIdAllocated ) _oldestIdAllocated = 0;
             _entries[packetId - 1].NextId = _tail;
             _entries[packetId - 1].PreviousId = 0;
             _entries[packetId - 1].Content = default;

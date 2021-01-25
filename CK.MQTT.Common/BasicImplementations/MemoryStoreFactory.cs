@@ -6,14 +6,14 @@ namespace CK.MQTT
 {
     class MemoryStoreFactory : IStoreFactory
     {
-        readonly Dictionary<string, (PacketStore, IPacketIdStore)> _stores = new Dictionary<string, (PacketStore, IPacketIdStore)>();
-        public ValueTask<(PacketStore, IPacketIdStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore )
+        readonly Dictionary<string, (IPacketStore, IPacketIdStore)> _stores = new Dictionary<string, (IPacketStore, IPacketIdStore)>();
+        public ValueTask<(IPacketStore, IPacketIdStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore )
         {
             if( resetStore )
             {
                 _stores[storeId] = (new MemoryPacketStore(pConfig, config, ushort.MaxValue ), new MemoryPacketIdStore());
             }
-            return new ValueTask<(PacketStore, IPacketIdStore)>( _stores[storeId] );
+            return new ValueTask<(IPacketStore, IPacketIdStore)>( _stores[storeId] );
         }
     }
 }

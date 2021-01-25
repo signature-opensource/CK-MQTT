@@ -1,4 +1,5 @@
 using CK.Core;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,11 +15,11 @@ namespace CK.MQTT
     /// </summary>
     public abstract class PacketStore
     {
-        public MqttIdStore IdStore { get; }
+        public MqttIdStore<IMemoryOwner<byte>> IdStore { get; }
 
         protected PacketStore( ProtocolConfiguration pConfig, MqttConfigurationBase config, int packetIdMaxValue )
         {
-            IdStore = new MqttIdStore( packetIdMaxValue, config );
+            IdStore = new( packetIdMaxValue, config );
             PConfig = pConfig;
             Config = config;
         }
@@ -33,17 +34,17 @@ namespace CK.MQTT
         /// <returns>A <see cref="IOutgoingPacket"/> that can be sent on the wire.</returns>
         internal async ValueTask<(IOutgoingPacketWithId, Task<object?>)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet )
         {
-            bool success = IdStore.TryGetId( out int packetId, out Task<object?>? idFreedAwaiter );
-            int waitTime = 500;
-            while( !success )
-            {
-                m?.Warn( "No PacketId available, awaiting until one is free." );
-                await Config.DelayHandler.Delay( waitTime );
-                if( waitTime < 5000 ) waitTime += 500;
-                success = IdStore.TryGetId( out packetId, out idFreedAwaiter );
-            }
-            Debug.Assert( idFreedAwaiter != null );
-            packet.PacketId = (ushort)packetId;
+            //bool success = IdStore.TryGetId( out int packetId, out Task<object?>? idFreedAwaiter );
+            //int waitTime = 500;
+            //while( !success )
+            //{
+            //    m?.Warn( "No PacketId available, awaiting until one is free." );
+            //    await Config.DelayHandler.Delay( waitTime );
+            //    if( waitTime < 5000 ) waitTime += 500;
+            //    success = IdStore.TryGetId( out packetId, out idFreedAwaiter );
+            //}
+            //Debug.Assert( idFreedAwaiter != null );
+            //packet.PacketId = (ushort)packetId;
             using( m?.OpenTrace()?.Send( $"{nameof( IdStore )} determined new packet id would be {packetId}." ) )
             {
                 var newPacket = await DoStoreMessageAsync( m, packet );

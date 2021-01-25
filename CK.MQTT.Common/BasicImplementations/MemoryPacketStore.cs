@@ -11,10 +11,10 @@ using static CK.MQTT.IOutgoingPacket;
 namespace CK.MQTT
 {
     /// <summary>
-    /// In memory implementation of<see cref="PacketStore"/>.
+    /// In memory implementation of<see cref="IPacketStore"/>.
     /// This class DONT persist the data !!!
     /// </summary>
-    public class MemoryPacketStore : PacketStore
+    public class MemoryPacketStore : IPacketStore
     {
         class OutgoingStoredPacket : IOutgoingPacketWithId
         {

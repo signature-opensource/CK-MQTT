@@ -9,10 +9,10 @@ namespace CK.MQTT
     public class MainOutputProcessor
     {
         readonly MqttConfiguration _config;
-        readonly PacketStore _packetStore;
+        readonly IPacketStore _packetStore;
         readonly PingRespReflex _pingRespReflex;
         readonly IStopwatch _stopwatch;
-        public MainOutputProcessor( MqttConfiguration config, PacketStore packetStore, PingRespReflex pingRespReflex )
+        public MainOutputProcessor( MqttConfiguration config, IPacketStore packetStore, PingRespReflex pingRespReflex )
         {
             _stopwatch = config.StopwatchFactory.Create();
             (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);

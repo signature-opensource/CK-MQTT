@@ -8,7 +8,7 @@ namespace CK.MQTT
     public static class SenderHelper
     {
         public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m,
-            PacketStore messageStore, OutputPump output, IOutgoingPacketWithId packet )
+            IPacketStore messageStore, OutputPump output, IOutgoingPacketWithId packet )
             where T : class
             => packet.Qos switch
             {
@@ -30,7 +30,7 @@ namespace CK.MQTT
         }
 
         static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor? m,
-            OutputPump output, PacketStore messageStore, IOutgoingPacketWithId msg )
+            OutputPump output, IPacketStore messageStore, IOutgoingPacketWithId msg )
             where T : class
         {
             (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );
