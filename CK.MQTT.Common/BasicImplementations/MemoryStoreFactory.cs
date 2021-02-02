@@ -7,7 +7,7 @@ namespace CK.MQTT
     class MemoryStoreFactory : IStoreFactory
     {
         readonly Dictionary<string, (IPacketStore, IPacketIdStore)> _stores = new Dictionary<string, (IPacketStore, IPacketIdStore)>();
-        public ValueTask<(IPacketStore, IPacketIdStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore )
+        public ValueTask<(MqttIdStore, IPacketIdStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore )
         {
             if( resetStore )
             {

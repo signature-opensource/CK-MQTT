@@ -8,7 +8,11 @@ namespace CK.MQTT
 {
     public class MqttClientFactory
     {
-        internal MqttClientFactory() { }
+        /// <summary>
+        /// Factory to use to create a MQTT Client.
+        /// </summary>
+        public static MqttClientFactory Factory { get; } = new MqttClientFactory();
+        private MqttClientFactory() { }
     }
 
     public static class MqttClientFactories
@@ -19,6 +23,37 @@ namespace CK.MQTT
             => new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
         public static IMqttClient CreateMQTTClient( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             => new MqttClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
+
+        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
+            => factory.CreateMQTT3Client( config, new DisposableHandlerCancellableClosure( messageHandler ).HandleMessage );
+
+        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
+            => factory.CreateMQTT5Client( config, new DisposableHandlerCancellableClosure( messageHandler ).HandleMessage );
+
+        public static IMqttClient CreateMQTTClient( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
+            => factory.CreateMQTTClient( config, new DisposableHandlerCancellableClosure( messageHandler ).HandleMessage );
+
+        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> messageHandler )
+            => factory.CreateMQTT3Client( config, new HandlerClosure( messageHandler ).HandleMessage );
+
+        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> messageHandler )
+            => factory.CreateMQTT5Client( config, new HandlerClosure( messageHandler ).HandleMessage );
+
+        public static IMqttClient CreateMQTTClient( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> messageHandler )
+            => factory.CreateMQTTClient( config, new HandlerClosure( messageHandler ).HandleMessage );
+
+
+        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this,
+            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+            => @this.CreateMQTT3Client( config, new MemoryHandlerCancellableClosure( messageHandler).HandleMessage );
+
+        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this,
+            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+            => @this.CreateMQTT5Client( config, new MemoryHandlerCancellableClosure( messageHandler ).HandleMessage );
+
+        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this,
+            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+            => @this.CreateMQTTClient( config, new MemoryHandlerCancellableClosure( messageHandler ).HandleMessage );
     }
 
 }

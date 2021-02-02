@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Stores;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -8,13 +9,13 @@ namespace CK.MQTT
     public static class SenderHelper
     {
         public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m,
-            IPacketStore messageStore, OutputPump output, IOutgoingPacketWithId packet )
+            IMqttIdStore store, OutputPump output, IOutgoingPacketWithId packet )
             where T : class
             => packet.Qos switch
             {
                 QualityOfService.AtMostOnce => PublishQoS0<T>( m, output, packet ),
-                QualityOfService.AtLeastOnce => StoreAndSend<T>( m, output, messageStore, packet ),
-                QualityOfService.ExactlyOnce => StoreAndSend<T>( m, output, messageStore, packet ),
+                QualityOfService.AtLeastOnce => StoreAndSend<T>( m, output, store, packet, packet.Qos),
+                QualityOfService.ExactlyOnce => StoreAndSend<T>( m, output, store, packet, packet.Qos ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
@@ -30,10 +31,10 @@ namespace CK.MQTT
         }
 
         static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor? m,
-            OutputPump output, IPacketStore messageStore, IOutgoingPacketWithId msg )
+            OutputPump output, IMqttIdStore messageStore, IOutgoingPacketWithId msg, QualityOfService qos)
             where T : class
         {
-            (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg );
+            (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg, qos );
             return Send<T>( output, newPacket, ackReceived );
         }
 

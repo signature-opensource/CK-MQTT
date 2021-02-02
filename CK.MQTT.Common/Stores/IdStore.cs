@@ -34,8 +34,10 @@ namespace CK.MQTT.Stores
         /// <summary>
         /// Current count of Entries.
         /// </summary>
-        int _count;
+        internal int _count;
         readonly int _maxPacketId;
+
+        public bool NoPacketAllocated => _oldestIdAllocated == 0;
 
         public IdStore( int packetIdMaxValue, int startSize )
         {

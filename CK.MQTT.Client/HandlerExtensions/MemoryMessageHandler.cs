@@ -9,42 +9,31 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public static class MemoryMessageHandler
+    internal class MemoryHandlerCancellableClosure
     {
-        class HandlerCancellabeClosure
+        readonly Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
+        public MemoryHandlerCancellableClosure( Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
         {
-            readonly Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
-            public HandlerCancellabeClosure( Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            {
-                _messageHandler = messageHandler;
-            }
-
-            public async ValueTask HandleMessage( IActivityMonitor m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
-            {
-                using( IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength ) )
-                {
-                    Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
-                    PipeReaderExtensions.FillStatus res = await pipe.CopyToBuffer( buffer, cancelToken );
-                    if( res != PipeReaderExtensions.FillStatus.Done ) throw new EndOfStreamException();
-                    await _messageHandler( m, topic, buffer, qos, retain, cancelToken );
-                }
-            }
+            _messageHandler = messageHandler;
         }
 
+        public async ValueTask HandleMessage( IActivityMonitor m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
+        {
+            using( IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength ) )
+            {
+                Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
+                PipeReaderExtensions.FillStatus res = await pipe.CopyToBuffer( buffer, cancelToken );
+                if( res != PipeReaderExtensions.FillStatus.Done ) throw new EndOfStreamException();
+                await _messageHandler( m, topic, buffer, qos, retain, cancelToken );
+            }
+        }
+    }
+    public static class MemoryMessageHandler
+    {
+        
+
         public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => client.SetMessageHandler( new HandlerCancellabeClosure( messageHandler ).HandleMessage );
-
-        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this,
-            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => @this.CreateMQTT3Client( config, new HandlerCancellabeClosure( messageHandler ).HandleMessage );
-
-        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this,
-            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => @this.CreateMQTT5Client( config, new HandlerCancellabeClosure( messageHandler ).HandleMessage );
-
-        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this,
-            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => @this.CreateMQTTClient( config, new HandlerCancellabeClosure( messageHandler ).HandleMessage );
+            => client.SetMessageHandler( (Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask>)new MemoryHandlerCancellableClosure( (Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask>)messageHandler ).HandleMessage );
 
 
         class HandlerClosure

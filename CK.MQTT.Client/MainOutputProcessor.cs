@@ -1,3 +1,4 @@
+using CK.MQTT.Stores;
 using System;
 using System.Threading;
 using System.Threading.Channels;
@@ -9,10 +10,10 @@ namespace CK.MQTT
     public class MainOutputProcessor
     {
         readonly MqttConfiguration _config;
-        readonly IPacketStore _packetStore;
+        readonly IMqttIdStore _packetStore;
         readonly PingRespReflex _pingRespReflex;
         readonly IStopwatch _stopwatch;
-        public MainOutputProcessor( MqttConfiguration config, IPacketStore packetStore, PingRespReflex pingRespReflex )
+        public MainOutputProcessor( MqttConfiguration config, IMqttIdStore packetStore, PingRespReflex pingRespReflex )
         {
             _stopwatch = config.StopwatchFactory.Create();
             (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);
@@ -97,7 +98,7 @@ namespace CK.MQTT
 
         bool HaveUnackPacketToSend( int waitTimeout )
         {
-            (int packetId, int waitTime) = _packetStore.IdStore.GetOldestUnackedPacket();
+            (int packetId, int waitTime) = _packetStore.GetOldestUnackedPacket();
             return packetId != 0 && waitTime < waitTimeout;
         }
 

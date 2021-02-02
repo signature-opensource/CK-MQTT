@@ -1,11 +1,15 @@
+using CK.Core;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
 {
     /// <typeparam name="T">Dispose may be called multiple times.</typeparam>
-    public abstract class MqttIdStore<T>
+    public abstract class MqttIdStore<T> : IMqttIdStore
     {
         // * Lot of important logic happen here:
         //   - When a packet ID is freed. (Not as simple as it seems)
@@ -34,6 +38,7 @@ namespace CK.MQTT.Stores
         //   So, contrary to what the MQTT specs says, in this case we SHOULD NOT free the ID right after the ack reception.
         protected enum QoSState : byte
         {
+            None = 0,
             QoS1 = 1 << 0,
             QoS2 = 1 << 1,
             QoS2PubRecAcked = 1 << 2,
@@ -52,82 +57,27 @@ namespace CK.MQTT.Stores
 
         readonly IdStore<EntryContent> _idStore;
         readonly IStopwatch _stopwatch;
+        readonly MqttConfigurationBase _config;
         TaskCompletionSource<object?>? _idFullTCS = null; //TODO: replace by non generic TCS in .NET 5
         public MqttIdStore( int packetIdMaxValue, MqttConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
             _stopwatch = config.StopwatchFactory.Create();
+            _config = config;
         }
 
-        protected ref T this[int packetId] => ref _idStore._entries[packetId - 1].Content.Storage;
+        [Pure]
+        static bool WasPacketNeverAcked( QoSState state ) => (byte)(state & QoSState.PacketAckedMask) > 0;
 
-        protected abstract ValueTask StorePacket( IOutputLogger? m, IOutgoingPacketWithId content );
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="m"></param>
-        /// <param name="content"></param>
-        /// <param name="qos"></param>
-        /// <returns><see langword="null"/> when no packet id was available.</returns>
-        public async ValueTask<Task<object?>> SendingPacketFirstTime( IOutputLogger? m, IOutgoingPacketWithId content, QualityOfService qos )
+        QoSState GetStateAndChecks( int packetId )
         {
-            Debug.Assert( qos != QualityOfService.AtMostOnce );
-            int packetId;
-            EntryContent entry;
-            bool res = false;
-            lock( _idStore )
-            {
-                res = _idStore.CreateNewId( out packetId, out entry );
-            }
-            while( !res )
-            {
-                lock( _idStore )
-                {
-                    res = _idStore.CreateNewId( out packetId, out entry );
-                    _idFullTCS = new TaskCompletionSource<object?>();
-                }
-                await _idFullTCS.Task; // Asynchronously wait that a new packet id is available.
-            }
-
-            // We don't need the lock there, packet is not sent yet so we wont receive an ack for this ID.
-            content.PacketId = packetId;
-            entry._lastEmissionTime = _stopwatch.Elapsed;
-            entry._attemptInTransitOrLost = 1;
-            TaskCompletionSource<object?> tcs = new();
-            entry._taskCompletionSource = tcs;
-            await StorePacket( m, content );
-            return tcs.Task;
-        }
-
-        public void PacketResent( IOutputLogger? m, int packetId )
-        {
-            lock( _idStore )
-            {
-                _idStore._entries[packetId - 1].Content._attemptInTransitOrLost++;
-                _idStore._entries[packetId - 1].Content._lastEmissionTime = _stopwatch.Elapsed;
-            }
-        }
-
-        protected abstract ValueTask RemovePacket( IInputLogger? m, int packetId );
-
-        /// <summary>
-        /// The first ack in the protocol steps.
-        /// Doesn't mean it's the first ack received but it's the first ack in the workflow.
-        /// </summary>
-        /// <param name="m"></param>
-        /// <param name="packetId"></param>
-        /// <param name="taskCompletionSource"></param>
-        public async ValueTask PacketAck( IInputLogger? m, int packetId, bool qos2PubRec )
-        {
+            if( packetId > _idStore._count ) throw new ProtocolViolationException( "The sender acknowlodged a packet id that does not exist." );
             QoSState state = _idStore._entries[packetId - 1].Content._state;
+            if( state == QoSState.None ) throw new ProtocolViolationException( "The sender acknowlodged a packet id that does not exist." );
             Debug.Assert( (state & QoSState.Dropped) != QoSState.Dropped );
-            if( (byte)(state & QoSState.PacketAckedMask) > 0 )
-            {
-                await RemovePacket( m, packetId );
-            }
-            DoPacketAck( m, state, packetId, qos2PubRec );
+            return state;
         }
+
         void FreeId( IInputLogger? m, int packetId )
         {
             lock( _idStore )
@@ -137,11 +87,8 @@ namespace CK.MQTT.Stores
             }
         }
 
-        void DoPacketAck( IInputLogger? m, QoSState state, int packetId, bool qos2PubRec )
+        void DropPreviousUnackedPacket( IInputLogger? m, ref IdStore<EntryContent>.Entry entry, int packetId )
         {
-            ref IdStore<EntryContent>.Entry entry = ref _idStore._entries[packetId - 1];
-
-
             int currId = packetId;
             ref var curr = ref _idStore._entries[currId - 1];
             while( currId != _idStore._oldestIdAllocated ) // We loop over all older packets.
@@ -167,12 +114,72 @@ namespace CK.MQTT.Stores
                     }
                 }
             }
+        }
 
-            QualityOfService qos = (QualityOfService)((byte)state & (byte)QualityOfService.Mask);
+        protected ref T this[int packetId] => ref _idStore._entries[packetId - 1].Content.Storage;
+
+        protected abstract ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacketWithId content );
+
+        /// <summary> To be called when packet must be stored. Assign ID to the packet.</summary>
+        /// <returns><see langword="null"/> when no packet id was available.</returns>
+        public async ValueTask<Task<object?>> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos )
+        {
             Debug.Assert( qos != QualityOfService.AtMostOnce );
-
-            if( qos == QualityOfService.AtLeastOnce )
+            int packetId;
+            EntryContent entry;
+            bool res = false;
+            lock( _idStore )
             {
+                res = _idStore.CreateNewId( out packetId, out entry );
+            }
+            while( !res )
+            {
+                lock( _idStore )
+                {
+                    res = _idStore.CreateNewId( out packetId, out entry );
+                    _idFullTCS = new TaskCompletionSource<object?>();
+                }
+                await _idFullTCS.Task; // Asynchronously wait that a new packet id is available.
+            }
+
+            // We don't need the lock there, packet is not sent yet so we wont receive an ack for this ID.
+            packet.PacketId = packetId;
+            entry._lastEmissionTime = _stopwatch.Elapsed;
+            entry._attemptInTransitOrLost = 0;
+            TaskCompletionSource<object?> tcs = new();
+            entry._taskCompletionSource = tcs;
+            packet = _config.StoreTransformer.PacketTransformerOnSave( packet );
+            await DoStorePacket( m, packet );
+            return tcs.Task;
+        }
+
+        public void OnPacketSent( IOutputLogger? m, int packetId )
+        {
+            lock( _idStore )
+            {
+                _idStore._entries[packetId - 1].Content._attemptInTransitOrLost++;
+                _idStore._entries[packetId - 1].Content._lastEmissionTime = _stopwatch.Elapsed;
+            }
+        }
+
+        protected abstract ValueTask RemovePacketData( IInputLogger? m, int packetId );
+
+        public async ValueTask OnQos1AckAsync( IInputLogger? m, int packetId, object? result )
+        {
+            MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+            Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
+
+            bool wasNeverAcked = WasPacketNeverAcked( state );
+            if( wasNeverAcked )
+            {
+                _idStore._entries[packetId - 1].Content._taskCompletionSource.SetResult( result ); // TODO: provide user a transaction window and remove packet when he is done..
+                await RemovePacketData( m, packetId );
+            }
+            End();
+            void End()
+            {
+                ref IdStore<EntryContent>.Entry entry = ref _idStore._entries[packetId - 1];
+                DropPreviousUnackedPacket( m, ref entry, packetId );
                 if( entry.Content._attemptInTransitOrLost > 1 )
                 {
                     entry.Content._attemptInTransitOrLost--;
@@ -183,29 +190,77 @@ namespace CK.MQTT.Stores
                     FreeId( m, packetId );
                 }
             }
-            else
+        }
+
+        public async ValueTask OnQos2AckStep1Async( IInputLogger? m, int packetId )
+        {
+            MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+            Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
+
+            bool wasNeverAcked = WasPacketNeverAcked( state );
+            if( wasNeverAcked )
             {
-                Debug.Assert( qos == QualityOfService.ExactlyOnce );
-                // TODO: we dont have info: which QoS2 packet we received ?
-                if( !qos2PubRec )
+                // We set to one because we don't care of the uncertain logic here. The next ack in the process will "clean" the pipe.
+                _idStore._entries[packetId - 1].Content._attemptInTransitOrLost = 1;
+                _idStore._entries[packetId - 1].Content._state |= QoSState.QoS2PubRecAcked;
+                _idStore._entries[packetId - 1].Content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
+                await RemovePacketData( m, packetId );
+            }
+            End();
+            void End()
+            {
+                ref IdStore<EntryContent>.Entry entry = ref _idStore._entries[packetId - 1];
+                DropPreviousUnackedPacket( m, ref entry, packetId );
+                if( entry.Content._attemptInTransitOrLost > 1 )
                 {
-                    if( entry.Content._attemptInTransitOrLost > 1 )
-                    {
-                        entry.Content._attemptInTransitOrLost--;
-                        entry.Content._state = QoSState.UncertainDead;
-                    }
-                    else
-                    {
-                        FreeId( m, packetId );
-                    }
+                    entry.Content._attemptInTransitOrLost--;
+                    entry.Content._state = QoSState.UncertainDead;
                 }
-                else if( (entry.Content._state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked )
+                else
                 {
-                    // First encounter of the PubRec.
-                    entry.Content._attemptInTransitOrLost = 1; // We set to one because we don't care of the uncertain logic here. The next ack in the process will "clean" the pipe.
-                    entry.Content._state |= QoSState.QoS2PubRecAcked;
+                    FreeId( m, packetId );
                 }
             }
+        }
+
+        public void OnQos2AckStep2( IInputLogger? m, int packetId )
+        {
+            MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+            if( (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked )
+            {
+                throw new ProtocolViolationException( "PubRec not acked but we received PubRel" );
+            }
+            ref IdStore<EntryContent>.Entry entry = ref _idStore._entries[packetId - 1];
+            if( entry.Content._attemptInTransitOrLost > 1 )
+            {
+                entry.Content._attemptInTransitOrLost--;
+                entry.Content._state = QoSState.UncertainDead;
+            }
+            else
+            {
+                FreeId( m, packetId );
+            }
+        }
+
+        protected abstract ValueTask<IOutgoingPacketWithId> RestorePacket( int packetId );
+
+        public ValueTask<IOutgoingPacketWithId?> GetOldestUnackpacket( TimeSpan timeSpan )
+        {
+            if( _idStore.NoPacketAllocated ) return new ValueTask<IOutgoingPacketWithId?>( default( IOutgoingPacketWithId ) ); // If there is no packet id allocated, there is no unacked packet id.
+            int currId = _idStore._head;
+            ref var curr = ref _idStore._entries[currId - 1];
+            int oldestPacketSentId = currId;
+            TimeSpan earliestEmissionTime = curr.Content._lastEmissionTime;
+            while( currId != _idStore._oldestIdAllocated ) // We loop over all older packets.
+            {
+                currId = curr.PreviousId;
+                curr = ref _idStore._entries[currId - 1];
+                if( curr.Content._lastEmissionTime < earliestEmissionTime )
+                {
+                    oldestPacketSentId = currId;
+                }
+            }
+            return RestorePacket( oldestPacketSentId )!; // ValueTask<T> => ValueTask<T?> throw a warning.
         }
     }
 }

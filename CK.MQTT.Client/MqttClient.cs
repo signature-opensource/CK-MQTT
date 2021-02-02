@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
+    
     internal class MqttClient : Pumppeteer<MqttClient.ClientState>, IMqttClient
     {
         /// <summary>
@@ -26,10 +27,7 @@ namespace CK.MQTT
             public readonly IPacketStore Store;
         }
 
-        /// <summary>
-        /// Factory to use to create a MQTT Client.
-        /// </summary>
-        public static MqttClientFactory Factory { get; } = new MqttClientFactory();
+
 
         readonly ProtocolConfiguration _pConfig;
         readonly MqttConfiguration _config;
