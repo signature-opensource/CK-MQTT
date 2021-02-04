@@ -13,7 +13,8 @@ When this ValueTask is completed, the client guarantee that it will retry to sen
 
 
 TODO:
-IDStore: Make internal and make private fields public.
+MqttIdStore: not thread safe currently, it should be.
+
 There is 3 monitors instead of 2.
 Cancel all tasks if reconnecting with new connection. (behavior, "throw if lost session" ?)
 Reconnect on connection lost.
@@ -36,3 +37,7 @@ Useless alloc: instead of allocating Publish object I can just write them direct
 
 Spec not yet implemented:
 MQTT-1.5.3-1 The character data in a UTF-8 encoded string MUST be well-formed UTF-8 as defined by the Unicode specification [Unicode] and restated in RFC 3629 [RFC3629]. In particular this data MUST NOT include encodings of code points between U+D800 and U+DFFF. If a Server or Client receives a Control Packet containing ill-formed UTF-8 it MUST close the Network Connection
+
+Things to do for the 1.0.0:
+Fixes namespaces.
+Fixes all accessibility modifier to what it should be.

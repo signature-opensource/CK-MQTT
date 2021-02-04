@@ -88,7 +88,6 @@ namespace CK.MQTT
             _packets.Clear();
             return new ValueTask();
         }
-
         /// <inheritdoc/>
         protected override ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IOutputLogger? m, int packetId )
             => new ValueTask<IOutgoingPacketWithId>( _packets[packetId] );

@@ -66,7 +66,7 @@ namespace CK.MQTT
         public async Task SendMessageWithPacketIdAsync( IOutgoingPacketWithId item )
         {
             Debug.Assert( item.PacketId != 0 );
-            var wrapper = new AwaitableOutgoingPacketWithIdWrapper( item );
+            var wrapper = new AwaitableOutgoingPacketWithIdWrapper( item ); // TODO: We shouldnt have this duplicated... Why I did this ?
             await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
             await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
         }
@@ -98,9 +98,9 @@ namespace CK.MQTT
             {
                 using( m?.SendingMessageWithId( ref outgoingPacket, _pconfig.ProtocolLevel, packetWithId.PacketId ) )
                 {
-                    _store.OnPacketSent( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet.
+                    _store.OnPacketSent( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet to avoid concurrency issues.
                     // Explanation:
-                    // Sometimes, the receiver and input loop is faster than simply running "SendingPacket".
+                    // Sometimes, the receiver and input loop is faster than simply running "OnPacketSent".
                     await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
                 }
             }

@@ -1,5 +1,7 @@
 using CK.MQTT.Stores;
 using System;
+using System.Buffers;
+using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -96,12 +98,6 @@ namespace CK.MQTT
             return true;
         }
 
-        bool HaveUnackPacketToSend( int waitTimeout )
-        {
-            (int packetId, int waitTime) = _packetStore.GetOldestUnackedPacket();
-            return packetId != 0 && waitTime < waitTimeout;
-        }
-
         async ValueTask<int> ResendAllUnackPacket( IOutputLogger? m, PacketSender packetSender, int waitTimeout )
         {
             if( _config.WaitTimeoutMilliseconds == int.MaxValue )
@@ -111,7 +107,7 @@ namespace CK.MQTT
             }
             while( true )
             {
-                (int packetId, int waitTime) = _packetStore.IdStore.GetOldestUnackedPacket();
+                (int packetId, int waitTime) = _packetStore.; // TODO: when we get the timeout, a new ack may mark other packet as dropped.
                 // 0 means that there is no packet in the store. So we don't want to wake up the loop to resend packets.
                 if( packetId == 0 ) return int.MaxValue;
                 // Wait the right amount of time.
