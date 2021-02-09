@@ -115,7 +115,7 @@ namespace CK.MQTT
                 {
                     m?.Error( "Error while connecting, closing client.", e );
                     await CloseAsync( DisconnectedReason.None );
-                    throw;
+                    return new ConnectResult( ConnectError.InternalException );
                 }
             }
         }

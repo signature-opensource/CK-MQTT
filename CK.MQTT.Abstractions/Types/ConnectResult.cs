@@ -18,6 +18,7 @@ namespace CK.MQTT
         /// </summary>
         Timeout,
         RemoteDisconnected,
+        InternalException,
         /// <summary>
         /// Other reasons...
         /// </summary>
