@@ -10,13 +10,16 @@ namespace CK.MQTT
         /// </summary>
         Ok,
         /// <summary>
-        /// The broker answered, but the response could not be parsed.
+        /// The server answered, but the response could not be parsed.
         /// </summary>
         ProtocolError,
         /// <summary>
-        /// The broker didn't answered in the given time.
+        /// The server didn't answered in the given time.
         /// </summary>
         Timeout,
+        /// <summary>
+        /// The server closed the connection.
+        /// </summary>
         RemoteDisconnected,
         InternalException,
         /// <summary>
@@ -24,11 +27,27 @@ namespace CK.MQTT
         /// </summary>
         Other
     }
+
     /// <summary>
     /// Represent the result of a connect operation.
     /// </summary>
-    public readonly struct ConnectResult
+    public readonly struct ConnectResult // TODO net6: Use struct records.
     {
+        /// <summary>
+        /// The error if the client could not connect.
+        /// </summary>
+        public readonly ConnectError ConnectError;
+
+        /// <summary>
+        /// The state of the sessions.
+        /// </summary>
+        public readonly SessionState SessionState;
+
+        /// <summary>
+        /// The connect return code.
+        /// </summary>
+        public readonly ConnectReturnCode ConnectReturnCode;
+
         /// <summary>
         /// Instantiate a new <see cref="ConnectResult"/> where the result is an error.
         /// <see cref="SessionState"/> will be <see cref="SessionState.Unknown"/>.
@@ -54,20 +73,5 @@ namespace CK.MQTT
             SessionState = sessionState;
             ConnectReturnCode = connectReturnCode;
         }
-
-        /// <summary>
-        /// The error if the client could not connect.
-        /// </summary>
-        public readonly ConnectError ConnectError;
-
-        /// <summary>
-        /// The state of the sessions.
-        /// </summary>
-        public readonly SessionState SessionState;
-
-        /// <summary>
-        /// The connect return code.
-        /// </summary>
-        public readonly ConnectReturnCode ConnectReturnCode;
     }
 }

@@ -24,6 +24,18 @@ namespace CK.MQTT.Stores
             public T Content;
         }
 
+        /// <summary>
+        /// | _head: newest ID allocated
+        /// | <br/>
+        /// | <br/>
+        /// o _oldestIdAllocated <br/>
+        /// | ⬅️ This id was unallocated the longest ago<br/>
+        /// | <br/>
+        /// | ↖️ previous <br/>
+        /// | ↙️ next <br/>
+        /// | <br/>
+        /// o _tail: most recent freed packet <br/>
+        /// </summary>
         internal Entry[] _entries;
         /// <summary>
         /// When 0, all IDs are free.
@@ -34,8 +46,10 @@ namespace CK.MQTT.Stores
         /// <summary>
         /// Current count of Entries.
         /// </summary>
-        int _count;
+        internal int _count;
         readonly int _maxPacketId;
+
+        public bool NoPacketAllocated => _oldestIdAllocated == 0;
 
         public IdStore( int packetIdMaxValue, int startSize )
         {
@@ -97,7 +111,7 @@ namespace CK.MQTT.Stores
             else
             {
                 _entries[_oldestIdAllocated - 1].PreviousId = 0;
-                // TODO: Theorical scenario: Is allocating there faster since we don't need to access immediatly allocated memory ?
+                // Theorical scenario: Is allocating (growing the array) right now faster since we don't need to access immediatly the newly allocated memory ?
             }
             oldHead.NextId = packetId;
             _entries[packetId - 1].NextId = 0;
