@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Stores;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,7 +15,7 @@ namespace CK.MQTT
     /// In memory implementation of<see cref="IPacketStore"/>.
     /// This class DONT persist the data !!!
     /// </summary>
-    public class MemoryPacketStore : IPacketStore
+    class MemoryPacketStore : MqttIdStore<MemoryPacketStore.StoredPacket>
     {
         class OutgoingStoredPacket : IOutgoingPacketWithId
         {
@@ -40,24 +41,26 @@ namespace CK.MQTT
             }
         }
 
-        readonly Dictionary<int, OutgoingStoredPacket> _packets = new Dictionary<int, OutgoingStoredPacket>();
+        internal struct StoredPacket
+        {
+
+        }
 
         /// <summary>
         /// Instantiates a new <see cref="MemoryPacketStore"/>.
         /// </summary>
         /// <param name="config">The config of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
-        public MemoryPacketStore( ProtocolConfiguration pConfig, MqttConfigurationBase config, int packetIdMaxValue )
-            : base( pConfig, config, packetIdMaxValue )
+        public MemoryPacketStore( MqttConfigurationBase config, int packetIdMaxValue )
+            : base( packetIdMaxValue, config  )
         {
         }
 
         /// <inheritdoc/>
-        protected override ValueTask<QualityOfService> DoDiscardMessage( IInputLogger? m, int packetId )
+        protected override ValueTask RemovePacketData( IInputLogger? m, ref StoredPacket storedPacket )
         {
-            QualityOfService qos = _packets[packetId].Qos;
-            _packets.Remove( packetId );
-            return new ValueTask<QualityOfService>( qos );
+            storedPacket = default;
+            return new ValueTask();
         }
 
         /// <inheritdoc/>
@@ -71,7 +74,7 @@ namespace CK.MQTT
         protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet )
         {
             if( _packets.ContainsKey( packet.PacketId ) ) throw new InvalidOperationException( $"Packet Id was badly choosen. Did you restored it's state correctly ?" );
-            int packetSize = packet.GetSize( PConfig.ProtocolLevel );
+            int packetSize = packet.GetSize( base.Config. PConfig.ProtocolLevel );
             m?.Trace( $"Allocating {packetSize} bytes to persist {packet}." );
             //TODO: https://github.com/signature-opensource/CK-MQTT/issues/12
             byte[] arr = new byte[packetSize];//Some packet can be written only once. So we need to allocate memory for them.

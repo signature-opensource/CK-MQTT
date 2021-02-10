@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,14 +63,14 @@ namespace CK.MQTT.Stores
 
         readonly IdStore<EntryContent> _idStore;
         readonly IStopwatch _stopwatch;
-        readonly MqttConfigurationBase _config;
+        protected readonly MqttConfigurationBase Config;
         TaskCompletionSource<object?>? _idFullTCS = null; //TODO: replace by non generic TCS in .NET 5
         TaskCompletionSource<object?>? _packetDroppedTCS = null;
         public MqttIdStore( int packetIdMaxValue, MqttConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
             _stopwatch = config.StopwatchFactory.Create();
-            _config = config;
+            Config = config;
         }
 
         public Task GetTaskResolvedOnPacketDropped()
@@ -78,13 +79,6 @@ namespace CK.MQTT.Stores
             {
                 if( _packetDroppedTCS == null ) _packetDroppedTCS = new TaskCompletionSource<object?>();
                 return _packetDroppedTCS.Task;
-            }
-        }
-        public void ReleaseTCSPacketDropped()
-        {
-            lock(_idStore)
-            {
-                _packetDroppedTCS = null;
             }
         }
 
@@ -143,7 +137,13 @@ namespace CK.MQTT.Stores
             }
         }
 
-        protected ref T this[int packetId] => ref _idStore._entries[packetId - 1].Content.Storage;
+        protected abstract ValueTask DoResetAsync();
+
+        public ValueTask ResetAsync()
+        {
+            _idStore.Reset();
+            return DoResetAsync();
+        }
 
         protected abstract ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacketWithId content );
 
@@ -175,7 +175,7 @@ namespace CK.MQTT.Stores
             entry._attemptInTransitOrLost = 0;
             TaskCompletionSource<object?> tcs = new();
             entry._taskCompletionSource = tcs;
-            packet = _config.StoreTransformer.PacketTransformerOnSave( packet );
+            packet = Config.StoreTransformer.PacketTransformerOnSave( packet );
             await DoStorePacket( m, packet );
             return tcs.Task;
         }
@@ -189,7 +189,7 @@ namespace CK.MQTT.Stores
             }
         }
 
-        protected abstract ValueTask RemovePacketData( IInputLogger? m, int packetId );
+        protected abstract ValueTask RemovePacketData( IInputLogger? m, ref T storage );
 
         public async ValueTask OnQos1AckAsync( IInputLogger? m, int packetId, object? result )
         {
@@ -199,8 +199,13 @@ namespace CK.MQTT.Stores
             bool wasNeverAcked = WasPacketNeverAcked( state );
             if( wasNeverAcked )
             {
-                _idStore._entries[packetId - 1].Content._taskCompletionSource.SetResult( result ); // TODO: provide user a transaction window and remove packet when he is done..
-                await RemovePacketData( m, packetId );
+                await DoRemovePacketData();
+                ValueTask DoRemovePacketData() // Cant do ref inside Async method, so you ... avoid it like this.
+                {
+                    ref MqttIdStore<T>.EntryContent content = ref _idStore._entries[packetId - 1].Content;
+                    content._taskCompletionSource.SetResult( result ); // TODO: provide user a transaction window and remove packet when he is done..
+                    return RemovePacketData( m, ref content.Storage );
+                }
             }
             End();
             void End()
@@ -227,11 +232,17 @@ namespace CK.MQTT.Stores
             bool wasNeverAcked = WasPacketNeverAcked( state );
             if( wasNeverAcked )
             {
-                // We set to one because we don't care of the uncertain logic here. The next ack in the process will "clean" the pipe.
-                _idStore._entries[packetId - 1].Content._attemptInTransitOrLost = 1;
-                _idStore._entries[packetId - 1].Content._state |= QoSState.QoS2PubRecAcked;
-                _idStore._entries[packetId - 1].Content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
-                await RemovePacketData( m, packetId );
+                await DoRemovePacket();
+                ValueTask DoRemovePacket()
+                {
+                    ref var content = ref _idStore._entries[packetId - 1].Content;
+                    // We dont have to keep count of the previous retries. The next ack in the process will allow us to know that there was no more packet in the pipe.
+                    content._attemptInTransitOrLost = 1;  
+                    content._state |= QoSState.QoS2PubRecAcked;
+                    content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
+                    return RemovePacketData( m, ref content.Storage );
+                }
+               
             }
             End();
             void End()
@@ -269,6 +280,8 @@ namespace CK.MQTT.Stores
             }
         }
 
+        public abstract IAsyncEnumerable<IOutgoingPacketWithId> RestoreAllPackets( IActivityMonitor? m );
+
         protected abstract ValueTask<IOutgoingPacketWithId> RestorePacket( int packetId );
 
         async ValueTask<(IOutgoingPacketWithId?, TimeSpan)> RestorePacketInternal( int packetId )
@@ -279,7 +292,7 @@ namespace CK.MQTT.Stores
             // If there is no packet id allocated, there is no unacked packet id.
             if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacketWithId?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
 
-            TimeSpan timeLimit = _stopwatch.Elapsed.Subtract( TimeSpan.FromMilliseconds( _config.WaitTimeoutMilliseconds ) );
+            TimeSpan timeLimit = _stopwatch.Elapsed.Subtract( TimeSpan.FromMilliseconds( Config.WaitTimeoutMilliseconds ) );
 
             int currId = _idStore._tail;
             ref var curr = ref _idStore._entries[currId - 1];

@@ -59,7 +59,14 @@ namespace CK.MQTT.Stores
             }
             _maxPacketId = packetIdMaxValue;
             _entries = new Entry[startSize];
-            for( int i = 0; i < startSize - 1; i++ )
+            Reset();
+        }
+
+        internal void Reset()
+        {
+            if( _count == 0 ) return;
+            _count = 1;
+            for( int i = 0; i < _entries.Length - 1; i++ )
             {
                 _entries[i] = new Entry()
                 {
@@ -67,12 +74,14 @@ namespace CK.MQTT.Stores
                     PreviousId = i  // So 'i' as is not incremented is the previous packet id.
                 };
             }
-            _entries[startSize - 1] = new Entry()
+            _entries[^1] = new Entry()
             {
-                PreviousId = startSize - 1
+                PreviousId = _entries.Length - 1
             };
             _head = 1;
-            _tail = startSize;
+            _tail = _entries.Length;
+            Array.Clear( _entries, 0, _entries.Length );
+            _oldestIdAllocated = 0;
         }
 
         internal bool CreateNewId( out int packetId, out T result )
@@ -151,16 +160,6 @@ namespace CK.MQTT.Stores
                 _entries.CopyTo( newEntries, 0 );
                 _entries = newEntries;
             }
-        }
-
-        internal void Reset()
-        {
-            if( _count == 0 ) return;
-            _count = 1;
-            Array.Clear( _entries, 0, _entries.Length );
-            _tail = 0;
-            _head = 0;
-            _oldestIdAllocated = 0;
         }
 
         internal bool Empty => _count == 0;

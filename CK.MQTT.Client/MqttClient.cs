@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Stores;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -16,7 +17,7 @@ namespace CK.MQTT
         /// </summary>
         internal class ClientState : StateHolder
         {
-            public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IPacketIdStore packetIdStore, IPacketStore store ) : base( input, output )
+            public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IPacketIdStore packetIdStore, IMqttIdStore store ) : base( input, output )
             {
                 Channel = channel;
                 PacketIdStore = packetIdStore;
@@ -24,7 +25,7 @@ namespace CK.MQTT
             }
             public readonly IMqttChannel Channel;
             public readonly IPacketIdStore PacketIdStore;
-            public readonly IPacketStore Store;
+            public readonly IMqttIdStore Store;
         }
 
 
@@ -59,7 +60,7 @@ namespace CK.MQTT
             {
                 try
                 {
-                    (IPacketStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
+                    (IMqttIdStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
                     IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
                     ConnectAckReflex connectAckReflex = new ConnectAckReflex();
                     Task<ConnectResult> connectedTask = connectAckReflex.Task;
@@ -118,9 +119,9 @@ namespace CK.MQTT
             }
         }
 
-        async static Task SendAllStoredMessages( IActivityMonitor? m, IPacketStore store, OutputPump output )
+        async static Task SendAllStoredMessages( IActivityMonitor? m, IMqttIdStore store, OutputPump output )
         {
-            IAsyncEnumerable<IOutgoingPacketWithId> msgs = await store.GetAllMessagesAsync( m );
+            IAsyncEnumerable<IOutgoingPacketWithId> msgs = store.RestoreAllPackets( m );
             await foreach( IOutgoingPacketWithId msg in msgs )
             {
                 await output.SendMessageWithPacketIdAsync( msg );

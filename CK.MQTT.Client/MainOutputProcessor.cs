@@ -49,7 +49,7 @@ namespace CK.MQTT
 
             // Prioritization: ...
             bool packetSent = await SendAMessageFromQueue( m, sender, reflexes, messages ); // We want to send a fresh new packet...
-            int timeToNextResend = await ResendAllUnackPacket( m, sender, waitTimeout ); // Then sending all packets that waited for too long.
+            TimeSpan timeToNextResend = await ResendAllUnackPacket( m, sender, waitTimeout ); // Then sending all packets that waited for too long.
 
             // Here we sent all unack packet, it mean the only messages availables right are the one in the queue.
             if( packetSent ) return;
@@ -62,12 +62,13 @@ namespace CK.MQTT
             while( keepAlive > 0 || keepAlive != int.MaxValue )
             {
                 // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-                int timeToWait = Math.Min( timeToNextResend, keepAlive );
+                int timeToWait = Math.Min( timeToNextResend.Milliseconds, keepAlive );
                 if( _pingRespReflex.WaitingPingResp ) timeToWait = Math.Min( timeToWait, waitTimeout );
 
                 Task<bool> reflexesWait = reflexes.Reader.WaitToReadAsync().AsTask();
                 Task<bool> messagesWait = messages.Reader.WaitToReadAsync().AsTask();
-                await Task.WhenAny( _config.DelayHandler.Delay( timeToWait, cancellationToken ), reflexesWait, messagesWait );
+                Task packetToResend = _packetStore.GetTaskResolvedOnPacketDropped();
+                await Task.WhenAny( _config.DelayHandler.Delay( timeToWait, cancellationToken ), reflexesWait, messagesWait, packetToResend );
                 if( IsPingReqTimeout )
                 {
                     await clientClose( DisconnectedReason.PingReqTimeout );
@@ -75,7 +76,7 @@ namespace CK.MQTT
                 }
                 if( reflexesWait.IsCompleted //because we have a message in a queue.
                     || messagesWait.IsCompleted
-                    || HaveUnackPacketToSend( waitTimeout ) // or we have a packet to re-send.
+                    || packetToResend.IsCompleted // or we have a packet to re-send.
                     || cancellationToken.IsCancellationRequested )// or the operation is cancelled.
                 {
                     return;
@@ -98,21 +99,19 @@ namespace CK.MQTT
             return true;
         }
 
-        async ValueTask<int> ResendAllUnackPacket( IOutputLogger? m, PacketSender packetSender, int waitTimeout )
+        async ValueTask<TimeSpan> ResendAllUnackPacket( IOutputLogger? m, PacketSender packetSender, int waitTimeout )
         {
             if( _config.WaitTimeoutMilliseconds == int.MaxValue )
             {
                 // Resend is disabled.
-                return int.MaxValue;
+                return Timeout.InfiniteTimeSpan;
             }
             while( true )
             {
-                (int packetId, int waitTime) = _packetStore.; // TODO: when we get the timeout, a new ack may mark other packet as dropped.
+                (IOutgoingPacketWithId? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _packetStore.GetPacketToResend();
                 // 0 means that there is no packet in the store. So we don't want to wake up the loop to resend packets.
-                if( packetId == 0 ) return int.MaxValue;
-                // Wait the right amount of time.
-                if( waitTime < waitTimeout ) return waitTimeout - waitTime;
-                await packetSender( m, await _packetStore.GetMessageByIdAsync( m, packetId ) );
+                if( outgoingPacket is null ) return timeUntilAnotherRetry;
+                await packetSender( m, outgoingPacket );
 
             }
         }
