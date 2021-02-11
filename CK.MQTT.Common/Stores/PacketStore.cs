@@ -44,7 +44,7 @@ namespace CK.MQTT
             }
             Debug.Assert( idFreedAwaiter != null );
             packet.PacketId = (ushort)packetId;
-            using( m?.OpenTrace()?.Send( $"{nameof( IdStore )} determined new packet id would be {packetId}." ) )
+            using( m?.OpenTrace( $"{nameof( IdStore )} determined new packet id would be {packetId}." ) )
             {
                 var newPacket = await DoStoreMessageAsync( m, packet );
                 return (Config.StoreTransformer.PacketTransformerOnSave( newPacket ), idFreedAwaiter);
