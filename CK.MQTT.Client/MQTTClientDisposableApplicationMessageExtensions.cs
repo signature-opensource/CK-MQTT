@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Client;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -8,22 +9,33 @@ using System.Threading;
 using System.Threading.Tasks;
 using static CK.Core.Extension.PipeReaderExtensions;
 
-namespace CK.MQTT
+namespace CK.MQTT.Client
 {
-    public class DisposableApplicationMessage : IDisposable
+    public static class MQTTClientDisposableApplicationMessageExtensions
     {
-        readonly IDisposable _disposable;
 
-        public DisposableApplicationMessage( string topic, ReadOnlyMemory<byte> payload, QualityOfService qoS, bool retain, IDisposable disposable )
-            => (Topic, Payload, QoS, Retain, _disposable) = (topic, payload, qoS, retain, disposable);
+        /// <param name="client">The client that will send the message.</param>
+        /// <param name="m">The monitor used to log.</param>
+        /// <param name="message">The message that will be sent. It will be disposed after being stored.</param>
+        /// <returns>A ValueTask, that complete when the message has been stored, containing a Task that complete when the publish has been ack.
+        /// On QoS 0, the message is directly sent and the returned Task is Task.CompletedTask.
+        /// </returns>
+        public static async ValueTask<Task> PublishAsync( this IMqtt3Client client, IActivityMonitor? m, DisposableApplicationMessage message )
+        {
+            Task task = await client.PublishAsync( m, message.Topic, message.QoS, message.Retain, message.Payload ); //The packet has been stored
+            message.Dispose(); // So we can dispose after it has been stored.
+            return task; // The task we return complete when the packet has been acked.
+        }
 
-        public string Topic { get; }
-        public ReadOnlyMemory<byte> Payload { get; }
-        public QualityOfService QoS { get; }
-        public bool Retain { get; }
-        public void Dispose() => _disposable.Dispose();
+        public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> handler )
+            => client.SetMessageHandler( new DisposableHandlerCancellableClosure( handler ).HandleMessage );
+
+        public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> handler )
+            => client.SetMessageHandler( new HandlerClosure( handler ).HandleMessage );
+
+
     }
-    internal class DisposableHandlerCancellableClosure
+    class DisposableHandlerCancellableClosure
     {
         readonly Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> _messageHandler;
         public DisposableHandlerCancellableClosure( Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
@@ -37,7 +49,7 @@ namespace CK.MQTT
             await _messageHandler( m, new DisposableApplicationMessage( topic, buffer, qos, retain, memoryOwner ), cancelToken );
         }
     }
-    internal class HandlerClosure
+    class HandlerClosure
     {
         readonly Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> _messageHandler;
         public HandlerClosure( Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> messageHandler )
@@ -52,22 +64,5 @@ namespace CK.MQTT
             await _messageHandler( m, new DisposableApplicationMessage( topic, buffer, qos, retain, memoryOwner ) );
         }
     }
-    public static class DisposableApplicationMessageExtensions
-    {
-        
-        public static async ValueTask<Task> PublishAsync( this IMqtt3Client client, IActivityMonitor m, DisposableApplicationMessage message )
-        {
-            Task task = await client.PublishAsync( m, message.Topic, message.QoS, message.Retain, message.Payload );
-            message.Dispose();
-            return task;
-        }
-
-        public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> handler )
-            => client.SetMessageHandler( new DisposableHandlerCancellableClosure( handler ).HandleMessage );
-
-        public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> handler )
-            => client.SetMessageHandler( new HandlerClosure( handler ).HandleMessage );
-
-        
-    }
+    
 }

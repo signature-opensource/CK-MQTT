@@ -22,20 +22,22 @@ namespace CK.MQTT
             {
                 if( Reflex == null ) throw new NullReferenceException( nameof( Reflex ) );
                 if( header != (byte)PacketType.ConnectAck ) _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError ) );
-                m?.ProcessPacket( PacketType.ConnectAck );
-                ReadResult? read = await reader.ReadAsync( m, 2, default );
-                if( !read.HasValue ) return;
-                Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
-                reader.AdvanceTo( position );
-                if( state > 1 ) throw new ProtocolViolationException( "Connect Acknowledge Flags byte should never be greater than 1." );
-                if( code > 5 ) throw new ProtocolViolationException( "Connect return code should be between 0 and 5." );
-                if( packetSize > 2 )
+                using( m?.ProcessPacket( PacketType.ConnectAck ) )
                 {
-                    await reader.SkipBytes( packetSize );
-                    m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
+                    ReadResult? read = await reader.ReadAsync( m, 2, default );
+                    if( !read.HasValue ) return;
+                    Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
+                    reader.AdvanceTo( position );
+                    if( state > 1 ) throw new ProtocolViolationException( "Connect Acknowledge Flags byte should never be greater than 1." );
+                    if( code > 5 ) throw new ProtocolViolationException( "Connect return code should be between 0 and 5." );
+                    if( packetSize > 2 )
+                    {
+                        await reader.SkipBytes( packetSize );
+                        m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
+                    }
+                    sender.CurrentReflex = Reflex;
+                    _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
                 }
-                sender.CurrentReflex = Reflex;
-                _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
             }
             catch( Exception e )
             {

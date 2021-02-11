@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Client;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
@@ -41,19 +42,6 @@ namespace CK.MQTT
 
         public static IMqttClient CreateMQTTClient( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> messageHandler )
             => factory.CreateMQTTClient( config, new HandlerClosure( messageHandler ).HandleMessage );
-
-
-        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this,
-            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => @this.CreateMQTT3Client( config, new MemoryHandlerCancellableClosure( messageHandler).HandleMessage );
-
-        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this,
-            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => @this.CreateMQTT5Client( config, new MemoryHandlerCancellableClosure( messageHandler ).HandleMessage );
-
-        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this,
-            MqttConfiguration config, Func<IActivityMonitor, string, ReadOnlyMemory<byte>, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => @this.CreateMQTTClient( config, new MemoryHandlerCancellableClosure( messageHandler ).HandleMessage );
     }
 
 }
