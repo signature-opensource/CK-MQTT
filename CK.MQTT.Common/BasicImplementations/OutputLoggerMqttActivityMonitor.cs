@@ -19,20 +19,20 @@ namespace CK.MQTT
             _m = m;
         }
 
-        public void ExceptionInOutputLoop( Exception e ) => _m.Error()?.Send( e, "Error while writing data." );
+        public void ExceptionInOutputLoop( Exception e ) => _m.Error( "Error while writing data.", e );
 
-        public IDisposable? OutputLoopStarting() => _m.OpenTrace()?.Send( "Output loop listening..." );
+        public IDisposable? OutputLoopStarting() => _m.OpenTrace( "Output loop listening..." );
 
         public void PacketMarkedPoisoned( int packetId, int tryCount )
-            => _m.Error()?.Send( $"Packet with id {packetId} is not acknowledged after sending it {tryCount} times." +
-                        $"\nThis was the last attempt, as configured." );
+            => _m.Error( $"Packet with id {packetId} is not acknowledged after sending it {tryCount} times." +
+                         $"\nThis was the last attempt, as configured." );
 
-        public void SendingKeepAlive() => _m.Trace().Send( "Sending PingReq." );
+        public void SendingKeepAlive() => _m.Trace( "Sending PingReq." );
 
         public IDisposable? SendingMessage( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel )
-            => _m.OpenInfo()?.Send( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )}." );
+            => _m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )}." );
 
         public IDisposable? SendingMessageWithId( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel, int packetId )
-            => _m.OpenInfo()?.Send( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )} with packet ID {packetId}." );
+            => _m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )} with packet ID {packetId}." );
     }
 }

@@ -19,69 +19,70 @@ namespace CK.MQTT
         public InputLoggerMqttActivityMonitor( IActivityMonitor m ) => _m = m;
 
         /// <inheritdoc/>
-        public void PingReqTimeout() => _m.Error()?.Send( "The broker did not responded PingReq in the given amount of time." );
+        public void PingReqTimeout() => _m.Error( "The broker did not responded PingReq in the given amount of time." );
 
         /// <inheritdoc/>
-        public void InvalidDataReceived( DisconnectedReason reason ) => _m.Info()?.Send( $"Client closing reason: '{reason}.'" );
+        public void InvalidDataReceived( DisconnectedReason reason ) => _m.Info( $"Client closing reason: '{reason}.'" );
 
         /// <inheritdoc/>
         public void DoubleFreePacketId( int packetId )
-            => _m.Error()?.Send( $"Freeing packet id {packetId} that was not assigned or already freed." );
+            => _m.Error( $"Freeing packet id {packetId} that was not assigned or already freed." );
 
         /// <inheritdoc/>
-        public IDisposable? ProcessPacket( PacketType packetType ) => _m.OpenTrace()?.Send( $"Handling incoming packet as {packetType}." );
+        public IDisposable? ProcessPacket( PacketType packetType ) => _m.OpenTrace( $"Handling incoming packet as {packetType}." );
 
         /// <inheritdoc/>
         public IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos )
-            => _m.OpenTrace()?.Send( $"Handling incoming packet as {PacketType.Publish}." );
+            => _m.OpenTrace( $"Handling incoming packet as {PacketType.Publish}." );
 
         /// <inheritdoc/>
         public void QueueFullPacketDropped( PacketType packetType, int packetId )
-            => _m.Warn()?.Send( $"Could not queue {packetType}. Message Queue is full !!!" );
+            => _m.Warn( $"Could not queue {packetType}. Message Queue is full !!!" );
 
         /// <inheritdoc/>
         public void ReadCancelled( int requestedByteCount )
-            => _m.Trace()?.Send( $"Read operation cancelled while trying to read {requestedByteCount} bytes." );
+            => _m.Trace( $"Read operation canceled while trying to read {requestedByteCount} bytes." );
 
         /// <inheritdoc/>
         public void UnexpectedEndOfStream( int requestedByteCount, int availableByteCount )
-            => _m.Error().Send( $"Unexpected End Of Stream. Expected {requestedByteCount} bytes but got {availableByteCount}." );
+            => _m.Error( $"Unexpected End Of Stream. Expected {requestedByteCount} bytes but got {availableByteCount}." );
 
         /// <inheritdoc/>
         public void UnparsedExtraBytes( InputPump incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize )
-            => _m.Warn().Send( $"Packet bigger than expected, skipping {unparsedSize} bytes." );
+            => _m.Warn( $"Packet bigger than expected, skipping {unparsedSize} bytes." );
 
         /// <inheritdoc/>
         public void UnparsedExtraBytesPacketId( int unparsedSize )
-            => _m.Warn().Send( $"Packet bigger than expected, skipping {unparsedSize} bytes." );
+            => _m.Warn( $"Packet bigger than expected, skipping {unparsedSize} bytes." );
 
         /// <inheritdoc/>
-        public IDisposable? InputLoopStarting() => _m.OpenTrace()?.Send( "Listening Incoming Messages..." );
+        public IDisposable? InputLoopStarting() => _m.OpenTrace( "Listening Incoming Messages..." );
 
         /// <inheritdoc/>
-        public void ReadLoopTokenCancelled() => _m.Trace()?.Send( "Read Loop Cancelled." );
+        public void ReadLoopTokenCancelled() => _m.Trace( "Read Loop Canceled." );
 
         /// <inheritdoc/>
-        public void InvalidIncomingData() => _m.Error()?.Send( "Invalid Incoming data." );
+        public void InvalidIncomingData() => _m.Error( "Invalid Incoming data." );
 
         /// <inheritdoc/>
-        public void ExceptionOnParsingIncomingData( Exception e ) => _m.Error()?.Send( e, "Error while parsing incoming data." );
+        public void ExceptionOnParsingIncomingData( Exception e ) => _m.Error( "Error while parsing incoming data.", e );
 
         /// <inheritdoc/>
-        public IDisposable? ReflexTimeout() => _m.OpenError()?.Send( "A reflex waited a packet too long and timeouted." );
+        public IDisposable? ReflexTimeout() => _m.OpenError( "Timeout while waiting for a reflex packet." );
 
         /// <inheritdoc/>
-        public IDisposable? IncomingPacket( byte header, int length ) => _m.OpenTrace()?.Send( $"Incoming packet of {length} bytes." );
-        /// <inheritdoc/>
-        public void EndOfStream() => _m.Trace()?.Send( $"End of server Stream." );
+        public IDisposable? IncomingPacket( byte header, int length ) => _m.OpenTrace( $"Incoming packet of {length} bytes." );
 
         /// <inheritdoc/>
-        public void UnexpectedEndOfStream() => _m.Error()?.Send( "Unexpected End of Stream." );
+        public void EndOfStream() => _m.Trace( "End of server Stream." );
 
         /// <inheritdoc/>
-        public void LoopCanceledException( Exception e ) => _m.Trace()?.Send( e, "Cancelled exception in loop." );
+        public void UnexpectedEndOfStream() => _m.Error( "Unexpected End of Stream." );
 
         /// <inheritdoc/>
-        public void FreedPacketId( int packetId ) => _m.Trace()?.Send( $"Freed packet id {packetId}." );
+        public void LoopCanceledException( Exception e ) => _m.Trace( "Canceled exception in loop." );
+
+        /// <inheritdoc/>
+        public void FreedPacketId( int packetId ) => _m.Trace( $"Freed packet id {packetId}." );
     }
 }

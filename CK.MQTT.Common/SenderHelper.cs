@@ -19,11 +19,9 @@ namespace CK.MQTT
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor? m,
-            OutputPump output, IOutgoingPacket msg )
-            where T : class
+        static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor? m, OutputPump output, IOutgoingPacket msg ) where T : class
         {
-            using( m?.OpenTrace()?.Send( "Executing Publish protocol with QoS 0." ) )
+            using( m.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
                 await output.SendMessageWithoutPacketIdAsync( msg );
                 return Task.FromResult<T?>( null );
