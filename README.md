@@ -11,6 +11,12 @@ This is simple:
 The first ValueTask ensure that the client have stored the packet in it's store.
 When this ValueTask is completed, the client guarantee that it will retry to send the packet.
 
+## PipeWriter Readings
+PipeWriter are not easy to use, and at the time I'm writing this, the XML Docs are scarce in details.
+So I compiled some reading for you.
+First thing to read: https://docs.microsoft.com/en-us/dotnet/standard/io/pipelines
+When should you flush the pipe ? https://github.com/dotnet/runtime/issues/26747#issuecomment-403892674
+
 
 TODO:
 MqttIdStore: not thread safe currently, it should be.

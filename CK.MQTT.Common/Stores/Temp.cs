@@ -24,7 +24,7 @@ namespace CK.MQTT.Common.Stores
         {
             lock( _entries )
             {
-                Entry smallest = new Entry
+                IdStoreEntry smallest = new IdStoreEntry
                 {
                     EmissionTime = TimeSpan.MaxValue
                 };
@@ -33,7 +33,7 @@ namespace CK.MQTT.Common.Stores
                 ushort confTryCount = _config.AttemptCountBeforeGivingUpPacket;
                 for( int i = 0; i < _count; i++ )
                 {
-                    Entry entry = _entries[i];
+                    IdStoreEntry entry = _entries[i];
                     if( entry.EmissionTime != default
                         && !entry.Acked
                         && entry.EmissionTime <= smallest.EmissionTime

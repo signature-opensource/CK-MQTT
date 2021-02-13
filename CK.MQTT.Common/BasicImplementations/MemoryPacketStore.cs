@@ -1,6 +1,9 @@
 using CK.Core;
+using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Stores;
+using Microsoft.Toolkit.HighPerformance.Extensions;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
@@ -17,33 +20,20 @@ namespace CK.MQTT
     /// </summary>
     class MemoryPacketStore : MqttIdStore<MemoryPacketStore.StoredPacket>
     {
-        class OutgoingStoredPacket : IOutgoingPacketWithId
-        {
-            readonly ReadOnlyMemory<byte> _buffer;
+        readonly ProtocolConfiguration _protocolConfig;
 
-            public OutgoingStoredPacket( int packetId, QualityOfService qos, ReadOnlyMemory<byte> buffer )
+        internal struct StoredPacket : IDisposable
+        {
+            public readonly ReadOnlyMemory<byte> Payload;
+            readonly IDisposable _disposable;
+
+            public StoredPacket( ReadOnlyMemory<byte> payload, IDisposable disposable )
             {
-                Qos = qos;
-                _buffer = buffer;
-                ((IOutgoingPacketWithId)(this)).PacketId = packetId;
+                Payload = payload;
+                _disposable = disposable;
             }
 
-            int IOutgoingPacketWithId.PacketId { get; set; }
-
-            public QualityOfService Qos { get; set; }
-
-            public int GetSize( ProtocolLevel protocolLevel ) => _buffer.Length;
-
-            public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
-            {
-                await writer.WriteAsync( _buffer );
-                return WriteResult.Written;
-            }
-        }
-
-        internal struct StoredPacket
-        {
-
+            public void Dispose() => _disposable.Dispose();
         }
 
         /// <summary>
@@ -51,52 +41,45 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The config of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
-        public MemoryPacketStore( MqttConfigurationBase config, int packetIdMaxValue )
-            : base( packetIdMaxValue, config  )
+        public MemoryPacketStore( ProtocolConfiguration protocolConfiguration, MqttConfigurationBase config, int packetIdMaxValue )
+            : base( packetIdMaxValue, config )
         {
+            _protocolConfig = protocolConfiguration;
         }
 
         /// <inheritdoc/>
         protected override ValueTask RemovePacketData( IInputLogger? m, ref StoredPacket storedPacket )
         {
+            storedPacket.Dispose();
             storedPacket = default;
             return new ValueTask();
         }
 
-        /// <inheritdoc/>
-        protected override ValueTask DoDiscardPacketIdAsync( IInputLogger? m, int packetId )
+        protected override async ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacketWithId packet )
         {
-            _packets.Remove( packetId );
-            return new ValueTask();
+            int packetSize = packet.GetSize( _protocolConfig.ProtocolLevel );
+            m?.Trace( $"Renting {packetSize} bytes to persist {packet}." );
+            IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( packetSize );
+            PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() );//And write their content to this memory.
+            if( await packet.WriteAsync( _protocolConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            Memory<byte> slicedMem = memOwner.Memory.Slice( 0, packetSize );
+            base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
+            return new FromMemoryOutgoingPacket( slicedMem );
         }
 
-        /// <inheritdoc/>
-        protected async override ValueTask<IOutgoingPacketWithId> DoStoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet )
+        protected override ValueTask DoResetAsync()
         {
-            if( _packets.ContainsKey( packet.PacketId ) ) throw new InvalidOperationException( $"Packet Id was badly choosen. Did you restored it's state correctly ?" );
-            int packetSize = packet.GetSize( base.Config. PConfig.ProtocolLevel );
-            m?.Trace( $"Allocating {packetSize} bytes to persist {packet}." );
-            //TODO: https://github.com/signature-opensource/CK-MQTT/issues/12
-            byte[] arr = new byte[packetSize];//Some packet can be written only once. So we need to allocate memory for them.
-            PipeWriter pipe = PipeWriter.Create( new MemoryStream( arr ) );//And write their content to this memory.
-            if( await packet.WriteAsync( PConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
-            var newPacket = new OutgoingStoredPacket( packet.PacketId, packet.Qos, arr );
-            _packets.Add( packet.PacketId, newPacket );
-            return newPacket;
+            TODO
         }
 
-        /// <inheritdoc/>
-        protected override ValueTask DoReset()
+        public override IAsyncEnumerable<IOutgoingPacketWithId> RestoreAllPackets( IActivityMonitor? m )
         {
-            _packets.Clear();
-            return new ValueTask();
+            throw new NotImplementedException();
         }
-        /// <inheritdoc/>
-        protected override ValueTask<IOutgoingPacketWithId> DoGetMessageByIdAsync( IOutputLogger? m, int packetId )
-            => new ValueTask<IOutgoingPacketWithId>( _packets[packetId] );
 
-        /// <inheritdoc/>
-        protected override ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>> DoGetAllMessagesAsync( IActivityMonitor? m )
-            => new ValueTask<IAsyncEnumerable<IOutgoingPacketWithId>>( _packets.Select( s => (IOutgoingPacketWithId)s.Value ).ToAsyncEnumerable() );
+        protected override ValueTask<IOutgoingPacketWithId> RestorePacket( int packetId )
+        {
+            throw new NotImplementedException();
+        }
     }
 }

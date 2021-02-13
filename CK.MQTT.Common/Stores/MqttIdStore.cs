@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Common.Stores;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -82,6 +83,8 @@ namespace CK.MQTT.Stores
             }
         }
 
+        protected ref IdStoreEntry<EntryContent> this[int index] => ref _idStore._entries[index];
+
         [Pure]
         static bool WasPacketNeverAcked( QoSState state ) => (byte)(state & QoSState.PacketAckedMask) > 0;
 
@@ -103,7 +106,7 @@ namespace CK.MQTT.Stores
             }
         }
 
-        void DropPreviousUnackedPacket( IInputLogger? m, ref IdStore<EntryContent>.Entry entry, int packetId )
+        void DropPreviousUnackedPacket( IInputLogger? m, ref IdStoreEntry<EntryContent> entry, int packetId )
         {
             int currId = packetId;
             ref var curr = ref _idStore._entries[currId - 1];
@@ -139,17 +142,17 @@ namespace CK.MQTT.Stores
 
         protected abstract ValueTask DoResetAsync();
 
-        public ValueTask ResetAsync()
+        public async ValueTask ResetAsync()
         {
+            await DoResetAsync();
             _idStore.Reset();
-            return DoResetAsync();
         }
 
-        protected abstract ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacketWithId content );
+        protected abstract ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacketWithId packet );
 
         /// <summary> To be called when packet must be stored. Assign ID to the packet.</summary>
         /// <returns><see langword="null"/> when no packet id was available.</returns>
-        public async ValueTask<Task<object?>> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos )
+        public async ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos )
         {
             Debug.Assert( qos != QualityOfService.AtMostOnce );
             int packetId;
@@ -166,7 +169,8 @@ namespace CK.MQTT.Stores
                     res = _idStore.CreateNewId( out packetId, out entry );
                     _idFullTCS = new TaskCompletionSource<object?>();
                 }
-                await _idFullTCS.Task; // Asynchronously wait that a new packet id is available.
+                // Asynchronously wait that a new packet id is available.
+                _ = await _idFullTCS.Task; // Discard because we don't care of the content of the task. In .NET 5 the Task will be empty.
             }
 
             // We don't need the lock there, packet is not sent yet so we wont receive an ack for this ID.
@@ -176,8 +180,8 @@ namespace CK.MQTT.Stores
             TaskCompletionSource<object?> tcs = new();
             entry._taskCompletionSource = tcs;
             packet = Config.StoreTransformer.PacketTransformerOnSave( packet );
-            await DoStorePacket( m, packet );
-            return tcs.Task;
+            var packetToReturn = await DoStorePacket( m, packet );
+            return (tcs.Task, packetToReturn);
         }
 
         public void OnPacketSent( IOutputLogger? m, int packetId )
@@ -210,7 +214,7 @@ namespace CK.MQTT.Stores
             End();
             void End()
             {
-                ref IdStore<EntryContent>.Entry entry = ref _idStore._entries[packetId - 1];
+                ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId - 1];
                 DropPreviousUnackedPacket( m, ref entry, packetId );
                 if( entry.Content._attemptInTransitOrLost > 1 )
                 {
@@ -237,17 +241,17 @@ namespace CK.MQTT.Stores
                 {
                     ref var content = ref _idStore._entries[packetId - 1].Content;
                     // We dont have to keep count of the previous retries. The next ack in the process will allow us to know that there was no more packet in the pipe.
-                    content._attemptInTransitOrLost = 1;  
+                    content._attemptInTransitOrLost = 1;
                     content._state |= QoSState.QoS2PubRecAcked;
                     content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
                     return RemovePacketData( m, ref content.Storage );
                 }
-               
+
             }
             End();
             void End()
             {
-                ref IdStore<EntryContent>.Entry entry = ref _idStore._entries[packetId - 1];
+                ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId - 1];
                 DropPreviousUnackedPacket( m, ref entry, packetId );
                 if( entry.Content._attemptInTransitOrLost > 1 )
                 {
@@ -268,7 +272,7 @@ namespace CK.MQTT.Stores
             {
                 throw new ProtocolViolationException( "PubRec not acked but we received PubRel" );
             }
-            ref IdStore<EntryContent>.Entry entry = ref _idStore._entries[packetId - 1];
+            ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId - 1];
             if( entry.Content._attemptInTransitOrLost > 1 )
             {
                 entry.Content._attemptInTransitOrLost--;

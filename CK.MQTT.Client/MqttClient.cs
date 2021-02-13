@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    
     internal class MqttClient : Pumppeteer<MqttClient.ClientState>, IMqttClient
     {
         /// <summary>
@@ -174,7 +173,7 @@ namespace CK.MQTT
             if( clearSession && !cancelAckTasks ) throw new ArgumentException( "When the session is cleared, the ACK tasks must be canceled too." );
             if( !IsConnected ) return Task.FromResult( false );
             if( state is null ) throw new NullReferenceException();
-            if( cancelAckTasks ) state!.Store.IdStore.CancelAllAcks( m );
+            if( cancelAckTasks ) state!.Store.CancelAllAckTask( m );
             return CloseAsync( DisconnectedReason.UserDisconnected );
         }
 

@@ -1,4 +1,6 @@
+using CK.MQTT.Common.Stores;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 #nullable enable
@@ -12,17 +14,12 @@ namespace CK.MQTT.Stores
         // Packet behind this cursor are available packet ID.
         // Packet after this cursor are used packets ID.
         // Because we prepend the list when an ID is freed and append when an ID is used it mean that the IDs are sorted chronogically:
-        // - The tail is the last freed packet ID,
+        // - The tail is the most recent freed packet ID,
         // - The previous packet of the "_oldestIdAllocated" is the oldest available ID.
         // - The _oldestIdAllocated, is well, the oldest id allocated.
         // - The head of the list is the newest id allocated.
 
-        internal struct Entry
-        {
-            public int NextId;
-            public int PreviousId;
-            public T Content;
-        }
+
 
         /// <summary>
         /// | _head: newest ID allocated
@@ -36,7 +33,7 @@ namespace CK.MQTT.Stores
         /// | <br/>
         /// o _tail: most recent freed packet <br/>
         /// </summary>
-        internal Entry[] _entries;
+        internal IdStoreEntry<T>[] _entries;
         /// <summary>
         /// When 0, all IDs are free.
         /// </summary>
@@ -58,7 +55,7 @@ namespace CK.MQTT.Stores
                 throw new ArgumentOutOfRangeException( $"{nameof( startSize )} must be greater than 0 and smaller than {packetIdMaxValue}" );
             }
             _maxPacketId = packetIdMaxValue;
-            _entries = new Entry[startSize];
+            _entries = new IdStoreEntry<T>[startSize];
             Reset();
         }
 
@@ -68,13 +65,13 @@ namespace CK.MQTT.Stores
             _count = 1;
             for( int i = 0; i < _entries.Length - 1; i++ )
             {
-                _entries[i] = new Entry()
+                _entries[i] = new IdStoreEntry<T>()
                 {
                     NextId = i + 2, // Packet ID start by 1, and we want to target the next entry.
                     PreviousId = i  // So 'i' as is not incremented is the previous packet id.
                 };
             }
-            _entries[^1] = new Entry()
+            _entries[^1] = new IdStoreEntry<T>()
             {
                 PreviousId = _entries.Length - 1
             };
@@ -86,7 +83,7 @@ namespace CK.MQTT.Stores
 
         internal bool CreateNewId( out int packetId, out T result )
         {
-            ref Entry oldHead = ref _entries[_head - 1];
+            ref IdStoreEntry<T> oldHead = ref _entries[_head - 1];
             if( _oldestIdAllocated == _tail ) // The oldest packet we sent is also the tail. It mean there are no packet Id available.
             {
                 if( _count == _maxPacketId ) // All packets are busy.
@@ -97,8 +94,8 @@ namespace CK.MQTT.Stores
                 }
                 EnsureSlotsAvailable( ++_count ); // We create space if required to store this id.
                 packetId = _count; // Now we can use this id.
-                ref Entry newEntry = ref _entries[packetId - 1];
-                newEntry = new Entry
+                ref IdStoreEntry<T> newEntry = ref _entries[packetId - 1];
+                newEntry = new IdStoreEntry<T>()
                 {
                     PreviousId = _head, // Previous head is our previous.
                     NextId = 0 // It's the head, so 0.
@@ -108,7 +105,7 @@ namespace CK.MQTT.Stores
                 result = newEntry.Content;
                 return true;
             }
-            ref Entry oldestId = ref _entries[_oldestIdAllocated - 1];
+            ref IdStoreEntry<T> oldestId = ref _entries[_oldestIdAllocated - 1];
             packetId = oldestId.PreviousId; // We take the oldest unused packet id.
             Debug.Assert( packetId != 0, "We didn't used all the IDs so at least one should be available." );
             int previous = _entries[packetId - 1].PreviousId;
@@ -133,7 +130,7 @@ namespace CK.MQTT.Stores
 
         internal void FreeId( IInputLogger? m, int packetId )
         {
-#if DEBUG
+#if DEBUG // Debug consistency check.
             int curr = packetId;
             while( curr != _oldestIdAllocated )
             {
@@ -141,7 +138,10 @@ namespace CK.MQTT.Stores
                 if( curr == 0 ) throw new InvalidOperationException( "Id was not allocated." );
             }
 #endif
-            if( packetId == _oldestIdAllocated ) _oldestIdAllocated = 0;
+            if( packetId == _oldestIdAllocated )
+            {
+                _oldestIdAllocated = _entries[packetId - 1].PreviousId;
+            }
             _entries[packetId - 1].NextId = _tail;
             _entries[packetId - 1].PreviousId = 0;
             _entries[packetId - 1].Content = default;
@@ -156,7 +156,7 @@ namespace CK.MQTT.Stores
             {
                 int newCount = count * 2;
                 if( count * 2 > _maxPacketId ) newCount = _maxPacketId;
-                Entry[] newEntries = new Entry[newCount];
+                IdStoreEntry<T>[] newEntries = new IdStoreEntry<T>[newCount];
                 _entries.CopyTo( newEntries, 0 );
                 _entries = newEntries;
             }
