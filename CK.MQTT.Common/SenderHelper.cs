@@ -23,7 +23,7 @@ namespace CK.MQTT
         {
             using( m.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
-                await output.SendMessageWithoutPacketIdAsync( msg );
+                await output.SendMessageAsync( msg );
                 return Task.FromResult<T?>( null );
             }
         }
@@ -32,18 +32,18 @@ namespace CK.MQTT
             OutputPump output, IMqttIdStore messageStore, IOutgoingPacketWithId msg, QualityOfService qos)
             where T : class
         {
-            (IOutgoingPacketWithId newPacket, Task<object?> ackReceived) = await messageStore.StoreMessageAsync( m, msg, qos );
+            (Task<object?> ackReceived, IOutgoingPacket newPacket) = await messageStore.StoreMessageAsync( m, msg, qos );
             return Send<T>( output, newPacket, ackReceived );
         }
 
-        static async Task<T?> Send<T>( OutputPump output, IOutgoingPacketWithId packet, Task<object?> ackReceived )
+        static async Task<T?> Send<T>( OutputPump output, IOutgoingPacket packet, Task<object?> ackReceived )
             where T : class
         {
-            await output.SendMessageWithPacketIdAsync( packet );
+            await output.SendMessageAsync( packet );
             object? res = await ackReceived;
             if( res is null ) return null;
             if( res is T a ) return a;
-            //For exemple: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
+            //For example: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
             throw new ProtocolViolationException( "We received a packet id ack from an unexpected packet type." );
         }
     }

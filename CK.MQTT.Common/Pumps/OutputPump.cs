@@ -56,20 +56,13 @@ namespace CK.MQTT
         public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        public async Task SendMessageWithoutPacketIdAsync( IOutgoingPacket item )
+        public async Task SendMessageAsync( IOutgoingPacket item )
         {
             var wrapper = new AwaitableOutgoingPacketWrapper( item );
             await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
+            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
         }
 
-        public async Task SendMessageWithPacketIdAsync( IOutgoingPacketWithId item )
-        {
-            Debug.Assert( item.PacketId != 0 );
-            var wrapper = new AwaitableOutgoingPacketWithIdWrapper( item ); // TODO: We shouldnt have this duplicated... Why I did this ?
-            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
-        }
 
         async Task WriteLoop()
         {

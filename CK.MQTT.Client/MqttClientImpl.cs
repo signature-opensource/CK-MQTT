@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    internal class MqttClient : Pumppeteer<MqttClient.ClientState>, IMqttClient
+    class MqttClientImpl : Pumppeteer<MqttClientImpl.ClientState>, IMqttClient
     {
         /// <summary>
         /// Allow to atomically get/set multiple fields.
@@ -34,11 +34,11 @@ namespace CK.MQTT
         Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
         /// <summary>
-        /// Instantiate the <see cref="MqttClient"/> with the given configuration.
+        /// Instantiate the <see cref="MqttClientImpl"/> with the given configuration.
         /// </summary>
-        /// <param name="config">The config to use.</param>
+        /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        internal MqttClient( ProtocolConfiguration protocolConfig, MqttConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        internal MqttClientImpl( ProtocolConfiguration protocolConfig, MqttConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             : base( config )
             => (_pConfig, _config, _messageHandler) = (protocolConfig, config, messageHandler);
 
@@ -75,7 +75,7 @@ namespace CK.MQTT
                         .UseMiddleware( pingRes )
                         .Build( InvalidPacket );
 
-                    await output.SendMessageWithoutPacketIdAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
+                    await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
                     output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
                     await Task.WhenAny( connectedTask, timeout );
@@ -105,7 +105,7 @@ namespace CK.MQTT
                     }
                     else
                     {
-                        await SendAllStoredMessages( m, store, output );
+                        throw new NotImplementedException();
                     }
                     return res;
                 }
@@ -115,15 +115,6 @@ namespace CK.MQTT
                     await CloseAsync( DisconnectedReason.None );
                     throw;
                 }
-            }
-        }
-
-        async static Task SendAllStoredMessages( IActivityMonitor? m, IMqttIdStore store, OutputPump output )
-        {
-            IAsyncEnumerable<IOutgoingPacketWithId> msgs = store.RestoreAllPackets( m );
-            await foreach( IOutgoingPacketWithId msg in msgs )
-            {
-                await output.SendMessageWithPacketIdAsync( msg );
             }
         }
 
@@ -144,7 +135,7 @@ namespace CK.MQTT
         {
             if( reason == DisconnectedReason.UserDisconnected )
             {
-                await State!.OutputPump.SendMessageWithoutPacketIdAsync( OutgoingDisconnect.Instance );
+                await State!.OutputPump.SendMessageAsync( OutgoingDisconnect.Instance );
             }
         }
 

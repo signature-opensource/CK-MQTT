@@ -18,7 +18,7 @@ namespace CK.MQTT.Client.Tests
                 TestPacket.Outgoing("3018000a7465737420746f70696374657374207061796c6f6164")
             } );
 
-            await await client.PublishAsync( TestHelper.Monitor, new NewApplicationMessage(
+            await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false )
             );
             packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
@@ -33,7 +33,7 @@ namespace CK.MQTT.Client.Tests
                 TestPacket.Incoming("40020001")
             } );
 
-            await await client.PublishAsync( TestHelper.Monitor, new NewApplicationMessage(
+            await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtLeastOnce, false )
             );
             packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
@@ -50,7 +50,7 @@ namespace CK.MQTT.Client.Tests
                 TestPacket.Incoming("70020001")
             } );
 
-            await await client.PublishAsync( TestHelper.Monitor, new NewApplicationMessage(
+            await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.ExactlyOnce, false )
             );
             packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();

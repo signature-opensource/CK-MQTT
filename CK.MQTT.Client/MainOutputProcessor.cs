@@ -35,9 +35,9 @@ namespace CK.MQTT
             CancellationToken cancellationToken )
         {
             // This is really easy to put bug in this function, thats why this is heavily commented.
-            // This function will be called again immediatly upon return, if the client is not closing.
+            // This function will be called again immediately upon return, if the client is not closing.
 
-            if( IsPingReqTimeout ) // Because we are in a loop, this will be called immediatly after a return. Keep this in mind.
+            if( IsPingReqTimeout ) // Because we are in a loop, this will be called immediately after a return. Keep this in mind.
             {
                 await clientClose( DisconnectedReason.PingReqTimeout );
                 return;
@@ -49,9 +49,9 @@ namespace CK.MQTT
 
             // Prioritization: ...
             bool packetSent = await SendAMessageFromQueue( m, sender, reflexes, messages ); // We want to send a fresh new packet...
-            TimeSpan timeToNextResend = await ResendAllUnackPacket( m, sender, waitTimeout ); // Then sending all packets that waited for too long.
+            TimeSpan timeToNextResend = await ResendAllUnackPacket( m, sender ); // Then sending all packets that waited for too long.
 
-            // Here we sent all unack packet, it mean the only messages availables right are the one in the queue.
+            // Here we sent all unack packet, it mean the only messages available right are the one in the queue.
             if( packetSent ) return;
             // But if we didn't sent any message from the queue, it mean that we have no more messages to send.
             // We need to wait for a new packet to send, or send a PingReq if didn't sent a message for too long and check if the broker did answer.
@@ -77,13 +77,13 @@ namespace CK.MQTT
                 if( reflexesWait.IsCompleted //because we have a message in a queue.
                     || messagesWait.IsCompleted
                     || packetToResend.IsCompleted // or we have a packet to re-send.
-                    || cancellationToken.IsCancellationRequested )// or the operation is cancelled.
+                    || cancellationToken.IsCancellationRequested )// or the operation is canceled.
                 {
                     return;
                 }
                 if( keepAlive != int.MaxValue ) keepAlive -= timeToWait;
                 // Maybe we waited something else than the keepalive (unack packets, timeout).
-                // So we substract the time we waited to the keepalive, and run the whole loop again.
+                // So we subtract the time we waited to the keepalive, and run the whole loop again.
             }
             //keepAlive reached 0. So we must send a ping.
             await sender( m, OutgoingPingReq.Instance );
@@ -99,7 +99,7 @@ namespace CK.MQTT
             return true;
         }
 
-        async ValueTask<TimeSpan> ResendAllUnackPacket( IOutputLogger? m, PacketSender packetSender, int waitTimeout )
+        async ValueTask<TimeSpan> ResendAllUnackPacket( IOutputLogger? m, PacketSender packetSender )
         {
             if( _config.WaitTimeoutMilliseconds == int.MaxValue )
             {
@@ -108,7 +108,7 @@ namespace CK.MQTT
             }
             while( true )
             {
-                (IOutgoingPacketWithId? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _packetStore.GetPacketToResend();
+                (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _packetStore.GetPacketToResend();
                 // 0 means that there is no packet in the store. So we don't want to wake up the loop to resend packets.
                 if( outgoingPacket is null ) return timeUntilAnotherRetry;
                 await packetSender( m, outgoingPacket );

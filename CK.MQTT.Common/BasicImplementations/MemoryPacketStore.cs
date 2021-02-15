@@ -1,5 +1,6 @@
 using CK.Core;
 using CK.MQTT.Common.OutgoingPackets;
+using CK.MQTT.Common.Stores;
 using CK.MQTT.Stores;
 using Microsoft.Toolkit.HighPerformance.Extensions;
 using System;
@@ -33,13 +34,13 @@ namespace CK.MQTT
                 _disposable = disposable;
             }
 
-            public void Dispose() => _disposable.Dispose();
+            public void Dispose() => _disposable?.Dispose(); // _disposable may be null when the struct is default.
         }
 
         /// <summary>
         /// Instantiates a new <see cref="MemoryPacketStore"/>.
         /// </summary>
-        /// <param name="config">The config of the mqtt client.</param>
+        /// <param name="config">The configuration of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
         public MemoryPacketStore( ProtocolConfiguration protocolConfiguration, MqttConfigurationBase config, int packetIdMaxValue )
             : base( packetIdMaxValue, config )
@@ -60,26 +61,23 @@ namespace CK.MQTT
             int packetSize = packet.GetSize( _protocolConfig.ProtocolLevel );
             m?.Trace( $"Renting {packetSize} bytes to persist {packet}." );
             IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( packetSize );
-            PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() );//And write their content to this memory.
+            PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
             if( await packet.WriteAsync( _protocolConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( slicedMem );
         }
 
-        protected override ValueTask DoResetAsync()
+        protected override ValueTask DoResetAsync( ArrayStartingAt1<IdStoreEntry<EntryContent>> entries )
         {
-            TODO
+            for( int i = 1; i < entries.Length + 1; i++ )
+            {
+                entries[i].Content.Storage.Dispose();
+            }
+            return new ValueTask();
         }
 
-        public override IAsyncEnumerable<IOutgoingPacketWithId> RestoreAllPackets( IActivityMonitor? m )
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override ValueTask<IOutgoingPacketWithId> RestorePacket( int packetId )
-        {
-            throw new NotImplementedException();
-        }
+        protected override ValueTask<IOutgoingPacket> RestorePacket( int packetId )
+            => new ValueTask<IOutgoingPacket>( new FromMemoryOutgoingPacket( base[packetId].Content.Storage.Payload ) );
     }
 }

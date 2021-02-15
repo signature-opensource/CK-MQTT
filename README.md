@@ -20,8 +20,8 @@ When should you flush the pipe ? https://github.com/dotnet/runtime/issues/26747#
 
 TODO:
 MqttIdStore: not thread safe currently, it should be.
+Store.OnPacketSent is not called anymore.
 
-There is 3 monitors instead of 2.
 Cancel all tasks if reconnecting with new connection. (behavior, "throw if lost session" ?)
 Reconnect on connection lost.
 There is issues on reconnection with the IdStore: After CanceAllAcks, the IdStore does not contain any IDs
