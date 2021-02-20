@@ -1,3 +1,5 @@
+using System;
+
 namespace CK.MQTT
 {
     /// <summary>
@@ -9,6 +11,7 @@ namespace CK.MQTT
     /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180912">Quality of Service levels and protocol flows</a>
     /// for more details about the QoS values and description
     /// </remarks>
+    [Flags]
 	public enum QualityOfService : byte
     {
         /// <summary>

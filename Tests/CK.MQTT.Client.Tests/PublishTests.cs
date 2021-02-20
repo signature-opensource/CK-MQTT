@@ -53,6 +53,7 @@ namespace CK.MQTT.Client.Tests
             await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.ExactlyOnce, false )
             );
+            await Task.WhenAny( Task.Delay( 500 ), packetReplayer.LastWorkTask );
             packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
 

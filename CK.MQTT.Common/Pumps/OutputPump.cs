@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.MQTT.Stores;
 using System;
 using System.Diagnostics;
@@ -38,8 +39,14 @@ namespace CK.MQTT
         {
 
             (_pipeWriter, _pconfig, _config, _store, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, store, initialProcessor);
-            _messages = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
-            _reflexes = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
+            _messages = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( _config.OutgoingPacketsChannelCapacity )
+            {
+                SingleReader = true
+            } );
+            _reflexes = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( _config.OutgoingPacketsChannelCapacity )
+            {
+                SingleReader = true
+            } );
             SetRunningLoop( WriteLoop() );
         }
 
@@ -56,11 +63,16 @@ namespace CK.MQTT
         public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        public async Task SendMessageAsync( IOutgoingPacket item )
+        public async Task SendMessageAsync( IActivityMonitor? m, IOutgoingPacket packet )
         {
-            var wrapper = new AwaitableOutgoingPacketWrapper( item );
-            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
+            using( m?.OpenTrace( "Sending a message ..." ) )
+            {
+                var wrapper = new AwaitableOutgoingPacketWrapper( packet );
+                m?.Trace( $"Queuing the packet '{packet}'. " );
+                await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
+                m?.Trace( $"Awaiting that the packet '{packet}' has been written." );
+                await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
+            }
         }
 
 

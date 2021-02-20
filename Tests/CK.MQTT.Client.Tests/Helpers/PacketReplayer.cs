@@ -25,7 +25,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public Task? LastWorkTask { get; private set; }
         public async Task NextAsync( Task writingTask )
         {
-            if( !_manualMode ) throw new InvalidOperationException( "Cannot move mannualy when not started in manual mode." );
+            if( !_manualMode ) throw new InvalidOperationException( "Cannot move manually when not started in manual mode." );
             await Task.WhenAll( WorkLoop(), writingTask );
         }
         async Task WorkLoop()
@@ -51,7 +51,6 @@ namespace CK.MQTT.Client.Tests.Helpers
                 TestDelayHandler.IncrementTime( packet.OperationTime );
                 _packets.Dequeue();
                 if( _manualMode ) return;
-                await Task.Yield();
             }
         }
 

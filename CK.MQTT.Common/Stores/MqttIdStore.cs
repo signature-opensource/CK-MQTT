@@ -186,8 +186,11 @@ namespace CK.MQTT.Stores
             // We don't need the lock there, packet is not sent yet so we wont receive an ack for this ID.
             packet.PacketId = packetId;
             packet = Config.StoreTransformer.PacketTransformerOnSave( packet );
-            IOutgoingPacket packetToReturn = await DoStorePacket( m, packet );
-            return (tcs.Task, packetToReturn);
+            using( m?.OpenTrace( $"Calling the implementation to store the packet..." ) )
+            {
+                IOutgoingPacket packetToReturn = await DoStorePacket( m, packet );
+                return (tcs.Task, packetToReturn);
+            }
         }
 
         public void OnPacketSent( IOutputLogger? m, int packetId )
@@ -237,7 +240,7 @@ namespace CK.MQTT.Stores
         public async ValueTask OnQos2AckStep1Async( IInputLogger? m, int packetId )
         {
             MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
-            Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
+            Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.ExactlyOnce );
 
             bool wasNeverAcked = WasPacketNeverAcked( state );
             if( wasNeverAcked )
@@ -254,21 +257,7 @@ namespace CK.MQTT.Stores
                 }
 
             }
-            End();
-            void End()
-            {
-                ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
-                DropPreviousUnackedPacket( m, ref entry, packetId );
-                if( entry.Content._attemptInTransitOrLost > 1 )
-                {
-                    entry.Content._attemptInTransitOrLost--;
-                    entry.Content._state = QoSState.UncertainDead;
-                }
-                else
-                {
-                    FreeId( m, packetId );
-                }
-            }
+            DropPreviousUnackedPacket( m, ref _idStore._entries[packetId], packetId );
         }
 
         public void OnQos2AckStep2( IInputLogger? m, int packetId )

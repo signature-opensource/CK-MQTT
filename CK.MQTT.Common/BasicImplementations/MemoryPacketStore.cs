@@ -62,7 +62,10 @@ namespace CK.MQTT
             m?.Trace( $"Renting {packetSize} bytes to persist {packet}." );
             IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( packetSize );
             PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
-            if( await packet.WriteAsync( _protocolConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            using( m?.OpenTrace( $"Serializing {packet} into memory..." ) )
+            {
+                if( await packet.WriteAsync( _protocolConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            }
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( slicedMem );

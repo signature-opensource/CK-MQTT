@@ -75,10 +75,10 @@ namespace CK.MQTT
                         .UseMiddleware( pingRes )
                         .Build( InvalidPacket );
 
-                    await output.SendMessageAsync( new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
+                    await output.SendMessageAsync( m, new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
                     output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
-                    await Task.WhenAny( connectedTask, timeout );
+                    _ = await Task.WhenAny( connectedTask, timeout );
                     if( connectedTask.Exception is not null ) throw connectedTask.Exception.InnerException ?? connectedTask.Exception;
                     if( CloseToken.IsCancellationRequested )
                     {
@@ -135,7 +135,7 @@ namespace CK.MQTT
         {
             if( reason == DisconnectedReason.UserDisconnected )
             {
-                await State!.OutputPump.SendMessageAsync( OutgoingDisconnect.Instance );
+                await State!.OutputPump.SendMessageAsync(null, OutgoingDisconnect.Instance ); // TODO: We need a logger here/
             }
         }
 

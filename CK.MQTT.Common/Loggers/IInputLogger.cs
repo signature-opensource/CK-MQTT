@@ -6,7 +6,7 @@ namespace CK.MQTT
 {
     public interface IInputLogger
     {
-        IDisposable? InputLoopStarting();
+        IDisposable InputLoopStarting();
         void ReadLoopTokenCancelled();
         void InvalidIncomingData();
         void ExceptionOnParsingIncomingData( Exception e );
