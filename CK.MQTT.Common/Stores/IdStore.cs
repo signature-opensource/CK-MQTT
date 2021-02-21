@@ -124,7 +124,7 @@ namespace CK.MQTT.Stores
                 _entries[_newestIdAllocated].Content = entry;
                 return true;
             }
-            packetId = _entries[_newestIdAllocated].PreviousId;
+            packetId = _entries[_newestIdAllocated].NextId;
             _newestIdAllocated = packetId;
             _entries[_newestIdAllocated].Content = entry;
             return true;

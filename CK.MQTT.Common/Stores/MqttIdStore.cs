@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
 {
-    /// <typeparam name="T">Dispose may be called multiple times.</typeparam>
     public abstract class MqttIdStore<T> : IMqttIdStore
     {
         // * Lot of important logic happen here:
@@ -68,7 +67,7 @@ namespace CK.MQTT.Stores
         protected readonly MqttConfigurationBase Config;
         TaskCompletionSource<object?>? _idFullTCS = null; //TODO: replace by non generic TCS in .NET 5
         TaskCompletionSource<object?>? _packetDroppedTCS = null;
-        public MqttIdStore( int packetIdMaxValue, MqttConfigurationBase config )
+        protected MqttIdStore( int packetIdMaxValue, MqttConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
             _stopwatch = config.StopwatchFactory.Create();
@@ -76,20 +75,28 @@ namespace CK.MQTT.Stores
             Config = config;
         }
 
+        // Called on output.
         public Task GetTaskResolvedOnPacketDropped()
         {
-            lock( _idStore )
-            {
-                if( _packetDroppedTCS == null ) _packetDroppedTCS = new TaskCompletionSource<object?>();
-                return _packetDroppedTCS.Task;
-            }
+            TaskCompletionSource<object?> newTcs = new();
+            TaskCompletionSource<object?>? val = Interlocked.CompareExchange( ref _packetDroppedTCS, newTcs, null );
+            if( val == null ) val = newTcs;
+            return val.Task;
         }
 
+        /// <summary>
+        /// Call it only with a lock.
+        /// </summary>
         protected ref IdStoreEntry<EntryContent> this[int index] => ref _idStore._entries[index];
 
         [Pure]
         static bool WasPacketNeverAcked( QoSState state ) => (state & QoSState.PacketAckedMask) == QoSState.None;
 
+        /// <summary>
+        /// Require lock.
+        /// </summary>
+        /// <param name="packetId"></param>
+        /// <returns></returns>
         QoSState GetStateAndChecks( int packetId )
         {
             if( packetId > _idStore._entries.Length ) throw new ProtocolViolationException( "The sender acknowledged a packet id that does not exist." );
@@ -99,6 +106,11 @@ namespace CK.MQTT.Stores
             return state;
         }
 
+        /// <summary>
+        /// Require lock.
+        /// </summary>
+        /// <param name="m"></param>
+        /// <param name="packetId"></param>
         void FreeId( IInputLogger? m, int packetId )
         {
             lock( _idStore )
@@ -108,11 +120,17 @@ namespace CK.MQTT.Stores
             }
         }
 
+        /// <summary>
+        /// Require lock.
+        /// </summary>
+        /// <param name="m"></param>
+        /// <param name="entry"></param>
+        /// <param name="packetId"></param>
         void DropPreviousUnackedPacket( IInputLogger? m, ref IdStoreEntry<EntryContent> entry, int packetId )
         {
             int currId = packetId;
             ref var curr = ref _idStore._entries[currId];
-            while( currId != _idStore._newestIdAllocated ) // We loop over all older packets.
+            while( currId != _idStore._head ) // We loop over all older packets.
             {
                 if( curr.Content._lastEmissionTime < entry.Content._lastEmissionTime )
                 {
@@ -129,22 +147,23 @@ namespace CK.MQTT.Stores
                     else
                     {
                         curr.Content._state |= QoSState.Dropped; // We mark the packet as dropped so it can be resent immediately.
-                        if( _packetDroppedTCS != null )
-                        {
-                            _packetDroppedTCS.SetResult( null );
-                            _packetDroppedTCS = null;
-                        }
+                        Interlocked.Exchange( ref _packetDroppedTCS, null ) // Get the ref and set it to null.
+                            ?.SetResult( null ); // Set the result if not null.
                     }
                 }
 
                 currId = curr.PreviousId;
                 curr = ref _idStore._entries[currId];
-
             }
         }
 
         protected abstract ValueTask DoResetAsync( ArrayStartingAt1<IdStoreEntry<EntryContent>> entries );
 
+        /// <summary>
+        /// Not thread safe.
+        /// </summary>
+        /// <param name="m"></param>
+        /// <returns></returns>
         public async ValueTask ResetAsync()
         {
             await DoResetAsync( _idStore._entries );
@@ -158,20 +177,22 @@ namespace CK.MQTT.Stores
         public async ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos )
         {
             Debug.Assert( qos != QualityOfService.AtMostOnce );
-            int packetId;
-            bool res = false;
-            TaskCompletionSource<object?> tcs = new();
             EntryContent entry = new EntryContent
             {
                 _lastEmissionTime = _stopwatch.Elapsed,
                 _attemptInTransitOrLost = 0,
                 _state = (QoSState)(byte)qos,
-                _taskCompletionSource = tcs
+                _taskCompletionSource = new()
             };
+            int packetId;
+            bool res = false;
             lock( _idStore )
             {
+                // Lock because id store is not thread safe.
                 res = _idStore.CreateNewEntry( entry, out packetId );
             }
+            // We don't need to lock more than that, packet is not sent yet so we wont receive an ack for this ID.
+
             while( !res )
             {
                 lock( _idStore )
@@ -183,13 +204,12 @@ namespace CK.MQTT.Stores
                 _ = await _idFullTCS.Task; // Discard because we don't care of the content of the task. In .NET 5 the Task will be empty.
             }
 
-            // We don't need the lock there, packet is not sent yet so we wont receive an ack for this ID.
             packet.PacketId = packetId;
             packet = Config.StoreTransformer.PacketTransformerOnSave( packet );
             using( m?.OpenTrace( $"Calling the implementation to store the packet..." ) )
             {
                 IOutgoingPacket packetToReturn = await DoStorePacket( m, packet );
-                return (tcs.Task, packetToReturn);
+                return (entry._taskCompletionSource.Task, packetToReturn);
             }
         }
 
@@ -297,7 +317,7 @@ namespace CK.MQTT.Stores
             TimeSpan oldest = curr.Content._lastEmissionTime;
             while( currId != _idStore._newestIdAllocated ) // We loop over all older packets.
             {
-                currId = curr.PreviousId;
+                currId = curr.NextId;
                 curr = ref _idStore._entries[currId];
                 if( curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped ) )
                 {
@@ -311,7 +331,7 @@ namespace CK.MQTT.Stores
 
         public void CancelAllAckTask( IActivityMonitor? m )
         {
-
+            throw new NotImplementedException();
         }
     }
 }
