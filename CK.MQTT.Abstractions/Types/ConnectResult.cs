@@ -8,11 +8,7 @@ namespace CK.MQTT
         /// <summary>
         /// No Error.
         /// </summary>
-        Ok,
-        /// <summary>
-        /// The server answered, but the response could not be parsed.
-        /// </summary>
-        ProtocolError,
+        Ok = 0,
         /// <summary>
         /// The server didn't answered in the given time.
         /// </summary>
@@ -22,10 +18,14 @@ namespace CK.MQTT
         /// </summary>
         RemoteDisconnected,
         InternalException,
+        ProtocolError_InvalidConnackState,
+        ProtocolError_UnexpectedConnectResponse,
+        ProtocolError_UnknownReturnCode,
+        ProtocolError_SessionNotFlushed,
         /// <summary>
         /// Other reasons...
         /// </summary>
-        Other
+        Other = byte.MaxValue
     }
 
     /// <summary>

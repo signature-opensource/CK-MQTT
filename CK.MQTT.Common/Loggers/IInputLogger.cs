@@ -26,5 +26,6 @@ namespace CK.MQTT
         void PingReqTimeout();
         void DoubleFreePacketId( int packetId );
         void FreedPacketId( int packetId );
+        void ConnectionUnknownException( Exception e );
     }
 }

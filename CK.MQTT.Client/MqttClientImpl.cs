@@ -79,23 +79,34 @@ namespace CK.MQTT
                     output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
                     _ = await Task.WhenAny( connectedTask, timeout );
-                    if( connectedTask.Exception is not null ) throw connectedTask.Exception.InnerException ?? connectedTask.Exception;
+                    // This following code wouldn't be better with a sort of ... switch/pattern matching ?
+                    if( connectedTask.Exception is not null ) 
+                    {
+                        m?.Fatal( connectedTask.Exception );
+                        _ = await CloseAsync( DisconnectedReason.None );
+                        return new ConnectResult( ConnectError.InternalException );
+                    }
                     if( CloseToken.IsCancellationRequested )
                     {
-                        await AutoDisconnectAsync();
+                        _ = await CloseAsync( DisconnectedReason.None );
                         return new ConnectResult( ConnectError.RemoteDisconnected );
                     }
                     if( !connectedTask.IsCompleted )
                     {
-                        await AutoDisconnectAsync();
+                        _ = await CloseAsync( DisconnectedReason.None );
                         return new ConnectResult( ConnectError.Timeout );
                     }
                     ConnectResult res = await connectedTask;
+                    if( res.ConnectError != ConnectError.Ok )
+                    {
+                        _ = await CloseAsync( DisconnectedReason.None );
+                        return new ConnectResult( res.ConnectError );
+                    }
                     bool askedCleanSession = credentials?.CleanSession ?? true;
                     if( askedCleanSession && res.SessionState != SessionState.CleanSession )
                     {
-                        await AutoDisconnectAsync();
-                        throw new ProtocolViolationException( "We asked for a clean session but broker's CONNACK had SessionPresent bit set." );
+                        _ = await CloseAsync( DisconnectedReason.None );
+                        return new ConnectResult( ConnectError.ProtocolError_SessionNotFlushed );
                     }
                     if( res.SessionState == SessionState.CleanSession )
                     {
@@ -112,8 +123,8 @@ namespace CK.MQTT
                 catch( Exception e )
                 {
                     m?.Error( "Error while connecting, closing client.", e );
-                    await CloseAsync( DisconnectedReason.None );
-                    throw;
+                    _ = await CloseAsync( DisconnectedReason.None );
+                    return new ConnectResult( ConnectError.InternalException );
                 }
             }
         }
@@ -121,7 +132,7 @@ namespace CK.MQTT
 
         async ValueTask InvalidPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
-            await AutoDisconnectAsync( DisconnectedReason.ProtocolError );
+            _ = await CloseAsync( DisconnectedReason.ProtocolError );
             throw new ProtocolViolationException();
         }
 
@@ -135,7 +146,7 @@ namespace CK.MQTT
         {
             if( reason == DisconnectedReason.UserDisconnected )
             {
-                await State!.OutputPump.SendMessageAsync(null, OutgoingDisconnect.Instance ); // TODO: We need a logger here/
+                await State!.OutputPump.SendMessageAsync( null, OutgoingDisconnect.Instance ); // TODO: We need a logger here.
             }
         }
 
@@ -167,12 +178,5 @@ namespace CK.MQTT
             if( cancelAckTasks ) state!.Store.CancelAllAckTask( m );
             return CloseAsync( DisconnectedReason.UserDisconnected );
         }
-
-        /// <summary>
-        /// This protected method can be called by this specialized "pumppeteer" to explicitly close the connection.
-        /// </summary>
-        /// <param name="reason">The reason of the disconnection.</param>
-        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        protected Task<bool> AutoDisconnectAsync( DisconnectedReason reason = DisconnectedReason.None ) => CloseAsync( reason );
     }
 }

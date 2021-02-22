@@ -76,7 +76,8 @@ namespace CK.MQTT
                     Task<bool> reflexesWait = reflexes.Reader.WaitToReadAsync().AsTask();
                     Task<bool> messagesWait = messages.Reader.WaitToReadAsync().AsTask();
                     Task packetMarkedAsDropped = _packetStore.GetTaskResolvedOnPacketDropped();
-                    _ = await Task.WhenAny( _config.DelayHandler.Delay( timeToWait, cancellationToken ), reflexesWait, messagesWait, packetMarkedAsDropped );
+                    Task timeToWaitTask = _config.DelayHandler.Delay( timeToWait, cancellationToken );
+                    _ = await Task.WhenAny( timeToWaitTask, reflexesWait, messagesWait, packetMarkedAsDropped );
                     if( IsPingReqTimeout )
                     {
                         m?.ConcludeMainLoopTimeout( mainGrpDispose! );
@@ -86,6 +87,7 @@ namespace CK.MQTT
                     if( cancellationToken.IsCancellationRequested )
                     {
                         m?.ConcludeMainLoopCancelled( mainGrpDispose! );
+                        return;
                     }
                     if( reflexesWait.IsCompleted || messagesWait.IsCompleted ) // a message in a queue is available.
                     {

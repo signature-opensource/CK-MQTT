@@ -84,5 +84,7 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         public void FreedPacketId( int packetId ) => _m.Trace( $"Freed packet id {packetId}." );
+
+        public void ConnectionUnknownException( Exception e ) => _m.Fatal( e );
     }
 }
