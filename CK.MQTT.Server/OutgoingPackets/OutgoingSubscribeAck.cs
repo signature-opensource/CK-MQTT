@@ -18,13 +18,13 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         protected override int GetRemainingSize( ProtocolLevel protocolLevel )
-		{
+        {
             return 2 + _returnCodes.Length;
         }
 
         /// <inheritdoc/>
-        protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span)
-		{
+        protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
+        {
             span = span.WriteBigEndianUInt16( _packetId );
             for( int i = 0; i < _returnCodes.Length; i++ )
             {

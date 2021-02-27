@@ -17,8 +17,8 @@ namespace CK.MQTT
         public BasicOutgoingApplicationMessage(
             string topic, QualityOfService qos, bool retain, Func<int> getPayloadSize, PayloadWriterDelegate payloadWriter,
             string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null ) //Properties
-             : base(topic, qos, retain, responseTopic, correlationDataSize, correlationDataWriter)
-		{
+             : base( topic, qos, retain, responseTopic, correlationDataSize, correlationDataWriter )
+        {
             _getPayloadSize = getPayloadSize;
             _payloadWriter = payloadWriter;
         }

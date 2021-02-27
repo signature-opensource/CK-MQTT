@@ -8,9 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.3.0" />
-    <PackageReference Include="System.IO.Pipelines" Version="4.7.2" />
-    <PackageReference Include="System.Linq.Async" Version="4.1.1" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.3.2" />
+    <PackageReference Include="Microsoft.Toolkit.HighPerformance" Version="7.0.0-preview4" />
   </ItemGroup>
 
   <ItemGroup>

@@ -12,7 +12,7 @@ namespace CK.MQTT
     {
         readonly TaskCompletionSource<ConnectResult> _tcs = new TaskCompletionSource<ConnectResult>();
 
-        public Reflex? Reflex { get; set; }
+        public Reflex Reflex { get; set; }
 
         public Task<ConnectResult> Task => _tcs.Task;
 
@@ -21,26 +21,41 @@ namespace CK.MQTT
             try
             {
                 if( Reflex == null ) throw new NullReferenceException( nameof( Reflex ) );
-                if( header != (byte)PacketType.ConnectAck ) _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError ) );
-                m?.ProcessPacket( PacketType.ConnectAck );
-                ReadResult? read = await reader.ReadAsync( m, 2, default );
-                if( !read.HasValue ) return;
-                Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
-                reader.AdvanceTo( position );
-                if( state > 1 ) throw new ProtocolViolationException( "Connect Acknowledge Flags byte should never be greater than 1." );
-                if( code > 5 ) throw new ProtocolViolationException( "Connect return code should be between 0 and 5." );
-                if( packetSize > 2 )
+                if( header != (byte)PacketType.ConnectAck )
                 {
-                    await reader.SkipBytes( packetSize );
-                    m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
+                    _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_UnexpectedConnectResponse ) );
+                    return;
                 }
-                sender.CurrentReflex = Reflex;
-                _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                using( m?.ProcessPacket( PacketType.ConnectAck ) )
+                {
+                    ReadResult? read = await reader.ReadAsync( m, 2, cancellationToken );
+                    if( !read.HasValue ) return;
+                    Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
+                    reader.AdvanceTo( position );
+                    if( state > 1 )
+                    {
+                        _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
+                        return;
+                    }
+                    if( code > 5 )
+                    {
+                        _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
+                        return;
+                    }
+                    if( packetSize > 2 )
+                    {
+                        await reader.SkipBytes( packetSize );
+                        m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
+                    }
+                    sender.CurrentReflex = Reflex;
+                    _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                }
             }
             catch( Exception e )
             {
-                _tcs.SetException( e );
-                throw;
+                m.ConnectionUnknownException( e );
+                _tcs.SetResult( new ConnectResult( ConnectError.InternalException ) );
+                return;
             }
         }
 

@@ -1,3 +1,4 @@
+using CK.MQTT.Stores;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
@@ -7,9 +8,9 @@ namespace CK.MQTT
 {
     class UnsubackReflex : IReflexMiddleware
     {
-        readonly PacketStore _store;
+        readonly IMqttIdStore _store;
 
-        public UnsubackReflex( PacketStore store ) => _store = store;
+        public UnsubackReflex( IMqttIdStore store ) => _store = store;
         public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken )
         {
             if( PacketType.UnsubscribeAck != (PacketType)header )
@@ -20,7 +21,7 @@ namespace CK.MQTT
             using( m?.ProcessPacket( PacketType.UnsubscribeAck ) )
             {
                 ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
-                await _store.OnMessageAck( m, packetId );
+                await _store.OnQos1AckAsync( m, packetId, null );
             }
         }
     }

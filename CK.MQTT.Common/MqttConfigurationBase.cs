@@ -54,6 +54,11 @@ namespace CK.MQTT
         public int OutgoingPacketsChannelCapacity { get; init; } = 32;
 
         /// <summary>
+        /// Initial capacity of the ID Store. May grow bigger.
+        /// </summary>
+        public int IdStoreStartCount { get; init; } = 32;
+
+        /// <summary>
         /// Gets the maximal number of retries to send the same packet
         /// before giving up.
         /// <para>
@@ -69,5 +74,6 @@ namespace CK.MQTT
         public IDelayHandler DelayHandler { get; init; } = MqttDelayHandler.Default;
 
         public IStopwatchFactory StopwatchFactory { get; init; } = new MqttStopwatchFactory();
+
     }
 }

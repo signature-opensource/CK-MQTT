@@ -30,7 +30,7 @@ namespace CK.MQTT.Client.Tests
         }
 
         [Test]
-        public async Task connect_with_clean_session_but_connack_session_present_is_not_zero_should_throw()
+        public async Task connect_with_clean_session_but_connack_session_present_is_not_zero_should_fail()
         {
             Queue<TestPacket> packets = new();
             TestPacket connectPacket = TestPacket.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
@@ -47,17 +47,12 @@ namespace CK.MQTT.Client.Tests
                 msg.Dispose();
                 return new ValueTask();
             } );
-            for( byte i = 1; i != 0; i++ )
+            ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            res.ConnectError.Should().Be( ConnectError.ProtocolError_SessionNotFlushed );
+            for( byte i = 2; i != 0; i++ )
             {
-                try
-                {
-                    ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-                    Assert.Fail();
-                }
-                catch( Exception e )
-                {
-                    e.Should().BeOfType<ProtocolViolationException>();
-                }
+                res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+                res.ConnectError.Should().Be( ConnectError.ProtocolError_InvalidConnackState );
             }
             pcktReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
@@ -83,15 +78,8 @@ namespace CK.MQTT.Client.Tests
             } );
             for( byte i = startSkipCount; i != 0; i++ )
             {
-                try
-                {
-                    ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-                    Assert.Fail();
-                }
-                catch( Exception e )
-                {
-                    e.Should().BeOfType<ProtocolViolationException>();
-                }
+                ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+                res.ConnectError.Should().Be( ConnectError.ProtocolError_UnknownReturnCode );
             }
             packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
@@ -149,8 +137,8 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task connect_after_failed_connect_works()
         {
-            Queue<TestPacket> packets = new();
             TestPacket connectPacket = TestPacket.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
+            Queue<TestPacket> packets = new();
             packets.Enqueue( connectPacket );
             packets.Enqueue( TestPacket.Incoming( "20021000" ) ); // Invalid response.
             packets.Enqueue( connectPacket );
@@ -162,15 +150,8 @@ namespace CK.MQTT.Client.Tests
                 msg.Dispose();
                 return new ValueTask();
             } );
-            try
-            {
-                ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-                Assert.Fail();
-            }
-            catch( Exception e )
-            {
-                e.Should().BeOfType<ProtocolViolationException>();
-            }
+            ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            res.ConnectError.Should().NotBe( ConnectError.Ok );
             ConnectResult res2 = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
             res2.ConnectError.Should().Be( ConnectError.Ok );
             packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();

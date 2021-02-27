@@ -1,3 +1,4 @@
+using CK.MQTT.Stores;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -10,9 +11,9 @@ namespace CK.MQTT
 {
     class SubackReflex : IReflexMiddleware
     {
-        readonly PacketStore _store;
+        readonly IMqttIdStore _store;
 
-        public SubackReflex( PacketStore store )
+        public SubackReflex( IMqttIdStore store )
         {
             _store = store;
         }
@@ -29,8 +30,7 @@ namespace CK.MQTT
                 if( !read.HasValue ) return;
                 Parse( read.Value.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
                 pipeReader.AdvanceTo( position );
-                QualityOfService debugQos = await _store.OnMessageAck( m, packetId, qos );
-                Debug.Assert( debugQos == QualityOfService.AtLeastOnce );
+                await _store.OnQos1AckAsync( m, packetId, qos );
             }
         }
 

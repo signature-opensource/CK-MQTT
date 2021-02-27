@@ -22,12 +22,12 @@ namespace CK.MQTT
         protected override byte Header => (byte)PacketType.Unsubscribe | 0b0010;
 
         protected override int GetRemainingSize( ProtocolLevel protocolLevel )
-		{
+        {
             return 2 + _topics.Sum( s => s.MQTTSize() );
         }
 
-        protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span)
-		{
+        protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
+        {
             span = span.WriteBigEndianUInt16( (ushort)PacketId );
             foreach( string topic in _topics )
             {

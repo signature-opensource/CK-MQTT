@@ -60,6 +60,7 @@ namespace CK.MQTT
                 {
                     await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                     if( !_output.QueueReflexMessage( LifecyclePacketV3.Puback( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishAck, packetId );
+                    return;
                 }
                 if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
                 await _store.StoreId( m, packetId );

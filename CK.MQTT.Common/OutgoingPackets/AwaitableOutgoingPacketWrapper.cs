@@ -19,7 +19,7 @@ namespace CK.MQTT
 
         public int GetSize( ProtocolLevel protocolLevel ) => _outgoingPacket.GetSize( protocolLevel );
 
-        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel , PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
             WriteResult res = await _outgoingPacket.WriteAsync( protocolLevel, writer, cancellationToken );
             _taskCompletionSource.SetResult( null );

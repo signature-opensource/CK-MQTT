@@ -56,7 +56,7 @@ namespace CK.MQTT
             => _m.Warn( $"Packet bigger than expected, skipping {unparsedSize} bytes." );
 
         /// <inheritdoc/>
-        public IDisposable? InputLoopStarting() => _m.OpenTrace( "Listening Incoming Messages..." );
+        public IDisposable InputLoopStarting() => _m.OpenInfo( "Listening Incoming Messages..." );
 
         /// <inheritdoc/>
         public void ReadLoopTokenCancelled() => _m.Trace( "Read Loop Canceled." );
@@ -84,5 +84,7 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         public void FreedPacketId( int packetId ) => _m.Trace( $"Freed packet id {packetId}." );
+
+        public void ConnectionUnknownException( Exception e ) => _m.Fatal( e );
     }
 }

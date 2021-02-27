@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
@@ -7,7 +6,7 @@ namespace CK.MQTT
 {
     public interface IInputLogger
     {
-        IDisposable? InputLoopStarting();
+        IDisposable InputLoopStarting();
         void ReadLoopTokenCancelled();
         void InvalidIncomingData();
         void ExceptionOnParsingIncomingData( Exception e );
@@ -27,5 +26,6 @@ namespace CK.MQTT
         void PingReqTimeout();
         void DoubleFreePacketId( int packetId );
         void FreedPacketId( int packetId );
+        void ConnectionUnknownException( Exception e );
     }
 }

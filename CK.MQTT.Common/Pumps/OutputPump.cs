@@ -1,3 +1,5 @@
+using CK.Core;
+using CK.MQTT.Stores;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -24,21 +26,27 @@ namespace CK.MQTT
         readonly PipeWriter _pipeWriter;
         readonly ProtocolConfiguration _pconfig;
         readonly MqttConfigurationBase _config;
-        readonly PacketStore _packetStore;
+        readonly IMqttIdStore _store;
         CancellationTokenSource _processorStopSource = new CancellationTokenSource();
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
-        /// <param name="packetStore">The packet store to use to retrieve packets.</param>
-        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, PacketStore packetStore )
+        /// <param name="store">The packet store to use to retrieve packets.</param>
+        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, IMqttIdStore store )
             : base( pumppeteer )
         {
 
-            (_pipeWriter, _pconfig, _config, _packetStore, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, packetStore, initialProcessor);
-            _messages = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
-            _reflexes = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
+            (_pipeWriter, _pconfig, _config, _store, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, store, initialProcessor);
+            _messages = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( _config.OutgoingPacketsChannelCapacity )
+            {
+                SingleReader = true
+            } );
+            _reflexes = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( _config.OutgoingPacketsChannelCapacity )
+            {
+                SingleReader = true
+            } );
             SetRunningLoop( WriteLoop() );
         }
 
@@ -55,20 +63,18 @@ namespace CK.MQTT
         public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        public async Task SendMessageWithoutPacketIdAsync( IOutgoingPacket item )
+        public async Task SendMessageAsync( IActivityMonitor? m, IOutgoingPacket packet )
         {
-            var wrapper = new AwaitableOutgoingPacketWrapper( item );
-            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
+            using( m?.OpenTrace( "Sending a message ..." ) )
+            {
+                var wrapper = new AwaitableOutgoingPacketWrapper( packet );
+                m?.Trace( $"Queuing the packet '{packet}'. " );
+                await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
+                m?.Trace( $"Awaiting that the packet '{packet}' has been written." );
+                await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
+            }
         }
 
-        public async Task SendMessageWithPacketIdAsync( IOutgoingPacketWithId item )
-        {
-            Debug.Assert( item.PacketId != 0 );
-            var wrapper = new AwaitableOutgoingPacketWithIdWrapper( item );
-            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
-        }
 
         async Task WriteLoop()
         {
@@ -97,9 +103,9 @@ namespace CK.MQTT
             {
                 using( m?.SendingMessageWithId( ref outgoingPacket, _pconfig.ProtocolLevel, packetWithId.PacketId ) )
                 {
-                    _packetStore.IdStore.SendingPacket( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet.
+                    _store.OnPacketSent( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet to avoid concurrency issues.
                     // Explanation:
-                    // Sometimes, the receiver and input loop is faster than simply running "SendingPacket".
+                    // Sometimes, the receiver and input loop is faster than simply running "OnPacketSent".
                     await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
                 }
             }
@@ -118,6 +124,5 @@ namespace CK.MQTT
             _processorStopSource?.Cancel();
             return loop;
         }
-
     }
 }

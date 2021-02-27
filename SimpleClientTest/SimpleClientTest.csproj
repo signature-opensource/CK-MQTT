@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring" Version="12.3.2--0008-develop" />
+    <PackageReference Include="CK.Monitoring" Version="13.0.1" />
   </ItemGroup>
 
   <ItemGroup>
