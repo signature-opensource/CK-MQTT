@@ -80,7 +80,7 @@ namespace CK.MQTT
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
                     _ = await Task.WhenAny( connectedTask, timeout );
                     // This following code wouldn't be better with a sort of ... switch/pattern matching ?
-                    if( connectedTask.Exception is not null ) 
+                    if( connectedTask.Exception is not null )
                     {
                         m?.Fatal( connectedTask.Exception );
                         _ = await CloseAsync( DisconnectedReason.None );
@@ -128,7 +128,6 @@ namespace CK.MQTT
                 }
             }
         }
-
 
         async ValueTask InvalidPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {

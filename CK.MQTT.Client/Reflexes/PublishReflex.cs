@@ -45,7 +45,7 @@ namespace CK.MQTT
                     if( read.IsCanceled ) return;
                     if( qos == QualityOfService.AtMostOnce )
                     {
-                        string theTopic = await reader.ReadMQTTString( packetLength );
+                        string theTopic = await reader.ReadMQTTString();
                         await _messageHandler( _mqttConfiguration.OnInputMonitor, theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                         return;
                     }

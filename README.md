@@ -19,7 +19,6 @@ When should you flush the pipe ? https://github.com/dotnet/runtime/issues/26747#
 
 
 TODO:
-MqttIdStore: not thread safe currently, it should be.
 Store.OnPacketSent is not called anymore.
 an exception outside the try/catch in the input loop doesnt kill the client.
 
