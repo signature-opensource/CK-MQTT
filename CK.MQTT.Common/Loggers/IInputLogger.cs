@@ -27,5 +27,10 @@ namespace CK.MQTT
         void DoubleFreePacketId( int packetId );
         void FreedPacketId( int packetId );
         void ConnectionUnknownException( Exception e );
+        void ConnectPropertyFieldDuplicated( PropertyIdentifier propertyIdentifier );
+        void InvalidMaxPacketSize( int maxPacketSize );
+        void InvalidPropertyType();
+        void InvalidPropertyValue( PropertyIdentifier propertyIdentifier, object value );
+        void ErrorAuthDataMissing();
     }
 }

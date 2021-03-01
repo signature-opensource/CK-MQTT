@@ -76,7 +76,8 @@ namespace CK.MQTT
                             _pipeReader.AdvanceTo( position );
                             using( m?.IncomingPacket( header, length ) )
                             {
-                                await CurrentReflex( m, this, header, length, _pipeReader, StopToken );
+                                // TODO: Can concurrently changing the ref to CurrentReflex could cause an issue here ? Lets hope not for now.
+                                await CurrentReflex( m, this, header, length, _pipeReader, StopToken ); 
                             }
                             continue;
                         }

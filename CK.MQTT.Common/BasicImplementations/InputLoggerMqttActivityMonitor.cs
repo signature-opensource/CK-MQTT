@@ -86,5 +86,19 @@ namespace CK.MQTT
         public void FreedPacketId( int packetId ) => _m.Trace( $"Freed packet id {packetId}." );
 
         public void ConnectionUnknownException( Exception e ) => _m.Fatal( e );
+
+        public void ConnectPropertyFieldDuplicated( PropertyIdentifier propertyIdentifier )
+            => _m.Error( $"{propertyIdentifier} is included more than once." );
+
+        public void InvalidMaxPacketSize( int maxPacketSize )
+            => _m?.Error( $"Invalid Max Packet Size ({maxPacketSize})." );
+
+        public void InvalidPropertyType()
+            => _m?.Error( "Invalid property type." );
+
+        public void InvalidPropertyValue( PropertyIdentifier propertyIdentifier, object value )
+            => _m?.Error( $"{propertyIdentifier} has an invalid value ({value})." );
+
+        public void ErrorAuthDataMissing() => _m?.Error( "Auth data present but there is no auth method." );
     }
 }

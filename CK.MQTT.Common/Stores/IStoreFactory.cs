@@ -6,6 +6,6 @@ namespace CK.MQTT
 {
     public interface IStoreFactory
     {
-        ValueTask<(IMqttIdStore, IPacketIdStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore );
+        ValueTask<(IOutgoingPacketStore, IIncomingPacketStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore );
     }
 }

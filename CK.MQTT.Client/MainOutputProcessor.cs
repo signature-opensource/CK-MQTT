@@ -13,10 +13,10 @@ namespace CK.MQTT
     public class MainOutputProcessor
     {
         readonly MqttConfiguration _config;
-        readonly IMqttIdStore _packetStore;
+        readonly IOutgoingPacketStore _packetStore;
         readonly PingRespReflex _pingRespReflex;
         readonly IStopwatch _stopwatch;
-        public MainOutputProcessor( MqttConfiguration config, IMqttIdStore packetStore, PingRespReflex pingRespReflex )
+        public MainOutputProcessor( MqttConfiguration config, IOutgoingPacketStore packetStore, PingRespReflex pingRespReflex )
         {
             _stopwatch = config.StopwatchFactory.Create();
             (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);
@@ -47,6 +47,7 @@ namespace CK.MQTT
                 }
                 // Because the config can change dynamically, we copy these values to avoid bugs.
                 int keepAlive = _config.KeepAliveSeconds * 1000;
+                if( keepAlive == 0 ) keepAlive = int.MaxValue;
                 if( keepAlive == 0 ) keepAlive = int.MaxValue;
                 int waitTimeout = _config.WaitTimeoutMilliseconds;
 

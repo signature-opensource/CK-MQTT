@@ -24,9 +24,9 @@ namespace CK.MQTT
         readonly Channel<IOutgoingPacket> _reflexes;
         OutputProcessor _outputProcessor;
         readonly PipeWriter _pipeWriter;
-        readonly ProtocolConfiguration _pconfig;
-        readonly MqttConfigurationBase _config;
-        readonly IMqttIdStore _store;
+        public ProtocolConfiguration PConfig { get; }
+        public MqttConfigurationBase Config { get; }
+        public IOutgoingPacketStore Store { get; }
         CancellationTokenSource _processorStopSource = new CancellationTokenSource();
 
         /// <summary>
@@ -34,16 +34,16 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, IMqttIdStore store )
+        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, IOutgoingPacketStore store )
             : base( pumppeteer )
         {
 
-            (_pipeWriter, _pconfig, _config, _store, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, store, initialProcessor);
-            _messages = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( _config.OutgoingPacketsChannelCapacity )
+            (_pipeWriter, PConfig, Config, Store, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, store, initialProcessor);
+            _messages = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
-            _reflexes = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( _config.OutgoingPacketsChannelCapacity )
+            _reflexes = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
@@ -78,45 +78,22 @@ namespace CK.MQTT
 
         async Task WriteLoop()
         {
-            using( _config.OutputLogger?.OutputLoopStarting() )
+            using( Config.OutputLogger?.OutputLoopStarting() )
             {
                 try
                 {
                     while( !StopToken.IsCancellationRequested )
                     {
-                        await _outputProcessor( _config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, DisconnectAsync, _processorStopSource.Token );
+                        await _outputProcessor( Config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, DisconnectAsync, _processorStopSource.Token );
                     }
                     _pipeWriter.Complete();
                 }
                 catch( Exception e )
                 {
-                    _config.OutputLogger?.ExceptionInOutputLoop( e );
+                    Config.OutputLogger?.ExceptionInOutputLoop( e );
                     await DisconnectAsync( DisconnectedReason.UnspecifiedError );
                 }
             }
-        }
-
-        async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket )
-        {
-            if( StopToken.IsCancellationRequested ) return;
-            if( outgoingPacket is IOutgoingPacketWithId packetWithId )
-            {
-                using( m?.SendingMessageWithId( ref outgoingPacket, _pconfig.ProtocolLevel, packetWithId.PacketId ) )
-                {
-                    _store.OnPacketSent( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet to avoid concurrency issues.
-                    // Explanation:
-                    // Sometimes, the receiver and input loop is faster than simply running "OnPacketSent".
-                    await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
-                }
-            }
-            else
-            {
-                using( m?.SendingMessage( ref outgoingPacket, _pconfig.ProtocolLevel ) )
-                {
-                    await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
-                }
-            }
-
         }
 
         protected override Task OnClosedAsync( Task loop )

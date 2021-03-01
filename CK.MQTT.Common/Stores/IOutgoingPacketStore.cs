@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
 {
-    public interface IMqttIdStore
+    public interface IOutgoingPacketStore
     {
         ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos );
         void CancelAllAckTask( IActivityMonitor? m );

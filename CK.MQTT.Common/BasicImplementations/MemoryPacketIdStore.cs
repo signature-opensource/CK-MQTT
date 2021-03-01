@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// In memory implementation of <see cref="IPacketIdStore"/>. Does not persist data. Use this only if you can allow data loss on process crash (bug, power failure for exemple).
+    /// In memory implementation of <see cref="IIncomingPacketStore"/>. Does not persist data. Use this only if you can allow data loss on process crash (bug, power failure for exemple).
     /// </summary>
-    public class MemoryPacketIdStore : IPacketIdStore
+    public class MemoryPacketIdStore : IIncomingPacketStore
     {
         readonly HashSet<int> _ids = new HashSet<int>();
 

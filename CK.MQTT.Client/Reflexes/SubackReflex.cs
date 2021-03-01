@@ -11,9 +11,9 @@ namespace CK.MQTT
 {
     class SubackReflex : IReflexMiddleware
     {
-        readonly IMqttIdStore _store;
+        readonly IOutgoingPacketStore _store;
 
-        public SubackReflex( IMqttIdStore store )
+        public SubackReflex( IOutgoingPacketStore store )
         {
             _store = store;
         }

@@ -62,6 +62,23 @@ namespace CK.MQTT
             return false;
         }
 
+        public static bool TryReadMQTTBinaryData( this ref SequenceReader<byte> reader, out ReadOnlyMemory<byte> memory )
+        {
+            if( !reader.TryReadBigEndian( out ushort length ) )
+            {
+                memory = ReadOnlyMemory<byte>.Empty;
+                return false;
+            }
+            Memory<byte> buffer = new byte[length];
+            memory = buffer;
+            if( !reader.TryCopyTo( buffer.Span ) )
+            {
+                reader.Rewind( 2 );
+                return false;
+            }
+            return true;
+        }
+
         /// <summary>
         /// Read a mqtt string on a <see cref="ReadOnlySequence{T}"/>, usefull when you cannot create a SequenceReader because you are on an async context.
         /// </summary>

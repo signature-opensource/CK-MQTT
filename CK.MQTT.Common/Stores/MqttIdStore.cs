@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
 {
-    public abstract class MqttIdStore<T> : IMqttIdStore
+    public abstract class MqttIdStore<T> : IOutgoingPacketStore
     {
         // * Lot of important logic happen here:
         //   - When a packet ID is freed. (Not as simple as it seems)

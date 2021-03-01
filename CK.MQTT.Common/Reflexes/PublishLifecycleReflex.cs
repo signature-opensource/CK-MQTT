@@ -9,11 +9,11 @@ namespace CK.MQTT
 {
     public class PublishLifecycleReflex : IReflexMiddleware
     {
-        readonly IPacketIdStore _packetIdStore;
-        readonly IMqttIdStore _store;
+        readonly IIncomingPacketStore _packetIdStore;
+        readonly IOutgoingPacketStore _store;
         readonly OutputPump _output;
 
-        public PublishLifecycleReflex( IPacketIdStore packetIdStore, IMqttIdStore store, OutputPump output )
+        public PublishLifecycleReflex( IIncomingPacketStore packetIdStore, IOutgoingPacketStore store, OutputPump output )
             => (_packetIdStore, _store, _output) = (packetIdStore, store, output);
 
         public async ValueTask ProcessIncomingPacketAsync(

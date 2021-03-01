@@ -16,15 +16,15 @@ namespace CK.MQTT
         /// </summary>
         internal class ClientState : StateHolder
         {
-            public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IPacketIdStore packetIdStore, IMqttIdStore store ) : base( input, output )
+            public ClientState( InputPump input, OutputPump output, IMqttChannel channel, IIncomingPacketStore packetIdStore, IOutgoingPacketStore store ) : base( input, output )
             {
                 Channel = channel;
                 PacketIdStore = packetIdStore;
                 Store = store;
             }
             public readonly IMqttChannel Channel;
-            public readonly IPacketIdStore PacketIdStore;
-            public readonly IMqttIdStore Store;
+            public readonly IIncomingPacketStore PacketIdStore;
+            public readonly IOutgoingPacketStore Store;
         }
 
 
@@ -59,7 +59,7 @@ namespace CK.MQTT
             {
                 try
                 {
-                    (IMqttIdStore store, IPacketIdStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
+                    (IOutgoingPacketStore store, IIncomingPacketStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
                     IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
                     ConnectAckReflex connectAckReflex = new ConnectAckReflex();
                     Task<ConnectResult> connectedTask = connectAckReflex.Task;
@@ -76,7 +76,7 @@ namespace CK.MQTT
                         .Build( InvalidPacket );
 
                     await output.SendMessageAsync( m, new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-                    output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
+                    output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor ); // TODO: I forgot why we need an early output processor... :(
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
                     _ = await Task.WhenAny( connectedTask, timeout );
                     // This following code wouldn't be better with a sort of ... switch/pattern matching ?
