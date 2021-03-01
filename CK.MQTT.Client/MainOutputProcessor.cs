@@ -12,20 +12,17 @@ namespace CK.MQTT
 {
     public class MainOutputProcessor
     {
-        readonly MqttConfiguration _config;
+        readonly MqttClientConfiguration _config;
         readonly IOutgoingPacketStore _packetStore;
         readonly PingRespReflex _pingRespReflex;
         readonly IStopwatch _stopwatch;
-        public MainOutputProcessor( MqttConfiguration config, IOutgoingPacketStore packetStore, PingRespReflex pingRespReflex )
+        public MainOutputProcessor( MqttClientConfiguration config, IOutgoingPacketStore packetStore, PingRespReflex pingRespReflex )
         {
             _stopwatch = config.StopwatchFactory.Create();
             (_config, _packetStore, _pingRespReflex) = (config, packetStore, pingRespReflex);
         }
 
-        bool IsPingReqTimeout =>
-            _pingRespReflex.WaitingPingResp
-            && _stopwatch.Elapsed.TotalMilliseconds > _config.WaitTimeoutMilliseconds
-            && _config.WaitTimeoutMilliseconds != int.MaxValue; //We never timeout if it's configured to int.MaxValue.
+        
 
         public async ValueTask OutputProcessor(
             IOutputLogger? m,
@@ -48,7 +45,6 @@ namespace CK.MQTT
                 // Because the config can change dynamically, we copy these values to avoid bugs.
                 int keepAlive = _config.KeepAliveSeconds * 1000;
                 if( keepAlive == 0 ) keepAlive = int.MaxValue;
-                if( keepAlive == 0 ) keepAlive = int.MaxValue;
                 int waitTimeout = _config.WaitTimeoutMilliseconds;
 
                 // Prioritization: ...
@@ -61,7 +57,6 @@ namespace CK.MQTT
                     m?.ConcludeRegularPacketSent( mainGrpDispose! );
                     return;
                 }
-                m?.AwaitingWork();
                 // But if we didn't sent any message from the queue, it mean that we have no more messages to send.
                 // We need to wait for a new packet to send, or send a PingReq if didn't sent a message for too long and check if the broker did answer.
                 // This chunk does a lot of 'slow' things, but we don't care since the output pump have nothing else to do.

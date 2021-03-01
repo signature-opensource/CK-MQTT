@@ -1,14 +1,14 @@
 using CK.Core;
 using CK.MQTT.Stores;
+using Microsoft.Toolkit.HighPerformance.Extensions;
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT.Pumps
 {
     /// <summary>
     /// The message pump that serializes the messages to the <see cref="PipeWriter"/>.
@@ -16,14 +16,11 @@ namespace CK.MQTT
     /// </summary>
     public class OutputPump : PumpBase
     {
-        public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, Func<DisconnectedReason, Task<bool>> clientClose, CancellationToken cancellationToken );
-
         public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
 
-        readonly Channel<IOutgoingPacket> _messages;
-        readonly Channel<IOutgoingPacket> _reflexes;
+        internal Channel<IOutgoingPacket> MessagesChannel { get; }
+        internal Channel<IOutgoingPacket> ReflexesChannel { get; }
         OutputProcessor _outputProcessor;
-        readonly PipeWriter _pipeWriter;
         public ProtocolConfiguration PConfig { get; }
         public MqttConfigurationBase Config { get; }
         public IOutgoingPacketStore Store { get; }
@@ -38,12 +35,12 @@ namespace CK.MQTT
             : base( pumppeteer )
         {
 
-            (_pipeWriter, PConfig, Config, Store, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, store, initialProcessor);
-            _messages = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
+            (PConfig, Config, Store, _outputProcessor) = (pconfig, pumppeteer.Configuration, store, initialProcessor);
+            MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
-            _reflexes = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
+            ReflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
@@ -58,9 +55,9 @@ namespace CK.MQTT
             _outputProcessor = outputProcessor;
         }
 
-        public bool QueueMessage( IOutgoingPacket item ) => _messages.Writer.TryWrite( item );
+        public bool QueueMessage( IOutgoingPacket item ) => MessagesChannel.Writer.TryWrite( item );
 
-        public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
+        public bool QueueReflexMessage( IOutgoingPacket item ) => ReflexesChannel.Writer.TryWrite( item );
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
         public async Task SendMessageAsync( IActivityMonitor? m, IOutgoingPacket packet )
@@ -69,7 +66,7 @@ namespace CK.MQTT
             {
                 var wrapper = new AwaitableOutgoingPacketWrapper( packet );
                 m?.Trace( $"Queuing the packet '{packet}'. " );
-                await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
+                await MessagesChannel.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
                 m?.Trace( $"Awaiting that the packet '{packet}' has been written." );
                 await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
             }
@@ -84,9 +81,13 @@ namespace CK.MQTT
                 {
                     while( !StopToken.IsCancellationRequested )
                     {
-                        await _outputProcessor( Config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, DisconnectAsync, _processorStopSource.Token );
+                        bool packetSent = await _outputProcessor.SendPackets( Config.OutputLogger, _processorStopSource.Token );
+                        if( !packetSent )
+                        {
+                            await _outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
+                        }
                     }
-                    _pipeWriter.Complete();
+                    _outputProcessor.Stopping();
                 }
                 catch( Exception e )
                 {

@@ -11,7 +11,7 @@ namespace CK.MQTT
 {
     class OutgoingConnect : ComplexOutgoingPacket
     {
-        readonly MqttConfiguration _mConf;
+        readonly MqttClientConfiguration _mConf;
         readonly MqttClientCredentials? _creds;
         readonly OutgoingLastWill? _lastWill;
         readonly uint _sessionExpiryInterval;
@@ -39,7 +39,7 @@ namespace CK.MQTT
         }
 
         public OutgoingConnect(
-            ProtocolConfiguration pConf, MqttConfiguration mConf, MqttClientCredentials? creds, OutgoingLastWill? lastWill = null,
+            ProtocolConfiguration pConf, MqttClientConfiguration mConf, MqttClientCredentials? creds, OutgoingLastWill? lastWill = null,
             uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, uint maximumPacketSize = 268435455, ushort topicAliasMaximum = 0,
             bool requestResponseInfo = false, bool requestProblemInfo = false, IReadOnlyList<UserProperty>? userProperties = null,
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )

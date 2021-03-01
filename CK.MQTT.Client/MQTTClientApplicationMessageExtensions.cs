@@ -34,13 +34,13 @@ namespace CK.MQTT.Client
         public static void SetMessageHandler( this IMqtt3Client @this, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
             => @this.SetMessageHandler( new HandlerCancellableClosure( handler ).HandleMessage );
 
-        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory factory, MqttConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
+        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory factory, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
             => factory.CreateMQTT3Client( config, new HandlerCancellableClosure( handler ).HandleMessage );
 
-        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
+        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
             => @this.CreateMQTT5Client( config, new HandlerCancellableClosure( handler ).HandleMessage );
 
-        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
+        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
             => @this.CreateMQTTClient( config, new HandlerCancellableClosure( handler ).HandleMessage );
 
         class HandlerClosure
@@ -62,13 +62,13 @@ namespace CK.MQTT.Client
         public static void SetMessageHandler( this IMqtt3Client @this, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
             => @this.SetMessageHandler( new HandlerClosure( handler ).HandleMessage );
 
-        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this, MqttConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
+        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
             => @this.CreateMQTT3Client( config, new HandlerClosure( handler ).HandleMessage );
 
-        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
+        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
             => @this.CreateMQTT5Client( config, new HandlerClosure( handler ).HandleMessage );
 
-        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
+        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
             => @this.CreateMQTTClient( config, new HandlerClosure( handler ).HandleMessage );
     }
 }

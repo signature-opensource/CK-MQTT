@@ -30,7 +30,7 @@ namespace CK.MQTT
 
 
         readonly ProtocolConfiguration _pConfig;
-        readonly MqttConfiguration _config;
+        readonly MqttClientConfiguration _config;
         Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        internal MqttClientImpl( ProtocolConfiguration protocolConfig, MqttConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        internal MqttClientImpl( ProtocolConfiguration protocolConfig, MqttClientConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             : base( config )
             => (_pConfig, _config, _messageHandler) = (protocolConfig, config, messageHandler);
 
@@ -76,7 +76,9 @@ namespace CK.MQTT
                         .Build( InvalidPacket );
 
                     await output.SendMessageAsync( m, new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-                    output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor ); // TODO: I forgot why we need an early output processor... :(
+                    output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
+                    // TODO: there is 2 output processor to not have the ping on the connect.
+                    // fix this.
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
                     _ = await Task.WhenAny( connectedTask, timeout );
                     // This following code wouldn't be better with a sort of ... switch/pattern matching ?

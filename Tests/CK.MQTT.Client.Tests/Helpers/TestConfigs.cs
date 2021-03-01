@@ -3,10 +3,10 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     static class TestConfigs
     {
-        public static MqttConfiguration DefaultTestConfig( PacketReplayer packetReplayer, int timeoutMs = 5_000 )
+        public static MqttClientConfiguration DefaultTestConfig( PacketReplayer packetReplayer, int timeoutMs = 5_000 )
         {
             _ = Testing.MonitorTestHelper.TestHelper.Monitor; // So the static will do GrandOutput.EnsureDefault.
-            return new MqttConfiguration( "" )
+            return new MqttClientConfiguration( "" )
             {
                 ChannelFactory = packetReplayer,
                 DelayHandler = packetReplayer.TestDelayHandler,
