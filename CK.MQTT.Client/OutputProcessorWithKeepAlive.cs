@@ -24,8 +24,8 @@ namespace CK.MQTT.Client
 
         bool IsPingReqTimeout =>
             _pingRespReflex.WaitingPingResp
-            && _stopwatch.Elapsed.TotalMilliseconds > _config.WaitTimeoutMilliseconds
-            && _config.WaitTimeoutMilliseconds != int.MaxValue; //We never timeout if it's configured to int.MaxValue.
+            && _config.WaitTimeoutMilliseconds != int.MaxValue //We never timeout if it's configured to int.MaxValue.
+            && _stopwatch.Elapsed.TotalMilliseconds > _config.WaitTimeoutMilliseconds;
 
         public override async ValueTask<bool> SendPackets( IOutputLogger? m, CancellationToken cancellationToken )
         {

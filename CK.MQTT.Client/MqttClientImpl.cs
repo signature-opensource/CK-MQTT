@@ -1,4 +1,6 @@
 using CK.Core;
+using CK.MQTT.Client;
+using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
 using System.Collections.Generic;
@@ -40,7 +42,14 @@ namespace CK.MQTT
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
         internal MqttClientImpl( ProtocolConfiguration protocolConfig, MqttClientConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             : base( config )
-            => (_pConfig, _config, _messageHandler) = (protocolConfig, config, messageHandler);
+        {
+            (_pConfig, _config, _messageHandler) = (protocolConfig, config, messageHandler);
+            if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds )
+            {
+                throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
+            }
+
+        }
 
 
         /// <summary>
@@ -63,8 +72,9 @@ namespace CK.MQTT
                     IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
                     ConnectAckReflex connectAckReflex = new ConnectAckReflex();
                     Task<ConnectResult> connectedTask = connectAckReflex.Task;
+                    OutputProcessorWithKeepAlive outputProcessorWithKeepAlive = new OutputProcessorWithKeepAlive();
                     var input = new InputPump( this, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
-                    var output = new OutputPump( this, _pConfig, DumbOutputProcessor.OutputProcessor, channel.DuplexPipe.Output, store );
+                    var output = new OutputPump( this, _pConfig,  );
                     OpenPumps( m, new ClientState( input, output, channel, packetIdStore, store ) );
                     PingRespReflex pingRes = new PingRespReflex();
                     connectAckReflex.Reflex = new ReflexMiddlewareBuilder()

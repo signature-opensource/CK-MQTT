@@ -18,24 +18,24 @@ namespace CK.MQTT.Pumps
     {
         public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
 
-        internal Channel<IOutgoingPacket> MessagesChannel { get; }
-        internal Channel<IOutgoingPacket> ReflexesChannel { get; }
-        OutputProcessor _outputProcessor;
+        public Channel<IOutgoingPacket> MessagesChannel { get; }
+        public Channel<IOutgoingPacket> ReflexesChannel { get; }
+        readonly OutputProcessor _outputProcessor;
         public ProtocolConfiguration PConfig { get; }
         public MqttConfigurationBase Config { get; }
-        public IOutgoingPacketStore Store { get; }
-        CancellationTokenSource _processorStopSource = new CancellationTokenSource();
+
+        readonly CancellationTokenSource _processorStopSource = new CancellationTokenSource();
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, IOutgoingPacketStore store )
+        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor packetProcessor)
             : base( pumppeteer )
         {
 
-            (PConfig, Config, Store, _outputProcessor) = (pconfig, pumppeteer.Configuration, store, initialProcessor);
+            (PConfig, Config, _outputProcessor) = (pconfig, pumppeteer.Configuration, packetProcessor);
             MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
@@ -45,14 +45,6 @@ namespace CK.MQTT.Pumps
                 SingleReader = true
             } );
             SetRunningLoop( WriteLoop() );
-        }
-
-        [MemberNotNull( nameof( _outputProcessor ) )]
-        public void SetOutputProcessor( OutputProcessor outputProcessor )
-        {
-            _processorStopSource.Cancel();
-            _processorStopSource = new CancellationTokenSource();
-            _outputProcessor = outputProcessor;
         }
 
         public bool QueueMessage( IOutgoingPacket item ) => MessagesChannel.Writer.TryWrite( item );

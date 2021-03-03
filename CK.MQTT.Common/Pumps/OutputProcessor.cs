@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
@@ -13,6 +14,10 @@ namespace CK.MQTT.Pumps
         protected OutputPump OutputPump { get; }
         readonly PipeWriter _pipeWriter;
 
+#if DEBUG
+        bool _waitLeadToPacketSent;
+#endif
+
         public OutputProcessor( OutputPump outputPump, PipeWriter pipeWriter )
         {
             OutputPump = outputPump;
@@ -23,9 +28,17 @@ namespace CK.MQTT.Pumps
 
         public virtual async ValueTask<bool> SendPackets( IOutputLogger? m, CancellationToken cancellationToken )
         {
-            bool packetSent = await SendAMessageFromQueue( m, cancellationToken ); // We want to send a fresh new packet...
+            bool newPacketSent = await SendAMessageFromQueue( m, cancellationToken ); // We want to send a fresh new packet...
             bool retriesSent = await ResendAllUnackPacket( m, cancellationToken ); // Then sending all packets that waited for too long.
-            return packetSent || retriesSent;
+            bool packetSent = newPacketSent || retriesSent;
+#if DEBUG
+            if( _waitLeadToPacketSent ) // Test the guarentee that after a wait there is always a packet sent.
+            {
+                Debug.Assert( packetSent );
+                _waitLeadToPacketSent = false;
+            }
+#endif
+            return packetSent;
         }
         public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
@@ -34,8 +47,9 @@ namespace CK.MQTT.Pumps
             Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync().AsTask();
             Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync().AsTask();
             Task packetMarkedAsDropped = OutputPump.Store.GetTaskResolvedOnPacketDropped();
-            Task timeToWaitTask = OutputPump.Config.DelayHandler.Delay( _timeUntilNextRetry, cancellationToken );
-            _ = await Task.WhenAny( timeToWaitTask, reflexesWait, messagesWait, packetMarkedAsDropped );
+            Task timeToWaitForRetry = OutputPump.Config.DelayHandler.Delay( _timeUntilNextRetry, cancellationToken );
+            _ = await Task.WhenAny( timeToWaitForRetry, reflexesWait, messagesWait, packetMarkedAsDropped );
+            _waitLeadToPacketSent = true;
         }
 
         public void Stopping() => _pipeWriter.Complete();
