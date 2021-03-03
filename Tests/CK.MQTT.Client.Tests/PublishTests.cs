@@ -56,12 +56,5 @@ namespace CK.MQTT.Client.Tests
             await Task.WhenAny( Task.Delay( 500 ), packetReplayer.LastWorkTask );
             packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
         }
-
-        [Test]
-        public async Task todo()
-        {
-            throw new NotImplementedException();
-            // test the case where a bad packet block a packet (cycling the ID don't reuse the blocked packet ID.)
-        }
     }
 }
