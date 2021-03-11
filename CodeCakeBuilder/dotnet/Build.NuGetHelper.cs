@@ -9,6 +9,7 @@ using NuGet.Credentials;
 using NuGet.Packaging.Core;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
+using NuGet.Protocol.Plugins;
 using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
@@ -58,7 +59,7 @@ namespace CodeCake
                     {
                         throw new ArgumentNullException( nameof( name ) );
                     }
-                    PackageSource exists = _sources.Value.FirstOrDefault( s => !s.IsLocal && s.Source == urlV3 );
+                    var exists = _sources.Value.FirstOrDefault( s => !s.IsLocal && s.Source == urlV3 );
                     if( exists != null ) return exists;
                     exists = new PackageSource( urlV3, "CCB-" + name );
                     _sources.Value.Insert( _definedSourceCount++, exists );
@@ -69,7 +70,7 @@ namespace CodeCake
                 {
                     if( string.IsNullOrWhiteSpace( localPath ) ) throw new ArgumentNullException( nameof( localPath ) );
                     NormalizedPath path = System.IO.Path.GetFullPath( localPath );
-                    PackageSource exists = _sources.Value.FirstOrDefault( s => s.IsLocal && new NormalizedPath( s.Source ) == path );
+                    var exists = _sources.Value.FirstOrDefault( s => s.IsLocal && new NormalizedPath( s.Source ) == path );
                     if( exists != null ) return exists;
                     exists = new PackageSource( path, "CCB-" + path.LastPart );
                     _sources.Value.Insert( _definedSourceCount++, exists );
@@ -185,7 +186,7 @@ namespace CodeCake
                 if( _logger == null )
                 {
                     ctx.Information( $"Initializing with sources:" );
-                    foreach( PackageSource s in _sourceProvider.LoadPackageSources() )
+                    foreach( var s in _sourceProvider.LoadPackageSources() )
                     {
                         ctx.Information( $"{s.Name} => {s.Source}" );
                     }
@@ -284,7 +285,7 @@ namespace CodeCake
                     _sourceRepository = new SourceRepository( _packageSource, _providers );
                     _updater = new AsyncLazy<PackageUpdateResource>( async () =>
                     {
-                        PackageUpdateResource r = await _sourceRepository.GetResourceAsync<PackageUpdateResource>();
+                        var r = await _sourceRepository.GetResourceAsync<PackageUpdateResource>();
                         // TODO: Update for next NuGet version?
                         // r.Settings = _settings;
                         return r;
@@ -321,12 +322,12 @@ namespace CodeCake
                 /// <returns>The set of push into this feed.</returns>
                 public override async Task<IEnumerable<ArtifactPush>> CreatePushListAsync( IEnumerable<ILocalArtifact> artifacts )
                 {
-                    List<ArtifactPush> result = new List<ArtifactPush>();
-                    ILogger logger = InitializeAndGetLogger( Cake );
+                    var result = new List<ArtifactPush>();
+                    var logger = InitializeAndGetLogger( Cake );
                     MetadataResource meta = await _sourceRepository.GetResourceAsync<MetadataResource>();
-                    foreach( ILocalArtifact p in artifacts )
+                    foreach( var p in artifacts )
                     {
-                        PackageIdentity pId = new PackageIdentity( p.ArtifactInstance.Artifact.Name, new NuGetVersion( p.ArtifactInstance.Version.ToNormalizedString() ) );
+                        var pId = new PackageIdentity( p.ArtifactInstance.Artifact.Name, new NuGetVersion( p.ArtifactInstance.Version.ToNormalizedString() ) );
                         if( await meta.Exists( pId, _sourceCache, logger, CancellationToken.None ) )
                         {
                             Cake.Debug( $" ==> Feed '{Name}' already contains {p.ArtifactInstance}." );
@@ -358,12 +359,12 @@ namespace CodeCake
                         }
                     }
                     Cake.Information( $"Pushing packages to '{Name}' => '{Url}'." );
-                    ILogger logger = InitializeAndGetLogger( Cake );
-                    PackageUpdateResource updater = await _updater;
-                    foreach( ArtifactPush p in pushes )
+                    var logger = InitializeAndGetLogger( Cake );
+                    var updater = await _updater;
+                    foreach( var p in pushes )
                     {
                         string packageString = p.Name + "." + p.Version.WithBuildMetaData( null ).ToNormalizedString();
-                        NormalizedPath fullPath = ArtifactType.GlobalInfo.ReleasesFolder.AppendPart( packageString + ".nupkg" );
+                        var fullPath = ArtifactType.GlobalInfo.ReleasesFolder.AppendPart( packageString + ".nupkg" );
                         await updater.Push(
                             fullPath,
                             string.Empty, // no Symbol source.
@@ -372,6 +373,8 @@ namespace CodeCake
                             getApiKey: endpoint => apiKey,
                             getSymbolApiKey: symbolsEndpoint => null,
                             noServiceEndpoint: false,
+                            skipDuplicate: true,
+                            symbolPackageUpdateResource: null,
                             log: logger );
                     }
                     await OnAllArtifactsPushed( pushes );
@@ -505,20 +508,20 @@ namespace CodeCake
             /// <returns>The awaitable.</returns>
             protected override async Task OnAllArtifactsPushed( IEnumerable<ArtifactPush> pushes )
             {
-                string basicAuth = Convert.ToBase64String( Encoding.ASCII.GetBytes( ":" + Cake.InteractiveEnvironmentVariable( SecretKeyName ) ) );
-                foreach( ArtifactPush p in pushes )
+                var basicAuth = Convert.ToBase64String( Encoding.ASCII.GetBytes( ":" + Cake.InteractiveEnvironmentVariable( SecretKeyName ) ) );
+                foreach( var p in pushes )
                 {
-                    foreach( PackageLabel view in p.Version.PackageQuality.GetLabels() )
+                    foreach( var view in p.Version.PackageQuality.GetLabels() )
                     {
-                        string url = ProjectName != null ?
+                        var url = ProjectName != null ?
                               $"https://pkgs.dev.azure.com/{Organization}/{ProjectName}/_apis/packaging/feeds/{FeedName}/nuget/packagesBatch?api-version=5.0-preview.1"
                             : $"https://pkgs.dev.azure.com/{Organization}/_apis/packaging/feeds/{FeedName}/nuget/packagesBatch?api-version=5.0-preview.1";
                         using( HttpRequestMessage req = new HttpRequestMessage( HttpMethod.Post, url ) )
                         {
                             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue( "Basic", basicAuth );
-                            string body = GetPromotionJSONBody( p.Name, p.Version.ToNormalizedString(), view.ToString() );
+                            var body = GetPromotionJSONBody( p.Name, p.Version.ToNormalizedString(), view.ToString() );
                             req.Content = new StringContent( body, Encoding.UTF8, "application/json" );
-                            using( HttpResponseMessage m = await StandardGlobalInfo.SharedHttpClient.SendAsync( req ) )
+                            using( var m = await StandardGlobalInfo.SharedHttpClient.SendAsync( req ) )
                             {
                                 if( m.IsSuccessStatusCode )
                                 {
@@ -538,7 +541,7 @@ namespace CodeCake
 
             string GetPromotionJSONBody( string packageName, string packageVersion, string viewId, bool npm = false )
             {
-                string bodyFormat = @"{
+                var bodyFormat = @"{
  ""data"": {
     ""viewId"": ""{viewId}""
   },

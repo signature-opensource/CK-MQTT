@@ -27,15 +27,15 @@ namespace CodeCake
 
         public void Pack()
         {
-            NuGetArtifactType nugetInfo = _globalInfo.ArtifactTypes.OfType<NuGetArtifactType>().Single();
-            DotNetCorePackSettings settings = new DotNetCorePackSettings().AddVersionArguments( _globalInfo.GitInfo, c =>
+            var nugetInfo = _globalInfo.ArtifactTypes.OfType<NuGetArtifactType>().Single();
+            var settings = new DotNetCorePackSettings().AddVersionArguments( _globalInfo.BuildInfo, c =>
             {
                 c.NoBuild = true;
                 c.IncludeSymbols = true;
-                c.Configuration = _globalInfo.BuildConfiguration;
+                c.Configuration = _globalInfo.BuildInfo.BuildConfiguration;
                 c.OutputDirectory = _globalInfo.ReleasesFolder.Path;
             } );
-            foreach( NuGetArtifactType.NuGetArtifact p in nugetInfo.GetNuGetArtifacts() )
+            foreach( var p in nugetInfo.GetNuGetArtifacts() )
             {
                 _globalInfo.Cake.Information( p.ArtifactInstance );
                 _globalInfo.Cake.DotNetCorePack( p.Project.Path.FullPath, settings );
@@ -86,10 +86,9 @@ namespace CodeCake
             /// </summary>
             /// <returns>The set of remote NuGet feeds (in practice at most one).</returns>
             protected override IEnumerable<ArtifactFeed> GetRemoteFeeds()
-            {
-                if( GlobalInfo.Version.PackageQuality >= PackageQuality.ReleaseCandidate ) yield return new RemoteFeed( this, "nuget.org", "https://api.nuget.org/v3/index.json", "NUGET_ORG_PUSH_API_KEY" );
-                yield return new SignatureVSTSFeed( this, "Signature-OpenSource", "NetCore3", "Feeds" );
-            }
+            {if( GlobalInfo.BuildInfo.Version.PackageQuality >= CSemVer.PackageQuality.ReleaseCandidate ) yield return new RemoteFeed( this, "nuget.org", "https://api.nuget.org/v3/index.json", "NUGET_ORG_PUSH_API_KEY" );
+yield return new SignatureVSTSFeed( this, "Signature-OpenSource","NetCore3", "Feeds");
+}
 
             /// <summary>
             /// Gets the local target feeds.
@@ -104,7 +103,7 @@ namespace CodeCake
 
             protected override IEnumerable<ILocalArtifact> GetLocalArtifacts()
             {
-                return _solution.ProjectsToPublish.Select( p => new NuGetArtifact( p, GlobalInfo.Version ) );
+                return _solution.ProjectsToPublish.Select( p => new NuGetArtifact( p, GlobalInfo.BuildInfo.Version ) );
             }
         }
     }
