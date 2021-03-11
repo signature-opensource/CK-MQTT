@@ -7,7 +7,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT.P2P
 {
     class ConnectReflex
     {
