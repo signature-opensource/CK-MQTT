@@ -5,6 +5,7 @@
     <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>
     <Description>Common implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
+    <Features>strict</Features>
   </PropertyGroup>
 
   <ItemGroup>

@@ -128,33 +128,37 @@ namespace CK.MQTT.Stores
         /// <param name="packetId"></param>
         void DropPreviousUnackedPacket( IInputLogger? m, ref IdStoreEntry<EntryContent> entry, int packetId )
         {
-            int currId = packetId;
-            ref var curr = ref _idStore._entries[currId];
-            while( currId != _idStore._head ) // We loop over all older packets.
+            lock( _idStore )
             {
-                if( curr.Content._lastEmissionTime < entry.Content._lastEmissionTime )
+                int currId = packetId;
+                ref var curr = ref _idStore._entries[currId];
+                while( currId != _idStore._head ) // We loop over all older packets.
                 {
-                    // The last retry of this packet occurred before the current packet was sent.
-                    // We can assert that this ack packet was dropped.
-                    if( (curr.Content._state & QoSState.UncertainDead) == QoSState.UncertainDead )
+                    if( curr.Content._lastEmissionTime < entry.Content._lastEmissionTime )
                     {
-                        // If the packet was in an uncertain state, it mean the ack logic ran.
-                        // But we could not knew if there was another ack in the pipe or not.
-                        // No we know that no such ack is in transit.
-                        // So we can simply free it now.
-                        FreeId( m, currId );
+                        // The last retry of this packet occurred before the current packet was sent.
+                        // We can assert that this ack packet was dropped.
+                        if( (curr.Content._state & QoSState.UncertainDead) == QoSState.UncertainDead )
+                        {
+                            // If the packet was in an uncertain state, it mean the ack logic ran.
+                            // But we could not knew if there was another ack in the pipe or not.
+                            // No we know that no such ack is in transit.
+                            // So we can simply free it now.
+                            FreeId( m, currId );
+                        }
+                        else
+                        {
+                            curr.Content._state |= QoSState.Dropped; // We mark the packet as dropped so it can be resent immediately.
+                            Interlocked.Exchange( ref _packetDroppedTCS, null ) // Get the ref and set it to null.
+                                ?.SetResult( null ); // Set the result if not null.
+                        }
                     }
-                    else
-                    {
-                        curr.Content._state |= QoSState.Dropped; // We mark the packet as dropped so it can be resent immediately.
-                        Interlocked.Exchange( ref _packetDroppedTCS, null ) // Get the ref and set it to null.
-                            ?.SetResult( null ); // Set the result if not null.
-                    }
-                }
 
-                currId = curr.PreviousId;
-                curr = ref _idStore._entries[currId];
+                    currId = curr.PreviousId;
+                    curr = ref _idStore._entries[currId];
+                }
             }
+
         }
 
         protected abstract ValueTask DoResetAsync( ArrayStartingAt1<IdStoreEntry<EntryContent>> entries );
@@ -177,7 +181,7 @@ namespace CK.MQTT.Stores
         public async ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos )
         {
             Debug.Assert( qos != QualityOfService.AtMostOnce );
-            EntryContent entry = new EntryContent
+            EntryContent entry = new()
             {
                 _lastEmissionTime = _stopwatch.Elapsed,
                 _attemptInTransitOrLost = 0,
@@ -282,20 +286,23 @@ namespace CK.MQTT.Stores
 
         public void OnQos2AckStep2( IInputLogger? m, int packetId )
         {
-            MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
-            if( (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked )
+            lock( _idStore )
             {
-                throw new ProtocolViolationException( "PubRec not acked but we received PubRel" );
-            }
-            ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
-            if( entry.Content._attemptInTransitOrLost > 1 )
-            {
-                entry.Content._attemptInTransitOrLost--;
-                entry.Content._state = QoSState.UncertainDead;
-            }
-            else
-            {
-                FreeId( m, packetId );
+                MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+                if( (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked )
+                {
+                    throw new ProtocolViolationException( "PubRec not acked but we received PubRel" );
+                }
+                ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
+                if( entry.Content._attemptInTransitOrLost > 1 )
+                {
+                    entry.Content._attemptInTransitOrLost--;
+                    entry.Content._state = QoSState.UncertainDead;
+                }
+                else
+                {
+                    FreeId( m, packetId );
+                }
             }
         }
 

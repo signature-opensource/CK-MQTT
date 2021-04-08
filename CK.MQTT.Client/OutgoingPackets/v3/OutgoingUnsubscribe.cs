@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Buffers.Binary;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -28,7 +29,8 @@ namespace CK.MQTT
 
         protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            span = span.WriteBigEndianUInt16( (ushort)PacketId );
+            BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
+            span = span[2..];
             foreach( string topic in _topics )
             {
                 span = span.WriteMQTTString( topic );

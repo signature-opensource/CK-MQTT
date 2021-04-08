@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 
 namespace CK.MQTT
 {
@@ -25,7 +26,8 @@ namespace CK.MQTT
         /// <inheritdoc/>
         protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            span = span.WriteBigEndianUInt16( _packetId );
+            BinaryPrimitives.WriteUInt16BigEndian( span, _packetId );
+            span = span[2..];
             for( int i = 0; i < _returnCodes.Length; i++ )
             {
                 span[i] = (byte)_returnCodes[i];

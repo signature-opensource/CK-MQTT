@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
@@ -104,7 +105,12 @@ namespace CK.MQTT
         protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
             span = span.WriteMQTTString( _topic );
-            if( Qos > QualityOfService.AtMostOnce ) span = span.WriteBigEndianUInt16( (ushort)PacketId );//topic id is not present on qos>0.
+            if( Qos > QualityOfService.AtMostOnce )
+            {
+                BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId ); //packet id is not present on qos=0.
+                span = span[2..];
+            }
+
             if( protocolLevel == ProtocolLevel.MQTT3 )
             {
                 if( _propertiesLength > 0 ) throw new InvalidOperationException( "Sending a MQTT5 Publish when agent is running in MQTT3." );
@@ -115,7 +121,9 @@ namespace CK.MQTT
                 if( _correlationDataWriter != null )
                 {
                     span[0] = (byte)PropertyIdentifier.CorrelationData;
-                    span = span[1..].WriteBigEndianUInt16( _correlationDataSize );
+                    span = span[1..];
+                    BinaryPrimitives.WriteUInt16BigEndian( span, _correlationDataSize );
+                    span = span[2..];
                     _correlationDataWriter( span[.._correlationDataSize] );
                     span = span[_correlationDataSize..];
                 }

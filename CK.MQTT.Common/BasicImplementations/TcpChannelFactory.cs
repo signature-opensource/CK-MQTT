@@ -18,7 +18,9 @@ namespace CK.MQTT
         public ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
         {
             string[] strs = connectionString.Split( ':' );
-            return new ValueTask<IMqttChannel>( new TcpChannel( new TcpClient( strs[0], int.Parse( strs[1] ) ) ) );
+            TcpClient client = new( strs[0], int.Parse( strs[1] ) );
+            client.NoDelay = true;
+            return new ValueTask<IMqttChannel>( new TcpChannel( client ) );
         }
     }
 }
