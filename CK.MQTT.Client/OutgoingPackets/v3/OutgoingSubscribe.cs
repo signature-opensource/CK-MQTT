@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -44,7 +45,8 @@ namespace CK.MQTT
 
         protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            span = span.WriteBigEndianUInt16( (ushort)PacketId );
+            BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
+            span = span[2..];
             if( protocolLevel > ProtocolLevel.MQTT3 )
             {
                 span = span.WriteVariableByteInteger( _propertiesLength );

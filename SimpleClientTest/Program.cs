@@ -26,22 +26,22 @@ namespace SimpleClientTest
             config.MinimalFilter = LogFilter.Debug;
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Debug;
-            var m = new ActivityMonitor( "main" );
-            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "test.mosquitto.org:1883" )
+            ActivityMonitor? m = null; //new ActivityMonitor( "main" );
+            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "localhost:1883" )
             {
-                InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor() ),
-                OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor() ),
+                //InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor() ),
+                //OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor() ),
                 KeepAliveSeconds = 0
             }, MessageHandlerDelegate );
-            Stopwatch stopwatch = new Stopwatch();
+            //Stopwatch stopwatch = new Stopwatch();
             var result = await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
-            await await client.SubscribeAsync( m, new Subscription[] { new Subscription( "#", QualityOfService.AtMostOnce ) } );
+            //await await client.SubscribeAsync( m, new Subscription[] { new Subscription( "#", QualityOfService.AtMostOnce ) } );
             await await client.PublishAsync( m, "test_topic", QualityOfService.ExactlyOnce, false, Encoding.ASCII.GetBytes( "hello world" ) );
-            //var payload = Encoding.UTF8.GetBytes( "test payload" );
-            //for( int i = 0; i < 200000; i++ )
-            //{
-            //    await await client.PublishAsync( null, "test topic", QualityOfService.ExactlyOnce, false, payload );
-            //}
+            var payload = Encoding.UTF8.GetBytes( "test payload" );
+            for( int i = 0; i < 200000; i++ )
+            {
+                await await client.PublishAsync( null, "test topic", QualityOfService.ExactlyOnce, false, payload );
+            }
             await Task.Delay( 5000000 );
         }
 

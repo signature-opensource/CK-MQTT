@@ -50,6 +50,7 @@ namespace CK.MQTT.Stores
         readonly int _maxPacketId;
 
         public bool NoPacketAllocated => _newestIdAllocated == 0;
+        readonly object _lock = new();
 
         public IdStore( int packetIdMaxValue, int startSize )
         {
@@ -82,9 +83,9 @@ namespace CK.MQTT.Stores
             _newestIdAllocated = 0;
         }
 
-#if DEBUG
         void SelfConsistencyCheck()
         {
+#if DEBUG
             int curr = _head;
             int count = 1;
             while( curr != _tail ) // forward
@@ -102,36 +103,42 @@ namespace CK.MQTT.Stores
                 if( curr == 0 ) throw new InvalidOperationException( "Error detected in the store: a node is not linked !" );
             }
             if( count != _entries.Length ) throw new InvalidOperationException( "Error detected in the store: links are not consistent." );
-        }
 #endif
+        }
         internal bool CreateNewEntry( T entry, out int packetId )
         {
-            if( _newestIdAllocated == _tail ) // The oldest packet we sent is also the tail. It mean there are no packet Id available.
+            SelfConsistencyCheck();
+            lock( _lock )
             {
-                if( _entries.Length == _maxPacketId ) // All packets are busy.
+                if( _newestIdAllocated == _tail ) // The oldest packet we sent is also the tail. It mean there are no packet Id available.
                 {
-                    packetId = 0;
-                    return false;
+                    if( _entries.Length == _maxPacketId ) // All packets are busy.
+                    {
+                        packetId = 0;
+                        return false;
+                    }
+                    GrowEntriesArray();
+                    Debug.Assert( _newestIdAllocated != _tail );
                 }
-                GrowEntriesArray();
-                Debug.Assert( _newestIdAllocated != _tail );
-            }
-            if( _newestIdAllocated == 0 )
-            {
-                // Mean no ID is currently allocated.
-                _newestIdAllocated = _head;
-                packetId = _newestIdAllocated;
+                if( _newestIdAllocated == 0 )
+                {
+                    // Mean no ID is currently allocated.
+                    _newestIdAllocated = _head;
+                    packetId = _newestIdAllocated;
+                    _entries[_newestIdAllocated].Content = entry;
+                    return true;
+                }
+                packetId = _entries[_newestIdAllocated].NextId;
+                _newestIdAllocated = packetId;
                 _entries[_newestIdAllocated].Content = entry;
+                SelfConsistencyCheck();
                 return true;
             }
-            packetId = _entries[_newestIdAllocated].NextId;
-            _newestIdAllocated = packetId;
-            _entries[_newestIdAllocated].Content = entry;
-            return true;
         }
 
         internal void FreeId( IInputLogger? m, int packetId )
         {
+            SelfConsistencyCheck();
             if( packetId == _newestIdAllocated )
             {
                 // If a node have no previous, it equal to 0.
@@ -161,15 +168,15 @@ namespace CK.MQTT.Stores
             _entries[_tail].NextId = packetId;
             _tail = packetId;
             m?.FreedPacketId( packetId );// This may want to free the packet we are freeing. So it must be ran after the free process.
-#if DEBUG
             SelfConsistencyCheck();
-#endif
         }
 
         void GrowEntriesArray()
         {
+            SelfConsistencyCheck();
             int newCount = _entries.Length * 2;
-            if( newCount + 1 == _maxPacketId ) newCount = _maxPacketId; // We don't want to increase the count by only 1, it would cause a bug below.
+            // We dont want that the next grow make the array only 1 item bigger, it would cause a bug later in this function.
+            if( newCount + 1 == _maxPacketId ) newCount = _maxPacketId;
             if( newCount > _maxPacketId ) newCount = _maxPacketId;
             var newEntries = new ArrayStartingAt1<IdStoreEntry<T>>( new IdStoreEntry<T>[newCount] );
             _entries.CopyTo( newEntries, 0 );
@@ -190,6 +197,7 @@ namespace CK.MQTT.Stores
             };
             _tail = newEntries.Length;
             _entries = newEntries;
+            SelfConsistencyCheck();
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
 
@@ -38,40 +39,18 @@ namespace CK.MQTT
         public static Span<byte> WriteMQTTString( this Span<byte> buffer, string str )
         {
             Debug.Assert( str.Length <= ushort.MaxValue );
-            WriteBigEndianUInt16( buffer, (ushort)str.Length );//Write the string length.
+            BinaryPrimitives.WriteUInt16BigEndian( buffer, (ushort)str.Length ); //Write the string length.
             buffer = buffer[2..];//slice out the uint16.
             if( str.Length == 0 ) return buffer;//if the string is empty, simply return the remaining buffer.
             int copyAmount = Encoding.UTF8.GetBytes( str.AsSpan(), buffer );//mqtt string are utf8. http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_UTF-8_encoded_strings_
             return buffer[copyAmount..];//slice out what we written.
         }
 
-        /// <summary>
-        /// Write an <see cref="ushort"/>.
-        /// </summary>
-        /// <param name="buffer">The buffer to write to.</param>
-        /// <param name="x">The <see cref="ushort"/> to write.</param>
-        /// <returns>The <paramref name="buffer"/>  but sliced after the 2 writtens bytes.</returns>
-        public static Span<byte> WriteBigEndianUInt16( this Span<byte> buffer, ushort x )
-        {
-            buffer[0] = (byte)(x >> 8);
-            buffer[1] = (byte)(x >> 0);
-            return buffer[2..];
-        }
-
-        public static Span<byte> WriteBigEndianUInt32( this Span<byte> buffer, uint x )
-        {
-            buffer[0] = (byte)(x >> 24);
-            buffer[1] = (byte)(x >> 16);
-            buffer[2] = (byte)(x >> 8);
-            buffer[3] = (byte)(x >> 0);
-            return buffer[4..];
-        }
-
         public static Span<byte> WriteBinaryData( this Span<byte> span, ReadOnlyMemory<byte> memory )
         {
             if( memory.Length > ushort.MaxValue ) throw new ArgumentException( $"Binary Data size should not exceed {ushort.MaxValue} bytes." );
-            span = span.WriteBigEndianUInt16( (ushort)memory.Length );
-            memory.Span.CopyTo( span );
+            BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)memory.Length );
+            memory.Span.CopyTo( span.Slice( 4 ) );
             return span[memory.Length..];
         }
     }

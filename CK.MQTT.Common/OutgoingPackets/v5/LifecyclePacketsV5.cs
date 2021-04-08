@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -48,7 +49,8 @@ namespace CK.MQTT
             bool hasUserProperties = _userProperties.Count > 0;
             span[0] = _header;
             span = span[1..].WriteVariableByteInteger( _contentSize );
-            span = span.WriteBigEndianUInt16( (ushort)PacketId );
+            BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
+            span = span[2..];
             span[0] = (byte)_reason;
             if( _propertiesSize == 0 )
             {

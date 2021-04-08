@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 
 namespace CK.MQTT
 {
@@ -23,7 +24,8 @@ namespace CK.MQTT
         {
             span[0] = _header;
             span[1] = 2;
-            span[2..].WriteBigEndianUInt16( (ushort)PacketId );
+            span = span[2..];
+            BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
         }
 
         public static IOutgoingPacketWithId Pubrel( int packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishRelease | 0b0010, packetId );

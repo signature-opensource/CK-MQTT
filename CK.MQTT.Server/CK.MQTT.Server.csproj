@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Description>MQTT server implementation (not yet available).</Description>
+    <Features>strict</Features>
   </PropertyGroup>
 
   <ItemGroup>
