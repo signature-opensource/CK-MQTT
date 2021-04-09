@@ -1,3 +1,4 @@
+using CK.MQTT.Common.Stores;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -10,11 +11,19 @@ namespace CK.MQTT.Common.OutgoingPackets
     public class FromMemoryOutgoingPacket : IOutgoingPacket
     {
         readonly ReadOnlyMemory<byte> _readOnlyMemory;
+        readonly int _packetId;
 
-        public FromMemoryOutgoingPacket( ReadOnlyMemory<byte> readOnlyMemory )
-            => _readOnlyMemory = readOnlyMemory;
+        public FromMemoryOutgoingPacket( ReadOnlyMemory<byte> readOnlyMemory, QualityOfService qos, int packetId )
+        {
+            _readOnlyMemory = readOnlyMemory;
+            Qos = qos;
+            _packetId = packetId;
+        }
+
+        public QualityOfService Qos { get; }
+        public int PacketId { get => _packetId; set => throw new NotSupportedException(); }
+
         public int GetSize( ProtocolLevel protocolLevel ) => _readOnlyMemory.Length;
-
 
         public async ValueTask<IOutgoingPacket.WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {

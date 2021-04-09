@@ -35,11 +35,11 @@ namespace CK.MQTT
 
             public override Span<byte> GetSpan( int sizeHint = 0 ) => _pw.GetSpan( sizeHint );
         }
-        class PacketWrapper : IOutgoingPacketWithId
+        class PacketWrapper : IOutgoingPacket
         {
-            readonly IOutgoingPacketWithId _packet;
+            readonly IOutgoingPacket _packet;
 
-            public PacketWrapper( IOutgoingPacketWithId packet ) => _packet = packet;
+            public PacketWrapper( IOutgoingPacket packet ) => _packet = packet;
 
             public int PacketId { get => _packet.PacketId; set => _packet.PacketId = value; }
 
@@ -59,12 +59,12 @@ namespace CK.MQTT
             return header |= 0b100;
         }
 
-        protected static IOutgoingPacketWithId SetDup( IOutgoingPacketWithId arg ) => new PacketWrapper( arg );
+        protected static IOutgoingPacket SetDup( IOutgoingPacket arg ) => new PacketWrapper( arg );
 
-        public Func<IOutgoingPacketWithId, IOutgoingPacketWithId> PacketTransformerOnRestore => SetDup;
+        public Func<IOutgoingPacket, IOutgoingPacket> PacketTransformerOnRestore => SetDup;
 
-        public Func<IOutgoingPacketWithId, IOutgoingPacketWithId> PacketTransformerOnSave => ( arg ) => arg;
+        public Func<IOutgoingPacket, IOutgoingPacket> PacketTransformerOnSave => ( arg ) => arg;
 
-        public static DefaultStoreTransformer Default => new DefaultStoreTransformer();
+        public static DefaultStoreTransformer Default => new();
     }
 }

@@ -10,8 +10,8 @@ namespace CK.MQTT
     public abstract class PumppeteerBase
     {
         // Must never be disposed!
-        static readonly CancellationTokenSource _signaled = new CancellationTokenSource( 0 );
-        readonly object _closeLock = new object();
+        static readonly CancellationTokenSource _signaled = new( 0 );
+        readonly object _closeLock = new();
 
         CancellationTokenSource _closed = _signaled;
 

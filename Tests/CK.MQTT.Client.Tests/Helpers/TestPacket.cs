@@ -15,9 +15,9 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
 
         public static TestPacket Incoming( string hexArray, TimeSpan operationTime = default )
-            => new TestPacket( FromString( hexArray ), PacketDirection.ToClient, operationTime );
+            => new( FromString( hexArray ), PacketDirection.ToClient, operationTime );
         public static TestPacket Outgoing( string hexArray, TimeSpan operationTime = default )
-            => new TestPacket( FromString( hexArray ), PacketDirection.ToServer, operationTime );
+            => new( FromString( hexArray ), PacketDirection.ToServer, operationTime );
 
         public static ReadOnlyMemory<byte> FromString( string hexArray )
         {

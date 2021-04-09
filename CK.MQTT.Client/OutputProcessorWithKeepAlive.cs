@@ -1,4 +1,5 @@
 using CK.MQTT.Pumps;
+using CK.MQTT.Stores;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -8,24 +9,24 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    class OutputProcessorWithKeepAlive : OutputProcessor
+    class OutputProcessorWithKeepAlive : OutputProcessor, IReflexMiddleware
     {
-        readonly PingRespReflex _pingRespReflex;
         readonly MqttClientConfiguration _config;
         readonly IStopwatch _stopwatch;
 
-        public OutputProcessorWithKeepAlive( PingRespReflex pingRespReflex, MqttClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter )
-            : base( outputPump, pipeWriter )
+        public OutputProcessorWithKeepAlive( MqttClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore store )
+            : base( outputPump, pipeWriter, store )
         {
-            _pingRespReflex = pingRespReflex;
             _config = config;
             _stopwatch = config.StopwatchFactory.Create();
         }
 
         bool IsPingReqTimeout =>
-            _pingRespReflex.WaitingPingResp
+            WaitingPingResp
             && _config.WaitTimeoutMilliseconds != int.MaxValue //We never timeout if it's configured to int.MaxValue.
             && _stopwatch.Elapsed.TotalMilliseconds > _config.WaitTimeoutMilliseconds;
+
+        public bool WaitingPingResp { get; set; }
 
         public override async ValueTask<bool> SendPackets( IOutputLogger? m, CancellationToken cancellationToken )
         {
@@ -53,7 +54,29 @@ namespace CK.MQTT.Client
                 await ProcessOutgoingPacket( m, OutgoingPingReq.Instance, cancellationToken );
             }
             _stopwatch.Restart();
-            _pingRespReflex.WaitingPingResp = true;
+            WaitingPingResp = true;
+        }
+
+        public async ValueTask ProcessIncomingPacketAsync(
+            IInputLogger? m,
+            InputPump sender,
+            byte header,
+            int packetLength,
+            PipeReader pipeReader,
+            Func<ValueTask> next,
+            CancellationToken cancellationToken )
+        {
+            if( PacketType.PingResponse != (PacketType)header )
+            {
+                await next();
+                return;
+            }
+            using( m?.ProcessPacket( PacketType.PingResponse ) )
+            {
+                WaitingPingResp = false;
+                if( packetLength > 0 ) m?.UnparsedExtraBytes( sender, PacketType.PingResponse, 0, packetLength, packetLength );
+                await pipeReader.SkipBytes( packetLength );
+            }
         }
     }
 }

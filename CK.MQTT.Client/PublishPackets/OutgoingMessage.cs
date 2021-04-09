@@ -12,7 +12,7 @@ namespace CK.MQTT
     /// Represent an outgoing mqtt message that will be sent.
     /// The dup flag is handled by the store transformer.
     /// </summary>
-    public abstract class OutgoingMessage : ComplexOutgoingPacket, IOutgoingPacketWithId
+    public abstract class OutgoingMessage : ComplexOutgoingPacket, IOutgoingPacket
     {
         readonly bool _retain;
         readonly string _topic;
@@ -53,7 +53,7 @@ namespace CK.MQTT
 
         int _packetId = 0;
         /// <inheritdoc/>
-        public int PacketId
+        public override int PacketId
         {
             get
             {
@@ -68,7 +68,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public QualityOfService Qos { get; }
+        public override QualityOfService Qos { get; }
 
         /// <inheritdoc/>
         protected sealed override int GetHeaderSize( ProtocolLevel protocolLevel )

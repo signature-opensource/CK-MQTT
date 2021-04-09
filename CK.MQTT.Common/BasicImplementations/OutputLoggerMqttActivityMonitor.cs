@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -17,7 +18,14 @@ namespace CK.MQTT
         /// <param name="m">The <see cref="IActivityMonitor"/> to wrap.</param>
         public OutputLoggerMqttActivityMonitor( IActivityMonitor m ) => _m = m;
 
-        public void AwaitingWork() => _m.Trace( "Awaiting that some work is available before restarting." );
+        public void AwaitCompletedDueTo( IDisposableGroup? disposableGroup, Task<bool> reflexesWait, Task<bool> messagesWait, Task packetMarkedAsDropped, Task timeToWaitForRetry )
+            => disposableGroup?.ConcludeWith( () => $"Await completed due to " +
+                $"{nameof( reflexesWait )}: {reflexesWait.IsCompleted}, " +
+                $"{nameof( messagesWait )}: {messagesWait.IsCompleted}, " +
+                $"{nameof( packetMarkedAsDropped )}: {packetMarkedAsDropped.IsCompleted}, " +
+                $"{nameof( timeToWaitForRetry )}: {timeToWaitForRetry.IsCompleted}" );
+
+        public IDisposableGroup AwaitingWork() => _m.OpenTrace( "Awaiting that some work is available before restarting." );
 
         public void ConcludeMainLoopCancelled( IDisposableGroup disposableGroup )
             => disposableGroup.ConcludeWith( () => "Canceled." );
@@ -62,6 +70,8 @@ namespace CK.MQTT
 
         public IDisposable? OutputLoopStarting() => _m.OpenTrace( "Output loop listening..." );
 
+        public IDisposable OutputProcessorRunning() => _m.OpenTrace( "Output processor running..." );
+
         public void PacketMarkedPoisoned( int packetId, int tryCount )
             => _m.Error( $"Packet with id {packetId} is not acknowledged after sending it {tryCount} times." +
                          $"\nThis was the last attempt, as configured." );
@@ -74,12 +84,11 @@ namespace CK.MQTT
         public void SendingKeepAlive() => _m.Trace( "Sending PingReq." );
 
         public IDisposable? SendingMessage( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel )
-            => _m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )}." );
+            => outgoingPacket.Qos == QualityOfService.AtMostOnce
+                ? _m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )}." )
+                : _m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )} with QoS {outgoingPacket.Qos} and packet ID {outgoingPacket.PacketId}." );
 
         public IDisposable SendingMessageFromQueue()
             => _m.OpenTrace( "Sending a message from queue." );
-
-        public IDisposable? SendingMessageWithId( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel, int packetId )
-            => _m.OpenInfo( $"Sending message '{outgoingPacket}' of size {outgoingPacket.GetSize( protocolLevel )} with packet ID {packetId}." );
     }
 }

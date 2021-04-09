@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.P2P;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
@@ -27,8 +28,7 @@ namespace CK.MQTT.Server
         }
 
         public static async ValueTask<ClientInstance> Connect( IActivityMonitor? m,
-            string clientAddress,
-            IMqttChannel channel, ProtocolConfiguration pConfig, MqttServerConfiguration config )
+            string clientAddress, IMqttChannel channel, ProtocolConfiguration pConfig, MqttServerConfiguration config )
         {
             // WIP.
             ClientInstance instance = new( config, channel );

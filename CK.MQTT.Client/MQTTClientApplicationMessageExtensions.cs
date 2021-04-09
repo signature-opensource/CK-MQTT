@@ -24,7 +24,7 @@ namespace CK.MQTT.Client
             public async ValueTask HandleMessage( IActivityMonitor m,
                 string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
             {
-                Memory<byte> memory = new Memory<byte>( new byte[payloadLength] );
+                Memory<byte> memory = new( new byte[payloadLength] );
                 FillStatus status = await pipe.CopyToBuffer( memory, cancelToken );
                 if( status != FillStatus.Done ) throw new InvalidOperationException( "Unexpected partial read." );
                 await _messageHandler( m, new ApplicationMessage( topic, memory, qos, retain ), cancelToken );
@@ -52,7 +52,7 @@ namespace CK.MQTT.Client
             public async ValueTask HandleMessage( IActivityMonitor m,
                 string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
             {
-                Memory<byte> memory = new Memory<byte>( new byte[payloadLength] );
+                Memory<byte> memory = new( new byte[payloadLength] );
                 FillStatus status = await pipe.CopyToBuffer( memory, cancelToken );
                 if( status != FillStatus.Done ) throw new InvalidOperationException( "Unexpected partial read." );
                 await _messageHandler( m, new ApplicationMessage( topic, memory, qos, retain ) );

@@ -11,7 +11,7 @@ namespace CK.MQTT.P2P
 {
     class ConnectReflex
     {
-        readonly List<(string, string)> _userProperties = new List<(string, string)>();
+        readonly List<(string, string)> _userProperties = new();
         readonly TaskCompletionSource<object?> _taskCompletionSource = new();
         readonly MqttServerConfiguration _config;
         readonly string _clientAddress;
@@ -60,7 +60,7 @@ namespace CK.MQTT.P2P
                 ParseFirstPartInternal();
                 void ParseFirstPartInternal() // Trick to use SequenceReader inside an async method.
                 {
-                    SequenceReader<byte> sequenceReader = new SequenceReader<byte>( res.Buffer );
+                    SequenceReader<byte> sequenceReader = new( res.Buffer );
                     // We need the ClientID to instantiate the store to the client.
                     status = ParseFirstPart( m, ref sequenceReader );
                     if( status == OperationStatus.InvalidData ) throw new ProtocolViolationException( "Invalid data while parsing the Connect packet." );

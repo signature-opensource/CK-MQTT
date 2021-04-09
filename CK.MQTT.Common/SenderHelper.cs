@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
 using System.Net;
@@ -8,8 +9,7 @@ namespace CK.MQTT
 {
     public static class SenderHelper
     {
-        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m,
-            IOutgoingPacketStore store, OutputPump output, IOutgoingPacketWithId packet )
+        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacketStore store, OutputPump output, IOutgoingPacket packet )
             where T : class
         {
             IDisposableGroup? group = m?.OpenTrace( $"Sending a packet '{packet}'in QoS {packet.Qos}" );
@@ -25,7 +25,7 @@ namespace CK.MQTT
         static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp, OutputPump output, IOutgoingPacket msg ) where T : class
         {
             using( disposableGrp )
-            using( m.OpenTrace( "Executing Publish protocol with QoS 0." ) )
+            using( m?.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
                 await output.SendMessageAsync( m, msg );
                 return Task.FromResult<T?>( null );
@@ -33,7 +33,7 @@ namespace CK.MQTT
         }
 
         static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp,
-            OutputPump output, IOutgoingPacketStore messageStore, IOutgoingPacketWithId msg, QualityOfService qos )
+            OutputPump output, IOutgoingPacketStore messageStore, IOutgoingPacket msg, QualityOfService qos )
             where T : class
         {
             Task<object?> ackReceived;

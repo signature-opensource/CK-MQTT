@@ -51,7 +51,8 @@ namespace CK.MQTT.Stores
             Dropped = 1 << 6,
             UncertainDead = 1 << 7,
             PacketAckedMask = QoS2PubRecAcked | UncertainDead,
-            QoSMask = QoS1 | QoS2 | QoS2PubRecAcked
+            QosMask = QoS1 | QoS2,
+            QoSStateMask = QosMask | QoS2PubRecAcked,
         }
         protected struct EntryContent
         {
@@ -148,6 +149,7 @@ namespace CK.MQTT.Stores
                         }
                         else
                         {
+                            m?.PacketMarkedAsDropped( currId );
                             curr.Content._state |= QoSState.Dropped; // We mark the packet as dropped so it can be resent immediately.
                             Interlocked.Exchange( ref _packetDroppedTCS, null ) // Get the ref and set it to null.
                                 ?.SetResult( null ); // Set the result if not null.
@@ -174,11 +176,11 @@ namespace CK.MQTT.Stores
             _idStore.Reset();
         }
 
-        protected abstract ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacketWithId packet );
+        protected abstract ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacket packet );
 
         /// <summary> To be called when packet must be stored. Assign ID to the packet.</summary>
         /// <returns><see langword="null"/> when no packet id was available.</returns>
-        public async ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos )
+        public async ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacket packet, QualityOfService qos )
         {
             Debug.Assert( qos != QualityOfService.AtMostOnce );
             EntryContent entry = new()
@@ -221,6 +223,7 @@ namespace CK.MQTT.Stores
         {
             lock( _idStore )
             {
+                _idStore._entries[packetId].Content._state &= QoSState.QoSStateMask;
                 _idStore._entries[packetId].Content._attemptInTransitOrLost++;
                 _idStore._entries[packetId].Content._lastEmissionTime = _stopwatch.Elapsed;
             }
@@ -308,7 +311,8 @@ namespace CK.MQTT.Stores
 
         protected abstract ValueTask<IOutgoingPacket> RestorePacket( int packetId );
 
-        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternal( int packetId )
+        // This method exist because ValueTask<T> => ValueTask<T?> throw a warning.
+        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternal( int packetId ) 
             => (await RestorePacket( packetId ), TimeSpan.Zero);
 
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResend()
@@ -321,19 +325,24 @@ namespace CK.MQTT.Stores
 
             int currId = _idStore._head;
             ref var curr = ref _idStore._entries[currId];
+            if( curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped ) )
+            {
+                return RestorePacketInternal( currId );
+            }
             TimeSpan oldest = curr.Content._lastEmissionTime;
             while( currId != _idStore._newestIdAllocated ) // We loop over all older packets.
             {
                 currId = curr.NextId;
                 curr = ref _idStore._entries[currId];
+                // If there is a packet that reached the peremption time, or is marked as dropped.
                 if( curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped ) )
                 {
-                    curr.Content._state &= QoSState.QoSMask;
-                    return RestorePacketInternal( currId ); // ValueTask<T> => ValueTask<T?> throw a warning.
+                    return RestorePacketInternal( currId ); 
                 }
                 if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
             }
-            return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, currentTime - oldest + timeOut) );
+            TimeSpan packetAge = currentTime - oldest;
+            return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeOut - packetAge) );
         }
 
         public void CancelAllAckTask( IActivityMonitor? m )

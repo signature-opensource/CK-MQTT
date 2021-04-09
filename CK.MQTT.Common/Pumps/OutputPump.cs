@@ -20,22 +20,21 @@ namespace CK.MQTT.Pumps
 
         public Channel<IOutgoingPacket> MessagesChannel { get; }
         public Channel<IOutgoingPacket> ReflexesChannel { get; }
-        readonly OutputProcessor _outputProcessor;
         public ProtocolConfiguration PConfig { get; }
         public MqttConfigurationBase Config { get; }
 
-        readonly CancellationTokenSource _processorStopSource = new CancellationTokenSource();
+        readonly CancellationTokenSource _processorStopSource = new();
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor packetProcessor)
+        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig )
             : base( pumppeteer )
         {
 
-            (PConfig, Config, _outputProcessor) = (pconfig, pumppeteer.Configuration, packetProcessor);
+            (PConfig, Config) = (pconfig, pumppeteer.Configuration);
             MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
@@ -44,8 +43,9 @@ namespace CK.MQTT.Pumps
             {
                 SingleReader = true
             } );
-            SetRunningLoop( WriteLoop() );
         }
+
+        public void StartPumping( OutputProcessor outputProcessor ) => SetRunningLoop( WriteLoop( outputProcessor ) );
 
         public bool QueueMessage( IOutgoingPacket item ) => MessagesChannel.Writer.TryWrite( item );
 
@@ -65,7 +65,7 @@ namespace CK.MQTT.Pumps
         }
 
 
-        async Task WriteLoop()
+        async Task WriteLoop( OutputProcessor outputProcessor )
         {
             using( Config.OutputLogger?.OutputLoopStarting() )
             {
@@ -73,13 +73,13 @@ namespace CK.MQTT.Pumps
                 {
                     while( !StopToken.IsCancellationRequested )
                     {
-                        bool packetSent = await _outputProcessor.SendPackets( Config.OutputLogger, _processorStopSource.Token );
+                        bool packetSent = await outputProcessor.SendPackets( Config.OutputLogger, _processorStopSource.Token );
                         if( !packetSent )
                         {
-                            await _outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
+                            await outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
                         }
                     }
-                    _outputProcessor.Stopping();
+                    outputProcessor.Stopping();
                 }
                 catch( Exception e )
                 {

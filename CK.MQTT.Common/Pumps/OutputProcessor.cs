@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Stores;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,43 +14,61 @@ namespace CK.MQTT.Pumps
     {
         protected OutputPump OutputPump { get; }
         readonly PipeWriter _pipeWriter;
+        readonly IOutgoingPacketStore _outgoingPacketStore;
 
 #if DEBUG
-        bool _waitLeadToPacketSent;
+        bool _waitWillLeadToPacketSent;
 #endif
 
-        public OutputProcessor( OutputPump outputPump, PipeWriter pipeWriter )
+        public OutputProcessor( OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore outgoingPacketStore )
         {
             OutputPump = outputPump;
             _pipeWriter = pipeWriter;
+            _outgoingPacketStore = outgoingPacketStore;
         }
 
         TimeSpan _timeUntilNextRetry = TimeSpan.MaxValue;
 
         public virtual async ValueTask<bool> SendPackets( IOutputLogger? m, CancellationToken cancellationToken )
         {
-            bool newPacketSent = await SendAMessageFromQueue( m, cancellationToken ); // We want to send a fresh new packet...
-            bool retriesSent = await ResendAllUnackPacket( m, cancellationToken ); // Then sending all packets that waited for too long.
-            bool packetSent = newPacketSent || retriesSent;
-#if DEBUG
-            if( _waitLeadToPacketSent ) // Test the guarentee that after a wait there is always a packet sent.
+            using( m?.OutputProcessorRunning() )
             {
-                Debug.Assert( packetSent );
-                _waitLeadToPacketSent = false;
-            }
+
+                bool newPacketSent = await SendAMessageFromQueue( m, cancellationToken ); // We want to send a fresh new packet...
+                bool retriesSent = await ResendAllUnackPacket( m, cancellationToken ); // Then sending all packets that waited for too long.
+                bool packetSent = newPacketSent || retriesSent;
+#if DEBUG
+                if( _waitWillLeadToPacketSent ) // Test the guarentee that after a wait there is always a packet sent.
+                {
+                    if( !packetSent )
+                    {
+                        Thread.Sleep( 1000 );
+                        retriesSent = await ResendAllUnackPacket( m, cancellationToken );
+                    }
+                    Debug.Assert( packetSent );
+                    _waitWillLeadToPacketSent = false;
+                }
 #endif
-            return packetSent;
+                return packetSent;
+            }
+
         }
         public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
-            m?.AwaitingWork();
-            // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-            Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync().AsTask();
-            Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync().AsTask();
-            Task packetMarkedAsDropped = OutputPump.Store.GetTaskResolvedOnPacketDropped();
-            Task timeToWaitForRetry = OutputPump.Config.DelayHandler.Delay( _timeUntilNextRetry, cancellationToken );
-            _ = await Task.WhenAny( timeToWaitForRetry, reflexesWait, messagesWait, packetMarkedAsDropped );
-            _waitLeadToPacketSent = true;
+            using( IDisposableGroup? grp = m?.AwaitingWork() )
+            {
+
+                // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
+                Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync().AsTask();
+                Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync().AsTask();
+                Task packetMarkedAsDropped = _outgoingPacketStore.GetTaskResolvedOnPacketDropped();
+                Task timeToWaitForRetry = OutputPump.Config.DelayHandler.Delay( _timeUntilNextRetry, cancellationToken );
+                _ = await Task.WhenAny( timeToWaitForRetry, reflexesWait, messagesWait, packetMarkedAsDropped );
+                m?.AwaitCompletedDueTo( grp, reflexesWait, messagesWait, packetMarkedAsDropped, timeToWaitForRetry );
+            }
+#if DEBUG
+            _waitWillLeadToPacketSent = true;
+#endif
         }
 
         public void Stopping() => _pipeWriter.Complete();
@@ -72,7 +91,7 @@ namespace CK.MQTT.Pumps
         {
             if( OutputPump.Config.WaitTimeoutMilliseconds == int.MaxValue ) return false; // Resend is disabled.
 
-            (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await OutputPump.Store.GetPacketToResend();
+            (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResend();
             if( outgoingPacket is null )
             {
                 m?.NoUnackPacketSent( timeUntilAnotherRetry );
@@ -84,7 +103,7 @@ namespace CK.MQTT.Pumps
                 await ProcessOutgoingPacket( m, outgoingPacket, cancellationToken );
                 while( true )
                 {
-                    (outgoingPacket, timeUntilAnotherRetry) = await OutputPump.Store.GetPacketToResend();
+                    (outgoingPacket, timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResend();
                     if( outgoingPacket is null )
                     {
                         m?.ConcludeTimeUntilNextUnackRetry( grp!, timeUntilAnotherRetry );
@@ -99,24 +118,17 @@ namespace CK.MQTT.Pumps
         protected async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket, CancellationToken cancellationToken )
         {
             if( cancellationToken.IsCancellationRequested ) return;
-            if( outgoingPacket is IOutgoingPacketWithId packetWithId )
+            using( m?.SendingMessage( ref outgoingPacket, OutputPump.PConfig.ProtocolLevel ) )
             {
-                using( m?.SendingMessageWithId( ref outgoingPacket, OutputPump.PConfig.ProtocolLevel, packetWithId.PacketId ) )
+                if( outgoingPacket.Qos != QualityOfService.AtMostOnce )
                 {
-                    OutputPump.Store.OnPacketSent( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet to avoid concurrency issues.
+                    // This must be done BEFORE writing the packet to avoid concurrency issues.
+                    _outgoingPacketStore.OnPacketSent( m, outgoingPacket.PacketId );
                     // Explanation:
-                    // Sometimes, the receiver and input loop is faster than simply running "OnPacketSent".
-                    await outgoingPacket.WriteAsync( OutputPump.PConfig.ProtocolLevel, _pipeWriter, cancellationToken );
+                    // The receiver and input loop can run before the next line is executed.
                 }
+                await outgoingPacket.WriteAsync( OutputPump.PConfig.ProtocolLevel, _pipeWriter, cancellationToken );
             }
-            else
-            {
-                using( m?.SendingMessage( ref outgoingPacket, OutputPump.PConfig.ProtocolLevel ) )
-                {
-                    await outgoingPacket.WriteAsync( OutputPump.PConfig.ProtocolLevel, _pipeWriter, cancellationToken );
-                }
-            }
-
         }
     }
 }

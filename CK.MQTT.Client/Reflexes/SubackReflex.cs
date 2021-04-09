@@ -1,3 +1,4 @@
+using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
 using System.Buffers;
@@ -40,7 +41,7 @@ namespace CK.MQTT
             [NotNullWhen( true )] out QualityOfService[]? qos,
             out SequencePosition position )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            SequenceReader<byte> reader = new( buffer );
             if( !reader.TryReadBigEndian( out packetId ) ) throw new InvalidOperationException();
             buffer = buffer.Slice( 2, payloadLength - 2 );
             qos = (QualityOfService[])(object)buffer.ToArray();

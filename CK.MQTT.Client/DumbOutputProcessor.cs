@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using static CK.MQTT.OutputPump;
+using static CK.MQTT.Pumps.OutputPump;
 
 namespace CK.MQTT
 {

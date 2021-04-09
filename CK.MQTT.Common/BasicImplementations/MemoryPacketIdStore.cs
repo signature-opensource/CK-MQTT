@@ -1,3 +1,4 @@
+using CK.MQTT.Stores;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,7 +9,7 @@ namespace CK.MQTT
     /// </summary>
     public class MemoryPacketIdStore : IIncomingPacketStore
     {
-        readonly HashSet<int> _ids = new HashSet<int>();
+        readonly HashSet<int> _ids = new();
 
         /// <inheritdoc/>
         public ValueTask RemoveId( IInputLogger? m, int id )

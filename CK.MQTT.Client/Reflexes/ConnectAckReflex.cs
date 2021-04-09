@@ -1,3 +1,4 @@
+using CK.MQTT.Pumps;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -10,7 +11,7 @@ namespace CK.MQTT
 {
     class ConnectAckReflex
     {
-        readonly TaskCompletionSource<ConnectResult> _tcs = new TaskCompletionSource<ConnectResult>();
+        readonly TaskCompletionSource<ConnectResult> _tcs = new();
 
         public Reflex Reflex { get; set; }
 
@@ -61,7 +62,7 @@ namespace CK.MQTT
 
         static void Deserialize( ReadOnlySequence<byte> buffer, out byte state, out byte code, out SequencePosition position )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            SequenceReader<byte> reader = new( buffer );
             bool res = reader.TryRead( out state );
             bool res2 = reader.TryRead( out code );
             position = reader.Position;

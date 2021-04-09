@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
@@ -9,13 +10,16 @@ namespace CK.MQTT
     public class AwaitableOutgoingPacketWrapper : IOutgoingPacket
     {
         readonly IOutgoingPacket _outgoingPacket;
-        readonly TaskCompletionSource<object?> _taskCompletionSource = new TaskCompletionSource<object?>();
+        readonly TaskCompletionSource<object?> _taskCompletionSource = new();
         public AwaitableOutgoingPacketWrapper( IOutgoingPacket outgoingPacket )
         {
             _outgoingPacket = outgoingPacket;
         }
 
         public Task Sent => _taskCompletionSource.Task;
+
+        public QualityOfService Qos => _outgoingPacket.Qos;
+        public int PacketId { get => _outgoingPacket.PacketId; set => _outgoingPacket.PacketId = value; }
 
         public int GetSize( ProtocolLevel protocolLevel ) => _outgoingPacket.GetSize( protocolLevel );
 
@@ -29,11 +33,11 @@ namespace CK.MQTT
         public override string ToString() => $"AwaitableWrapper({_outgoingPacket})";
     }
 
-    public class AwaitableOutgoingPacketWithIdWrapper : IOutgoingPacketWithId
+    public class AwaitableOutgoingPacketWithIdWrapper : IOutgoingPacket
     {
-        readonly IOutgoingPacketWithId _outgoingPacket;
-        readonly TaskCompletionSource<object?> _taskCompletionSource = new TaskCompletionSource<object?>();
-        public AwaitableOutgoingPacketWithIdWrapper( IOutgoingPacketWithId outgoingPacket )
+        readonly IOutgoingPacket _outgoingPacket;
+        readonly TaskCompletionSource<object?> _taskCompletionSource = new();
+        public AwaitableOutgoingPacketWithIdWrapper( IOutgoingPacket outgoingPacket )
         {
             Debug.Assert( outgoingPacket.PacketId != 0 );
             _outgoingPacket = outgoingPacket;

@@ -7,7 +7,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     class TestDelayHandler : IDelayHandler, IStopwatchFactory
     {
-        readonly object _lock = new object();
+        readonly object _lock = new();
         List<DelayTask> _delays { get; } = new List<DelayTask>();
         List<Stopwatch> _stopwatches { get; } = new List<Stopwatch>();
 

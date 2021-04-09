@@ -18,13 +18,10 @@ namespace CK.MQTT
         /// <param name="packetId">The packet id of the publish packet.</param>
         /// <param name="position">The position after the read data.</param>
         /// <returns>true if there was enough data, false if more data is required.</returns>
-        public static bool ParsePublishWithPacketId(
-            ReadOnlySequence<byte> buffer,
-            int packetLength,
-            [NotNullWhen( true )] out string? topic, out ushort packetId, out SequencePosition position )
+        public static bool ParsePublishWithPacketId( ReadOnlySequence<byte> buffer, [NotNullWhen( true )] out string? topic, out ushort packetId, out SequencePosition position )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
-            if( !reader.TryReadMQTTString( packetLength, out topic ) )
+            SequenceReader<byte> reader = new( buffer );
+            if( !reader.TryReadMQTTString( out topic ) )
             {
                 packetId = 0;
                 position = reader.Position;

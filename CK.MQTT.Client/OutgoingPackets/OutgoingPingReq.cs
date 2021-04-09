@@ -9,6 +9,9 @@ namespace CK.MQTT
         /// Return the default instance of <see cref="OutgoingPingReq"/>.
         /// </summary>
         public static OutgoingPingReq Instance { get; } = new OutgoingPingReq();
+        public override int PacketId { get => 0; set => throw new NotSupportedException(); }
+
+        public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
         public override int GetSize( ProtocolLevel protocolLevel )
         {

@@ -56,7 +56,7 @@ namespace CK.MQTT
             return new ValueTask();
         }
 
-        protected override async ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacketWithId packet )
+        protected override async ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacket packet )
         {
             int packetSize = packet.GetSize( _protocolConfig.ProtocolLevel );
             m?.Trace( $"Renting {packetSize} bytes to persist {packet}." );
@@ -68,7 +68,7 @@ namespace CK.MQTT
             }
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
-            return new FromMemoryOutgoingPacket( slicedMem );
+            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId );
         }
 
         protected override ValueTask DoResetAsync( ArrayStartingAt1<IdStoreEntry<EntryContent>> entries )
@@ -81,6 +81,9 @@ namespace CK.MQTT
         }
 
         protected override ValueTask<IOutgoingPacket> RestorePacket( int packetId )
-            => new ValueTask<IOutgoingPacket>( new FromMemoryOutgoingPacket( base[packetId].Content.Storage.Payload ) );
+        {
+            EntryContent content = base[packetId].Content;
+            return new( new FromMemoryOutgoingPacket( content.Storage.Payload, (QualityOfService)(content._state & QoSState.QosMask), packetId ) );
+        }
     }
 }

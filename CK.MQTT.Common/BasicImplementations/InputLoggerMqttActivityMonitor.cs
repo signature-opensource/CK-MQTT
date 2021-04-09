@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Pumps;
 using System;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
@@ -33,7 +34,7 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         public IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos )
-            => _m.OpenTrace( $"Handling incoming packet as {PacketType.Publish}." );
+            => _m.OpenDebug( $"Handling incoming packet as {PacketType.Publish}." );
 
         /// <inheritdoc/>
         public void QueueFullPacketDropped( PacketType packetType, int packetId )
@@ -100,5 +101,7 @@ namespace CK.MQTT
             => _m?.Error( $"{propertyIdentifier} has an invalid value ({value})." );
 
         public void ErrorAuthDataMissing() => _m?.Error( "Auth data present but there is no auth method." );
+
+        public void PacketMarkedAsDropped( int id ) => _m.Warn( $"Packet with ID {id} has been marked as dropped." );
     }
 }

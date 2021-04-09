@@ -6,8 +6,8 @@ namespace CK.MQTT.Client.Tests
     {
         public TestChannel()
         {
-            Pipe input = new Pipe();
-            Pipe output = new Pipe();
+            Pipe input = new();
+            Pipe output = new();
             DuplexPipe = new DuplexPipe( input.Reader, output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
         }

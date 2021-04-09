@@ -27,10 +27,10 @@ namespace SimpleClientTest
             var go = GrandOutput.EnsureActiveDefault( config );
             go.ExternalLogLevelFilter = LogLevelFilter.Debug;
             ActivityMonitor? m = null; //new ActivityMonitor( "main" );
-            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "localhost:1883" )
+            var client = MqttClient.Factory.CreateMQTT3Client( new MqttClientConfiguration( "localhost:1883" )
             {
-                //InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor() ),
-                //OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor() ),
+                InputLogger = new InputLoggerMqttActivityMonitor( new ActivityMonitor() ),
+                OutputLogger = new OutputLoggerMqttActivityMonitor( new ActivityMonitor() ),
                 KeepAliveSeconds = 0
             }, MessageHandlerDelegate );
             //Stopwatch stopwatch = new Stopwatch();
@@ -45,7 +45,7 @@ namespace SimpleClientTest
             await Task.Delay( 5000000 );
         }
 
-        static Random r = new Random();
+        static Random r = new();
 
         async static ValueTask MessageHandlerDelegate( IActivityMonitor m, string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {

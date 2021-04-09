@@ -1,3 +1,4 @@
+using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
 using System.IO.Pipelines;
@@ -47,7 +48,8 @@ namespace CK.MQTT
                         if( (header & 0b0010) != 2 ) throw new ProtocolViolationException( "MQTT-3.6.1-1 docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800427" );
                         ushort packetId = await pipe.ReadPacketIdPacket( m, pktLen );
                         await _packetIdStore.RemoveId( m, packetId );
-                        _output.QueueReflexMessage( LifecyclePacketV3.Pubcomp( packetId ) );
+                        // We doesn't care of the return value, if the queue is filled we have too much job to do currently and we drop that packet.
+                        _= _output.QueueReflexMessage( LifecyclePacketV3.Pubcomp( packetId ) );
                         return;
                     case PacketType.PublishReceived:
                         ushort packetId4 = await pipe.ReadPacketIdPacket( m, pktLen );

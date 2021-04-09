@@ -44,7 +44,7 @@ namespace CK.MQTT
             : base( config )
         {
             (_pConfig, _config, _messageHandler) = (protocolConfig, config, messageHandler);
-            if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds )
+            if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds && config.KeepAliveSeconds != 0 )
             {
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
             }
@@ -70,25 +70,37 @@ namespace CK.MQTT
                 {
                     (IOutgoingPacketStore store, IIncomingPacketStore packetIdStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, _config.ConnectionString, credentials?.CleanSession ?? true );
                     IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
-                    ConnectAckReflex connectAckReflex = new ConnectAckReflex();
+                    ConnectAckReflex connectAckReflex = new();
                     Task<ConnectResult> connectedTask = connectAckReflex.Task;
-                    OutputProcessorWithKeepAlive outputProcessorWithKeepAlive = new OutputProcessorWithKeepAlive();
+                    var output = new OutputPump( this, _pConfig );
+                    OutputProcessor outputProcessor;
                     var input = new InputPump( this, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacket );
-                    var output = new OutputPump( this, _pConfig,  );
                     OpenPumps( m, new ClientState( input, output, channel, packetIdStore, store ) );
-                    PingRespReflex pingRes = new PingRespReflex();
-                    connectAckReflex.Reflex = new ReflexMiddlewareBuilder()
+                    ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
                         .UseMiddleware( new PublishReflex( _config, packetIdStore, OnMessage, output ) )
                         .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
                         .UseMiddleware( new SubackReflex( store ) )
-                        .UseMiddleware( new UnsubackReflex( store ) )
-                        .UseMiddleware( pingRes )
-                        .Build( InvalidPacket );
-
-                    await output.SendMessageAsync( m, new OutgoingConnect( _pConfig, _config, credentials, lastWill ) );
-                    output.SetOutputProcessor( new MainOutputProcessor( _config, store, pingRes ).OutputProcessor );
-                    // TODO: there is 2 output processor to not have the ping on the connect.
-                    // fix this.
+                        .UseMiddleware( new UnsubackReflex( store ) );
+                    if( _config.KeepAliveSeconds == 0 )
+                    {
+                        outputProcessor = new OutputProcessor( output, channel.DuplexPipe.Output, store );
+                    }
+                    else
+                    {
+                        OutputProcessorWithKeepAlive withKeepAlive = new( _config, output, channel.DuplexPipe.Output, store ); ;
+                        outputProcessor = withKeepAlive;
+                        _ = builder.UseMiddleware( withKeepAlive );
+                    }
+                    output.StartPumping( outputProcessor );
+                    connectAckReflex.Reflex = builder.Build( InvalidPacket );
+                    OutgoingConnect outgoingConnect = new( _pConfig, _config, credentials, lastWill );
+                    CancellationTokenSource cts = new( _config.WaitTimeoutMilliseconds );
+                    IOutgoingPacket.WriteResult writeConnectResult = await outgoingConnect.WriteAsync( _pConfig.ProtocolLevel, channel.DuplexPipe.Output, cts.Token );
+                    if( writeConnectResult != IOutgoingPacket.WriteResult.Written )
+                    {
+                        _ = await CloseAsync( DisconnectedReason.None );
+                        return new ConnectResult( ConnectError.Timeout );
+                    }
                     Task timeout = _config.DelayHandler.Delay( _config.WaitTimeoutMilliseconds, CloseToken );
                     _ = await Task.WhenAny( connectedTask, timeout );
                     // This following code wouldn't be better with a sort of ... switch/pattern matching ?
@@ -167,7 +179,7 @@ namespace CK.MQTT
             return base.OnClosed( reason );
         }
 
-        public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacketWithId outgoingPacket ) where T : class
+        public ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacket outgoingPacket ) where T : class
         {
             ClientState? state = State;
             if( !IsConnected ) throw new InvalidOperationException( "Client is Disconnected." );

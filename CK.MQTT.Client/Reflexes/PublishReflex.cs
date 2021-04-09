@@ -1,4 +1,6 @@
 using CK.Core;
+using CK.MQTT.Pumps;
+using CK.MQTT.Stores;
 using System;
 using System.IO.Pipelines;
 using System.Net;
@@ -49,7 +51,7 @@ namespace CK.MQTT
                         await _messageHandler( _mqttConfiguration.OnInputMonitor, theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                         return;
                     }
-                    if( Publish.ParsePublishWithPacketId( read.Buffer, packetLength, out topic, out packetId, out SequencePosition position ) )
+                    if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
                     {
                         reader.AdvanceTo( position );
                         break;

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace CK.MQTT
 {
-    public sealed class LifecyclePacketsV5 : SimpleOutgoingPacket, IOutgoingPacketWithId
+    public sealed class LifecyclePacketsV5 : SimpleOutgoingPacket, IOutgoingPacket
     {
         readonly byte _header;
         readonly ReasonCode _reason;
@@ -34,9 +34,9 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public int PacketId { get; set; }
+        public override int PacketId { get; set; }
 
-        public QualityOfService Qos => QualityOfService.AtLeastOnce;
+        public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         readonly int _getSize;
 

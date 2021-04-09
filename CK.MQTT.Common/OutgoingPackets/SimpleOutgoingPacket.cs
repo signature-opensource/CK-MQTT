@@ -9,6 +9,9 @@ namespace CK.MQTT
 {
     public abstract class SimpleOutgoingPacket : IOutgoingPacket
     {
+        public abstract int PacketId { get; set; }
+        public abstract QualityOfService Qos { get; }
+
         /// <summary>
         /// Allow to write synchronously to the input buffer.
         /// </summary>

@@ -75,6 +75,10 @@ namespace CK.MQTT
 
         protected override byte Header => (byte)PacketType.Connect;
 
+        public override int PacketId { get => 0; set => throw new NotSupportedException(); }
+
+        public override QualityOfService Qos => QualityOfService.AtMostOnce;
+
         protected override int GetHeaderSize( ProtocolLevel protocolLevel )
             => _pConf.ProtocolName.MQTTSize()
                 + 1 //_protocolLevel

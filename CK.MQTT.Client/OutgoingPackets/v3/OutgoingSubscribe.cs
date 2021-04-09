@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacketWithId
+    class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacket
     {
         readonly Subscription[] _subscriptions;
         readonly int _subscriptionIdentifier;
@@ -30,8 +30,8 @@ namespace CK.MQTT
             }
         }
 
-        public int PacketId { get; set; }
-        public QualityOfService Qos => QualityOfService.AtLeastOnce;
+        public override int PacketId { get; set; }
+        public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349306
         protected override byte Header => (byte)PacketType.Subscribe | 0b0010;

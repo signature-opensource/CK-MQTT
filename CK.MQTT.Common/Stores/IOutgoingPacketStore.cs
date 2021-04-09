@@ -7,7 +7,7 @@ namespace CK.MQTT.Stores
 {
     public interface IOutgoingPacketStore
     {
-        ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacketWithId packet, QualityOfService qos );
+        ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacket packet, QualityOfService qos );
         void CancelAllAckTask( IActivityMonitor? m );
         void OnPacketSent( IOutputLogger? m, int packetId );
         ValueTask OnQos1AckAsync( IInputLogger? m, int packetId, object? result );

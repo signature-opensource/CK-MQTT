@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -8,7 +9,6 @@ namespace CK.MQTT
         IDisposable? OutputLoopStarting();
         void ExceptionInOutputLoop( Exception e );
         IDisposable? SendingMessage( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel );
-        IDisposable? SendingMessageWithId( ref IOutgoingPacket outgoingPacket, ProtocolLevel protocolLevel, int packetId );
         void PacketMarkedPoisoned( int packetId, int tryCount );
         void SendingKeepAlive();
         IDisposable SendingMessageFromQueue();
@@ -18,12 +18,14 @@ namespace CK.MQTT
         void ConcludeMainLoopTimeout( IDisposableGroup disposableGroup );
         void ConcludeRegularPacketSent( IDisposableGroup disposableGroup );
         void ConcludeMessageInQueueAvailable( IDisposableGroup disposableGroup );
+        IDisposable OutputProcessorRunning();
         void ConcludeMainLoopCancelled( IDisposableGroup disposableGroup );
         void ConcludePacketDroppedAvailable( IDisposableGroup disposableGroup );
         IDisposable MainLoopSendingKeepAlive();
         void ConcludeSentKeepAlive( IDisposableGroup disposableGroup );
         void QueueEmpty();
         void NoUnackPacketSent( TimeSpan timeUntilAnotherRetry );
-        void AwaitingWork();
+        IDisposableGroup AwaitingWork();
+        void AwaitCompletedDueTo( IDisposableGroup? disposableGroup, Task<bool> reflexesWait, Task<bool> messagesWait, Task packetMarkedAsDropped, Task timeToWaitForRetry );
     }
 }
