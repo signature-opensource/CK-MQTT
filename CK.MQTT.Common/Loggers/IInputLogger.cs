@@ -33,6 +33,7 @@ namespace CK.MQTT
         void InvalidPropertyType();
         void InvalidPropertyValue( PropertyIdentifier propertyIdentifier, object value );
         void ErrorAuthDataMissing();
-        void PacketMarkedAsDropped( int currId );
+        void PacketMarkedAsDropped( int packetId );
+        void UncertainPacketFreed( int packetId );
     }
 }

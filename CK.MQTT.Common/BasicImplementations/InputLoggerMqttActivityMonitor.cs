@@ -103,5 +103,7 @@ namespace CK.MQTT
         public void ErrorAuthDataMissing() => _m?.Error( "Auth data present but there is no auth method." );
 
         public void PacketMarkedAsDropped( int id ) => _m.Warn( $"Packet with ID {id} has been marked as dropped." );
+
+        public void UncertainPacketFreed( int packetId ) => _m?.Trace( $"Uncertain packet ID {packetId} has been freed." );
     }
 }

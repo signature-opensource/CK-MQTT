@@ -145,6 +145,7 @@ namespace CK.MQTT.Stores
                             // But we could not knew if there was another ack in the pipe or not.
                             // No we know that no such ack is in transit.
                             // So we can simply free it now.
+                            m?.UncertainPacketFreed( currId );
                             FreeId( m, currId );
                         }
                         else
@@ -297,9 +298,9 @@ namespace CK.MQTT.Stores
                     throw new ProtocolViolationException( "PubRec not acked but we received PubRel" );
                 }
                 ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
+                entry.Content._attemptInTransitOrLost--;
                 if( entry.Content._attemptInTransitOrLost > 1 )
                 {
-                    entry.Content._attemptInTransitOrLost--;
                     entry.Content._state = QoSState.UncertainDead;
                 }
                 else
@@ -312,7 +313,7 @@ namespace CK.MQTT.Stores
         protected abstract ValueTask<IOutgoingPacket> RestorePacket( int packetId );
 
         // This method exist because ValueTask<T> => ValueTask<T?> throw a warning.
-        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternal( int packetId ) 
+        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternal( int packetId )
             => (await RestorePacket( packetId ), TimeSpan.Zero);
 
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResend()
@@ -335,9 +336,10 @@ namespace CK.MQTT.Stores
                 currId = curr.NextId;
                 curr = ref _idStore._entries[currId];
                 // If there is a packet that reached the peremption time, or is marked as dropped.
-                if( curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped ) )
+                if( curr.Content._state != QoSState.UncertainDead && (curr.Content._lastEmissionTime < peremptionTime
+                    || curr.Content._state.HasFlag( QoSState.Dropped )) )
                 {
-                    return RestorePacketInternal( currId ); 
+                    return RestorePacketInternal( currId );
                 }
                 if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
             }
