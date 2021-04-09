@@ -42,7 +42,6 @@ namespace CK.MQTT.Pumps
                 {
                     if( !packetSent )
                     {
-                        Thread.Sleep( 1000 );
                         retriesSent = await ResendAllUnackPacket( m, cancellationToken );
                     }
                     Debug.Assert( packetSent );

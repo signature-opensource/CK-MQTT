@@ -83,7 +83,8 @@ namespace CK.MQTT.Stores
             _newestIdAllocated = 0;
         }
 
-        void SelfConsistencyCheck()
+
+        internal void SelfConsistencyCheck()
         {
 #if DEBUG
             int curr = _head;

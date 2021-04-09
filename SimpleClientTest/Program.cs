@@ -2,10 +2,13 @@ using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
+using CK.Text;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,10 +21,16 @@ namespace SimpleClientTest
         static async Task Main()
         {
             var config = new GrandOutputConfiguration();
-            config.Handlers.Add( new ConsoleConfiguration()
+            config.Handlers.Add(
+            //    new ConsoleConfiguration()
+            //{
+            //    EnableMonitorIdColorFlag = true
+            //}
+            new TextFileConfiguration()
             {
-                EnableMonitorIdColorFlag = true
-            } );
+                Path = "Logs"
+            }
+                );
             ActivityMonitor.DefaultFilter = LogFilter.Debug;
             config.MinimalFilter = LogFilter.Debug;
             var go = GrandOutput.EnsureActiveDefault( config );

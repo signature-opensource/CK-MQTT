@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.MQTT.Client;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -11,7 +10,7 @@ using static CK.Core.Extension.PipeReaderExtensions;
 
 namespace CK.MQTT.Client
 {
-    public static class MQTTClientDisposableApplicationMessageExtensions
+    public static class DisposableApplicationMessageExtensions
     {
 
         /// <param name="client">The client that will send the message.</param>

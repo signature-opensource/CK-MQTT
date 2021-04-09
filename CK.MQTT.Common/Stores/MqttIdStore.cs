@@ -323,28 +323,32 @@ namespace CK.MQTT.Stores
             TimeSpan currentTime = _stopwatch.Elapsed;
             TimeSpan timeOut = TimeSpan.FromMilliseconds( Config.WaitTimeoutMilliseconds );
             TimeSpan peremptionTime = currentTime.Subtract( timeOut );
-
-            int currId = _idStore._head;
-            ref var curr = ref _idStore._entries[currId];
-            if( curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped ) )
+            TimeSpan oldest;
+            lock( _idStore )
             {
-                return RestorePacketInternal( currId );
-            }
-            TimeSpan oldest = curr.Content._lastEmissionTime;
-            while( currId != _idStore._newestIdAllocated ) // We loop over all older packets.
-            {
-                currId = curr.NextId;
-                curr = ref _idStore._entries[currId];
-                // If there is a packet that reached the peremption time, or is marked as dropped.
-                if( curr.Content._state != QoSState.UncertainDead && (curr.Content._lastEmissionTime < peremptionTime
-                    || curr.Content._state.HasFlag( QoSState.Dropped )) )
+                int currId = _idStore._head;
+                ref var curr = ref _idStore._entries[currId];
+                if( curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped ) )
                 {
                     return RestorePacketInternal( currId );
                 }
-                if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
+                oldest = curr.Content._lastEmissionTime;
+                while( currId != _idStore._newestIdAllocated ) // We loop over all older packets.
+                {
+                    currId = curr.NextId;
+                    curr = ref _idStore._entries[currId];
+                    // If there is a packet that reached the peremption time, or is marked as dropped.
+                    if( curr.Content._state != QoSState.UncertainDead && (curr.Content._lastEmissionTime < peremptionTime
+                        || curr.Content._state.HasFlag( QoSState.Dropped )) )
+                    {
+                        return RestorePacketInternal( currId );
+                    }
+                    if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
+                }
             }
-            TimeSpan packetAge = currentTime - oldest;
-            return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeOut - packetAge) );
+            TimeSpan timeUntilAnotherRetry = timeOut - (currentTime - oldest);
+            Debug.Assert( timeUntilAnotherRetry.TotalMilliseconds > 0 );
+            return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeUntilAnotherRetry) );
         }
 
         public void CancelAllAckTask( IActivityMonitor? m )

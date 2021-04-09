@@ -10,7 +10,7 @@ using static CK.Core.Extension.PipeReaderExtensions;
 namespace CK.MQTT.Client
 {
 
-    public static class MQTTClientApplicationMessageExtensions
+    public static class ApplicationMessageExtensions
     {
         public static ValueTask<Task> PublishAsync( this IMqtt3Client @this, IActivityMonitor m, ApplicationMessage message )
             => @this.PublishAsync( m, message.Topic, message.QoS, message.Retain, message.Payload );
