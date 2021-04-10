@@ -16,10 +16,6 @@ namespace CK.MQTT.Pumps
         readonly PipeWriter _pipeWriter;
         readonly IOutgoingPacketStore _outgoingPacketStore;
 
-#if DEBUG
-        bool _waitWillLeadToPacketSent;
-#endif
-
         public OutputProcessor( OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore outgoingPacketStore )
         {
             OutputPump = outputPump;
@@ -37,17 +33,6 @@ namespace CK.MQTT.Pumps
                 bool newPacketSent = await SendAMessageFromQueue( m, cancellationToken ); // We want to send a fresh new packet...
                 bool retriesSent = await ResendAllUnackPacket( m, cancellationToken ); // Then sending all packets that waited for too long.
                 bool packetSent = newPacketSent || retriesSent;
-#if DEBUG
-                if( _waitWillLeadToPacketSent ) // Test the guarentee that after a wait there is always a packet sent.
-                {
-                    if( !packetSent )
-                    {
-                        retriesSent = await ResendAllUnackPacket( m, cancellationToken );
-                    }
-                    Debug.Assert( packetSent );
-                    _waitWillLeadToPacketSent = false;
-                }
-#endif
                 return packetSent;
             }
 
@@ -65,9 +50,6 @@ namespace CK.MQTT.Pumps
                 _ = await Task.WhenAny( timeToWaitForRetry, reflexesWait, messagesWait, packetMarkedAsDropped );
                 m?.AwaitCompletedDueTo( grp, reflexesWait, messagesWait, packetMarkedAsDropped, timeToWaitForRetry );
             }
-#if DEBUG
-            _waitWillLeadToPacketSent = true;
-#endif
         }
 
         public void Stopping() => _pipeWriter.Complete();
