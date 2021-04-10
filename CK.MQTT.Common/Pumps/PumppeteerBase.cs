@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,8 +10,8 @@ namespace CK.MQTT
     public abstract class PumppeteerBase
     {
         // Must never be disposed!
-        static readonly CancellationTokenSource _signaled = new CancellationTokenSource( 0 );
-        readonly object _closeLock = new object();
+        static readonly CancellationTokenSource _signaled = new( 0 );
+        readonly object _closeLock = new();
 
         CancellationTokenSource _closed = _signaled;
 

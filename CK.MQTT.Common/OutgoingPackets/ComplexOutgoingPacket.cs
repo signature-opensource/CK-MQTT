@@ -18,6 +18,8 @@ namespace CK.MQTT
         /// The first byte of the packet. This contain the <see cref="PacketType"/> and possibly other data.
         /// </summary>
         protected abstract byte Header { get; }
+        public abstract int PacketId { get; set; }
+        public abstract QualityOfService Qos { get; }
 
         /// <inheritdoc/>
         public int GetSize( ProtocolLevel protocolLevel )

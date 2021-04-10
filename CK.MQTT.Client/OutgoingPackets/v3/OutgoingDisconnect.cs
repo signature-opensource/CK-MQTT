@@ -13,16 +13,16 @@ namespace CK.MQTT
         /// Return the default instance of <see cref="OutgoingDisconnect"/>.
         /// </summary>
         public static OutgoingDisconnect Instance { get; } = new OutgoingDisconnect();
+        public override int PacketId { get => 0; set => throw new NotSupportedException(); }
+
+        public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
         /// <inheritdoc/>
-        public override int GetSize( ProtocolLevel protocolLevel )
+        public override int GetSize( ProtocolLevel protocolLevel ) => 2;
+
+        /// <inheritdoc/>
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            return 2;
-        }
-
-        /// <inheritdoc/>
-        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
-		{
             span[0] = (byte)PacketType.Disconnect;
             span[1] = 0;
         }

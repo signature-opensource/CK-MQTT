@@ -4,7 +4,7 @@ namespace CK.MQTT
 {
     public interface IStoreTransformer
     {
-        Func<IOutgoingPacketWithId, IOutgoingPacketWithId> PacketTransformerOnRestore { get; }
-        Func<IOutgoingPacketWithId, IOutgoingPacketWithId> PacketTransformerOnSave { get; }
+        Func<IOutgoingPacket, IOutgoingPacket> PacketTransformerOnRestore { get; }
+        Func<IOutgoingPacket, IOutgoingPacket> PacketTransformerOnSave { get; }
     }
 }

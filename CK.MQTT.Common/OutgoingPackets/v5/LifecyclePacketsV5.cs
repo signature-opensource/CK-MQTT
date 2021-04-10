@@ -1,11 +1,12 @@
-using System.Diagnostics;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace CK.MQTT
 {
-    public sealed class LifecyclePacketsV5 : SimpleOutgoingPacket, IOutgoingPacketWithId
+    public sealed class LifecyclePacketsV5 : SimpleOutgoingPacket, IOutgoingPacket
     {
         readonly byte _header;
         readonly ReasonCode _reason;
@@ -26,29 +27,30 @@ namespace CK.MQTT
             if( hasReason || hasUserProperties )
             {  // property: 1 byte + property content
                 if( hasReason ) _propertiesSize += 1 + reasonString.MQTTSize();
-                if( hasUserProperties ) _propertiesSize += userProperties.Sum( s => s.Size);
+                if( hasUserProperties ) _propertiesSize += userProperties.Sum( s => s.Size );
                 _contentSize += _propertiesSize + _propertiesSize.CompactByteCount();
             }
             _getSize = GetSize( ProtocolLevel.MQTT5 ) + 1 + _contentSize.CompactByteCount() + _contentSize;
         }
 
         /// <inheritdoc/>
-        public int PacketId { get; set; }
+        public override int PacketId { get; set; }
 
-        public QualityOfService Qos => QualityOfService.AtLeastOnce;
+        public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         readonly int _getSize;
 
         /// <inheritdoc/>
         public override int GetSize( ProtocolLevel protocolLevel ) => _getSize;
 
-        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span)
-		{
+        protected override void Write( ProtocolLevel protocolLevel, Span<byte> span )
+        {
             bool hasReason = !string.IsNullOrEmpty( _reasonString );
             bool hasUserProperties = _userProperties.Count > 0;
             span[0] = _header;
             span = span[1..].WriteVariableByteInteger( _contentSize );
-            span = span.WriteBigEndianUInt16( (ushort)PacketId );
+            BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
+            span = span[2..];
             span[0] = (byte)_reason;
             if( _propertiesSize == 0 )
             {

@@ -10,7 +10,7 @@ namespace CK.MQTT
     {
         readonly PumppeteerBase _pumppeteer;
         Task? _readLoop;
-        readonly CancellationTokenSource _stopSource = new CancellationTokenSource();
+        readonly CancellationTokenSource _stopSource = new();
 
         private protected PumpBase( PumppeteerBase pumppeteer ) => _pumppeteer = pumppeteer;
 

@@ -5,13 +5,13 @@ namespace CK.MQTT
     /// <summary>
     /// Configuration of a <see cref="IMqtt3Client"/>.
     /// </summary>
-    public class MqttConfiguration : MqttConfigurationBase
+    public class MqttClientConfiguration : MqttConfigurationBase
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="MqttConfiguration" /> class.
+        /// Initializes a new instance of the <see cref="MqttClientConfiguration" /> class.
         /// </summary>
         /// <param name="connectionString">The connection string that will be used by the <see cref="IMqttChannelFactory"/>.</param>
-        public MqttConfiguration( string connectionString ) => ConnectionString = connectionString;
+        public MqttClientConfiguration( string connectionString ) => ConnectionString = connectionString;
 
         public string ConnectionString { get; }
 

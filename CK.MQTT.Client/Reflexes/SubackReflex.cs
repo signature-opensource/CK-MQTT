@@ -1,3 +1,5 @@
+using CK.MQTT.Pumps;
+using CK.MQTT.Stores;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -10,9 +12,9 @@ namespace CK.MQTT
 {
     class SubackReflex : IReflexMiddleware
     {
-        readonly PacketStore _store;
+        readonly IOutgoingPacketStore _store;
 
-        public SubackReflex( PacketStore store )
+        public SubackReflex( IOutgoingPacketStore store )
         {
             _store = store;
         }
@@ -29,8 +31,7 @@ namespace CK.MQTT
                 if( !read.HasValue ) return;
                 Parse( read.Value.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
                 pipeReader.AdvanceTo( position );
-                QualityOfService debugQos = await _store.OnMessageAck( m, packetId, qos );
-                Debug.Assert( debugQos == QualityOfService.AtLeastOnce );
+                await _store.OnQos1AckAsync( m, packetId, qos );
             }
         }
 
@@ -40,7 +41,7 @@ namespace CK.MQTT
             [NotNullWhen( true )] out QualityOfService[]? qos,
             out SequencePosition position )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            SequenceReader<byte> reader = new( buffer );
             if( !reader.TryReadBigEndian( out packetId ) ) throw new InvalidOperationException();
             buffer = buffer.Slice( 2, payloadLength - 2 );
             qos = (QualityOfService[])(object)buffer.ToArray();

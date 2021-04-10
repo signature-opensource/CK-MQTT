@@ -2,6 +2,7 @@ namespace CK.MQTT
 {
     public enum PropertyIdentifier : byte //Specs says "this is a variable byte integer but for now only one byte is used", one byte simplify implementation, so this enum is a byte for now.
     {
+        None = 0,
         PayloadFormatIndicator = 0x01,
         MessageExpiryInterval = 0x02,
         ContentType = 0x03,

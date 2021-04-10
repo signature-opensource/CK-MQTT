@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
@@ -11,7 +12,7 @@ namespace CK.MQTT
 {
     class OutgoingConnect : ComplexOutgoingPacket
     {
-        readonly MqttConfiguration _mConf;
+        readonly MqttClientConfiguration _mConf;
         readonly MqttClientCredentials? _creds;
         readonly OutgoingLastWill? _lastWill;
         readonly uint _sessionExpiryInterval;
@@ -39,7 +40,7 @@ namespace CK.MQTT
         }
 
         public OutgoingConnect(
-            ProtocolConfiguration pConf, MqttConfiguration mConf, MqttClientCredentials? creds, OutgoingLastWill? lastWill = null,
+            ProtocolConfiguration pConf, MqttClientConfiguration mConf, MqttClientCredentials? creds, OutgoingLastWill? lastWill = null,
             uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, uint maximumPacketSize = 268435455, ushort topicAliasMaximum = 0,
             bool requestResponseInfo = false, bool requestProblemInfo = false, IReadOnlyList<UserProperty>? userProperties = null,
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )
@@ -74,6 +75,10 @@ namespace CK.MQTT
 
         protected override byte Header => (byte)PacketType.Connect;
 
+        public override int PacketId { get => 0; set => throw new NotSupportedException(); }
+
+        public override QualityOfService Qos => QualityOfService.AtMostOnce;
+
         protected override int GetHeaderSize( ProtocolLevel protocolLevel )
             => _pConf.ProtocolName.MQTTSize()
                 + 1 //_protocolLevel
@@ -91,7 +96,9 @@ namespace CK.MQTT
             span[0] = (byte)_pConf.ProtocolLevel; //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
 
             span[1] = _flags;
-            span = span[2..].WriteBigEndianUInt16( _mConf.KeepAliveSeconds );//http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
+            span = span[2..];
+            BinaryPrimitives.WriteUInt16BigEndian( span, _mConf.KeepAliveSeconds ); //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349238
+            span = span[2..];
             if( protocolLevel == ProtocolLevel.MQTT5 )
             {
                 span = span.WriteVariableByteInteger( _propertiesSize );
@@ -99,22 +106,30 @@ namespace CK.MQTT
                 if( _sessionExpiryInterval != 0 )
                 {
                     span[0] = (byte)PropertyIdentifier.SessionExpiryInterval;
-                    span = span[1..].WriteBigEndianUInt32( _sessionExpiryInterval );
+                    span = span[1..];
+                    BinaryPrimitives.WriteUInt32BigEndian( span, _sessionExpiryInterval );
+                    span = span[4..];
                 }
                 if( _receiveMaximum != ushort.MaxValue )
                 {
                     span[0] = (byte)PropertyIdentifier.ReceiveMaximum;
-                    span = span[1..].WriteBigEndianUInt16( _receiveMaximum );
+                    span = span[1..];
+                    BinaryPrimitives.WriteUInt16BigEndian( span, _receiveMaximum );
+                    span = span[2..];
                 }
                 if( _maximumPacketSize != 268435455 )
                 {
                     span[0] = (byte)PropertyIdentifier.MaximumPacketSize;
-                    span = span[1..].WriteBigEndianUInt32( _maximumPacketSize );
+                    span = span[1..];
+                    BinaryPrimitives.WriteUInt32BigEndian( span, _maximumPacketSize );
+                    span = span[4..];
                 }
                 if( _topicAliasMaximum != 0 )
                 {
                     span[0] = (byte)PropertyIdentifier.TopicAliasMaximum;
-                    span = span[1..].WriteBigEndianUInt16( _topicAliasMaximum );
+                    span = span[1..];
+                    BinaryPrimitives.WriteUInt16BigEndian( span, _topicAliasMaximum );
+                    span = span[2..];
                 }
                 if( _requestResponseInformation )
                 {

@@ -1,3 +1,4 @@
+using CK.MQTT.Pumps;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -39,7 +40,7 @@ namespace CK.MQTT
         /// <summary>
         /// The chain of middleware.
         /// </summary>
-        readonly List<ReflexMiddleware> _reflexes = new List<ReflexMiddleware>();
+        readonly List<ReflexMiddleware> _reflexes = new();
 
         ReflexMiddlewareBuilder Use( ReflexMiddleware reflex )
         {

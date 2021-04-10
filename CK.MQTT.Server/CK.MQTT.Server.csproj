@@ -2,6 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Description>MQTT server implementation (not yet available).</Description>
+    <Nullable>enable</Nullable>
+    <Features>strict</Features>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,6 +4,8 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
+    <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
+    <Features>strict</Features>
   </PropertyGroup>
 
   <ItemGroup>

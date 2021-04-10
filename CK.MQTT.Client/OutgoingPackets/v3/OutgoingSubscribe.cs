@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacketWithId
+    class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacket
     {
         readonly Subscription[] _subscriptions;
         readonly int _subscriptionIdentifier;
@@ -29,8 +30,8 @@ namespace CK.MQTT
             }
         }
 
-        public int PacketId { get; set; }
-        public QualityOfService Qos => QualityOfService.AtLeastOnce;
+        public override int PacketId { get; set; }
+        public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349306
         protected override byte Header => (byte)PacketType.Subscribe | 0b0010;
@@ -44,7 +45,8 @@ namespace CK.MQTT
 
         protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            span = span.WriteBigEndianUInt16( (ushort)PacketId );
+            BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
+            span = span[2..];
             if( protocolLevel > ProtocolLevel.MQTT3 )
             {
                 span = span.WriteVariableByteInteger( _propertiesLength );

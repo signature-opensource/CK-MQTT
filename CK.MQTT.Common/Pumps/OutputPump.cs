@@ -1,12 +1,14 @@
+using CK.Core;
+using CK.MQTT.Stores;
+using Microsoft.Toolkit.HighPerformance.Extensions;
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT.Pumps
 {
     /// <summary>
     /// The message pump that serializes the messages to the <see cref="PipeWriter"/>.
@@ -14,103 +16,77 @@ namespace CK.MQTT
     /// </summary>
     public class OutputPump : PumpBase
     {
-        public delegate ValueTask OutputProcessor( IOutputLogger? m, PacketSender packetSender, Channel<IOutgoingPacket> reflexes, Channel<IOutgoingPacket> messages, Func<DisconnectedReason, Task<bool>> clientClose, CancellationToken cancellationToken );
-
         public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
 
-        readonly Channel<IOutgoingPacket> _messages;
-        readonly Channel<IOutgoingPacket> _reflexes;
-        OutputProcessor _outputProcessor;
-        readonly PipeWriter _pipeWriter;
-        readonly ProtocolConfiguration _pconfig;
-        readonly MqttConfigurationBase _config;
-        readonly PacketStore _packetStore;
-        CancellationTokenSource _processorStopSource = new CancellationTokenSource();
+        public Channel<IOutgoingPacket> MessagesChannel { get; }
+        public Channel<IOutgoingPacket> ReflexesChannel { get; }
+        public ProtocolConfiguration PConfig { get; }
+        public MqttConfigurationBase Config { get; }
+
+        readonly CancellationTokenSource _processorStopSource = new();
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
-        /// <param name="packetStore">The packet store to use to retrieve packets.</param>
-        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig, OutputProcessor initialProcessor, PipeWriter writer, PacketStore packetStore )
+        /// <param name="store">The packet store to use to retrieve packets.</param>
+        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig )
             : base( pumppeteer )
         {
 
-            (_pipeWriter, _pconfig, _config, _packetStore, _outputProcessor) = (writer, pconfig, pumppeteer.Configuration, packetStore, initialProcessor);
-            _messages = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
-            _reflexes = Channel.CreateBounded<IOutgoingPacket>( _config.OutgoingPacketsChannelCapacity );
-            SetRunningLoop( WriteLoop() );
+            (PConfig, Config) = (pconfig, pumppeteer.Configuration);
+            MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
+            {
+                SingleReader = true
+            } );
+            ReflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
+            {
+                SingleReader = true
+            } );
         }
 
-        [MemberNotNull( nameof( _outputProcessor ) )]
-        public void SetOutputProcessor( OutputProcessor outputProcessor )
-        {
-            _processorStopSource.Cancel();
-            _processorStopSource = new CancellationTokenSource();
-            _outputProcessor = outputProcessor;
-        }
+        public void StartPumping( OutputProcessor outputProcessor ) => SetRunningLoop( WriteLoop( outputProcessor ) );
 
-        public bool QueueMessage( IOutgoingPacket item ) => _messages.Writer.TryWrite( item );
+        public bool QueueMessage( IOutgoingPacket item ) => MessagesChannel.Writer.TryWrite( item );
 
-        public bool QueueReflexMessage( IOutgoingPacket item ) => _reflexes.Writer.TryWrite( item );
+        public bool QueueReflexMessage( IOutgoingPacket item ) => ReflexesChannel.Writer.TryWrite( item );
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        public async Task SendMessageWithoutPacketIdAsync( IOutgoingPacket item )
+        public async Task SendMessageAsync( IActivityMonitor? m, IOutgoingPacket packet )
         {
-            var wrapper = new AwaitableOutgoingPacketWrapper( item );
-            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
+            using( m?.OpenTrace( "Sending a message ..." ) )
+            {
+                var wrapper = new AwaitableOutgoingPacketWrapper( packet );
+                m?.Trace( $"Queuing the packet '{packet}'. " );
+                await MessagesChannel.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
+                m?.Trace( $"Awaiting that the packet '{packet}' has been written." );
+                await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
+            }
         }
 
-        public async Task SendMessageWithPacketIdAsync( IOutgoingPacketWithId item )
-        {
-            Debug.Assert( item.PacketId != 0 );
-            var wrapper = new AwaitableOutgoingPacketWithIdWrapper( item );
-            await _messages.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asyncrounously.
-        }
 
-        async Task WriteLoop()
+        async Task WriteLoop( OutputProcessor outputProcessor )
         {
-            using( _config.OutputLogger?.OutputLoopStarting() )
+            using( Config.OutputLogger?.OutputLoopStarting() )
             {
                 try
                 {
                     while( !StopToken.IsCancellationRequested )
                     {
-                        await _outputProcessor( _config.OutputLogger, ProcessOutgoingPacket, _reflexes, _messages, DisconnectAsync, _processorStopSource.Token );
+                        bool packetSent = await outputProcessor.SendPackets( Config.OutputLogger, _processorStopSource.Token );
+                        if( !packetSent )
+                        {
+                            await outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
+                        }
                     }
-                    _pipeWriter.Complete();
+                    outputProcessor.Stopping();
                 }
                 catch( Exception e )
                 {
-                    _config.OutputLogger?.ExceptionInOutputLoop( e );
+                    Config.OutputLogger?.ExceptionInOutputLoop( e );
                     await DisconnectAsync( DisconnectedReason.UnspecifiedError );
                 }
             }
-        }
-
-        async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket )
-        {
-            if( StopToken.IsCancellationRequested ) return;
-            if( outgoingPacket is IOutgoingPacketWithId packetWithId )
-            {
-                using( m?.SendingMessageWithId( ref outgoingPacket, _pconfig.ProtocolLevel, packetWithId.PacketId ) )
-                {
-                    _packetStore.IdStore.SendingPacket( m, packetWithId.PacketId ); // This should be done BEFORE writing the packet.
-                    // Explanation:
-                    // Sometimes, the receiver and input loop is faster than simply running "SendingPacket".
-                    await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
-                }
-            }
-            else
-            {
-                using( m?.SendingMessage( ref outgoingPacket, _pconfig.ProtocolLevel ) )
-                {
-                    await outgoingPacket.WriteAsync( _pconfig.ProtocolLevel, _pipeWriter, StopToken );
-                }
-            }
-
         }
 
         protected override Task OnClosedAsync( Task loop )
@@ -118,6 +94,5 @@ namespace CK.MQTT
             _processorStopSource?.Cancel();
             return loop;
         }
-
     }
 }

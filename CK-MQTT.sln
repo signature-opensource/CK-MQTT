@@ -36,6 +36,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Basic.Tests", "Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client.Tests", "Tests\CK.MQTT.Client.Tests\CK.MQTT.Client.Tests.csproj", "{3BAE478E-3814-4088-8353-C7A227BDFAF9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.MQTT.P2P", "CK.MQTT.P2P\CK.MQTT.P2P.csproj", "{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -108,6 +110,14 @@ Global
 		{3BAE478E-3814-4088-8353-C7A227BDFAF9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3BAE478E-3814-4088-8353-C7A227BDFAF9}.Release|x64.ActiveCfg = Release|Any CPU
 		{3BAE478E-3814-4088-8353-C7A227BDFAF9}.Release|x64.Build.0 = Release|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Debug|x64.Build.0 = Debug|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Release|x64.ActiveCfg = Release|Any CPU
+		{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

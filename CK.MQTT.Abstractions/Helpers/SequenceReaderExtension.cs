@@ -25,6 +25,13 @@ namespace CK.MQTT
             return status;
         }
 
+        public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out uint value )
+        {
+            bool status = sequenceReader.TryReadBigEndian( out int toCast );
+            value = (uint)toCast;
+            return status;
+        }
+
         /// <summary>
         /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
         /// </summary>

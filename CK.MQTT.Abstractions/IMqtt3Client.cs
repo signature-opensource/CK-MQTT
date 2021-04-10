@@ -45,7 +45,7 @@ namespace CK.MQTT
         /// </remarks>
         Task<ConnectResult> ConnectAsync( IActivityMonitor? m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null );
 
-        ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacketWithId outgoingPacket ) where T : class;
+        ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacket outgoingPacket ) where T : class;
 
         /// <summary>
         /// Disconnect the client.

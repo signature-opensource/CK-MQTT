@@ -2,11 +2,12 @@
   <Import Project="..\Common\Mqtt.props" />
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <Description>Interfaces and basic types for MQTT Clients (v3 and v5).</Description>
     <Nullable>enable</Nullable>
+    <Features>strict</Features>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor" Version="13.3.0" />
-    <PackageReference Include="CK.Core" Version="13.2.0" />
+    <PackageReference Include="CK.ActivityMonitor" Version="13.3.2" />
     <PackageReference Include="System.IO.Pipelines" Version="4.7.2" />
   </ItemGroup>
 

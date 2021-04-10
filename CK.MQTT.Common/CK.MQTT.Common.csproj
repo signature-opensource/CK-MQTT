@@ -4,15 +4,15 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>
-    <Description>Interfaces and Implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
+    <Description>Common implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
+    <Features>strict</Features>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.3.0" />
-    <PackageReference Include="CK.ActivityMonitor.StandardSender" Version="13.3.0" />
-    <PackageReference Include="System.IO.Pipelines" Version="4.7.2" />
-    <PackageReference Include="System.Linq.Async" Version="4.1.1" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="13.3.2" />
+    <PackageReference Include="Microsoft.Toolkit.HighPerformance" Version="7.0.0-preview4" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Abstractions\CK.MQTT.Abstractions.csproj" />
   </ItemGroup>

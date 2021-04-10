@@ -49,7 +49,7 @@ namespace CK.MQTT
         /// <returns></returns>
         static bool TryReadUInt16( ReadOnlySequence<byte> buffer, out ushort val, out SequencePosition sequencePosition )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            SequenceReader<byte> reader = new( buffer );
             bool result = reader.TryReadBigEndian( out val );
             sequencePosition = reader.Position;
             return result;

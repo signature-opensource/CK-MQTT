@@ -1,230 +1,204 @@
-using CK.Core;
+using CK.MQTT.Common.Stores;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Net;
-using System.Threading.Tasks;
+using System.Runtime.ConstrainedExecution;
 
 #nullable enable
 
-namespace CK.MQTT
+namespace CK.MQTT.Stores
 {
-    [DebuggerDisplay( "Count = {_count} {DebuggerDisplay}" )]
-    public class IdStore
+    class IdStore<T> where T : struct
     {
-        [DebuggerDisplay( "{DebuggerDisplay} {NextFreeId}" )]
-        struct Entry
-        {
-            public TaskCompletionSource<object?>? TaskCS;
-            public TimeSpan EmissionTime;
-            public int NextFreeId;
-            public ushort TryCount;
+        // This is a doubly linked list.
+        // There is a cursor, named '_newestIdAllocated' that point to the most recent ID allocated.
+        // Packet behind this cursor are available packet ID.
+        // Packet after this cursor are used packets ID.
+        // Because we move an element to the tail when an ID is freed it mean that the IDs are sorted chronologically:
+        // - The tail is the most recent freed packet ID,
+        // - The previous packet of the "_newestIdAllocated" is the oldest freed ID.
+        // - The _newestIdAllocated, is well, the newest id allocated.
+        // - The head of the list is the oldest id allocated.
+        // - To allocate a new ID we just have to move the _newestIdAllocated to the next element.
 
-            public bool Acked => TaskCS == null;
-            public char DebuggerDisplay => EmissionTime == default ? '-' : Acked ? '?' : 'X';
-        }
 
-        Entry[] _entries;
-        int _nextFreeId = 0;
         /// <summary>
-        /// Current count of Entries.
+        /// o _head: oldest ID allocated  <br/>
+        /// | <br/>
+        /// | <br/>
+        /// o _newestIdAllocated <br/>
+        /// | ⬅️ This id was unallocated the longest ago<br/>
+        /// | <br/>
+        /// | ↖️ previous <br/>
+        /// | ↙️ next <br/>
+        /// | <br/>
+        /// o _tail: most recent freed packet <br/>
         /// </summary>
-        int _count = 0;
-        bool _haveUncertainPacketId;
+        internal ArrayStartingAt1<IdStoreEntry<T>> _entries;
+        /// <summary>
+        /// When 0, all IDs are free.
+        /// </summary>
+        internal int _newestIdAllocated;
+        /// <summary>
+        /// The tail, also the most recent freed packet.
+        /// </summary>
+        internal int _tail;
+        /// <summary>
+        /// The head, also point to the newest ID allocated.
+        /// </summary>
+        internal int _head;
         readonly int _maxPacketId;
-        readonly MqttConfigurationBase _config;
-        readonly IStopwatch _stopwatch;
-        string DebuggerDisplay
+
+        public bool NoPacketAllocated => _newestIdAllocated == 0;
+        readonly object _lock = new();
+
+        public IdStore( int packetIdMaxValue, int startSize )
         {
-            get
+            if( startSize <= 0 || startSize > packetIdMaxValue )
             {
-                Span<char> chars = new char[_entries.Length];
-                for( int i = 0; i < _entries.Length; i++ ) chars[i] = _entries[i].DebuggerDisplay;
-                return chars.ToString();
+                throw new ArgumentOutOfRangeException( $"{nameof( startSize )} must be greater than 0 and smaller than {packetIdMaxValue}" );
             }
+            _maxPacketId = packetIdMaxValue;
+            _entries = new ArrayStartingAt1<IdStoreEntry<T>>( new IdStoreEntry<T>[startSize] );
+            Reset();
         }
 
-        public IdStore( int packetIdMaxValue, MqttConfigurationBase config )
+        internal void Reset()
         {
-            (_maxPacketId, _config) = (packetIdMaxValue, config);
-            _entries = new Entry[64];
-            _stopwatch = config.StopwatchFactory.Create();
-            _stopwatch.Start();
-        }
-
-        public bool TryGetId( out int packetId, [NotNullWhen( true )] out Task<object?>? idFreedAwaiter )
-        {
-            lock( _entries )
+            _entries.Clear();
+            for( int i = 1; i < _entries.Length + 1; i++ )
             {
-                if( _nextFreeId == 0 ) // When 0 it mean there are no id
+                _entries[i] = new IdStoreEntry<T>()
                 {
-                    if( _count == _maxPacketId )
+                    NextId = i + 1,
+                    PreviousId = i - 1 // 'i' is not incremented so it's the previous packet id.
+                };
+            }
+            _entries[^0] = new IdStoreEntry<T>()
+            {
+                PreviousId = _entries.Length - 1
+            };
+            _head = 1;
+            _tail = _entries.Length;
+            _newestIdAllocated = 0;
+        }
+
+
+        internal void SelfConsistencyCheck()
+        {
+#if DEBUG
+            int curr = _head;
+            int count = 1;
+            while( curr != _tail ) // forward
+            {
+                count++;
+                curr = _entries[curr].NextId;
+                if( curr == 0 ) throw new InvalidOperationException( "Error detected in the store: a node is not linked !" );
+            }
+            if( count != _entries.Length ) throw new InvalidOperationException( "Error detected in the store: links are not consistent." );
+            count = 1;
+            while( curr != _head ) // backward
+            {
+                count++;
+                curr = _entries[curr].PreviousId;
+                if( curr == 0 ) throw new InvalidOperationException( "Error detected in the store: a node is not linked !" );
+            }
+            if( count != _entries.Length ) throw new InvalidOperationException( "Error detected in the store: links are not consistent." );
+#endif
+        }
+        internal bool CreateNewEntry( T entry, out int packetId )
+        {
+            SelfConsistencyCheck();
+            lock( _lock )
+            {
+                if( _newestIdAllocated == _tail ) // The oldest packet we sent is also the tail. It mean there are no packet Id available.
+                {
+                    if( _entries.Length == _maxPacketId ) // All packets are busy.
                     {
                         packetId = 0;
-                        idFreedAwaiter = null;
                         return false;
                     }
-                    EnsureSlotsAvailable( ++_count );
-                    packetId = _count;
+                    GrowEntriesArray();
+                    Debug.Assert( _newestIdAllocated != _tail );
                 }
-                else
+                if( _newestIdAllocated == 0 )
                 {
-                    packetId = _nextFreeId;
-                    _nextFreeId = _entries[packetId - 1].NextFreeId;
+                    // Mean no ID is currently allocated.
+                    _newestIdAllocated = _head;
+                    packetId = _newestIdAllocated;
+                    _entries[_newestIdAllocated].Content = entry;
+                    return true;
                 }
-                var tcs = new TaskCompletionSource<object?>();
-                _entries[packetId - 1].TaskCS = tcs;
-                idFreedAwaiter = tcs.Task;
+                packetId = _entries[_newestIdAllocated].NextId;
+                _newestIdAllocated = packetId;
+                _entries[_newestIdAllocated].Content = entry;
+                SelfConsistencyCheck();
                 return true;
             }
         }
 
-        public void SendingPacket( IOutputLogger? m, int packetId )
+        internal void FreeId( IInputLogger? m, int packetId )
         {
-            lock( _entries )
+            SelfConsistencyCheck();
+            if( packetId == _newestIdAllocated )
             {
-                TimeSpan elapsed = _stopwatch.Elapsed;
-                // I want to avoid having a TimeSpan being equal to default, which mean the value is uninitialized.
-                _entries[packetId - 1].EmissionTime = elapsed.Ticks > 0 ? elapsed : new TimeSpan( 1 );
-                int count = ++_entries[packetId - 1].TryCount;
-                if( count > 1 )
-                {
-                    _haveUncertainPacketId = true;
-                }
-                if( count == _config.AttemptCountBeforeGivingUpPacket && count > 0 )
-                {
-                    _entries[packetId - 1].TaskCS!.SetCanceled();
-                    m?.PacketMarkedPoisoned( packetId, count );
-                }
+                // If a node have no previous, it equal to 0.
+                // Here if the newest id allocated has no previous, it mean there a no other allocated id.
+                // In this case, the _newestIdAllocated should be set to 0.
+                _newestIdAllocated = _entries[packetId].PreviousId;
             }
-        }
-
-        void CleanUncertainPacketId( IInputLogger? m, TimeSpan timeSpan )
-        {
-            if( !_haveUncertainPacketId ) return;
-            _haveUncertainPacketId = false;
-            for( ushort i = 0; i < _entries.Length; i++ )
+            int next = _entries[packetId].NextId;
+            int previous = _entries[packetId].PreviousId;
+            // Removing the element from the linked list.
+            if( packetId == _head )
             {
-                Entry entry = _entries[i];
-                if( entry.TryCount > 1 && entry.Acked )
-                {
-                    if( entry.EmissionTime < timeSpan )
-                    {
-                        FreeId( m, i + 1 );
-                    }
-                    else
-                    {
-                        _haveUncertainPacketId = true;
-                    }
-                }
+                _head = next;
             }
-        }
-
-        public void OnAck( IInputLogger? m, int packetId, object? result = null )
-        {
-            lock( _entries )
+            if( next != 0 )
             {
-                if( packetId > _count ) throw new ProtocolViolationException( "The sender sent a packet id that does not exist." );
-                Entry entry = _entries[packetId - 1];
-                if( entry.EmissionTime == default )
-                {
-                    if( entry.TaskCS != null ) throw new InvalidOperationException( "Store did not knew that this packet was sent." );
-                    throw new ProtocolViolationException( $"Ack of an unknown packet id '{packetId}'." );
-                }
-                // Considering the following scenario:
-                // The line latency is really high.
-                // We send SUBSCRIBE packetId: 1
-                // We resend SUBSCRIBE packetId: 1
-                // We receive SUBACK packetId: 1.
-                // Right now, there may be another SUBACK incoming, so we must not free the packetId 1 right now.
-                // YES, the MQTT spec says that you can reuse it now, but the spec is wrong.
-                CleanUncertainPacketId( m, _entries[packetId - 1].EmissionTime );
-                if( entry.TryCount > 1 )
-                {
-                    _entries[packetId - 1].TaskCS = null; //Setting this to null allow to mark the packet as "uncertain".
-                    _haveUncertainPacketId = true;
-                }
-                else
-                {
-                    FreeId( m, packetId );
-                }
-                entry.TaskCS!.SetResult( result );
+                _entries[next].PreviousId = previous;
             }
-        }
-
-        public void CancelAllAcks( IActivityMonitor? m )
-        {
-            lock( _entries )
+            if( previous != 0 )
             {
-                using( m?.OpenTrace( "Cancelling all ack's tasks." ) )
-                {
-                    for( int i = 0; i < _entries.Length; i++ )
-                    {
-                        m?.Trace( $"Cancelling task for packet id {i + 1}." );
-                        _entries[i].TaskCS!.SetCanceled();
-                    }
-                }
+                _entries[previous].NextId = next;
             }
-        }
 
-        void FreeId( IInputLogger? m, int packetId )
-        {
-            _entries[packetId - 1] = default; // I hope it's faster than zero'ing everything by hand. Will be more change-proof anyway.
-            _entries[packetId - 1].NextFreeId = _nextFreeId;
-            _nextFreeId = packetId;
+            _entries[packetId].NextId = 0;
+            _entries[packetId].PreviousId = _tail;
+            _entries[packetId].Content = default;
+            _entries[_tail].NextId = packetId;
+            _tail = packetId;
             m?.FreedPacketId( packetId );// This may want to free the packet we are freeing. So it must be ran after the free process.
+            SelfConsistencyCheck();
         }
 
-        public (int packetId, int waitTime) GetOldestUnackedPacket()
+        void GrowEntriesArray()
         {
-            lock( _entries )
+            SelfConsistencyCheck();
+            int newCount = _entries.Length * 2;
+            // We dont want that the next grow make the array only 1 item bigger, it would cause a bug later in this function.
+            if( newCount + 1 == _maxPacketId ) newCount = _maxPacketId;
+            if( newCount > _maxPacketId ) newCount = _maxPacketId;
+            var newEntries = new ArrayStartingAt1<IdStoreEntry<T>>( new IdStoreEntry<T>[newCount] );
+            _entries.CopyTo( newEntries, 0 );
+            for( int i = _entries.Length + 2; i < newEntries.Length; i++ ) // Link all the new entries.
             {
-                Entry smallest = new Entry
+                newEntries[i] = new IdStoreEntry<T>()
                 {
-                    EmissionTime = TimeSpan.MaxValue
+                    PreviousId = i - 1,
+                    NextId = i + 1
                 };
-                // If not assigned, will return 0 (invalid packet id).
-                int smallIndex = -1;
-                ushort confTryCount = _config.AttemptCountBeforeGivingUpPacket;
-                for( int i = 0; i < _count; i++ )
-                {
-                    Entry entry = _entries[i];
-                    if( entry.EmissionTime != default
-                        && !entry.Acked
-                        && entry.EmissionTime <= smallest.EmissionTime
-                        && (entry.TryCount != confTryCount || confTryCount == 0) )
-                    {
-                        smallest = entry;
-                        smallIndex = i;
-                    }
-                }
-                return (smallIndex + 1, (int)((_stopwatch.Elapsed - smallest.EmissionTime).Ticks / TimeSpan.TicksPerMillisecond));
             }
-        }
-
-        void EnsureSlotsAvailable( int count )
-        {
-            if( _entries.Length < count )
+            newEntries[^0].PreviousId = newEntries.Length - 1;
+            newEntries[_tail].NextId = _entries.Length + 1; // Link previous tail to our expansion.
+            newEntries[_entries.Length + 1] = new IdStoreEntry<T>()
             {
-                int newCount = count * 2;
-                if( count * 2 > _maxPacketId ) newCount = _maxPacketId;
-                Entry[] newEntries = new Entry[newCount];
-                _entries.CopyTo( newEntries, 0 );
-                _entries = newEntries;
-            }
+                PreviousId = _tail, // Link expansion to previous tail.
+                NextId = _entries.Length + 2 // If the count was increased only by 1, this would fail.
+            };
+            _tail = newEntries.Length;
+            _entries = newEntries;
+            SelfConsistencyCheck();
         }
-
-        public void Reset()
-        {
-            lock( _entries )
-            {
-                if( _count == 0 ) return;
-                _count = 0;
-                Array.Clear( _entries, 0, _entries.Length );
-                _nextFreeId = 1;
-            }
-        }
-
-        public bool Empty => _count == 0;
     }
 }
