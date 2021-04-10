@@ -1,4 +1,4 @@
-<RepositoryInfo xmlns="http://csemver.org/schemas/2015">
+<RepositoryInfo>
   <SimpleGitVersion>
     <Branches>
       <Branch Name="develop" VersionName="develop" CIVersionMode="LastReleaseBased" />
