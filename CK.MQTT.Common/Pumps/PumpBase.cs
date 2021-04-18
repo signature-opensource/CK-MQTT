@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,18 +7,14 @@ namespace CK.MQTT
     /// <summary>
     /// Generalizes <see cref="InputPump"/> and <see cref="OutputPump"/>.
     /// </summary>
-    public abstract class PumpBase
+    public abstract class PumpBase : IDisposable
     {
-        readonly PumppeteerBase _pumppeteer;
-        Task? _readLoop;
+        Task _readLoop = null!;
         readonly CancellationTokenSource _stopSource = new();
+        readonly CancellationTokenSource _closeSource = new();
+        readonly Func<DisconnectedReason, ValueTask> _onDisconnect;
 
-        private protected PumpBase( PumppeteerBase pumppeteer ) => _pumppeteer = pumppeteer;
-
-        /// <summary>
-        /// Gets the token that drives the run of this pump.
-        /// </summary>
-        protected CancellationToken StopToken => _stopSource.Token;
+        private protected PumpBase( Func<DisconnectedReason, ValueTask> onDisconnect ) => _onDisconnect = onDisconnect;
 
         /// <summary>
         /// Must be called at the end of the specialized constructors.
@@ -26,35 +23,45 @@ namespace CK.MQTT
         protected void SetRunningLoop( Task loop ) => _readLoop = loop;
 
         /// <summary>
-        /// Triggers a disconnection from this pump.
+        /// Gets the token that drives the run of this pump.
+        /// When this Token is cancelled, the pump should complete it's work then close.
         /// </summary>
-        /// <param name="reason">The reason of the disconnection.</param>
-        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        public Task<bool> DisconnectAsync( DisconnectedReason reason )
+        public CancellationToken StopToken => _stopSource.Token;
+
+        public Task StopWork()
         {
             _stopSource.Cancel();
-            return _pumppeteer.PumpClose( reason );
+            return _readLoop;
         }
 
         /// <summary>
-        /// This is called by the <see cref="Pumppeteer"/>.
+        /// Gets the token that close the pump.
+        /// When this Token is cancelled, the pump should stop ASAP and the task complete.
         /// </summary>
-        /// <returns>The awaitable.</returns>
-        internal Task CloseAsync()
+        public CancellationToken CloseToken => _closeSource.Token;
+
+        public virtual Task CloseAsync()
         {
-            if( _stopSource.IsCancellationRequested ) return Task.CompletedTask;
-            _stopSource.Cancel();
-            return OnClosedAsync( _readLoop! );
+            Close();
+            return _readLoop;
         }
 
-        /// <summary>
-        /// Called when then this pump has been stopped: the <see cref="Loop"/>
-        /// is being canceled.
-        /// </summary>
-        /// <param name="loop">
-        /// The loop task. This method can wait for its termination if required.
-        /// </param>
-        /// <returns>The awaitable: by default this method simply returns the <paramref name="loop"/> task.</returns>
-        protected virtual Task OnClosedAsync( Task loop ) => loop;
+        internal protected ValueTask SelfClose( DisconnectedReason disconnectedReason )
+        {
+            Close();
+            return _onDisconnect( disconnectedReason );
+        }
+
+        internal void Close()
+        {
+            _stopSource.Cancel();
+            _closeSource.Cancel();
+        }
+
+        public void Dispose()
+        {
+            _closeSource.Dispose();
+            _stopSource.Dispose();
+        }
     }
 }

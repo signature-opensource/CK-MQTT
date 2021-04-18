@@ -13,11 +13,14 @@ namespace CK.MQTT.Pumps
     public class OutputProcessor
     {
         protected OutputPump OutputPump { get; }
+
+        readonly ProtocolConfiguration _pConfig;
         readonly PipeWriter _pipeWriter;
         readonly IOutgoingPacketStore _outgoingPacketStore;
 
-        public OutputProcessor( OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore outgoingPacketStore )
+        public OutputProcessor( ProtocolConfiguration pConfig, OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore outgoingPacketStore )
         {
+            _pConfig = pConfig;
             OutputPump = outputPump;
             _pipeWriter = pipeWriter;
             _outgoingPacketStore = outgoingPacketStore;
@@ -29,7 +32,6 @@ namespace CK.MQTT.Pumps
         {
             using( m?.OutputProcessorRunning() )
             {
-
                 bool newPacketSent = await SendAMessageFromQueue( m, cancellationToken ); // We want to send a fresh new packet...
                 bool retriesSent = await ResendAllUnackPacket( m, cancellationToken ); // Then sending all packets that waited for too long.
                 bool packetSent = newPacketSent || retriesSent;
@@ -52,7 +54,9 @@ namespace CK.MQTT.Pumps
             }
         }
 
-        public void Stopping() => _pipeWriter.Complete();
+        internal void Stopping() => _pipeWriter.Complete();
+
+        protected ValueTask SelfDisconnect( DisconnectedReason disconnectedReason ) => OutputPump.SelfClose( disconnectedReason );
 
         async ValueTask<bool> SendAMessageFromQueue( IOutputLogger? m, CancellationToken cancellationToken )
         {
@@ -99,7 +103,7 @@ namespace CK.MQTT.Pumps
         protected async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket, CancellationToken cancellationToken )
         {
             if( cancellationToken.IsCancellationRequested ) return;
-            using( m?.SendingMessage( ref outgoingPacket, OutputPump.PConfig.ProtocolLevel ) )
+            using( m?.SendingMessage( ref outgoingPacket, _pConfig.ProtocolLevel ) )
             {
                 if( outgoingPacket.Qos != QualityOfService.AtMostOnce )
                 {
@@ -108,7 +112,7 @@ namespace CK.MQTT.Pumps
                     // Explanation:
                     // The receiver and input loop can run before the next line is executed.
                 }
-                await outgoingPacket.WriteAsync( OutputPump.PConfig.ProtocolLevel, _pipeWriter, cancellationToken );
+                await outgoingPacket.WriteAsync( _pConfig.ProtocolLevel, _pipeWriter, cancellationToken );
             }
         }
     }

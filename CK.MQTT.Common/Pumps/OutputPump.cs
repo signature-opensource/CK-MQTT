@@ -20,21 +20,17 @@ namespace CK.MQTT.Pumps
 
         public Channel<IOutgoingPacket> MessagesChannel { get; }
         public Channel<IOutgoingPacket> ReflexesChannel { get; }
-        public ProtocolConfiguration PConfig { get; }
         public MqttConfigurationBase Config { get; }
-
-        readonly CancellationTokenSource _processorStopSource = new();
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( PumppeteerBase pumppeteer, ProtocolConfiguration pconfig )
-            : base( pumppeteer )
+        public OutputPump( Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
         {
 
-            (PConfig, Config) = (pconfig, pumppeteer.Configuration);
+            Config = config;
             MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
@@ -45,14 +41,43 @@ namespace CK.MQTT.Pumps
             } );
         }
 
-        public void StartPumping( OutputProcessor outputProcessor ) => SetRunningLoop( WriteLoop( outputProcessor ) );
+        OutputProcessor _outputProcessor;
+        public void StartPumping( OutputProcessor outputProcessor )
+        {
+            _outputProcessor = outputProcessor;
+            SetRunningLoop( WriteLoop() );
+        }
+
+        async Task WriteLoop()
+        {
+            using( Config.OutputLogger?.OutputLoopStarting() )
+            {
+                try
+                {
+                    while( !StopToken.IsCancellationRequested )
+                    {
+                        bool packetSent = await _outputProcessor.SendPackets( Config.OutputLogger, CloseToken );
+                        if( !packetSent )
+                        {
+                            //if( StopToken.IsCancellationRequested ) return;
+                            await _outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
+                        }
+                    }
+                }
+                catch( Exception e )
+                {
+                    Config.OutputLogger?.ExceptionInOutputLoop( e );
+                    await SelfClose( DisconnectedReason.InternalException );
+                }
+            }
+        }
 
         public bool QueueMessage( IOutgoingPacket item ) => MessagesChannel.Writer.TryWrite( item );
 
         public bool QueueReflexMessage( IOutgoingPacket item ) => ReflexesChannel.Writer.TryWrite( item );
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        public async Task SendMessageAsync( IActivityMonitor? m, IOutgoingPacket packet )
+        public async Task QueueMessageAndWaitUntilSentAsync( IActivityMonitor? m, IOutgoingPacket packet )
         {
             using( m?.OpenTrace( "Sending a message ..." ) )
             {
@@ -64,35 +89,10 @@ namespace CK.MQTT.Pumps
             }
         }
 
-
-        async Task WriteLoop( OutputProcessor outputProcessor )
+        public override Task CloseAsync()
         {
-            using( Config.OutputLogger?.OutputLoopStarting() )
-            {
-                try
-                {
-                    while( !StopToken.IsCancellationRequested )
-                    {
-                        bool packetSent = await outputProcessor.SendPackets( Config.OutputLogger, _processorStopSource.Token );
-                        if( !packetSent )
-                        {
-                            await outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
-                        }
-                    }
-                    outputProcessor.Stopping();
-                }
-                catch( Exception e )
-                {
-                    Config.OutputLogger?.ExceptionInOutputLoop( e );
-                    await DisconnectAsync( DisconnectedReason.UnspecifiedError );
-                }
-            }
-        }
-
-        protected override Task OnClosedAsync( Task loop )
-        {
-            _processorStopSource?.Cancel();
-            return loop;
+            _outputProcessor.Stopping();
+            return base.CloseAsync();
         }
     }
 }

@@ -28,36 +28,37 @@ namespace CK.MQTT
         public IDisposableGroup AwaitingWork() => _m.OpenTrace( "Awaiting that some work is available before restarting." );
 
         public void ConcludeMainLoopCancelled( IDisposableGroup disposableGroup )
-            => disposableGroup.ConcludeWith( () => "Canceled." );
+        { }// => disposableGroup.ConcludeWith( () => "Canceled." );
 
         public void ConcludeMainLoopTimeout( IDisposableGroup disposableGroup )
-            => disposableGroup.ConcludeWith( () => "Timeout." );
+        { }//   => disposableGroup.ConcludeWith( () => "Timeout." );
 
         public void ConcludeMessageInQueueAvailable( IDisposableGroup disposableGroup )
-            => disposableGroup.ConcludeWith( () => "Detected message in queue available." );
+        { }//   => disposableGroup.ConcludeWith( () => "Detected message in queue available." );
 
         public void ConcludePacketDroppedAvailable( IDisposableGroup disposableGroup )
-            => disposableGroup.ConcludeWith( () => "Detected dropped message to resend." );
+        { }//    => disposableGroup.ConcludeWith( () => "Detected dropped message to resend." );
 
         public void ConcludeRegularPacketSent( IDisposableGroup disposableGroup )
-            => disposableGroup.ConcludeWith( () => "A packet has been sent." );
+        { }//   => disposableGroup.ConcludeWith( () => "A packet has been sent." );
 
         public void ConcludeSentKeepAlive( IDisposableGroup disposableGroup )
-            => disposableGroup.ConcludeWith( () => "Sent KeepAlive." );
+        { }//  => disposableGroup.ConcludeWith( () => "Sent KeepAlive." );
 
         public void ConcludeTimeUntilNextUnackRetry( IDisposableGroup disposableGroup, TimeSpan timeUntilAnotherRetry )
-            => _ = timeUntilAnotherRetry == Timeout.InfiniteTimeSpan ?
-                disposableGroup.ConcludeWith( () => $"Done resending unacks packets, no scheduled retries." ) :
-                disposableGroup.ConcludeWith( () => $"Done resending unacks packets, next retry in {timeUntilAnotherRetry}." );
+        { }//  => _ = timeUntilAnotherRetry == Timeout.InfiniteTimeSpan ?
+           //disposableGroup.ConcludeWith( () => $"Done resending unacks packets, no scheduled retries." ) :
+           //      disposableGroup.ConcludeWith( () => $"Done resending unacks packets, next retry in {timeUntilAnotherRetry}." );
 
-        public void ExceptionInOutputLoop( Exception e ) => _m.Error( "Error while writing data.", e );
+        public void ExceptionInOutputLoop( Exception e ) { }//=> _m.Error( "Error while writing data.", e );
 
-        public IDisposable MainLoopSendingKeepAlive() => _m.OpenTrace( "Sending keep alive..." );
+        public IDisposable MainLoopSendingKeepAlive() => null;//_m.OpenTrace( "Sending keep alive..." );
 
-        public IDisposableGroup MainOutputProcessorLoop() => _m.OpenTrace( "Main output process running..." );
+        public IDisposableGroup MainOutputProcessorLoop() => null;// _m.OpenTrace( "Main output process running..." );
 
         public void NoUnackPacketSent( TimeSpan timeUntilAnotherRetry )
         {
+            return;
             if( timeUntilAnotherRetry == Timeout.InfiniteTimeSpan )
             {
                 _m.Trace( "There is no unack packet." );

@@ -92,7 +92,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180876">MQTT Subscribe</a>
         /// for more details about the protocol subscription.
         /// </remarks>
-        public static ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( this IMqtt3Client client, IActivityMonitor m, params Subscription[] subscriptions )
+        public static ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( this IMqtt3Client client, IActivityMonitor? m, params Subscription[] subscriptions )
             => client.SendPacket<SubscribeReturnCode[]>( m, new OutgoingSubscribe( subscriptions ) );
     }
 }

@@ -18,6 +18,7 @@ namespace CK.MQTT
         /// </summary>
         RemoteDisconnected,
         InternalException,
+        Connection_Cancelled,
         ProtocolError_InvalidConnackState,
         ProtocolError_UnexpectedConnectResponse,
         ProtocolError_UnknownReturnCode,

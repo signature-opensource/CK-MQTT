@@ -27,7 +27,7 @@ namespace CK.MQTT
             using( disposableGrp )
             using( m?.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
-                await output.SendMessageAsync( m, msg );
+                await output.QueueMessageAndWaitUntilSentAsync( m, msg );
                 return Task.FromResult<T?>( null );
             }
         }
@@ -55,7 +55,7 @@ namespace CK.MQTT
         {
             using( disposableGrp )
             {
-                await output.SendMessageAsync( m, packet );
+                await output.QueueMessageAndWaitUntilSentAsync( m, packet );
                 object? res = await ackReceived;
                 if( res is null ) return null;
                 if( res is T a ) return a;

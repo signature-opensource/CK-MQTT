@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.Monitoring;
 using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;

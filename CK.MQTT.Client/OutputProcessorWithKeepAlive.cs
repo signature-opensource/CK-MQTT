@@ -14,8 +14,8 @@ namespace CK.MQTT.Client
         readonly MqttClientConfiguration _config;
         readonly IStopwatch _stopwatch;
 
-        public OutputProcessorWithKeepAlive( MqttClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore store )
-            : base( outputPump, pipeWriter, store )
+        public OutputProcessorWithKeepAlive( ProtocolConfiguration pConfig, MqttClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore store )
+            : base( pConfig, outputPump, pipeWriter, store )
         {
             _config = config;
             _stopwatch = config.StopwatchFactory.Create();
@@ -30,25 +30,27 @@ namespace CK.MQTT.Client
 
         public override async ValueTask<bool> SendPackets( IOutputLogger? m, CancellationToken cancellationToken )
         {
-            if( IsPingReqTimeout ) // Because we are in a loop, this will be called immediately after a return. Keep this in mind.
+            if( IsPingReqTimeout )
             {
-                await OutputPump.DisconnectAsync( DisconnectedReason.PingReqTimeout );
-                return true; // true so that the loop exit immediatly without calling the next method.
+                await SelfDisconnect( DisconnectedReason.PingReqTimeout );
+                return true;
             }
             return await base.SendPackets( m, cancellationToken );
         }
 
         public override async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
-            if( IsPingReqTimeout ) // Because we are in a loop, this will be called immediately after a return. Keep this in mind.
+            if( IsPingReqTimeout )
             {
-                await OutputPump.DisconnectAsync( DisconnectedReason.PingReqTimeout );
+                await SelfDisconnect( DisconnectedReason.PingReqTimeout );
                 return;
             }
             Task packetAvailable = base.WaitPacketAvailableToSendAsync( m, cancellationToken );
             Task keepAlive = _config.DelayHandler.Delay( _config.KeepAliveSeconds * 1000, cancellationToken );
             _ = await Task.WhenAny( packetAvailable, keepAlive );
-            if( packetAvailable.IsCompleted ) return;
+            // When we exit the function ... 
+            if( cancellationToken.IsCancellationRequested ) return; // Either it has been canceled.
+            if( packetAvailable.IsCompleted ) return;  // Or a packet is available to be sent.
             using( m?.MainLoopSendingKeepAlive() )
             {
                 await ProcessOutgoingPacket( m, OutgoingPingReq.Instance, cancellationToken );
