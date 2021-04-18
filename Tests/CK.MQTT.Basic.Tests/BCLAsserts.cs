@@ -3,10 +3,14 @@ using NUnit.Framework;
 using System;
 using System.IO;
 using System.IO.Pipelines;
+using System.Threading;
 
 namespace CK.MQTT.Client.Abstractions.Tests
 {
-    public class PipeWriterAsserts
+    /// <summary>
+    /// Simple assertions on the behavior of the BCL.
+    /// </summary>
+    public class BCLAsserts
     {
         [Test]
         public void PipeWriter_second_memory_access_is_same()
@@ -17,6 +21,14 @@ namespace CK.MQTT.Client.Abstractions.Tests
             memory1[0] = 42;
             Span<byte> memory2 = pw.GetSpan( 1 );
             memory2[0].Should().Be( 42 );
+        }
+
+        [Test]
+        public void CancellationTokenSource_can_be_cancelled_multiples_times()
+        {
+            CancellationTokenSource cts = new();
+            cts.Cancel();
+            cts.Cancel();
         }
     }
 }

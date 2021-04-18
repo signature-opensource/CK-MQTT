@@ -45,12 +45,13 @@ namespace CK.MQTT.Client
                 await SelfDisconnect( DisconnectedReason.PingReqTimeout );
                 return;
             }
-            Task packetAvailable = base.WaitPacketAvailableToSendAsync( m, cancellationToken );
-            Task keepAlive = _config.DelayHandler.Delay( _config.KeepAliveSeconds * 1000, cancellationToken );
-            _ = await Task.WhenAny( packetAvailable, keepAlive );
-            // When we exit the function ... 
-            if( cancellationToken.IsCancellationRequested ) return; // Either it has been canceled.
-            if( packetAvailable.IsCompleted ) return;  // Or a packet is available to be sent.
+            using( CancellationTokenSource cts = new( _config.KeepAliveSeconds * 1000 ) )
+            using( cancellationToken.Register( () => cts.Cancel() ) )
+            {
+                await base.WaitPacketAvailableToSendAsync( m, cts.Token );
+                // We didn't get cancelled, or the cancellation is due to the processor being cancelled.
+                if( !cts.IsCancellationRequested || cancellationToken.IsCancellationRequested ) return;
+            }
             using( m?.MainLoopSendingKeepAlive() )
             {
                 await ProcessOutgoingPacket( m, OutgoingPingReq.Instance, cancellationToken );

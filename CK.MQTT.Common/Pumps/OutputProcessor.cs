@@ -43,7 +43,6 @@ namespace CK.MQTT.Pumps
         {
             using( IDisposableGroup? grp = m?.AwaitingWork() )
             {
-
                 // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
                 Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync().AsTask();
                 Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync().AsTask();

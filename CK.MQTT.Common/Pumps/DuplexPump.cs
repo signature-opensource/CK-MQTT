@@ -33,6 +33,7 @@ namespace CK.MQTT.Common.Pumps
 
         public async Task CloseAsync()
         {
+            if( IsClosed ) return;
             await Task.WhenAll( _pumpA.CloseAsync(), _pumpB.CloseAsync() );
             await State.CloseAsync();
         }
@@ -46,7 +47,7 @@ namespace CK.MQTT.Common.Pumps
         }
 
         public bool IsRunning => !_pumpA.StopToken.IsCancellationRequested && !_pumpB.StopToken.IsCancellationRequested;
-        public bool IsClosed => _pumpA.CloseToken.IsCancellationRequested  || _pumpB.CloseToken.IsCancellationRequested;
+        public bool IsClosed => _pumpA.CloseToken.IsCancellationRequested || _pumpB.CloseToken.IsCancellationRequested;
 
         public T State { get; }
     }
