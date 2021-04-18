@@ -33,7 +33,7 @@ namespace CK.MQTT
         /// Disconnected because of an unexpected error on the endpoint, 
         /// This applies to a Client or a Server.
         /// </summary>
-		UnspecifiedError,
+		InternalException,
 
         /// <summary>
         /// The disconnection is due to a Ping timeout: the server is lost.

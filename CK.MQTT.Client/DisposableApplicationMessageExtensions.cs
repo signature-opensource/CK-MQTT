@@ -44,7 +44,7 @@ namespace CK.MQTT.Client
         {
             IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
             Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
-            if( await pipe.CopyToBuffer( buffer, cancelToken ) != FillStatus.Done ) Debug.Fail( "Unexpected partial read." );
+            if( await pipe.CopyToBufferAsync( buffer, cancelToken ) != FillStatus.Done ) Debug.Fail( "Unexpected partial read." );
             await _messageHandler( m, new DisposableApplicationMessage( topic, buffer, qos, retain, memoryOwner ), cancelToken );
         }
     }
@@ -58,7 +58,7 @@ namespace CK.MQTT.Client
         {
             IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
             Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
-            FillStatus res = await pipe.CopyToBuffer( buffer, cancelToken );
+            FillStatus res = await pipe.CopyToBufferAsync( buffer, cancelToken );
             if( res != FillStatus.Done ) throw new EndOfStreamException();
             await _messageHandler( m, new DisposableApplicationMessage( topic, buffer, qos, retain, memoryOwner ) );
         }

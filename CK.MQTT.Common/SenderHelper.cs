@@ -15,24 +15,24 @@ namespace CK.MQTT
             IDisposableGroup? group = m?.OpenTrace( $"Sending a packet '{packet}'in QoS {packet.Qos}" );
             return packet.Qos switch
             {
-                QualityOfService.AtMostOnce => PublishQoS0<T>( m, group, output, packet ),
-                QualityOfService.AtLeastOnce => StoreAndSend<T>( m, group, output, store, packet, packet.Qos ),
-                QualityOfService.ExactlyOnce => StoreAndSend<T>( m, group, output, store, packet, packet.Qos ),
+                QualityOfService.AtMostOnce => PublishQoS0Async<T>( m, group, output, packet ),
+                QualityOfService.AtLeastOnce => StoreAndSendAsync<T>( m, group, output, store, packet, packet.Qos ),
+                QualityOfService.ExactlyOnce => StoreAndSendAsync<T>( m, group, output, store, packet, packet.Qos ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
         }
 
-        static async ValueTask<Task<T?>> PublishQoS0<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp, OutputPump output, IOutgoingPacket msg ) where T : class
+        static async ValueTask<Task<T?>> PublishQoS0Async<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp, OutputPump output, IOutgoingPacket msg ) where T : class
         {
             using( disposableGrp )
             using( m?.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
-                await output.SendMessageAsync( m, msg );
+                await output.QueueMessageAndWaitUntilSentAsync( m, msg );
                 return Task.FromResult<T?>( null );
             }
         }
 
-        static async ValueTask<Task<T?>> StoreAndSend<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp,
+        static async ValueTask<Task<T?>> StoreAndSendAsync<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp,
             OutputPump output, IOutgoingPacketStore messageStore, IOutgoingPacket msg, QualityOfService qos )
             where T : class
         {
@@ -55,7 +55,7 @@ namespace CK.MQTT
         {
             using( disposableGrp )
             {
-                await output.SendMessageAsync( m, packet );
+                await output.QueueMessageAndWaitUntilSentAsync( m, packet );
                 object? res = await ackReceived;
                 if( res is null ) return null;
                 if( res is T a ) return a;

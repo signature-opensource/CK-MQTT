@@ -47,7 +47,7 @@ namespace CK.MQTT
                     if( read.IsCanceled ) return;
                     if( qos == QualityOfService.AtMostOnce )
                     {
-                        string theTopic = await reader.ReadMQTTString();
+                        string theTopic = await reader.ReadMQTTStringAsync();
                         await _messageHandler( _mqttConfiguration.OnInputMonitor, theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                         return;
                     }
@@ -65,7 +65,7 @@ namespace CK.MQTT
                     return;
                 }
                 if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
-                await _store.StoreId( m, packetId );
+                await _store.StoreIdAsync( m, packetId );
                 await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                 if( !_output.QueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) ) ) m?.QueueFullPacketDropped( PacketType.PublishReceived, packetId );
             }

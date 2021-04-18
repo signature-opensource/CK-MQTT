@@ -4,3 +4,7 @@ M:System.Threading.Tasks.Task.Delay(System.Int32,CancellationToken); Use the tim
 M:System.Threading.Tasks.Task.Delay(System.TimeSpan); Use the time handling interfaces instead.
 M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.Threading.CancellationToken); Use the time handling interfaces instead.
 T:System.Diagnostics.Stopwatch; Use the time handling interfaces instead.
+M:System.Threading.CancellationTokenSource.#ctor(System.Int32); Use the time handling interfaces instead.
+M:System.Threading.CancellationTokenSource.#ctor(System.TimeSpan); Use the time handling interfaces instead.
+M:System.Threading.CancellationTokenSource.CancelAfter(System.Int32); Use the time handling interfaces instead.
+M:System.Threading.CancellationTokenSource.CancelAfter(System.TimeSpan); Use the time handling interfaces instead.

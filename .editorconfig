@@ -64,5 +64,5 @@ dotnet_diagnostic.CA1034.severity = none
 # Motive: Nested types can be used to design a good API.
 # /Signature-Code .editorconfig
 
-# IDE0058: Expression value is never used
-csharp_style_unused_value_expression_statement_preference = discard_variable:warning
+# VSTHRD003: Avoid awaiting foreign Tasks
+dotnet_diagnostic.VSTHRD003.severity = none

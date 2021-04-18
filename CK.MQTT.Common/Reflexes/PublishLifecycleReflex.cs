@@ -37,22 +37,22 @@ namespace CK.MQTT
                 switch( packetType )
                 {
                     case PacketType.PublishAck:
-                        ushort packetId2 = await pipe.ReadPacketIdPacket( m, pktLen );
+                        ushort packetId2 = await pipe.ReadPacketIdPacketAsync( m, pktLen );
                         await _store.OnQos1AckAsync( m, packetId2, null );
                         return;
                     case PacketType.PublishComplete:
-                        ushort packetId3 = await pipe.ReadPacketIdPacket( m, pktLen );
+                        ushort packetId3 = await pipe.ReadPacketIdPacketAsync( m, pktLen );
                         _store.OnQos2AckStep2( m, packetId3 );
                         return;
                     case PacketType.PublishRelease:
                         if( (header & 0b0010) != 2 ) throw new ProtocolViolationException( "MQTT-3.6.1-1 docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800427" );
-                        ushort packetId = await pipe.ReadPacketIdPacket( m, pktLen );
-                        await _packetIdStore.RemoveId( m, packetId );
+                        ushort packetId = await pipe.ReadPacketIdPacketAsync( m, pktLen );
+                        await _packetIdStore.RemoveIdAsync( m, packetId );
                         // We doesn't care of the return value, if the queue is filled we have too much job to do currently and we drop that packet.
                         _= _output.QueueReflexMessage( LifecyclePacketV3.Pubcomp( packetId ) );
                         return;
                     case PacketType.PublishReceived:
-                        ushort packetId4 = await pipe.ReadPacketIdPacket( m, pktLen );
+                        ushort packetId4 = await pipe.ReadPacketIdPacketAsync( m, pktLen );
                         await _store.OnQos2AckStep1Async( m, packetId4 );
                         _output.QueueReflexMessage( LifecyclePacketV3.Pubrel( packetId4 ) );
                         return;

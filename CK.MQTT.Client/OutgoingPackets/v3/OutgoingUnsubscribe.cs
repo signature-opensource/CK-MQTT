@@ -53,6 +53,6 @@ namespace CK.MQTT
         /// for more details about the protocol unsubscription
         /// </remarks>
         public async static ValueTask<Task> UnsubscribeAsync( this IMqtt3Client client, IActivityMonitor m, params string[] topics )
-         => await client.SendPacket<object>( m, new OutgoingUnsubscribe( topics ) );
+         => await client.SendPacketAsync<object>( m, new OutgoingUnsubscribe( topics ) );
     }
 }

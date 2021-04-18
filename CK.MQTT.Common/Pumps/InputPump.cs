@@ -24,11 +24,10 @@ namespace CK.MQTT.Pumps
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public InputPump( PumppeteerBase pumppeteer, PipeReader pipeReader, Reflex reflex )
-            : base( pumppeteer )
+        public InputPump( Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config, PipeReader pipeReader, Reflex reflex ) : base( onDisconnect )
         {
-            (_config, _pipeReader, CurrentReflex) = (pumppeteer.Configuration, pipeReader, reflex);
-            SetRunningLoop( ReadLoop() );
+            (_config, _pipeReader, CurrentReflex) = (config, pipeReader, reflex);
+            SetRunningLoop( ReadLoopAsync() );
         }
 
         /// <summary>
@@ -48,7 +47,7 @@ namespace CK.MQTT.Pumps
             return reader.TryReadMQTTRemainingLength( out length, out position );
         }
 
-        async Task ReadLoop()
+        async Task ReadLoopAsync()
         {
             using( _config.InputLogger?.InputLoopStarting() )
             {
@@ -56,19 +55,19 @@ namespace CK.MQTT.Pumps
                 {
                     while( !StopToken.IsCancellationRequested )
                     {
-                        ReadResult read = await _pipeReader.ReadAsync( StopToken );
+                        ReadResult read = await _pipeReader.ReadAsync( CloseToken );
                         IInputLogger? m = _config.InputLogger;
-                        if( StopToken.IsCancellationRequested || read.IsCanceled )
+                        if( CloseToken.IsCancellationRequested || read.IsCanceled )
                         {
                             m?.ReadLoopTokenCancelled();
-                            break;//The client called the cancel, no need to notify it.
+                            break; // When we are notified to stop, we don't need to notify the external world of it.
                         }
                         //The packet header require 2-5 bytes
                         OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position );
                         if( res == OperationStatus.InvalidData )
                         {
                             m?.InvalidIncomingData();
-                            await DisconnectAsync( DisconnectedReason.ProtocolError );
+                            await SelfCloseAsync( DisconnectedReason.ProtocolError );
                             break;
                         }
                         if( res == OperationStatus.Done )
@@ -77,7 +76,7 @@ namespace CK.MQTT.Pumps
                             using( m?.IncomingPacket( header, length ) )
                             {
                                 // TODO: Can concurrently changing the ref to CurrentReflex could cause an issue here ? Lets hope not for now.
-                                await CurrentReflex( m, this, header, length, _pipeReader, StopToken ); 
+                                await CurrentReflex( m, this, header, length, _pipeReader, CloseToken );
                             }
                             continue;
                         }
@@ -86,13 +85,11 @@ namespace CK.MQTT.Pumps
                         {
                             if( read.Buffer.Length == 0 ) m?.EndOfStream();
                             else m?.UnexpectedEndOfStream();
-                            await DisconnectAsync( DisconnectedReason.RemoteDisconnected );
+                            await SelfCloseAsync( DisconnectedReason.RemoteDisconnected );
                             break;
                         }
                         _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                     }
-                    _pipeReader.Complete();
-                    _pipeReader.CancelPendingRead();
                 }
                 catch( OperationCanceledException e )
                 {
@@ -101,10 +98,16 @@ namespace CK.MQTT.Pumps
                 catch( Exception e )
                 {
                     _config.InputLogger?.ExceptionOnParsingIncomingData( e );
-                    await DisconnectAsync( DisconnectedReason.UnspecifiedError );
+                    await SelfCloseAsync( DisconnectedReason.InternalException );
                 }
             }
         }
 
+
+        public override Task CloseAsync()
+        {
+            _pipeReader.CompleteAsync();
+            return base.CloseAsync();
+        }
     }
 }

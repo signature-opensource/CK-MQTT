@@ -21,7 +21,7 @@ namespace CK.MQTT
             }
             using( m?.ProcessPacket( PacketType.UnsubscribeAck ) )
             {
-                ushort packetId = await pipeReader.ReadPacketIdPacket( m, packetLength );
+                ushort packetId = await pipeReader.ReadPacketIdPacketAsync( m, packetLength );
                 await _store.OnQos1AckAsync( m, packetId, null );
             }
         }

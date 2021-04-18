@@ -102,7 +102,7 @@ namespace CK.MQTT
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask SkipBytes( this PipeReader reader, int skipCount )
+        public static async ValueTask SkipBytesAsync( this PipeReader reader, int skipCount )
         {
             while( skipCount > 0 )
             {
@@ -127,7 +127,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read the data from.</param>
         /// <returns>A <see cref="ValueTask{TResult}"/> that complete when the string is read.</returns>
-        public static async ValueTask<string> ReadMQTTString( this PipeReader pipeReader )
+        public static async ValueTask<string> ReadMQTTStringAsync( this PipeReader pipeReader )
         {
             while( true ) //If the data was not available on the first try, we redo the process.
             {

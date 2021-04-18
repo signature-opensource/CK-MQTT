@@ -65,7 +65,7 @@ namespace CK.MQTT
         /// <returns>The middleware chain built as a <see cref="Reflex"/>.</returns>
         public Reflex Build( Reflex lastReflex )
             => _reflexes.Reverse<ReflexMiddleware>()
-            .Aggregate( lastReflex, ( previous, current ) => new Closure( current, previous ).Run );
+            .Aggregate( lastReflex, ( previous, current ) => new Closure( current, previous ).RunAsync );
 
 
         readonly struct Closure
@@ -73,7 +73,7 @@ namespace CK.MQTT
             readonly ReflexMiddleware _current;
             readonly Reflex _previous;
             public Closure( ReflexMiddleware current, Reflex previous ) => (_current, _previous) = (current, previous);
-            public ValueTask Run( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c )
+            public ValueTask RunAsync( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c )
             {
                 Reflex previous = _previous;
                 return _current( m, s, h, l, p, () => previous( m, s, h, l, p, c ), c );

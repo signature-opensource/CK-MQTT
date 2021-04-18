@@ -62,7 +62,7 @@ namespace CK.Core.Extension
         /// <param name="buffer">The buffer to fill.</param>
         /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>An enum representing the status of the the operation.</returns>
-        public static async ValueTask<FillStatus> CopyToBuffer( this PipeReader reader, Memory<byte> buffer, CancellationToken cancellationToken )
+        public static async ValueTask<FillStatus> CopyToBufferAsync( this PipeReader reader, Memory<byte> buffer, CancellationToken cancellationToken )
         {
             while( true )
             {

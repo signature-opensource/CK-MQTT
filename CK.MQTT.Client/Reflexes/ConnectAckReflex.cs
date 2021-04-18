@@ -13,7 +13,7 @@ namespace CK.MQTT
     {
         readonly TaskCompletionSource<ConnectResult> _tcs = new();
 
-        public Reflex Reflex { get; set; }
+        public Reflex? Reflex { get; set; }
 
         public Task<ConnectResult> Task => _tcs.Task;
 
@@ -45,7 +45,7 @@ namespace CK.MQTT
                     }
                     if( packetSize > 2 )
                     {
-                        await reader.SkipBytes( packetSize );
+                        await reader.SkipBytesAsync( packetSize );
                         m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
                     }
                     sender.CurrentReflex = Reflex;
@@ -54,7 +54,7 @@ namespace CK.MQTT
             }
             catch( Exception e )
             {
-                m.ConnectionUnknownException( e );
+                m?.ConnectionUnknownException( e );
                 _tcs.SetResult( new ConnectResult( ConnectError.InternalException ) );
                 return;
             }

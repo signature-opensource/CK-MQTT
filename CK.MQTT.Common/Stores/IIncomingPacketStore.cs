@@ -10,9 +10,9 @@ namespace CK.MQTT.Stores
     /// </remarks>
     public interface IIncomingPacketStore
     {
-        ValueTask StoreId( IInputLogger? m, int id );
+        ValueTask StoreIdAsync( IInputLogger? m, int id );
 
-        ValueTask RemoveId( IInputLogger? m, int id );
+        ValueTask RemoveIdAsync( IInputLogger? m, int id );
 
         bool Empty { get; }
 

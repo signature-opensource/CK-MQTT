@@ -7,6 +7,7 @@ namespace CK.MQTT
 {
     public interface IDelayHandler
     {
+#pragma warning disable VSTHRD200 // Use "Async" suffix for async methods
         /// <inheritdoc cref="Task.Delay(int)"/>
         public Task Delay( int millisecondsDelay );
 
@@ -18,7 +19,7 @@ namespace CK.MQTT
 
         /// <inheritdoc cref="Task.Delay(TimeSpan,CancellationToken)"/>
         public Task Delay( TimeSpan delay, CancellationToken cancellationToken );
-
+#pragma warning restore VSTHRD200 // Use "Async" suffix for async methods
     }
 }
 #pragma warning restore RS0030 // Do not used banned APIs

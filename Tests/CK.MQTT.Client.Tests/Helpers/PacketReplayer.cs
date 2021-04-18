@@ -43,7 +43,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                     if( packet.PacketDirection == PacketDirection.ToServer )
                     {
                         Memory<byte> buffer = new byte[packet.Buffer.Length];
-                        PipeReaderExtensions.FillStatus status = await _channel!.TestDuplexPipe.Input.CopyToBuffer( buffer, default );
+                        PipeReaderExtensions.FillStatus status = await _channel!.TestDuplexPipe.Input.CopyToBufferAsync( buffer, default );
                         if( status != PipeReaderExtensions.FillStatus.Done ) throw new EndOfStreamException();
                         if( !buffer.Span.SequenceEqual( packet.Buffer.Span ) ) throw new InvalidDataException();
                     }

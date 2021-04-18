@@ -36,7 +36,7 @@ namespace SimpleClientTest
             //var go = GrandOutput.EnsureActiveDefault( config );
             //go.ExternalLogLevelFilter = LogLevelFilter.Debug;
             //ActivityMonitor? m = null;// new ActivityMonitor( "main" );
-            var client = MqttClient.Factory.CreateMQTT3Client( new MqttClientConfiguration( "localhost:1883" )
+            var client = MqttClient.Factory.CreateMQTT3Client( new MqttConfiguration( "localhost:1883" )
             {
                 InputLogger = null// new InputLoggerMqttActivityMonitor( new ActivityMonitor() )
                 ,

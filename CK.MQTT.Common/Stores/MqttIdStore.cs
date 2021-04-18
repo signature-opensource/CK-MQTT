@@ -312,7 +312,6 @@ namespace CK.MQTT.Stores
 
         protected abstract ValueTask<IOutgoingPacket> RestorePacket( int packetId );
 
-        // This method exist because ValueTask<T> => ValueTask<T?> throw a warning.
         async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternal( int packetId )
             => (await RestorePacket( packetId ), TimeSpan.Zero);
 
