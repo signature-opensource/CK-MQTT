@@ -1,6 +1,7 @@
 using CK.MQTT.Common.Stores;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
@@ -15,6 +16,7 @@ namespace CK.MQTT.Common.OutgoingPackets
 
         public FromMemoryOutgoingPacket( ReadOnlyMemory<byte> readOnlyMemory, QualityOfService qos, int packetId )
         {
+            Debug.Assert( readOnlyMemory.Length > 0 );
             _readOnlyMemory = readOnlyMemory;
             Qos = qos;
             _packetId = packetId;

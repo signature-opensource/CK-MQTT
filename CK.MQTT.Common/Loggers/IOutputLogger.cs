@@ -1,5 +1,6 @@
 using CK.Core;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -14,10 +15,10 @@ namespace CK.MQTT
         void ConcludeTimeUntilNextUnackRetry( IDisposableGroup disposableGroup, TimeSpan timeUntilAnotherRetry );
         IDisposable OutputProcessorRunning();
         IDisposable MainLoopSendingKeepAlive();
-        void ConcludeSentKeepAlive( IDisposableGroup disposableGroup );
         void QueueEmpty();
         void NoUnackPacketSent( TimeSpan timeUntilAnotherRetry );
         IDisposableGroup AwaitingWork();
-        void AwaitCompletedDueTo( IDisposableGroup? disposableGroup, Task<bool> reflexesWait, Task<bool> messagesWait, Task packetMarkedAsDropped, Task timeToWaitForRetry );
+        void AwaitCompletedDueTo( IDisposableGroup? grp, Task<bool> reflexesWait, Task<bool> messagesWait, CancellationToken packetResend, CancellationToken cancelOnPacketDropped, CancellationToken cancellationToken );
+        void OutputLoopCancelled( OperationCanceledException e );
     }
 }

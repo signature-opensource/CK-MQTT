@@ -20,16 +20,6 @@ namespace CK.MQTT
         public InputLoggerMqttActivityMonitor( IActivityMonitor m ) => _m = m;
 
         /// <inheritdoc/>
-        public void PingReqTimeout() => _m.Error( "The broker did not responded PingReq in the given amount of time." );
-
-        /// <inheritdoc/>
-        public void InvalidDataReceived( DisconnectedReason reason ) => _m.Info( $"Client closing reason: '{reason}.'" );
-
-        /// <inheritdoc/>
-        public void DoubleFreePacketId( int packetId )
-            => _m.Error( $"Freeing packet id {packetId} that was not assigned or already freed." );
-
-        /// <inheritdoc/>
         public IDisposable? ProcessPacket( PacketType packetType ) => _m.OpenTrace( $"Handling incoming packet as {packetType}." );
 
         /// <inheritdoc/>
@@ -69,9 +59,6 @@ namespace CK.MQTT
         public void ExceptionOnParsingIncomingData( Exception e ) => _m.Error( "Error while parsing incoming data.", e );
 
         /// <inheritdoc/>
-        public IDisposable? ReflexTimeout() => _m.OpenError( "Timeout while waiting for a reflex packet." );
-
-        /// <inheritdoc/>
         public IDisposable? IncomingPacket( byte header, int length ) => _m.OpenTrace( $"Incoming packet of {length} bytes." );
 
         /// <inheritdoc/>
@@ -88,22 +75,14 @@ namespace CK.MQTT
 
         public void ConnectionUnknownException( Exception e ) => _m.Fatal( e );
 
-        public void ConnectPropertyFieldDuplicated( PropertyIdentifier propertyIdentifier )
-            => _m.Error( $"{propertyIdentifier} is included more than once." );
-
-        public void InvalidMaxPacketSize( int maxPacketSize )
-            => _m?.Error( $"Invalid Max Packet Size ({maxPacketSize})." );
-
-        public void InvalidPropertyType()
-            => _m?.Error( "Invalid property type." );
-
-        public void InvalidPropertyValue( PropertyIdentifier propertyIdentifier, object value )
-            => _m?.Error( $"{propertyIdentifier} has an invalid value ({value})." );
-
-        public void ErrorAuthDataMissing() => _m?.Error( "Auth data present but there is no auth method." );
-
         public void PacketMarkedAsDropped( int id ) => _m.Warn( $"Packet with ID {id} has been marked as dropped." );
 
         public void UncertainPacketFreed( int packetId ) => _m?.Trace( $"Uncertain packet ID {packetId} has been freed." );
+
+        public void RentingBytesStore( int packetSize, IOutgoingPacket packet )
+            => _m?.Trace( $"Renting {packetSize} to persist {packet} in memory." );
+
+        public IDisposable? SerializingPacketInMemory( IOutgoingPacket packet )
+            => _m?.OpenTrace( $"Serializing {packet} in memory." );
     }
 }

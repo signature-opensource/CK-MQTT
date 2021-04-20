@@ -21,7 +21,7 @@ namespace CK.MQTT.Client
             public HandlerCancellableClosure( Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> messageHandler )
                 => _messageHandler = messageHandler;
 
-            public async ValueTask HandleMessage( IActivityMonitor m,
+            public async ValueTask HandleMessageAsync( IActivityMonitor m,
                 string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
             {
                 Memory<byte> memory = new( new byte[payloadLength] );
@@ -32,16 +32,16 @@ namespace CK.MQTT.Client
         }
 
         public static void SetMessageHandler( this IMqtt3Client @this, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
-            => @this.SetMessageHandler( new HandlerCancellableClosure( handler ).HandleMessage );
+            => @this.SetMessageHandler( new HandlerCancellableClosure( handler ).HandleMessageAsync );
 
         public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory factory, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
-            => factory.CreateMQTT3Client( config, new HandlerCancellableClosure( handler ).HandleMessage );
+            => factory.CreateMQTT3Client( config, new HandlerCancellableClosure( handler ).HandleMessageAsync );
 
         public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
-            => @this.CreateMQTT5Client( config, new HandlerCancellableClosure( handler ).HandleMessage );
+            => @this.CreateMQTT5Client( config, new HandlerCancellableClosure( handler ).HandleMessageAsync );
 
         public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, CancellationToken, ValueTask> handler )
-            => @this.CreateMQTTClient( config, new HandlerCancellableClosure( handler ).HandleMessage );
+            => @this.CreateMQTTClient( config, new HandlerCancellableClosure( handler ).HandleMessageAsync );
 
         class HandlerClosure
         {
@@ -49,7 +49,7 @@ namespace CK.MQTT.Client
             public HandlerClosure( Func<IActivityMonitor, ApplicationMessage, ValueTask> messageHandler )
                 => _messageHandler = messageHandler;
 
-            public async ValueTask HandleMessage( IActivityMonitor m,
+            public async ValueTask HandleMessageAsync( IActivityMonitor m,
                 string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
             {
                 Memory<byte> memory = new( new byte[payloadLength] );
@@ -60,15 +60,15 @@ namespace CK.MQTT.Client
         }
 
         public static void SetMessageHandler( this IMqtt3Client @this, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
-            => @this.SetMessageHandler( new HandlerClosure( handler ).HandleMessage );
+            => @this.SetMessageHandler( new HandlerClosure( handler ).HandleMessageAsync );
 
         public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
-            => @this.CreateMQTT3Client( config, new HandlerClosure( handler ).HandleMessage );
+            => @this.CreateMQTT3Client( config, new HandlerClosure( handler ).HandleMessageAsync );
 
         public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
-            => @this.CreateMQTT5Client( config, new HandlerClosure( handler ).HandleMessage );
+            => @this.CreateMQTT5Client( config, new HandlerClosure( handler ).HandleMessageAsync );
 
         public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor, ApplicationMessage, ValueTask> handler )
-            => @this.CreateMQTTClient( config, new HandlerClosure( handler ).HandleMessage );
+            => @this.CreateMQTTClient( config, new HandlerClosure( handler ).HandleMessageAsync );
     }
 }

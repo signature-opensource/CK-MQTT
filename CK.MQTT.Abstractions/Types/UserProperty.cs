@@ -22,5 +22,14 @@ namespace CK.MQTT
                 .WriteMQTTString( Value );
         }
 
+        public override bool Equals( object obj )
+            => obj is UserProperty u && u.Name == Name && u.Value == Value;
+
+        public override int GetHashCode() => HashCode.Combine( Name, Value );
+
+
+        public static bool operator ==( UserProperty left, UserProperty right ) => left.Equals( right );
+
+        public static bool operator !=( UserProperty left, UserProperty right ) => !(left == right);
     }
 }

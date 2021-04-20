@@ -17,7 +17,7 @@ namespace CK.MQTT
 
         public Task<ConnectResult> Task => _tcs.Task;
 
-        public async ValueTask ProcessIncomingPacket( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             try
             {

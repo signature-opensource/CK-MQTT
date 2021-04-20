@@ -53,8 +53,8 @@ namespace CK.MQTT
                         return;
                     case PacketType.PublishReceived:
                         ushort packetId4 = await pipe.ReadPacketIdPacketAsync( m, pktLen );
-                        await _store.OnQos2AckStep1Async( m, packetId4 );
-                        _output.QueueReflexMessage( LifecyclePacketV3.Pubrel( packetId4 ) );
+                        IOutgoingPacket msg = await _store.OnQos2AckStep1Async( m, packetId4 );
+                        _output.QueueReflexMessage( msg );
                         return;
                     default:
                         await next();

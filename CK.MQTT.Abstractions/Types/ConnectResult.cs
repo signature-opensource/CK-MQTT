@@ -1,3 +1,5 @@
+using System;
+
 namespace CK.MQTT
 {
     /// <summary>
@@ -74,5 +76,17 @@ namespace CK.MQTT
             SessionState = sessionState;
             ConnectReturnCode = connectReturnCode;
         }
+
+        public override bool Equals( object obj )
+            => obj is ConnectResult result
+            && result.ConnectError == ConnectError
+            && result.ConnectReturnCode == ConnectReturnCode
+            && result.SessionState == SessionState;
+
+        public override int GetHashCode() => HashCode.Combine( SessionState, ConnectError, ConnectReturnCode );
+
+        public static bool operator ==( ConnectResult left, ConnectResult right ) => left.Equals( right );
+
+        public static bool operator !=( ConnectResult left, ConnectResult right ) => !(left == right);
     }
 }

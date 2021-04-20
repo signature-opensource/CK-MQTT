@@ -32,12 +32,12 @@ namespace CK.MQTT
         /// <summary>
         /// Default for MQTT3.
         /// </summary>
-        public static ProtocolConfiguration Mqtt3 => new ProtocolConfiguration( 8883, 1883, ProtocolLevel.MQTT3, "+", "#", "MQTT" );
+        public static ProtocolConfiguration Mqtt3 => new( 8883, 1883, ProtocolLevel.MQTT3, "+", "#", "MQTT" );
 
         /// <summary>
         /// Defaults for MQTT5
         /// </summary>
-        public static ProtocolConfiguration Mqtt5 => new ProtocolConfiguration( 8883, 1883, ProtocolLevel.MQTT5, "+", "#", "MQTT" );
+        public static ProtocolConfiguration Mqtt5 => new( 8883, 1883, ProtocolLevel.MQTT5, "+", "#", "MQTT" );
 
         /// <summary>
         /// The default port when communication are secured.
@@ -69,6 +69,6 @@ namespace CK.MQTT
         /// </summary>
         public string ProtocolName { get; }
 
-        public int MaximumPacketSize => 268435455;
+        public int MaximumPacketSize { get; set; } = 268435455;
     }
 }

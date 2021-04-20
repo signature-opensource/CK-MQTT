@@ -61,13 +61,22 @@ namespace CK.MQTT.Stores
             internal byte _attemptInTransitOrLost;
             internal QoSState _state;
             internal TaskCompletionSource<object?> _taskCompletionSource;
+
+            public override bool Equals( object? obj ) => throw new NotSupportedException();
+
+            public override int GetHashCode() => throw new NotSupportedException();
+
+            public static bool operator ==( MqttIdStore<T>.EntryContent left, MqttIdStore<T>.EntryContent right ) => left.Equals( right );
+
+            public static bool operator !=( MqttIdStore<T>.EntryContent left, MqttIdStore<T>.EntryContent right ) => !(left == right);
         }
 
         readonly IdStore<EntryContent> _idStore;
         readonly IStopwatch _stopwatch;
         protected readonly MqttConfigurationBase Config;
         TaskCompletionSource<object?>? _idFullTCS = null; //TODO: replace by non generic TCS in .NET 5
-        TaskCompletionSource<object?>? _packetDroppedTCS = null;
+        CancellationTokenSource _packetDroppedCTS = new();
+        int _droppedCount = 0;
         protected MqttIdStore( int packetIdMaxValue, MqttConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
@@ -77,21 +86,12 @@ namespace CK.MQTT.Stores
         }
 
         // Called on output.
-        public Task GetTaskResolvedOnPacketDropped()
-        {
-            TaskCompletionSource<object?> newTcs = new();
-            TaskCompletionSource<object?>? val = Interlocked.CompareExchange( ref _packetDroppedTCS, newTcs, null );
-            if( val == null ) val = newTcs;
-            return val.Task;
-        }
+        public CancellationToken DroppedPacketCancelToken => _packetDroppedCTS.Token;
 
         /// <summary>
         /// Call it only with a lock.
         /// </summary>
         protected ref IdStoreEntry<EntryContent> this[int index] => ref _idStore._entries[index];
-
-        [Pure]
-        static bool WasPacketNeverAcked( QoSState state ) => (state & QoSState.PacketAckedMask) == QoSState.None;
 
         /// <summary>
         /// Require lock.
@@ -152,8 +152,8 @@ namespace CK.MQTT.Stores
                         {
                             m?.PacketMarkedAsDropped( currId );
                             curr.Content._state |= QoSState.Dropped; // We mark the packet as dropped so it can be resent immediately.
-                            Interlocked.Exchange( ref _packetDroppedTCS, null ) // Get the ref and set it to null.
-                                ?.SetResult( null ); // Set the result if not null.
+                            _droppedCount++;
+                            _packetDroppedCTS.Cancel();
                         }
                     }
 
@@ -177,7 +177,13 @@ namespace CK.MQTT.Stores
             _idStore.Reset();
         }
 
-        protected abstract ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacket packet );
+        protected abstract ValueTask<IOutgoingPacket> DoStorePacketAsync( IActivityMonitor? m, IOutgoingPacket packet );
+
+        /// <summary>
+        /// Used when we have to discard QoS packet, but have to store that we will send a PUBREL.
+        /// The overwrite will always be smaller that the original message.
+        /// </summary>
+        protected abstract ValueTask<IOutgoingPacket> OverwriteMessageAsync( IInputLogger? m, IOutgoingPacket packet ); //TODO MQTT5: check if the overwrite can be bigger in size.
 
         /// <summary> To be called when packet must be stored. Assign ID to the packet.</summary>
         /// <returns><see langword="null"/> when no packet id was available.</returns>
@@ -208,14 +214,14 @@ namespace CK.MQTT.Stores
                     _idFullTCS = new TaskCompletionSource<object?>();
                 }
                 // Asynchronously wait that a new packet id is available.
-                _ = await _idFullTCS.Task; // Discard because we don't care of the content of the task. In .NET 5 the Task will be empty.
+                await _idFullTCS.Task;
             }
 
             packet.PacketId = packetId;
             packet = Config.StoreTransformer.PacketTransformerOnSave( packet );
             using( m?.OpenTrace( $"Calling the implementation to store the packet..." ) )
             {
-                IOutgoingPacket packetToReturn = await DoStorePacket( m, packet );
+                IOutgoingPacket packetToReturn = await DoStorePacketAsync( m, packet );
                 return (entry._taskCompletionSource.Task, packetToReturn);
             }
         }
@@ -224,20 +230,29 @@ namespace CK.MQTT.Stores
         {
             lock( _idStore )
             {
+                if( _idStore._entries[packetId].Content._state.HasFlag( QoSState.Dropped ) )
+                {
+                    _droppedCount--;
+                    if( _droppedCount == 0 )
+                    {
+                        _packetDroppedCTS = new CancellationTokenSource();
+                    }
+                }
                 _idStore._entries[packetId].Content._state &= QoSState.QoSStateMask;
                 _idStore._entries[packetId].Content._attemptInTransitOrLost++;
                 _idStore._entries[packetId].Content._lastEmissionTime = _stopwatch.Elapsed;
             }
         }
 
-        protected abstract ValueTask RemovePacketData( IInputLogger? m, ref T storage );
+        protected abstract ValueTask RemovePacketDataAsync( IInputLogger? m, ref T storage );
 
         public async ValueTask OnQos1AckAsync( IInputLogger? m, int packetId, object? result )
         {
             MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
             Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
 
-            bool wasNeverAcked = WasPacketNeverAcked( state );
+            // If it was already acked, the packet would be marked as "UncertainDed".
+            bool wasNeverAcked = (state & QoSState.UncertainDead) != QoSState.UncertainDead;
             if( wasNeverAcked )
             {
                 await DoRemovePacketData();
@@ -245,7 +260,7 @@ namespace CK.MQTT.Stores
                 {
                     ref MqttIdStore<T>.EntryContent content = ref _idStore._entries[packetId].Content;
                     content._taskCompletionSource.SetResult( result ); // TODO: provide user a transaction window and remove packet when he is done..
-                    return RemovePacketData( m, ref content.Storage );
+                    return RemovePacketDataAsync( m, ref content.Storage );
                 }
             }
             End();
@@ -256,7 +271,7 @@ namespace CK.MQTT.Stores
                 if( entry.Content._attemptInTransitOrLost > 1 )
                 {
                     entry.Content._attemptInTransitOrLost--;
-                    entry.Content._state = QoSState.UncertainDead;
+                    entry.Content._state |= QoSState.UncertainDead;
                 }
                 else
                 {
@@ -265,27 +280,26 @@ namespace CK.MQTT.Stores
             }
         }
 
-        public async ValueTask OnQos2AckStep1Async( IInputLogger? m, int packetId )
+        public async ValueTask<IOutgoingPacket> OnQos2AckStep1Async( IInputLogger? m, int packetId )
         {
             MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
             Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.ExactlyOnce );
 
-            bool wasNeverAcked = WasPacketNeverAcked( state );
+            bool wasNeverAcked = (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked;
             if( wasNeverAcked )
             {
-                await DoRemovePacket();
-                ValueTask DoRemovePacket()
+                DoRemovePacket();
+                void DoRemovePacket()
                 {
                     ref var content = ref _idStore._entries[packetId].Content;
                     // We don't have to keep count of the previous retries. The next ack in the process will allow us to know that there was no more packet in the pipe.
-                    content._attemptInTransitOrLost = 1;
+                    content._attemptInTransitOrLost = 0;
                     content._state |= QoSState.QoS2PubRecAcked;
                     content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
-                    return RemovePacketData( m, ref content.Storage );
                 }
-
+                return await OverwriteMessageAsync( m, LifecyclePacketV3.Pubrel( packetId ) );
             }
-            DropPreviousUnackedPacket( m, ref _idStore._entries[packetId], packetId );
+            return LifecyclePacketV3.Pubrel( packetId );
         }
 
         public void OnQos2AckStep2( IInputLogger? m, int packetId )
@@ -299,9 +313,9 @@ namespace CK.MQTT.Stores
                 }
                 ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
                 entry.Content._attemptInTransitOrLost--;
-                if( entry.Content._attemptInTransitOrLost > 1 )
+                if( entry.Content._attemptInTransitOrLost > 0 )
                 {
-                    entry.Content._state = QoSState.UncertainDead;
+                    entry.Content._state = QoSState.UncertainDead | QoSState.QoS2PubRecAcked;
                 }
                 else
                 {
@@ -310,26 +324,26 @@ namespace CK.MQTT.Stores
             }
         }
 
-        protected abstract ValueTask<IOutgoingPacket> RestorePacket( int packetId );
+        protected abstract ValueTask<IOutgoingPacket> RestorePacketAsync( int packetId );
 
-        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternal( int packetId )
-            => (await RestorePacket( packetId ), TimeSpan.Zero);
+        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( int packetId )
+            => (await RestorePacketAsync( packetId ), TimeSpan.Zero);
 
-        public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResend()
+        public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync()
         {
-            // If there is no packet id allocated, there is no unacked packet id.
-            if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
             TimeSpan currentTime = _stopwatch.Elapsed;
             TimeSpan timeOut = TimeSpan.FromMilliseconds( Config.WaitTimeoutMilliseconds );
             TimeSpan peremptionTime = currentTime.Subtract( timeOut );
             TimeSpan oldest;
             lock( _idStore )
             {
+                // If there is no packet id allocated, there is no unacked packet id.
+                if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
                 int currId = _idStore._head;
                 ref var curr = ref _idStore._entries[currId];
-                if( curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped ) )
+                if( (curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped )) )
                 {
-                    return RestorePacketInternal( currId );
+                    return RestorePacketInternalAsync( currId );
                 }
                 oldest = curr.Content._lastEmissionTime;
                 while( currId != _idStore._newestIdAllocated ) // We loop over all older packets.
@@ -340,7 +354,7 @@ namespace CK.MQTT.Stores
                     if( curr.Content._state != QoSState.UncertainDead && (curr.Content._lastEmissionTime < peremptionTime
                         || curr.Content._state.HasFlag( QoSState.Dropped )) )
                     {
-                        return RestorePacketInternal( currId );
+                        return RestorePacketInternalAsync( currId );
                     }
                     if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
                 }

@@ -27,10 +27,10 @@ namespace CK.MQTT.Client
         }
 
         public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> handler )
-            => client.SetMessageHandler( new DisposableHandlerCancellableClosure( handler ).HandleMessage );
+            => client.SetMessageHandler( new DisposableHandlerCancellableClosure( handler ).HandleMessageAsync );
 
         public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> handler )
-            => client.SetMessageHandler( new HandlerClosure( handler ).HandleMessage );
+            => client.SetMessageHandler( new HandlerClosure( handler ).HandleMessageAsync );
 
 
     }
@@ -40,7 +40,7 @@ namespace CK.MQTT.Client
         public DisposableHandlerCancellableClosure( Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
             => _messageHandler = messageHandler;
 
-        public async ValueTask HandleMessage( IActivityMonitor m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
+        public async ValueTask HandleMessageAsync( IActivityMonitor m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
         {
             IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
             Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
@@ -54,7 +54,7 @@ namespace CK.MQTT.Client
         public HandlerClosure( Func<IActivityMonitor, DisposableApplicationMessage, ValueTask> messageHandler )
             => _messageHandler = messageHandler;
 
-        public async ValueTask HandleMessage( IActivityMonitor m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
+        public async ValueTask HandleMessageAsync( IActivityMonitor m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
         {
             IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
             Memory<byte> buffer = memoryOwner.Memory[..payloadLength];

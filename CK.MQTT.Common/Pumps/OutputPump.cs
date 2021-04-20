@@ -46,10 +46,10 @@ namespace CK.MQTT.Pumps
         public void StartPumping( OutputProcessor outputProcessor )
         {
             _outputProcessor = outputProcessor;
-            SetRunningLoop( WriteLoop() );
+            SetRunningLoop( WriteLoopAsync() );
         }
 
-        async Task WriteLoop()
+        async Task WriteLoopAsync()
         {
             Debug.Assert( _outputProcessor != null ); // TODO: Put non nullable init on output processor when it will be available.
             using( Config.OutputLogger?.OutputLoopStarting() )
@@ -58,13 +58,17 @@ namespace CK.MQTT.Pumps
                 {
                     while( !StopToken.IsCancellationRequested )
                     {
-                        bool packetSent = await _outputProcessor.SendPackets( Config.OutputLogger, CloseToken );
+                        bool packetSent = await _outputProcessor.SendPacketsAsync( Config.OutputLogger, CloseToken );
                         if( !packetSent )
                         {
                             if( StopToken.IsCancellationRequested ) return;
                             await _outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
                         }
                     }
+                }
+                catch(OperationCanceledException e)
+                {
+                    Config.OutputLogger?.OutputLoopCancelled(e);
                 }
                 catch( Exception e )
                 {

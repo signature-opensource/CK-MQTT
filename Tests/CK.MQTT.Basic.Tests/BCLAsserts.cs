@@ -15,7 +15,7 @@ namespace CK.MQTT.Client.Abstractions.Tests
         [Test]
         public void PipeWriter_second_memory_access_is_same()
         {
-            MemoryStream mem = new MemoryStream();
+            MemoryStream mem = new();
             PipeWriter pw = PipeWriter.Create( mem );
             Span<byte> memory1 = pw.GetSpan( 1 );
             memory1[0] = 42;

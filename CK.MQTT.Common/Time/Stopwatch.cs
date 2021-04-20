@@ -4,14 +4,11 @@ using System.Diagnostics;
 #pragma warning disable RS0030 // Do not used banned APIs
 namespace CK.MQTT
 {
-    class MqttStopwatch : IStopwatch
+    class Stopwatch : IStopwatch
     {
-        readonly Stopwatch _stopwatch;
+        readonly System.Diagnostics.Stopwatch _stopwatch;
 
-        public MqttStopwatch( Stopwatch stopwatch )
-        {
-            _stopwatch = stopwatch;
-        }
+        public Stopwatch( System.Diagnostics.Stopwatch stopwatch ) => _stopwatch = stopwatch;
 
         public TimeSpan Elapsed => _stopwatch.Elapsed;
 

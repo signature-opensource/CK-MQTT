@@ -24,7 +24,7 @@ namespace CK.MQTT.Common.Pumps
 
         void Close()
         {
-            _ = _ctsRegistration.Unregister();
+            _ctsRegistration.Unregister();
             _pumpA.CancelTokens();
             _pumpB.CancelTokens();
         }

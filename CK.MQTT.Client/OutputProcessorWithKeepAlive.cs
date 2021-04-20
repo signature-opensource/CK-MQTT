@@ -28,14 +28,14 @@ namespace CK.MQTT.Client
 
         public bool WaitingPingResp { get; set; }
 
-        public override async ValueTask<bool> SendPackets( IOutputLogger? m, CancellationToken cancellationToken )
+        public override async ValueTask<bool> SendPacketsAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
             if( IsPingReqTimeout )
             {
                 await SelfDisconnectAsync( DisconnectedReason.PingReqTimeout );
                 return true;
             }
-            return await base.SendPackets( m, cancellationToken );
+            return await base.SendPacketsAsync( m, cancellationToken );
         }
 
         public override async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken cancellationToken )
@@ -45,7 +45,7 @@ namespace CK.MQTT.Client
                 await SelfDisconnectAsync( DisconnectedReason.PingReqTimeout );
                 return;
             }
-            using( CancellationTokenSource cts = new( _config.KeepAliveSeconds * 1000 ) )
+            using( CancellationTokenSource cts = _config.CancellationTokenSourceFactory.Create( _config.KeepAliveSeconds * 1000 ) )
             using( cancellationToken.Register( () => cts.Cancel() ) )
             {
                 await base.WaitPacketAvailableToSendAsync( m, cts.Token );
@@ -54,7 +54,7 @@ namespace CK.MQTT.Client
             }
             using( m?.MainLoopSendingKeepAlive() )
             {
-                await ProcessOutgoingPacket( m, OutgoingPingReq.Instance, cancellationToken );
+                await ProcessOutgoingPacketAsync( m, OutgoingPingReq.Instance, cancellationToken );
             }
             _stopwatch.Restart();
             WaitingPingResp = true;

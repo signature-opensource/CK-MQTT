@@ -5,25 +5,25 @@ namespace CK.MQTT
 {
     public interface IStopwatch
     {
-        /// <inheritdoc cref="Stopwatch.Elapsed"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.Elapsed"/>
         public TimeSpan Elapsed { get; }
-        /// <inheritdoc cref="Stopwatch.ElapsedMilliseconds"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.ElapsedMilliseconds"/>
         public long ElapsedMilliseconds { get; }
-        /// <inheritdoc cref="Stopwatch.ElapsedTicks"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.ElapsedTicks"/>
         public long ElapsedTicks { get; }
-        /// <inheritdoc cref="Stopwatch.IsRunning"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.IsRunning"/>
         public bool IsRunning { get; }
 
-        /// <inheritdoc cref="Stopwatch.Reset"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.Reset"/>
         public void Reset();
 
-        /// <inheritdoc cref="Stopwatch.Restart"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.Restart"/>
         public void Restart();
 
-        /// <inheritdoc cref="Stopwatch.Start"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.Start"/>
         public void Start();
 
-        /// <inheritdoc cref="Stopwatch.Stop"/>
+        /// <inheritdoc cref="System.Diagnostics.Stopwatch.Stop"/>
         public void Stop();
 
     }

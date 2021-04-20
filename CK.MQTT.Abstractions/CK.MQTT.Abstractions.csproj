@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <Description>Interfaces and basic types for MQTT Clients (v3 and v5).</Description>
     <Nullable>enable</Nullable>
-    <Features>strict</Features>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor" Version="13.3.2" />

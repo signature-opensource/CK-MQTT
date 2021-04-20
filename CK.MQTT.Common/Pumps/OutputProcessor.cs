@@ -28,12 +28,12 @@ namespace CK.MQTT.Pumps
 
         TimeSpan _timeUntilNextRetry = TimeSpan.MaxValue;
 
-        public virtual async ValueTask<bool> SendPackets( IOutputLogger? m, CancellationToken cancellationToken )
+        public virtual async ValueTask<bool> SendPacketsAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
             using( m?.OutputProcessorRunning() )
             {
                 bool newPacketSent = await SendAMessageFromQueueAsync( m, cancellationToken ); // We want to send a fresh new packet...
-                bool retriesSent = await ResendAllUnackPacket( m, cancellationToken ); // Then sending all packets that waited for too long.
+                bool retriesSent = await ResendAllUnackPacketAsync( m, cancellationToken ); // Then sending all packets that waited for too long.
                 bool packetSent = newPacketSent || retriesSent;
                 return packetSent;
             }
@@ -44,12 +44,17 @@ namespace CK.MQTT.Pumps
             using( IDisposableGroup? grp = m?.AwaitingWork() )
             {
                 // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-                Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync().AsTask();
-                Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync().AsTask();
-                Task packetMarkedAsDropped = _outgoingPacketStore.GetTaskResolvedOnPacketDropped();
-                Task timeToWaitForRetry = OutputPump.Config.DelayHandler.Delay( _timeUntilNextRetry, cancellationToken );
-                _ = await Task.WhenAny( timeToWaitForRetry, reflexesWait, messagesWait, packetMarkedAsDropped );
-                m?.AwaitCompletedDueTo( grp, reflexesWait, messagesWait, packetMarkedAsDropped, timeToWaitForRetry );
+                CancellationToken cancelOnPacketDropped = _outgoingPacketStore.DroppedPacketCancelToken;
+
+                using( var ctsRetry = OutputPump.Config.CancellationTokenSourceFactory.Create( _timeUntilNextRetry ) )
+                using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, cancellationToken ) )
+                {
+                    Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
+                    Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
+                    await Task.WhenAny( reflexesWait, messagesWait ); //These task will be awaited later.
+                    m?.AwaitCompletedDueTo( grp, reflexesWait, messagesWait, ctsRetry.Token, cancelOnPacketDropped, cancellationToken );
+                    linkedCts.Cancel(); //Avoid background running task.
+                }
             }
         }
 
@@ -66,16 +71,16 @@ namespace CK.MQTT.Pumps
             }
             using( m?.SendingMessageFromQueue() )
             {
-                await ProcessOutgoingPacket( m, packet, cancellationToken );
+                await ProcessOutgoingPacketAsync( m, packet, cancellationToken );
                 return true;
             }
         }
 
-        async ValueTask<bool> ResendAllUnackPacket( IOutputLogger? m, CancellationToken cancellationToken )
+        async ValueTask<bool> ResendAllUnackPacketAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
             if( OutputPump.Config.WaitTimeoutMilliseconds == int.MaxValue ) return false; // Resend is disabled.
 
-            (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResend();
+            (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResendAsync();
             if( outgoingPacket is null )
             {
                 m?.NoUnackPacketSent( timeUntilAnotherRetry );
@@ -84,22 +89,22 @@ namespace CK.MQTT.Pumps
             }
             using( IDisposableGroup? grp = m?.ResendAllUnackPacket() )
             {
-                await ProcessOutgoingPacket( m, outgoingPacket, cancellationToken );
+                await ProcessOutgoingPacketAsync( m, outgoingPacket, cancellationToken );
                 while( true )
                 {
-                    (outgoingPacket, timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResend();
+                    (outgoingPacket, timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResendAsync();
                     if( outgoingPacket is null )
                     {
                         m?.ConcludeTimeUntilNextUnackRetry( grp!, timeUntilAnotherRetry );
                         _timeUntilNextRetry = timeUntilAnotherRetry;
                         return true;
                     }
-                    await ProcessOutgoingPacket( m, outgoingPacket, cancellationToken );
+                    await ProcessOutgoingPacketAsync( m, outgoingPacket, cancellationToken );
                 }
             }
         }
 
-        protected async ValueTask ProcessOutgoingPacket( IOutputLogger? m, IOutgoingPacket outgoingPacket, CancellationToken cancellationToken )
+        protected async ValueTask ProcessOutgoingPacketAsync( IOutputLogger? m, IOutgoingPacket outgoingPacket, CancellationToken cancellationToken )
         {
             if( cancellationToken.IsCancellationRequested ) return;
             using( m?.SendingMessage( ref outgoingPacket, _pConfig.ProtocolLevel ) )

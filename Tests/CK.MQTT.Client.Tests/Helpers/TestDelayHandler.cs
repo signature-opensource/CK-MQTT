@@ -1,3 +1,4 @@
+using CK.MQTT.Common.Time;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -5,18 +6,29 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
-    class TestDelayHandler : IDelayHandler, IStopwatchFactory
+    class TestDelayHandler : IDelayHandler, IStopwatchFactory, ICancellationTokenSourceFactory
     {
         readonly object _lock = new();
-        List<DelayTask> _delays { get; } = new List<DelayTask>();
-        List<Stopwatch> _stopwatches { get; } = new List<Stopwatch>();
-
+        readonly List<DelayTask> _delays = new();
+        readonly List<WeakReference<Stopwatch>> _stopwatches = new();
+        readonly List<CTS> _cts = new();
         public void IncrementTime( TimeSpan timeSpan )
         {
             lock( _lock )
             {
-                _stopwatches.ForEach( s => s.IncrementTime( timeSpan ) );
+                _stopwatches.ForEach( s =>
+                {
+                    if( s.TryGetTarget( out Stopwatch? stopwatch ) )
+                    {
+                        stopwatch.IncrementTime( timeSpan );
+                    }
+                } );
                 _delays.ForEach( s => s.AdvanceTime( timeSpan ) );
+                _cts.ForEach( s => s.IncrementTime( timeSpan ) );
+
+                _stopwatches.RemoveAll( s => !s.TryGetTarget( out _ ) );
+                _cts.RemoveAll( s => s.CancellationTokenSource.IsCancellationRequested );
+                _delays.RemoveAll( s => s.TaskCompletionSource.Task.IsCompleted );
             }
         }
 
@@ -70,12 +82,26 @@ namespace CK.MQTT.Client.Tests.Helpers
             public void Stop() => IsRunning = false;
         }
 
+        class CTS
+        {
+            public CTS( TimeSpan delayToCancel ) => DelayToCancel = delayToCancel;
+
+            public CancellationTokenSource CancellationTokenSource { get; } = new CancellationTokenSource();
+            public TimeSpan DelayToCancel { get; private set; }
+
+            public void IncrementTime( TimeSpan timeSpan )
+            {
+                DelayToCancel -= timeSpan;
+                if( DelayToCancel.TotalMilliseconds < 0 ) CancellationTokenSource.Cancel();
+            }
+        }
+
         public IStopwatch Create()
         {
             Stopwatch stopwatch = new();
             lock( _lock )
             {
-                _stopwatches.Add( stopwatch );
+                _stopwatches.Add( new WeakReference<Stopwatch>( stopwatch ) );
             }
             return stopwatch;
         }
@@ -96,6 +122,15 @@ namespace CK.MQTT.Client.Tests.Helpers
             return delayTask.TaskCompletionSource.Task;
         }
 
-
+        public CancellationTokenSource Create( int millisecondsDelay ) => Create( TimeSpan.FromMilliseconds( millisecondsDelay ) );
+        public CancellationTokenSource Create( TimeSpan delay )
+        {
+            lock( _lock )
+            {
+                CTS cts = new( delay );
+                _cts.Add( cts );
+                return cts.CancellationTokenSource;
+            }
+        }
     }
 }

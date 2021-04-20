@@ -1,3 +1,4 @@
+using CK.MQTT.Common.Time;
 using System;
 
 namespace CK.MQTT
@@ -71,9 +72,11 @@ namespace CK.MQTT
         /// </summary>
         public ushort AttemptCountBeforeGivingUpPacket { get; set; } = 50;
 
-        public IDelayHandler DelayHandler { get; init; } = MqttDelayHandler.Default;
+        public IDelayHandler DelayHandler { get; init; } = MQTT.DelayHandler.Default;
 
-        public IStopwatchFactory StopwatchFactory { get; init; } = new MqttStopwatchFactory();
+        public IStopwatchFactory StopwatchFactory { get; init; } = new StopwatchFactory();
+
+        public ICancellationTokenSourceFactory CancellationTokenSourceFactory { get; init; } = new CancellationTokenSourceFactory();
 
     }
 }

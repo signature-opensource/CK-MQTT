@@ -9,7 +9,7 @@ namespace CK.MQTT
 {
     public static class SenderHelper
     {
-        public static ValueTask<Task<T?>> SendPacket<T>( IActivityMonitor? m, IOutgoingPacketStore store, OutputPump output, IOutgoingPacket packet )
+        public static ValueTask<Task<T?>> SendPacketAsync<T>( IActivityMonitor? m, IOutgoingPacketStore store, OutputPump output, IOutgoingPacket packet )
             where T : class
         {
             IDisposableGroup? group = m?.OpenTrace( $"Sending a packet '{packet}'in QoS {packet.Qos}" );
@@ -47,10 +47,10 @@ namespace CK.MQTT
                 disposableGrp?.Dispose();
                 throw;
             }
-            return Send<T>( m, disposableGrp, output, newPacket, ackReceived );
+            return SendAsync<T>( m, disposableGrp, output, newPacket, ackReceived );
         }
 
-        static async Task<T?> Send<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp, OutputPump output, IOutgoingPacket packet, Task<object?> ackReceived )
+        static async Task<T?> SendAsync<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp, OutputPump output, IOutgoingPacket packet, Task<object?> ackReceived )
             where T : class
         {
             using( disposableGrp )

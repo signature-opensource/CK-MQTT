@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    class MqttDelayHandler : IDelayHandler
+    class DelayHandler : IDelayHandler
     {
-        MqttDelayHandler() { }
+        DelayHandler() { }
         public Task Delay( int millisecondsDelay ) => Task.Delay( millisecondsDelay );
 
         public Task Delay( int millisecondsDelay, CancellationToken cancellationToken ) => Task.Delay( millisecondsDelay, cancellationToken );
@@ -16,7 +16,7 @@ namespace CK.MQTT
 
         public Task Delay( TimeSpan delay, CancellationToken cancellationToken ) => Task.Delay( delay, cancellationToken );
 
-        internal static IDelayHandler Default { get; } = new MqttDelayHandler();
+        internal static IDelayHandler Default { get; } = new DelayHandler();
     }
 }
 #pragma warning restore RS0030 // Do not used banned APIs

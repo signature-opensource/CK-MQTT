@@ -101,7 +101,6 @@ namespace CK.MQTT.Client.Tests
             connectTask.IsCompleted.Should().BeFalse();
             await packetReplayer.LastWorkTask!;
             packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
-            await Task.WhenAny( connectTask, Task.Delay( 50 ) );
             connectTask.IsCompleted.Should().BeFalse();
             packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
             (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );

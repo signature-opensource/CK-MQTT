@@ -6,6 +6,7 @@ using Microsoft.Toolkit.HighPerformance.Extensions;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
@@ -33,7 +34,6 @@ namespace CK.MQTT
                 Payload = payload;
                 _disposable = disposable;
             }
-
             public void Dispose() => _disposable?.Dispose(); // _disposable may be null when the struct is default.
         }
 
@@ -49,14 +49,14 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        protected override ValueTask RemovePacketData( IInputLogger? m, ref StoredPacket storedPacket )
+        protected override ValueTask RemovePacketDataAsync( IInputLogger? m, ref StoredPacket storedPacket )
         {
             storedPacket.Dispose();
             storedPacket = default;
             return new ValueTask();
         }
 
-        protected override async ValueTask<IOutgoingPacket> DoStorePacket( IActivityMonitor? m, IOutgoingPacket packet )
+        protected override async ValueTask<IOutgoingPacket> DoStorePacketAsync( IActivityMonitor? m, IOutgoingPacket packet )
         {
             int packetSize = packet.GetSize( _protocolConfig.ProtocolLevel );
             m?.Trace( $"Renting {packetSize} bytes to persist {packet}." );
@@ -80,10 +80,27 @@ namespace CK.MQTT
             return new ValueTask();
         }
 
-        protected override ValueTask<IOutgoingPacket> RestorePacket( int packetId )
+        protected override ValueTask<IOutgoingPacket> RestorePacketAsync( int packetId )
         {
             EntryContent content = base[packetId].Content;
+            Debug.Assert( content.Storage.Payload.Length > 0 );
             return new( new FromMemoryOutgoingPacket( content.Storage.Payload, (QualityOfService)(content._state & QoSState.QosMask), packetId ) );
+        }
+
+        protected async override ValueTask<IOutgoingPacket> OverwriteMessageAsync( IInputLogger? m, IOutgoingPacket packet )
+        {
+            base[packet.PacketId].Content.Storage.Dispose();
+            int packetSize = packet.GetSize( _protocolConfig.ProtocolLevel );
+            m?.RentingBytesStore( packetSize, packet );
+            IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( packetSize );
+            PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
+            using( m?.SerializingPacketInMemory( packet ) )
+            {
+                if( await packet.WriteAsync( _protocolConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            }
+            Memory<byte> slicedMem = memOwner.Memory.Slice( 0, packetSize );
+            base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
+            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId );
         }
     }
 }

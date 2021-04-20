@@ -88,7 +88,7 @@ namespace CK.MQTT
         /// <returns><see langword="true"/> if the <see cref="string"/> was correctly read, <see langword="false"/> if there is not enough data.</returns>
         static bool TryReadMQTTString( ReadOnlySequence<byte> buffer, [NotNullWhen( true )] out string? output, out SequencePosition sequencePosition )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
+            SequenceReader<byte> reader = new( buffer );
             bool result = reader.TryReadMQTTString( out output );
             sequencePosition = reader.Position;
             Debug.Assert( result == (output != null) );
