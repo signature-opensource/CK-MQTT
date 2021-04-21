@@ -17,20 +17,18 @@ namespace CK.MQTT.Pumps
     /// </summary>
     public class OutputPump : PumpBase
     {
-        public delegate ValueTask PacketSender( IOutputLogger? m, IOutgoingPacket outgoingPacket );
+        OutputProcessor? _outputProcessor;
+        readonly IOutgoingPacketStore _outgoingPacketStore;
 
-        public Channel<IOutgoingPacket> MessagesChannel { get; }
-        public Channel<IOutgoingPacket> ReflexesChannel { get; }
-        public MqttConfigurationBase Config { get; }
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
+        public OutputPump( IOutgoingPacketStore outgoingPacketStore, Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
         {
-
+            _outgoingPacketStore = outgoingPacketStore;
             Config = config;
             MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {
@@ -42,7 +40,10 @@ namespace CK.MQTT.Pumps
             } );
         }
 
-        OutputProcessor? _outputProcessor;
+        public Channel<IOutgoingPacket> MessagesChannel { get; }
+        public Channel<IOutgoingPacket> ReflexesChannel { get; }
+        public MqttConfigurationBase Config { get; }
+
         public void StartPumping( OutputProcessor outputProcessor )
         {
             _outputProcessor = outputProcessor;
@@ -66,9 +67,9 @@ namespace CK.MQTT.Pumps
                         }
                     }
                 }
-                catch(OperationCanceledException e)
+                catch( OperationCanceledException e )
                 {
-                    Config.OutputLogger?.OutputLoopCancelled(e);
+                    Config.OutputLogger?.OutputLoopCancelled( e );
                 }
                 catch( Exception e )
                 {
@@ -80,7 +81,14 @@ namespace CK.MQTT.Pumps
 
         public bool QueueMessage( IOutgoingPacket item ) => MessagesChannel.Writer.TryWrite( item );
 
-        public bool QueueReflexMessage( IOutgoingPacket item ) => ReflexesChannel.Writer.TryWrite( item );
+        public void QueueReflexMessage( IInputLogger? m, IOutgoingPacket item )
+        {
+            _outgoingPacketStore.BeforeQueueReflexPacket( m, ( packet ) =>
+             {
+                 bool result = ReflexesChannel.Writer.TryWrite( item );
+                 if( !result ) m?.QueueFullPacketDropped( PacketType.PublishAck, item.PacketId );
+             }, item );
+        }
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
         public async Task QueueMessageAndWaitUntilSentAsync( IActivityMonitor? m, IOutgoingPacket packet )

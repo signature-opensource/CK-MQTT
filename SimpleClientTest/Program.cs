@@ -52,6 +52,9 @@ namespace SimpleClientTest
             stopwatch.Start();
             var payload = Encoding.UTF8.GetBytes( "test payload" );
             //Task[] tasks = new Task[20000];
+
+            await await client.SendPacketAsync<object>( null, LifecyclePacketV3.Pubrel( 4712 ) );
+            await Task.Delay( 2000 );
             for( int i = 0; i < 2_000_000; i++ )
             {
                 await await client.PublishAsync( null, "test topic" + i, QualityOfService.ExactlyOnce, false, payload );

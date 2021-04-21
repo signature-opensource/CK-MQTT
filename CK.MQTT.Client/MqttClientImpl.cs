@@ -85,7 +85,7 @@ namespace CK.MQTT
                     IMqttChannel channel = await _config.ChannelFactory.CreateAsync( m, _config.ConnectionString );
                     ConnectAckReflex connectAckReflex = new();
                     Task<ConnectResult> connectedTask = connectAckReflex.Task;
-                    var output = new OutputPump( SelfDisconnectAsync, _config );
+                    var output = new OutputPump(store, SelfDisconnectAsync, _config );
                     OutputProcessor outputProcessor;
                     var input = new InputPump( SelfDisconnectAsync, _config, channel.DuplexPipe.Input, connectAckReflex.ProcessIncomingPacketAsync );
                     _pumps = new DuplexPump<ClientState>( new ClientState( _config, output, channel, packetIdStore, store ), input, output );

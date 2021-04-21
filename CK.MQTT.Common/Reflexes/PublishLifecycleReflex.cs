@@ -49,12 +49,12 @@ namespace CK.MQTT
                         ushort packetId = await pipe.ReadPacketIdPacketAsync( m, pktLen );
                         await _packetIdStore.RemoveIdAsync( m, packetId );
                         // We doesn't care of the return value, if the queue is filled we have too much job to do currently and we drop that packet.
-                        _= _output.QueueReflexMessage( LifecyclePacketV3.Pubcomp( packetId ) );
+                        _output.QueueReflexMessage( m, LifecyclePacketV3.Pubcomp( packetId ) );
                         return;
                     case PacketType.PublishReceived:
                         ushort packetId4 = await pipe.ReadPacketIdPacketAsync( m, pktLen );
                         IOutgoingPacket msg = await _store.OnQos2AckStep1Async( m, packetId4 );
-                        _output.QueueReflexMessage( msg );
+                        _output.QueueReflexMessage( m, msg );
                         return;
                     default:
                         await next();

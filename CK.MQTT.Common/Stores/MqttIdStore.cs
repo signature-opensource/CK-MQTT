@@ -226,6 +226,21 @@ namespace CK.MQTT.Stores
             }
         }
 
+        /// <summary>
+        /// Perform operation that must be done when we take the decision to send a packet.
+        /// </summary>
+        /// <param name="m"></param>
+        /// <param name="queuePacket">Operation run on a lock on the store, allow to atomically queue a packet and mutate the store at the same time.</param>
+        /// <param name="outgoingPacket"></param>
+        public void BeforeQueueReflexPacket( IInputLogger? m, Action<IOutgoingPacket> queuePacket, IOutgoingPacket outgoingPacket )
+        {
+            lock( _idStore )
+            {
+                _idStore._entries[outgoingPacket.PacketId].Content._attemptInTransitOrLost++;
+                queuePacket( outgoingPacket );
+            }
+        }
+
         public void OnPacketSent( IOutputLogger? m, int packetId )
         {
             lock( _idStore )
@@ -239,7 +254,6 @@ namespace CK.MQTT.Stores
                     }
                 }
                 _idStore._entries[packetId].Content._state &= QoSState.QoSStateMask;
-                _idStore._entries[packetId].Content._attemptInTransitOrLost++;
                 _idStore._entries[packetId].Content._lastEmissionTime = _stopwatch.Elapsed;
             }
         }

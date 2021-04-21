@@ -18,5 +18,7 @@ namespace CK.MQTT.Stores
         ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync();
         CancellationToken DroppedPacketCancelToken { get; }
         ValueTask ResetAsync();
+
+        void BeforeQueueReflexPacket( IInputLogger? m, Action<IOutgoingPacket> queuePacket, IOutgoingPacket outgoingPacket );
     }
 }
