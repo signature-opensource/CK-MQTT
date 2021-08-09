@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +21,7 @@ namespace SimpleClientTest
     {
         static async Task Main()
         {
+
             //var config = new GrandOutputConfiguration();
             //config.Handlers.Add(
             //     new ConsoleConfiguration()
@@ -53,7 +55,7 @@ namespace SimpleClientTest
             var payload = Encoding.UTF8.GetBytes( "test payload" );
             //Task[] tasks = new Task[20000];
 
-            await await client.SendPacketAsync<object>( null, LifecyclePacketV3.Pubrel( 4712 ) );
+            await await client.SendPacketAsync<object>( null, LifecyclePacketV3.Pubrel( 3712 ) );
             await Task.Delay( 2000 );
             for( int i = 0; i < 2_000_000; i++ )
             {

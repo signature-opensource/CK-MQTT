@@ -84,5 +84,30 @@ namespace CK.MQTT
 
         public IDisposable? SerializingPacketInMemory( IOutgoingPacket packet )
             => _m?.OpenTrace( $"Serializing {packet} in memory." );
+
+        public void ConnectPropertyFieldDuplicated( PropertyIdentifier sessionExpiryInterval )
+        {
+            throw new NotImplementedException();
+        }
+
+        public void InvalidPropertyValue( PropertyIdentifier requestResponseInformation, byte val1 )
+        {
+            throw new NotImplementedException();
+        }
+
+        public void InvalidMaxPacketSize( int maxPacketSize )
+        {
+            throw new NotImplementedException();
+        }
+
+        public void InvalidPropertyType()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ErrorAuthDataMissing()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

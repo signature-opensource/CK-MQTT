@@ -1,5 +1,7 @@
+using CK.Core;
 using System;
 using System.IO.Pipelines;
+using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -8,6 +10,8 @@ namespace CK.MQTT
     /// </summary>
     public interface IMqttChannel : IDisposable
     {
+        ValueTask StartAsync(IActivityMonitor? m);
+
         /// <summary>
         /// Disconnect the <see cref="IMqttChannel"/>.
         /// </summary>

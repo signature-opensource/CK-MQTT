@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    class PublishReflex : IReflexMiddleware
+    public class PublishReflex : IReflexMiddleware
     {
         readonly MqttClientConfiguration _mqttConfiguration;
         readonly IIncomingPacketStore _store;

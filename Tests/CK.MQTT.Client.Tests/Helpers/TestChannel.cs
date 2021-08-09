@@ -1,4 +1,6 @@
+using CK.Core;
 using System.IO.Pipelines;
+using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
 {
@@ -21,5 +23,7 @@ namespace CK.MQTT.Client.Tests
         public void Close( IInputLogger? m ) { }
 
         public void Dispose() { }
+
+        public ValueTask StartAsync( IActivityMonitor? m ) => new ValueTask();
     }
 }

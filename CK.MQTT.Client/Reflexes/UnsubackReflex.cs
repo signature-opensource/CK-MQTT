@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    class UnsubackReflex : IReflexMiddleware
+    public class UnsubackReflex : IReflexMiddleware
     {
         readonly IOutgoingPacketStore _store;
 

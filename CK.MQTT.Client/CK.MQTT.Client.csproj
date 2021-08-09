@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>9</LangVersion>
     <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
     <Features>strict</Features>
   </PropertyGroup>

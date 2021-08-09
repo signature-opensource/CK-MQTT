@@ -51,9 +51,4 @@ namespace CK.MQTT.Common.Pumps
 
         public T State { get; }
     }
-
-    public interface IState
-    {
-        public Task CloseAsync();
-    }
 }

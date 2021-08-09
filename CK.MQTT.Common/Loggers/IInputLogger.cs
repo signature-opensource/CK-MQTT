@@ -28,5 +28,10 @@ namespace CK.MQTT
         void UncertainPacketFreed( int packetId );
         void RentingBytesStore( int packetSize, IOutgoingPacket packet );
         IDisposable? SerializingPacketInMemory( IOutgoingPacket packet );
+        void ConnectPropertyFieldDuplicated( PropertyIdentifier sessionExpiryInterval );
+        void InvalidPropertyValue( PropertyIdentifier requestResponseInformation, byte val1 );
+        void InvalidMaxPacketSize( int maxPacketSize );
+        void InvalidPropertyType();
+        void ErrorAuthDataMissing();
     }
 }

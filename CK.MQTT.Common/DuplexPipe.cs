@@ -8,12 +8,6 @@ namespace System.IO.Pipelines
 {
     public class DuplexPipe : IDuplexPipe
     {
-        public DuplexPipe( Stream stream, StreamPipeReaderOptions? readerOptions = null, StreamPipeWriterOptions? writerOptions = null )
-        {
-            Input = PipeReader.Create( stream, readerOptions );
-            Output = PipeWriter.Create( stream, writerOptions );
-        }
-
         public DuplexPipe( PipeReader input, PipeWriter output )
         {
             Input = input;

@@ -4,6 +4,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,11 +14,24 @@ namespace CK.MQTT
     {
         readonly TaskCompletionSource<ConnectResult> _tcs = new();
 
-        public Reflex? Reflex { get; set; }
+        /// <summary>
+        /// Upon receiving the CONNACK packet, will set <see cref="InputPump.CurrentReflex"/> to this property value.
+        /// </summary>
+        public Reflex? Reflex { get; set; } // TODO .NET5: Maybe we can use "init" ?
 
+        /// <summary>
+        /// <see cref="Task{TResult}"/> that complete when receiving the CONNACK packet.
+        /// </summary>
+        /// <remarks>
+        /// Code awaiting this will run concurrently with <see cref="Reflex"/> delegate.
+        /// You should not await this to set the <see cref="InputPump.CurrentReflex"/>. <br/>
+        /// Explanation:
+        /// The input pump messages in a loop. The mqtt spec allow to send a CONNECTACK and immediatly following retained messages.
+        /// This mean while your task will be processed, the <see cref="InputPump"/> will be processing the next message.
+        /// </remarks>
         public Task<ConnectResult> Task => _tcs.Task;
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             try
             {

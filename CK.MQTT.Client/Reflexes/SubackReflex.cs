@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    class SubackReflex : IReflexMiddleware
+    public class SubackReflex : IReflexMiddleware
     {
         readonly IOutgoingPacketStore _store;
 
