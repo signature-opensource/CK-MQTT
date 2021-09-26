@@ -106,6 +106,7 @@ namespace CK.MQTT.Stores
             Debug.Assert( !state.HasFlag( QoSState.Dropped ) );
             return state;
         }
+        public bool IsRevivedSession { get; set; }
 
         /// <summary>
         /// Require lock.

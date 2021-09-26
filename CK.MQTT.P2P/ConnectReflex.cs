@@ -16,8 +16,6 @@ namespace CK.MQTT.P2P
         readonly TaskCompletionSource<object?> _taskCompletionSource = new();
         readonly ProtocolConfiguration _pConfig;
         readonly MqttConfigurationBase _config;
-        readonly Reflex _reflexForReplacement;
-        readonly InputPump _inputPump;
         ReadOnlyMemory<byte> _authData;
         string _protocolName = null!; // See TODO below.
         string _clientId = null!;
@@ -52,11 +50,12 @@ namespace CK.MQTT.P2P
         }
 
         public Task ConnectHandledTask => _taskCompletionSource.Task;
+        InputPump _sender;
         public async ValueTask HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
+            _sender = sender;
             OperationStatus status = OperationStatus.NeedMoreData;
             ReadResult res;
-            _inputPump.CurrentReflex = _reflexForReplacement;
             while( status != OperationStatus.Done )
             {
                 res = await reader.ReadAsync( cancellationToken );
@@ -77,7 +76,7 @@ namespace CK.MQTT.P2P
                     }
                 }
             }
-            (OutStore, InStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config , ClientId, CleanSession );
+            (OutStore, InStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, ClientId, CleanSession );
             // TODO:
             // - Last Will
             //      We need to:
@@ -92,8 +91,9 @@ namespace CK.MQTT.P2P
         }
 
 
-        public void Release()
+        public void EngageNextReflex( Reflex reflex )
         {
+            _sender.CurrentReflex = reflex;
             _exitWait.Release();
         }
         public IOutgoingPacketStore OutStore { get; set; }

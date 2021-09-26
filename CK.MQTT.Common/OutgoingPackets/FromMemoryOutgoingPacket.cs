@@ -30,8 +30,9 @@ namespace CK.MQTT.Common.OutgoingPackets
         public async ValueTask<IOutgoingPacket.WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
             FlushResult res = await writer.WriteAsync( _readOnlyMemory, cancellationToken );
-            if( res.IsCompleted ) return IOutgoingPacket.WriteResult.Written;
-            return IOutgoingPacket.WriteResult.Cancelled;
+            if(res.IsCanceled) return IOutgoingPacket.WriteResult.Cancelled;
+            await writer.FlushAsync( cancellationToken );
+            return IOutgoingPacket.WriteResult.Written;
         }
     }
 }

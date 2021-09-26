@@ -62,8 +62,8 @@ namespace CK.MQTT
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
             }
             ProtocolConfig = pConfig;
-        }
 
+        }
 
         /// <summary>
         /// This method is required so the delegate used in the Reflex doesn't change.
@@ -95,11 +95,7 @@ namespace CK.MQTT
 
                     // Creating pumps. Need to be started.
                     OutputPump output = new( store, SelfDisconnectAsync, Config );
-                    Pumps = new DuplexPump<ClientState>(
-                        new ClientState( Config, output, channel, packetIdStore, store ),
-                        output,
-                        new InputPump( SelfDisconnectAsync, Config, channel.DuplexPipe.Input, connectAckReflex.HandleRequestAsync )
-                    );
+
 
                     // Middleware that will processes the requests.
                     ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
@@ -107,6 +103,10 @@ namespace CK.MQTT
                         .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
                         .UseMiddleware( new SubackReflex( store ) )
                         .UseMiddleware( new UnsubackReflex( store ) );
+                   
+
+                    await channel.StartAsync( m ); // Will create the connection to server.
+
                     OutputProcessor outputProcessor;
                     // Enable keepalive only if we need it.
                     if( Config.KeepAliveSeconds == 0 )
@@ -116,14 +116,18 @@ namespace CK.MQTT
                     else
                     {
                         // If keepalive is enabled, we add it's handler to the middlewares.
-                        OutputProcessorWithKeepAlive withKeepAlive = new( ProtocolConfig, Config, output, channel.DuplexPipe.Output, store );
+                        OutputProcessorWithKeepAlive withKeepAlive = new( ProtocolConfig, Config, output, channel.DuplexPipe.Output, store ); // Require channel started.
                         outputProcessor = withKeepAlive;
                         builder.UseMiddleware( withKeepAlive );
                     }
                     // When receiving the ConnAck, this reflex will replace the reflex with this property.
                     connectAckReflex.Reflex = builder.Build( ( a, b, c, d, e, f ) => SelfDisconnectAsync( DisconnectedReason.ProtocolError ) );
 
-                    await channel.StartAsync( m ); // Will create the connection to server.
+                    Pumps = new DuplexPump<ClientState>( // Require channel started.
+                        new ClientState( Config, output, channel, packetIdStore, store ),
+                        output,
+                        new InputPump( SelfDisconnectAsync, Config, channel.DuplexPipe.Input, connectAckReflex.HandleRequestAsync )
+                    );
                     output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
                     OutgoingConnect outgoingConnect = new( ProtocolConfig, Config, credentials, lastWill );

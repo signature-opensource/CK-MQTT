@@ -8,6 +8,7 @@ namespace CK.MQTT.Stores
 {
     public interface IOutgoingPacketStore
     {
+        bool IsRevivedSession { get; set; }
         ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacket packet, QualityOfService qos );
         void CancelAllAckTask( IActivityMonitor? m );
         void OnPacketSent( IOutputLogger? m, int packetId );

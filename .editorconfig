@@ -10,6 +10,11 @@ indent_style = space
 indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = true
+dotnet_diagnostic.CA2100.severity=warning
+dotnet_diagnostic.CA2012.severity=warning
+dotnet_diagnostic.CA2011.severity=error
+dotnet_diagnostic.CA1041.severity=error
+dotnet_diagnostic.CA1068.severity=warning
  
 [*.{cs,js,ts,sql,tql}]
 indent_size = 4
@@ -66,3 +71,4 @@ dotnet_diagnostic.CA1034.severity = none
 
 # VSTHRD003: Avoid awaiting foreign Tasks
 dotnet_diagnostic.VSTHRD003.severity = none
+dotnet_diagnostic.CA2016.severity=warning

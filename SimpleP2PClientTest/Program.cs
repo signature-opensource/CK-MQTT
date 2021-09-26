@@ -3,20 +3,15 @@ using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
 using CK.MQTT.Client;
-using CK.Text;
+using CK.MQTT.P2P;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Pipelines;
-using System.Linq;
-using System.Net.Http;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-#nullable enable
 
-namespace SimpleClientTest
+namespace SimpleP2PClientTest
 {
     class Program
     {
@@ -30,16 +25,19 @@ namespace SimpleClientTest
             var cfg = new GrandOutputConfiguration();
             cfg.Handlers.Add( new ConsoleConfiguration() );
             GrandOutput.EnsureActiveDefault( cfg );
+
             ActivityMonitor m = new();
-            var client = MqttClient.Factory.CreateMQTT3Client( new MqttClientConfiguration( "localhost:1883" ),
-                MessageHandlerDelegate
-            );
-            var res = await client.ConnectAsync( m );
-            while( true )
+            P2PClient client = P2PMqttClient.Factory.CreateMQTT3Client( new MqttClientConfiguration( "localhost:1883" )
             {
-                string line = System.Console.ReadLine();
-                await client.PublishAsync( m, new ApplicationMessage( "foo", Encoding.UTF8.GetBytes( line ), QualityOfService.AtMostOnce, false) );
-            }
+                KeepAliveSeconds = 0
+            }, MessageHandlerDelegate );
+            await client.AcceptClientAsync( m, new TcpChannelListener( new TcpListener( IPAddress.Any, 1883 ) ), default );
+            //while( true )
+            //{
+            //    string line = System.Console.ReadLine();
+            //    await client.PublishAsync( m, new ApplicationMessage( "foo", Encoding.UTF8.GetBytes( line ), QualityOfService.ExactlyOnce, false ) );
+            //}
+            await Task.Delay( -1 );
             await client.DisconnectAsync( m, true, true, default );
         }
     }

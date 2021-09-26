@@ -6,6 +6,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 namespace CK.MQTT.Client.Tests
@@ -21,7 +22,7 @@ namespace CK.MQTT.Client.Tests
                 TestPacket.Incoming("20020000")
             } ) );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -43,7 +44,7 @@ namespace CK.MQTT.Client.Tests
 
             PacketReplayer pcktReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -72,7 +73,7 @@ namespace CK.MQTT.Client.Tests
 
             PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -92,7 +93,7 @@ namespace CK.MQTT.Client.Tests
             packets.Enqueue( TestPacket.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" ) );
             PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -115,7 +116,7 @@ namespace CK.MQTT.Client.Tests
             packets.Enqueue( TestPacket.Incoming( "20020000" ) );
             PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -145,7 +146,7 @@ namespace CK.MQTT.Client.Tests
             packets.Enqueue( TestPacket.Incoming( "20020000" ) ); // Valid response.
             PacketReplayer packetReplayer = new( packets );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor m, DisposableApplicationMessage msg ) =>
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();

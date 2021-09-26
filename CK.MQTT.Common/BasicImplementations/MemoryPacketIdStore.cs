@@ -11,6 +11,8 @@ namespace CK.MQTT
     {
         readonly HashSet<int> _ids = new();
 
+        public bool IsRevivedSession { get; set; }
+
         /// <inheritdoc/>
         public ValueTask RemoveIdAsync( IInputLogger? m, int id )
         {

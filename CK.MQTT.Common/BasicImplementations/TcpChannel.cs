@@ -38,16 +38,16 @@ namespace CK.MQTT
             {
                 NoDelay = true
             };
+            await _tcpClient.ConnectAsync( _host, _port );
             Stream stream = _tcpClient.GetStream();
             _duplexPipe = new DuplexPipe( PipeReader.Create( stream ), PipeWriter.Create( stream ) );
-            await _tcpClient.ConnectAsync( _host, _port );
         }
 
         /// <inheritdoc/>
         public bool IsConnected => _tcpClient.Connected;
 
         /// <inheritdoc/>
-        public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException("Start the pump before accessing the pipes.");
+        public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException("Start the channel before accessing the pipes.");
 
         /// <inheritdoc/>
         public void Close( IInputLogger? m ) => _tcpClient.Close();
