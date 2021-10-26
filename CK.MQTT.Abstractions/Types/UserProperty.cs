@@ -9,6 +9,9 @@ namespace CK.MQTT
 
         public UserProperty( string name, string value )
         {
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( name );
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( value );
+
             Name = name;
             Value = value;
         }

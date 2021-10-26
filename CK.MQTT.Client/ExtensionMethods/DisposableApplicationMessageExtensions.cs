@@ -22,7 +22,7 @@ namespace CK.MQTT.Client
             return task; // The task we return complete when the packet has been acked.
         }
 
-        public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor, DisposableApplicationMessage, CancellationToken, ValueTask> handler )
+        public static void SetMessageHandler( this IMqtt3Client client, Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> handler )
             => client.SetMessageHandler( new DisposableMessageClosure( handler ).HandleMessageAsync );
     }
 }

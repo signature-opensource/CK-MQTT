@@ -76,7 +76,7 @@ namespace CK.MQTT
             public ValueTask RunAsync( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c )
             {
                 Reflex previous = _previous;
-                return _current( m, s, h, l, p, () => previous( m, s, h, l, p, c ), c );
+                return _current( m, s, h, l, p, () => previous( m, s, h, l, p, c ), c );//TODO: there is a closure here :|
             }
         }
     }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
-    class TestDelayHandler : IDelayHandler, IStopwatchFactory, ICancellationTokenSourceFactory
+    public class TestDelayHandler : IDelayHandler, IStopwatchFactory, ICancellationTokenSourceFactory
     {
         readonly object _lock = new();
         readonly List<DelayTask> _delays = new();

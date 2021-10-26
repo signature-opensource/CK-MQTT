@@ -93,6 +93,12 @@ namespace CK.MQTT
         /// for more details about the protocol subscription.
         /// </remarks>
         public static ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( this IMqtt3Client client, IActivityMonitor? m, params Subscription[] subscriptions )
-            => client.SendPacketAsync<SubscribeReturnCode[]>( m, new OutgoingSubscribe( subscriptions ) );
+        {
+            foreach( Subscription sub in subscriptions )
+            {
+                MqttBinaryWriter.ThrowIfInvalidMQTTString( sub.TopicFilter );
+            }
+            return client.SendPacketAsync<SubscribeReturnCode[]>( m, new OutgoingSubscribe( subscriptions ) );
+        }
     }
 }

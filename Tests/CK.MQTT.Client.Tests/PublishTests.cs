@@ -13,48 +13,50 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task simple_publish_qos0_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new List<TestPacket>()
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
             {
-                TestPacket.Outgoing("3018000a7465737420746f70696374657374207061796c6f6164")
+                TestPacketHelper.Outgoing("3018000a7465737420746f70696374657374207061796c6f6164")
             } );
 
             await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false )
             );
-            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
+            await packetReplayer.StopAndEnsureValidAsync();
         }
 
         [Test]
         public async Task simple_publish_qos1_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new List<TestPacket>()
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
             {
-                TestPacket.Outgoing("321a000a7465737420746f706963000174657374207061796c6f6164"),
-                TestPacket.Incoming("40020001")
+                TestPacketHelper.Outgoing("321a000a7465737420746f706963000174657374207061796c6f6164"),
+                TestPacketHelper.SendToClient("40020001")
             } );
 
             await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtLeastOnce, false )
             );
-            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
+
+            await packetReplayer.StopAndEnsureValidAsync();
         }
 
         [Test]
         public async Task simple_publish_qos2_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new List<TestPacket>()
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
             {
-                TestPacket.Outgoing("341a000a7465737420746f706963000174657374207061796c6f6164"),
-                TestPacket.Incoming("50020001"),
-                TestPacket.Outgoing("62020001"),
-                TestPacket.Incoming("70020001")
+                TestPacketHelper.Outgoing("341a000a7465737420746f706963000174657374207061796c6f6164"),
+                TestPacketHelper.SendToClient("50020001"),
+                TestPacketHelper.Outgoing("62020001"),
+                TestPacketHelper.SendToClient("70020001")
             } );
 
             await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.ExactlyOnce, false )
             );
-            await Task.WhenAny( Task.Delay( 500 ), packetReplayer.LastWorkTask ?? Task.CompletedTask );
-            packetReplayer.LastWorkTask!.IsCompletedSuccessfully.Should().BeTrue();
+            await packetReplayer.StopAndEnsureValidAsync();
         }
+
+
     }
 }

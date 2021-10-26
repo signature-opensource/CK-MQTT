@@ -10,16 +10,44 @@ namespace CK.MQTT.Common.BasicImplementations
 {
     public class StreamChannel : IMqttChannel
     {
-        readonly Stream _stream;
+        readonly IDisposable _disposable;
 
         public StreamChannel( Stream stream )
         {
-            _stream = stream;
+            _disposable = stream;
             DuplexPipe = new DuplexPipe(
-                PipeReader.Create( _stream ),
-                PipeWriter.Create( _stream )
+                PipeReader.Create( stream ),
+                PipeWriter.Create( stream )
             );
         }
+
+        class ChainedDispose : IDisposable
+        {
+            readonly IDisposable _a;
+            readonly IDisposable _b;
+
+            public ChainedDispose( IDisposable a, IDisposable b )
+            {
+                _a = a;
+                _b = b;
+            }
+
+            public void Dispose()
+            {
+                _a.Dispose();
+                _b.Dispose();
+            }
+        }
+
+        public StreamChannel( Stream readStream, Stream writeStream )
+        {
+            _disposable = new ChainedDispose(readStream, writeStream);
+            DuplexPipe = new DuplexPipe(
+                PipeReader.Create( readStream ),
+                PipeWriter.Create( writeStream )
+            );
+        }
+
         public bool IsConnected { get; private set; }
 
         public IDuplexPipe DuplexPipe { get; private set; }
@@ -31,7 +59,7 @@ namespace CK.MQTT.Common.BasicImplementations
             DuplexPipe.Output.Complete();
         }
 
-        public void Dispose() => _stream.Dispose();
+        public void Dispose() => _disposable.Dispose();
 
         public ValueTask StartAsync( IActivityMonitor? m ) => new();
     }

@@ -12,7 +12,7 @@ namespace CK.MQTT
     /// </summary>
     public abstract class OutgoingLastWill : IOutgoingPacket
     {
-        readonly string _topic;
+        public string Topic { get; }
 
         /// <summary>
         /// Instantiate a new <see cref="OutgoingLastWill"/>.
@@ -22,9 +22,10 @@ namespace CK.MQTT
         /// <param name="qos">The qos of the will message.</param>
         protected OutgoingLastWill( bool retain, string topic, QualityOfService qos )
         {
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( topic );
             Retain = retain;
             Qos = qos;
-            _topic = topic;
+            Topic = topic;
         }
 
         /// <summary>
@@ -59,8 +60,8 @@ namespace CK.MQTT
         /// <returns></returns>
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
-            int stringSize = _topic.MQTTSize();
-            writer.GetSpan( stringSize ).WriteMQTTString( _topic );
+            int stringSize = Topic.MQTTSize();
+            writer.GetSpan( stringSize ).WriteMQTTString( Topic );
             writer.Advance( stringSize );
             await writer.FlushAsync( cancellationToken );
             return await WritePayloadAsync( writer, cancellationToken );

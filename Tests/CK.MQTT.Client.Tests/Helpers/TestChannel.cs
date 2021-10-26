@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
 {
-    class TestChannel : IMqttChannel
+    public class TestChannel : IMqttChannel
     {
         public TestChannel()
         {
@@ -22,7 +22,10 @@ namespace CK.MQTT.Client.Tests
 
         public void Close( IInputLogger? m ) { }
 
-        public void Dispose() { }
+        readonly TaskCompletionSource _tcs = new();
+        public void Dispose() => _tcs.SetResult();
+
+        public Task OnDisposeTask => _tcs.Task;
 
         public ValueTask StartAsync( IActivityMonitor? m ) => new ValueTask();
     }

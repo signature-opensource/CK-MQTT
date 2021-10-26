@@ -76,6 +76,19 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( IActivityMonitor? m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
+            if( lastWill != null )
+            {
+                MqttBinaryWriter.ThrowIfInvalidMQTTString( lastWill.Topic );
+            }
+            if( credentials != null )
+            {
+                MqttBinaryWriter.ThrowIfInvalidMQTTString( credentials.ClientId );
+                if( credentials.Password != null )
+                {
+                    MqttBinaryWriter.ThrowIfInvalidMQTTString( credentials.Password );
+                }
+            }
+
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
             using( m?.OpenTrace( "Connecting..." ) )
             {
@@ -103,7 +116,7 @@ namespace CK.MQTT
                         .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
                         .UseMiddleware( new SubackReflex( store ) )
                         .UseMiddleware( new UnsubackReflex( store ) );
-                   
+
 
                     await channel.StartAsync( m ); // Will create the connection to server.
 
@@ -137,23 +150,23 @@ namespace CK.MQTT
                     IOutgoingPacket.WriteResult writeConnectResult = await outgoingConnect.WriteAsync(
                         ProtocolConfig.ProtocolLevel, channel.DuplexPipe.Output, cts.Token
                     );
-                    if( writeConnectResult != IOutgoingPacket.WriteResult.Written )
-                    {
-                        await Pumps.CloseAsync();
-                        return new ConnectResult( ConnectError.Timeout );
-                    }
-                    Task timeout = Config.DelayHandler.Delay( Config.WaitTimeoutMilliseconds, cancellationToken );
-                    Task<ConnectResult> connectedTask = connectAckReflex.Task;
-                    await Task.WhenAny( connectedTask, timeout ); // TODO: should I rewrite this to avoid the background unawaited task.delay ?
-                    // This following code wouldn't be better with a sort of ... switch/pattern matching ?
 
                     async ValueTask<ConnectResult> Exit( LogLevel logLevel, ConnectError connectError, string? log = null, Exception? exception = null )
                     {
                         m?.Log( logLevel, log, exception );
                         await Pumps!.CloseAsync();
+                        channel.Dispose();
                         return new ConnectResult( connectError );
                     }
+                    if( writeConnectResult != IOutgoingPacket.WriteResult.Written )
+                        return await Exit( LogLevel.Error, ConnectError.Timeout, "Timeout while writing connect packet." );
+                    Task timeout = Config.DelayHandler.Delay( Config.WaitTimeoutMilliseconds, cancellationToken );
+                    Task<ConnectResult> connectedTask = connectAckReflex.Task;
+                    await Task.WhenAny( connectedTask, timeout ); // TODO: should I rewrite this to avoid the background unawaited task.delay ?
 
+
+
+                    // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                     if( timeout.IsCanceled )
                         return await Exit( LogLevel.Trace, ConnectError.Connection_Cancelled, "Connection was canceled." );
                     if( connectedTask.Exception is not null )
@@ -162,9 +175,11 @@ namespace CK.MQTT
                         return await Exit( LogLevel.Trace, ConnectError.RemoteDisconnected, "Remote disconnected." );
                     if( !connectedTask.IsCompleted )
                         return await Exit( LogLevel.Trace, ConnectError.Timeout, "Timeout while waiting for server response." );
+
                     ConnectResult res = await connectedTask;
                     if( res.ConnectError != ConnectError.Ok )
                         return await Exit( LogLevel.Trace, res.ConnectError, "Connect code is not ok." );
+
                     bool askedCleanSession = credentials?.CleanSession ?? true;
                     if( askedCleanSession && res.SessionState != SessionState.CleanSession )
                         return await Exit( LogLevel.Warn, ConnectError.ProtocolError_SessionNotFlushed, "Session was not flushed while we asked for it." );

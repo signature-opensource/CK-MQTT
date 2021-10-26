@@ -16,5 +16,16 @@ namespace CK.MQTT.Client
         public ReadOnlyMemory<byte> Payload { get; }
         public QualityOfService QoS { get; }
         public bool Retain { get; }
+
+        public override bool Equals( object? obj )
+        {
+            return obj is ApplicationMessage message &&
+                   Topic == message.Topic &&
+                   Payload.Span.SequenceEqual( message.Payload.Span ) &&
+                   QoS == message.QoS &&
+                   Retain == message.Retain;
+        }
+
+        public override int GetHashCode() => HashCode.Combine( Topic, Payload, QoS, Retain );
     }
 }

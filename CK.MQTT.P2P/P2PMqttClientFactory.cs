@@ -35,11 +35,11 @@ namespace CK.MQTT
             => @this.CreateMQTTClient( config, new BaseHandlerClosure( handler ).HandleMessageAsync );
 
         public static P2PClient CreateMQTT3Client( this P2PMqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => new P2PClient( ProtocolConfiguration.Mqtt3, config, messageHandler );
+            => new( ProtocolConfiguration.Mqtt3, config, messageHandler );
         public static P2PClient CreateMQTT5Client( this P2PMqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => new P2PClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
+            => new( ProtocolConfiguration.Mqtt5, config, messageHandler );
         public static P2PClient CreateMQTTClient( this P2PMqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => new P2PClient( ProtocolConfiguration.Mqtt5, config, messageHandler );
+            => new( ProtocolConfiguration.Mqtt5, config, messageHandler );
 
         public static P2PClient CreateMQTT3Client( this P2PMqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
             => factory.CreateMQTT3Client( config, new DisposableMessageClosure( messageHandler ).HandleMessageAsync );

@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace CK.MQTT
@@ -30,6 +31,29 @@ namespace CK.MQTT
             return buffer[(i + 1)..];
         }
 
+        static readonly Range[] _invalidRanges = { new( 0x0001, 0x001F ), new( 0xD800, 0xDFFF ), new( 0x0000, 0x0000 ), new( 0x007F, 0x009F ) };
+
+        static bool IsInvalidString( string str )
+        {
+            foreach( char c in str )
+            {
+                foreach( var range in _invalidRanges )
+                {
+                    int cInt = c;
+                    if( cInt >= range.Start.Value && cInt <= range.End.Value ) return true;
+                }
+            }
+            return false;
+        }
+
+        static bool StringTooLong( string str ) => str.Length > ushort.MaxValue;
+
+        public static void ThrowIfInvalidMQTTString( string str )
+        {
+            if( StringTooLong( str ) ) throw new ArgumentException( "Serializing a string that is longer than 65535 chars." );
+            if( IsInvalidString( str ) ) throw new ArgumentException( "The string contain invalid chars." );
+        }
+
         /// <summary>
         /// Write a mqtt string.
         /// </summary>
@@ -38,7 +62,7 @@ namespace CK.MQTT
         /// <returns>The <paramref name="buffer"/> but sliced after the writtens bytes (2+ the number of bytes in the string).</returns>
         public static Span<byte> WriteMQTTString( this Span<byte> buffer, string str )
         {
-            Debug.Assert( str.Length <= ushort.MaxValue );
+            ThrowIfInvalidMQTTString( str );
             BinaryPrimitives.WriteUInt16BigEndian( buffer, (ushort)str.Length ); //Write the string length.
             buffer = buffer[2..];//slice out the uint16.
             if( str.Length == 0 ) return buffer;//if the string is empty, simply return the remaining buffer.

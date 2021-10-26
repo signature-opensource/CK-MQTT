@@ -1,9 +1,13 @@
 using CK.Core;
 using CK.Core.Extension;
+using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Pipelines;
 using System.Linq;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
@@ -11,65 +15,62 @@ namespace CK.MQTT.Client.Tests.Helpers
     /// <summary>
     /// Allow to test the client with weird packet without hacking a the server code.
     /// </summary>
-    class PacketReplayer : IMqttChannelFactory
+    public class PacketReplayer : IMqttChannelFactory
     {
-        readonly Queue<TestPacket> _packets;
-        readonly bool _manualMode;
-        TestChannel? _channel;
-        public PacketReplayer( Queue<TestPacket> packets, bool manualMode = false )
+        public Channel<TestWorker> PacketsWorker { get; }
+        public TestChannel? Channel { get; private set; }
+        public PacketReplayer( IEnumerable<TestWorker>? packets = null )
         {
-            _packets = packets;
-            _manualMode = manualMode;
+            PacketsWorker = System.Threading.Channels.Channel.CreateUnbounded<TestWorker>();
+            if( packets != null )
+            {
+                foreach( var item in packets )
+                {
+                    PacketsWorker.Writer.TryWrite( item );
+                }
+            }
         }
         public TestDelayHandler TestDelayHandler { get; } = new();
-        public Task? LastWorkTask { get; private set; }
-        public async Task NextAsync( Task writingTask )
+        Task? _workLoopTask;
+        public async Task StopAndEnsureValidAsync()
         {
-            if( !_manualMode ) throw new InvalidOperationException( "Cannot move manually when not started in manual mode." );
-            await Task.WhenAll( WorkLoop(), writingTask );
+            PacketsWorker.Writer.Complete();
+            Task? task = _workLoopTask;
+            if( task != null ) await task;
+            _workLoopTask?.IsCompletedSuccessfully.Should().BeTrue();
         }
+
+        /// <summary>
+        /// When <see langword="true"/>, drop all data.
+        /// </summary>
+        public int DropData { get; set; }
+        public delegate ValueTask<bool> TestWorker( PacketReplayer packetReplayer );
         async Task WorkLoop()
         {
-            while( _packets.Count > 0 )
+            await foreach( TestWorker func in PacketsWorker.Reader.ReadAllAsync() )
             {
-                TestPacket packet = _packets.Peek();
-                if( packet.Buffer.Length > 0 )
-                {
-
-                    if( packet.PacketDirection == PacketDirection.ToClient )
-                    {
-                        await _channel!.TestDuplexPipe.Output.WriteAsync( packet.Buffer );
-                    }
-                    if( packet.PacketDirection == PacketDirection.ToServer )
-                    {
-                        Memory<byte> buffer = new byte[packet.Buffer.Length];
-                        PipeReaderExtensions.FillStatus status = await _channel!.TestDuplexPipe.Input.CopyToBufferAsync( buffer, default );
-                        if( status != PipeReaderExtensions.FillStatus.Done ) throw new EndOfStreamException();
-                        if( !buffer.Span.SequenceEqual( packet.Buffer.Span ) ) throw new InvalidDataException();
-                    }
-                }
-                TestDelayHandler.IncrementTime( packet.OperationTime );
-                _packets.Dequeue();
-                if( _manualMode ) return;
+                if( !await func( this ) ) break;
             }
+            _workLoopTask = null;
         }
 
         public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
         {
-            if( LastWorkTask != null )
+            Channel = new();
+            if( _workLoopTask != null )
             {
-                try
+                if( Debugger.IsAttached )
                 {
-                    await LastWorkTask;
+                    await _workLoopTask;
                 }
-                catch( Exception )
+                else
                 {
-
+                    await _workLoopTask.WaitAsync( 500 );
                 }
+                if( _workLoopTask != null ) throw new InvalidOperationException( "A work is already running." );
             }
-            _channel = new();
-            if( !_manualMode ) LastWorkTask = WorkLoop();
-            return _channel;
+            _workLoopTask = WorkLoop();
+            return Channel;
         }
     }
 }

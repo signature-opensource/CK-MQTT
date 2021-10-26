@@ -51,9 +51,9 @@ namespace CK.MQTT.Pumps
                 {
                     Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
                     Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
-                    await Task.WhenAny( reflexesWait, messagesWait ); //These task will be awaited later.
+                    await Task.WhenAny( reflexesWait, messagesWait );
                     m?.AwaitCompletedDueTo( grp, reflexesWait, messagesWait, ctsRetry.Token, cancelOnPacketDropped, cancellationToken );
-                    linkedCts.Cancel(); //Avoid background running task.
+                    linkedCts.Cancel(); //Avoid leaking useless background task.
                 }
             }
         }

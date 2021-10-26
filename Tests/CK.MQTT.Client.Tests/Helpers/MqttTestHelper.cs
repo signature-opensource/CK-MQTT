@@ -9,7 +9,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     static class MqttTestHelper
     {
-        public static (PacketReplayer packetReplayer, IMqtt3Client client) CreateTestClient( Queue<TestPacket> packets )
+        public static (PacketReplayer packetReplayer, IMqtt3Client client) CreateTestClient( Queue<PacketReplayer.TestWorker> packets )
         {
             PacketReplayer pcktReplayer = new( packets );
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
@@ -19,13 +19,14 @@ namespace CK.MQTT.Client.Tests.Helpers
             } );
             return (pcktReplayer, client);
         }
-        public static async ValueTask<(PacketReplayer packetReplayer, IMqtt3Client client)> CreateConnectedTestClient( IEnumerable<TestPacket> packets )
+
+        public static async ValueTask<(PacketReplayer packetReplayer, IMqtt3Client client)> CreateConnectedTestClient( IEnumerable<PacketReplayer.TestWorker> packets )
         {
             PacketReplayer pcktReplayer = new
             (
-                new Queue<TestPacket>( new[] {
-                    TestPacket.Outgoing( "20020000" ),
-                    TestPacket.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" )
+                new Queue<PacketReplayer.TestWorker>( new[] {
+                    TestPacketHelper.Outgoing( "20020000" ),
+                    TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" )
                 }.Concat( packets ) )
             );
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
