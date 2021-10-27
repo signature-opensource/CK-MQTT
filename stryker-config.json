@@ -1,0 +1,17 @@
+{
+  "stryker-config":
+  {
+      "project-file": "ExampleProject.csproj",
+      "ignore-methods": [
+          "Debug.Assert"
+      ],
+      "solution-path": "CK-MQTT.sln",
+      "test-projects": [
+        "Tests/CK.MQTT.Basic.Tests/CK.MQTT.Basic.Tests.csproj",
+        "Tests/CK.MQTT.Client.Tests/CK.MQTT.Client.Tests.csproj",
+        "Tests/CK.MQTT.Basic.Tests/CK.MQTT.Basic.Tests.csproj",
+        "Tests/CK.MQTT.P2P.Tests/CK.MQTT.P2P.Tests"
+
+      ]
+  }
+}

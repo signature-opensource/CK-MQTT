@@ -2,6 +2,8 @@ using CK.Core;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
+using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
@@ -47,7 +49,24 @@ namespace CK.MQTT
                     if( read.IsCanceled ) return;
                     if( qos == QualityOfService.AtMostOnce )
                     {
-                        string theTopic = await reader.ReadMQTTStringAsync();
+                        bool ReadString( [NotNullWhen( true )] out string? theTopic )
+                        {
+                            SequenceReader<byte> seqReader = new( read.Buffer );
+                            bool result = seqReader.TryReadMQTTString( out theTopic );
+                            if( result )
+                            {
+                                reader.AdvanceTo( seqReader.Position );
+                            }
+                            else
+                            {
+                                reader.AdvanceTo( read.Buffer.Start, read.Buffer.End );
+                            }
+                            return result;
+                        }
+                        if( !ReadString( out string? theTopic ) )
+                        {
+                            continue;
+                        }
                         await _messageHandler( _mqttConfiguration.OnInputMonitor, theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                         return;
                     }

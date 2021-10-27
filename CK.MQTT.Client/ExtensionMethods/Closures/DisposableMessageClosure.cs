@@ -19,7 +19,7 @@ namespace CK.MQTT.Client.Closures
         {
             IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
             Memory<byte> buffer = memoryOwner.Memory[..payloadLength];
-            if( await pipe.CopyToBufferAsync( buffer, cancelToken ) != FillStatus.Done ) Debug.Fail( "Unexpected partial read." );
+            if( !buffer.IsEmpty && await pipe.CopyToBufferAsync( buffer, cancelToken ) != FillStatus.Done ) Debug.Fail( "Unexpected partial read." );
             await _messageHandler( m, new DisposableApplicationMessage( topic, buffer, qos, retain, memoryOwner ), cancelToken );
         }
     }

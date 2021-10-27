@@ -42,6 +42,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             await replayer.Channel!.OnDisposeTask;
             return false;
         }
+
         public static PacketReplayer.TestWorker SwallowEverything( CancellationToken stopToken )
             => async ( PacketReplayer replayer ) =>
             {

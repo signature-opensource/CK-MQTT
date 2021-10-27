@@ -121,27 +121,5 @@ namespace CK.MQTT
                 skipCount -= bufferLength;
             };
         }
-
-        /// <summary>
-        /// Read a mqtt string directly from a <see cref="PipeReader"/>. Use this only if you are in an async context, and the next read cannot use a <see cref="SequenceReader{T}"/>.
-        /// </summary>
-        /// <param name="pipeReader">The <see cref="PipeReader"/> to read the data from.</param>
-        /// <returns>A <see cref="ValueTask{TResult}"/> that complete when the string is read.</returns>
-        public static async ValueTask<string> ReadMQTTStringAsync( this PipeReader pipeReader )
-        {
-            while( true ) //If the data was not available on the first try, we redo the process.
-            {
-                ReadResult result = await pipeReader.ReadAsync();
-                if( result.IsCanceled ) throw new OperationCanceledException();//The read may have been canceled.
-                if( TryReadMQTTString( result.Buffer, out string? output, out SequencePosition sequencePosition ) )
-                { //string was correctly read.
-                    pipeReader.AdvanceTo( sequencePosition );//we mark that the data was read.
-                    return output;
-                }
-                //We mark that all the data was observed, the next Read operation won't complete until more data are available.
-                pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
-                if( result.IsCompleted ) throw new EndOfStreamException();//we may have hit an end of stream...
-            }
-        }
     }
 }

@@ -3,7 +3,7 @@ using System;
 namespace CK.MQTT
 {
     /// <summary>
-    /// An error code used if the client did not receive the CONNACK packet.
+    /// An error code used if the client did not receive the CONNACK packet, or if the server refused the connexion.
     /// </summary>
     public enum ConnectError
     {
@@ -11,6 +11,10 @@ namespace CK.MQTT
         /// No Error.
         /// </summary>
         Ok = 0,
+        /// <summary>
+        /// The server answered a ConnAck which telling us why the server refused the connexion.
+        /// </summary>
+        SeeReturnCode,
         /// <summary>
         /// The server didn't answered in the given time.
         /// </summary>
@@ -72,7 +76,7 @@ namespace CK.MQTT
         /// <param name="connectReturnCode">The connection return code.</param>
         public ConnectResult( SessionState sessionState, ConnectReturnCode connectReturnCode )
         {
-            ConnectError = ConnectError.Ok;
+            ConnectError = connectReturnCode == ConnectReturnCode.Accepted ? ConnectError.Ok : ConnectError.SeeReturnCode;
             SessionState = sessionState;
             ConnectReturnCode = connectReturnCode;
         }

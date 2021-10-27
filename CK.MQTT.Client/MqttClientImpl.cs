@@ -178,7 +178,12 @@ namespace CK.MQTT
 
                     ConnectResult res = await connectedTask;
                     if( res.ConnectError != ConnectError.Ok )
-                        return await Exit( LogLevel.Trace, res.ConnectError, "Connect code is not ok." );
+                    {
+                        m?.Trace( "Connect code is not ok." );
+                        await Pumps!.CloseAsync();
+                        channel.Dispose();
+                        return res;
+                    }
 
                     bool askedCleanSession = credentials?.CleanSession ?? true;
                     if( askedCleanSession && res.SessionState != SessionState.CleanSession )

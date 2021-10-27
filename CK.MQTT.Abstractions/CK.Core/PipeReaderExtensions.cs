@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -64,6 +65,7 @@ namespace CK.Core.Extension
         /// <returns>An enum representing the status of the the operation.</returns>
         public static async ValueTask<FillStatus> CopyToBufferAsync( this PipeReader reader, Memory<byte> buffer, CancellationToken cancellationToken )
         {
+            Debug.Assert( !buffer.IsEmpty );
             while( true )
             {
                 ReadResult result = await reader.ReadAsync( cancellationToken );

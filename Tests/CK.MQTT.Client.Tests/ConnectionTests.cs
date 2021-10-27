@@ -91,11 +91,12 @@ namespace CK.MQTT.Client.Tests
             await packetReplayer.StopAndEnsureValidAsync();
         }
 
+        [Test]
         public async Task connect_return_correct_error_code()
         {
             PacketReplayer packetReplayer = new();
             PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
-            for( byte i = 0; i < 6; i++ ) //Ok there we loop over all non zero bytes.
+            for( byte i = 1; i < 6; i++ ) //Ok there we loop over all non zero bytes.
             {
                 packetReplayer.PacketsWorker.Writer.TryWrite( connectPacket ).Should().BeTrue();
                 packetReplayer.PacketsWorker.Writer.TryWrite(
@@ -110,7 +111,7 @@ namespace CK.MQTT.Client.Tests
                 msg.Dispose();
                 return new ValueTask();
             } );
-            for( byte i = 0; i < 6; i++ )
+            for( byte i = 1; i < 6; i++ )
             {
                 ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
                 switch( i )
@@ -224,7 +225,8 @@ namespace CK.MQTT.Client.Tests
             } );
             TaskCompletionSource tcs = new();
             ApplicationMessage? msg = null;
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ),
+            InputMonitorCounter inputLogger = new( new InputLoggerMqttActivityMonitor( new ActivityMonitor( "Input Logger" ) ) );
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer, inputLogger: inputLogger ),
                 ( IActivityMonitor? m, ApplicationMessage incMsg, CancellationToken cancellationToken ) =>
             {
                 msg = incMsg;
@@ -237,6 +239,28 @@ namespace CK.MQTT.Client.Tests
             msg.Should().BeEquivalentTo( new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtLeastOnce, false )
             );
+            inputLogger.UnparsedExtraBytesCounter.Should().Be( 1 );
+            await pcktReplayer.StopAndEnsureValidAsync();
+        }
+
+        [Test]
+        public async Task connect_ack_is_parsed_without_skipping_data()
+        {
+            PacketReplayer pcktReplayer = new( new[]
+            {
+                TestPacketHelper.Outgoing("101600044d5154540402001e000a434b4d71747454657374"),
+                TestPacketHelper.SendToClient("20020000")
+            } );
+
+            InputMonitorCounter inputLogger = new( new InputLoggerMqttActivityMonitor( new ActivityMonitor( "Input Logger" ) ) );
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer, inputLogger: inputLogger ),
+                ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
+            {
+                msg.Dispose();
+                return new ValueTask();
+            } );
+            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            inputLogger.UnparsedExtraBytesCounter.Should().Be( 0 );
             await pcktReplayer.StopAndEnsureValidAsync();
         }
     }
