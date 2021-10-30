@@ -38,6 +38,7 @@ namespace CK.MQTT.Client.Tests
                         await bytePerByte.Writer.FlushAsync();
                     }
                 }
+                input.Reader.AdvanceTo( result.Buffer.End );
                 if( result.IsCompleted ) return;
                 if( result.IsCanceled ) return;
             }
