@@ -18,8 +18,8 @@ namespace CK.MQTT.Client.Tests.Helpers
     public class PacketReplayer : IMqttChannelFactory
     {
         public Channel<TestWorker> PacketsWorker { get; }
-        public TestChannel? Channel { get; private set; }
-        public PacketReplayer( IEnumerable<TestWorker>? packets = null )
+        public LoopBack? Channel { get; private set; }
+        public PacketReplayer( string channelType, IEnumerable<TestWorker>? packets = null )
         {
             PacketsWorker = System.Threading.Channels.Channel.CreateUnbounded<TestWorker>();
             if( packets != null )
@@ -29,8 +29,11 @@ namespace CK.MQTT.Client.Tests.Helpers
                     PacketsWorker.Writer.TryWrite( item );
                 }
             }
+            ChannelType = channelType;
         }
         public TestDelayHandler TestDelayHandler { get; } = new();
+        public string ChannelType { get; set; }
+
         Task? _workLoopTask;
         public async Task StopAndEnsureValidAsync()
         {
@@ -40,35 +43,37 @@ namespace CK.MQTT.Client.Tests.Helpers
             _workLoopTask?.IsCompletedSuccessfully.Should().BeTrue();
         }
 
-        /// <summary>
-        /// When <see langword="true"/>, drop all data.
-        /// </summary>
-        public int DropData { get; set; }
-        public delegate ValueTask<bool> TestWorker( PacketReplayer packetReplayer );
+        public delegate ValueTask<bool> TestWorker( IActivityMonitor m, PacketReplayer packetReplayer );
+
+        readonly ActivityMonitor _m = new();
         async Task WorkLoop()
         {
+            int i = 0;
             await foreach( TestWorker func in PacketsWorker.Reader.ReadAllAsync() )
             {
-                if( !await func( this ) ) break;
+                using( _m.OpenInfo( $"Running test worker {i++}." ) )
+                {
+                    if( !await func( _m, this ) ) break;
+                }
             }
             _workLoopTask = null;
         }
 
         public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
         {
-            Channel = new();
-            if( _workLoopTask != null )
+            Task? task = _workLoopTask; //Capturing reference to avoid concurrency issue
+            if( task != null )
             {
-                if( Debugger.IsAttached )
-                {
-                    await _workLoopTask;
-                }
-                else
-                {
-                    await _workLoopTask.WaitAsync( 500 );
-                }
+                await task;
                 if( _workLoopTask != null ) throw new InvalidOperationException( "A work is already running." );
             }
+            // This must be done after the wait. The work in the loop may use the channel.
+            Channel = ChannelType switch
+            {
+                "Default" => new DefaultLoopback(),
+                "BytePerByte" => new BytePerByteLoopback(),
+                _ => throw new InvalidOperationException( "Unknown channel type.")
+            } ; 
             _workLoopTask = WorkLoop();
             return Channel;
         }

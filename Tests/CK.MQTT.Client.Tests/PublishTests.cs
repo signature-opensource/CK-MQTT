@@ -7,14 +7,27 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
+
 namespace CK.MQTT.Client.Tests
 {
-    public class PublishTests
+    public class PublishTests_Default : PublishTests
     {
+        public override string ClassCase => "Default";
+    }
+
+    public class PublishTests_BytePerByteChannel : PublishTests
+    {
+        public override string ClassCase => "BytePerByte";
+    }
+
+    public abstract class PublishTests
+    {
+        public abstract string ClassCase { get; }
+
         [Test]
         public async Task simple_publish_qos0_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.Outgoing("3018000a7465737420746f70696374657374207061796c6f6164")
             } );
@@ -28,7 +41,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task simple_publish_qos1_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.Outgoing("321a000a7465737420746f706963000174657374207061796c6f6164"),
                 TestPacketHelper.SendToClient("40020001")
@@ -44,7 +57,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task simple_publish_qos2_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.Outgoing("341a000a7465737420746f706963000174657374207061796c6f6164"),
                 TestPacketHelper.SendToClient("50020001"),
@@ -64,11 +77,11 @@ namespace CK.MQTT.Client.Tests
             using( CancellationTokenSource cts = new() )
             {
 
-                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
+                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
                 {
                     TestPacketHelper.SwallowEverything(cts.Token),
                 } );
-                await await client.PublishAsync( TestHelper.Monitor, new string( 'a', ushort.MaxValue ), QualityOfService.AtMostOnce, false, new byte[0] );
+                await await client.PublishAsync( TestHelper.Monitor, new string( 'a', ushort.MaxValue ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
                 cts.Cancel();
             }
         }
@@ -79,13 +92,13 @@ namespace CK.MQTT.Client.Tests
             using( CancellationTokenSource cts = new() )
             {
 
-                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
+                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
                 {
                     TestPacketHelper.SwallowEverything(cts.Token),
                 } );
                 try
                 {
-                    await await client.PublishAsync( TestHelper.Monitor, new string( 'a', ushort.MaxValue + 1 ), QualityOfService.AtMostOnce, false, new byte[0] );
+                    await await client.PublishAsync( TestHelper.Monitor, new string( 'a', ushort.MaxValue + 1 ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
                     Assert.Fail();
                 }
                 catch( Exception )

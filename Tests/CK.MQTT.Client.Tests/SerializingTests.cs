@@ -10,15 +10,27 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
-    public class SerializingTests
+    public class SerializingTests_Default : ConnectionTests
     {
+        public override string ClassCase => "Default";
+    }
+
+    public class SerializingTests_BytePerByteChannel : ConnectionTests
+    {
+        public override string ClassCase => "BytePerByte";
+    }
+
+    public abstract class SerializingTests
+    {
+        public abstract string ClassCase { get; }
+
         [Test]
         public async Task packet_of_128_bytes_payload_serialized_correctly()
         {
             using( CancellationTokenSource cts = new() )
             {
 
-                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( new[]
+                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
                 {
                     TestPacketHelper.SwallowEverything(cts.Token),
                 } );

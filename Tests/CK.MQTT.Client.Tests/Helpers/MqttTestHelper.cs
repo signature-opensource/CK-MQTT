@@ -9,9 +9,9 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     static class MqttTestHelper
     {
-        public static (PacketReplayer packetReplayer, IMqtt3Client client) CreateTestClient( Queue<PacketReplayer.TestWorker> packets )
+        public static (PacketReplayer packetReplayer, IMqtt3Client client) CreateTestClient( string channelType, Queue<PacketReplayer.TestWorker> packets )
         {
-            PacketReplayer pcktReplayer = new( packets );
+            PacketReplayer pcktReplayer = new( channelType, packets );
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
@@ -20,10 +20,11 @@ namespace CK.MQTT.Client.Tests.Helpers
             return (pcktReplayer, client);
         }
 
-        public static async ValueTask<(PacketReplayer packetReplayer, IMqtt3Client client)> CreateConnectedTestClient( IEnumerable<PacketReplayer.TestWorker> packets )
+        public static async ValueTask<(PacketReplayer packetReplayer, IMqtt3Client client)> CreateConnectedTestClient(string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
         {
             PacketReplayer pcktReplayer = new
             (
+                channelType,
                 new Queue<PacketReplayer.TestWorker>( new[] {
                     TestPacketHelper.Outgoing( "20020000" ),
                     TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" )

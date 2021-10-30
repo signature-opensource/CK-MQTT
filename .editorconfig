@@ -72,3 +72,6 @@ dotnet_diagnostic.CA1034.severity = none
 # VSTHRD003: Avoid awaiting foreign Tasks
 dotnet_diagnostic.VSTHRD003.severity = none
 dotnet_diagnostic.CA2016.severity=warning
+
+# CA1816: Dispose methods should call SuppressFinalize
+dotnet_diagnostic.CA1816.severity = none

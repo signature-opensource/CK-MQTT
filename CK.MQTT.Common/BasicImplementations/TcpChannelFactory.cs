@@ -15,10 +15,10 @@ namespace CK.MQTT
         /// <param name="m">The logger to use.</param>
         /// <param name="connectionString">"hostname:port"</param>
         /// <returns></returns>
-        public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
+        public ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
         {
             string[] strs = connectionString.Split( ':' );
-            return new TcpChannel( strs[0], int.Parse( strs[1] ) );
+            return new( new TcpChannel( strs[0], int.Parse( strs[1] ) ) );
         }
     }
 }

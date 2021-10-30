@@ -12,7 +12,7 @@ namespace CK.MQTT
         public static ValueTask<Task<T?>> SendPacketAsync<T>( IActivityMonitor? m, IOutgoingPacketStore store, OutputPump output, IOutgoingPacket packet )
             where T : class
         {
-            IDisposableGroup? group = m?.OpenTrace( $"Sending a packet '{packet}'in QoS {packet.Qos}" );
+            IDisposableGroup? group = m?.OpenTrace( $"Sending a packet '{packet}' in QoS {packet.Qos}" );
             return packet.Qos switch
             {
                 QualityOfService.AtMostOnce => PublishQoS0Async<T>( m, group, output, packet ),

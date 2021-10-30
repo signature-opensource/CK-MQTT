@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.Core.Extension;
 using NUnit.Framework;
 using System;
@@ -13,40 +14,51 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
 
         public static PacketReplayer.TestWorker SendToClient( string hexArray, TimeSpan operationTime = default ) =>
-            async ( PacketReplayer replayer ) =>
+            async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
-                await replayer.Channel!.TestDuplexPipe.Output.WriteAsync( FromString( hexArray ) );
-                await replayer.Channel!.TestDuplexPipe.Output.FlushAsync();
-                replayer.TestDelayHandler.IncrementTime( operationTime );
+                using( m.OpenInfo( "Sending to client..." ) )
+                {
+                    await replayer.Channel!.TestDuplexPipe.Output.WriteAsync( FromString( hexArray ) );
+                    await replayer.Channel!.TestDuplexPipe.Output.FlushAsync();
+                    replayer.TestDelayHandler.IncrementTime( operationTime );
+                }
                 return true;
             };
         public static PacketReplayer.TestWorker Outgoing( string hexArray, TimeSpan operationTime = default )
-            => async ( PacketReplayer replayer ) =>
+            => async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
-                ReadOnlyMemory<byte> truthBuffer = FromString( hexArray );
-                Memory<byte> buffer = new byte[truthBuffer.Length];
-
-                using( CancellationTokenSource cts = Debugger.IsAttached ? new() : new( 500 ) )
+                using( m.OpenInfo( "Outgoing packet..." ) )
                 {
-                    PipeReaderExtensions.FillStatus status = await replayer.Channel!.TestDuplexPipe.Input.CopyToBufferAsync( buffer, cts.Token );
-                    if( cts.IsCancellationRequested ) Assert.Fail( "Timeout." );
-                    if( status != PipeReaderExtensions.FillStatus.Done ) Assert.Fail( "Fill status not ok." );
-                    if( !buffer.Span.SequenceEqual( truthBuffer.Span ) ) Assert.Fail( "Buffer not equals." );
+                    ReadOnlyMemory<byte> truthBuffer = FromString( hexArray );
+                    Memory<byte> buffer = new byte[truthBuffer.Length];
 
+                    using( CancellationTokenSource cts = Debugger.IsAttached ? new() : new( 500 ) )
+                    {
+                        PipeReaderExtensions.FillStatus status = await replayer.Channel!.TestDuplexPipe.Input.CopyToBufferAsync( buffer, cts.Token );
+                        if( cts.IsCancellationRequested ) Assert.Fail( "Timeout." );
+                        if( status != PipeReaderExtensions.FillStatus.Done ) Assert.Fail( "Fill status not ok." );
+                        if( !buffer.Span.SequenceEqual( truthBuffer.Span ) ) Assert.Fail( "Buffer not equals." );
+                    }
+                    replayer.TestDelayHandler.IncrementTime( operationTime );
                 }
-                replayer.TestDelayHandler.IncrementTime( operationTime );
                 return true;
             };
-        public static async ValueTask<bool> LinkDown( PacketReplayer replayer )
+        public static async ValueTask<bool> LinkDown( IActivityMonitor m, PacketReplayer replayer )
         {
-            await replayer.Channel!.OnDisposeTask;
+            using( m.OpenInfo( "Waiting for link to be down..." ) )
+            {
+                await replayer.Channel!.OnDisposeTask;
+            }
             return false;
         }
 
         public static PacketReplayer.TestWorker SwallowEverything( CancellationToken stopToken )
-            => async ( PacketReplayer replayer ) =>
+            => async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
-                await replayer.Channel!.TestDuplexPipe.Input.CopyToAsync( Stream.Null, stopToken );
+                using( m.OpenInfo( "Swallowing everything..." ) )
+                {
+                    await replayer.Channel!.TestDuplexPipe.Input.CopyToAsync( Stream.Null, stopToken );
+                }
                 return true;
             };
 

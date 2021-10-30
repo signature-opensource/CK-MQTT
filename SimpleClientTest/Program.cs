@@ -20,9 +20,10 @@ namespace SimpleClientTest
 {
     class Program
     {
-        async static ValueTask MessageHandlerDelegate( IActivityMonitor? m, ApplicationMessage msg, CancellationToken cancellationToken )
+        static ValueTask MessageHandlerDelegate( IActivityMonitor? m, ApplicationMessage msg, CancellationToken cancellationToken )
         {
             System.Console.WriteLine( msg.Topic + Encoding.UTF8.GetString( msg.Payload.Span ) );
+            return new();
         }
         static async Task Main()
         {

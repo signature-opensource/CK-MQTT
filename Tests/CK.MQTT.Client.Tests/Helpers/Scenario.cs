@@ -10,10 +10,10 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     static class Scenario
     {
-        public static async Task<(PacketReplayer packetReplayer, IMqtt3Client client)> ConnectedClient( IEnumerable<PacketReplayer.TestWorker> packets,
+        public static async Task<(PacketReplayer packetReplayer, IMqtt3Client client)> ConnectedClient(string channelType, IEnumerable<PacketReplayer.TestWorker> packets,
             Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask>?  messageProcessor = null )
         {
-            PacketReplayer pcktReplayer = new( new[]
+            PacketReplayer pcktReplayer = new(channelType, new[]
             {
                 TestPacketHelper.Outgoing("101600044d5154540402001e000a434b4d71747454657374"),
                 TestPacketHelper.SendToClient("20020000")
