@@ -144,12 +144,13 @@ namespace CK.MQTT
                     output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
                     OutgoingConnect outgoingConnect = new( ProtocolConfig, Config, credentials, lastWill );
-                    // Write timeout.
-                    CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds );
-                    // Send the packet.
-                    IOutgoingPacket.WriteResult writeConnectResult = await outgoingConnect.WriteAsync(
-                        ProtocolConfig.ProtocolLevel, channel.DuplexPipe.Output, cts.Token
-                    );
+
+                    IOutgoingPacket.WriteResult writeConnectResult;
+                    using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
+                    {
+                        // Send the packet.
+                        writeConnectResult = await outgoingConnect.WriteAsync( ProtocolConfig.ProtocolLevel, channel.DuplexPipe.Output, cts.Token );
+                    };
 
                     async ValueTask<ConnectResult> Exit( LogLevel logLevel, ConnectError connectError, string? log = null, Exception? exception = null )
                     {
@@ -158,25 +159,39 @@ namespace CK.MQTT
                         channel.Dispose();
                         return new ConnectResult( connectError );
                     }
+
                     if( writeConnectResult != IOutgoingPacket.WriteResult.Written )
                         return await Exit( LogLevel.Error, ConnectError.Timeout, "Timeout while writing connect packet." );
-                    Task timeout = Config.DelayHandler.Delay( Config.WaitTimeoutMilliseconds, cancellationToken );
-                    Task<ConnectResult> connectedTask = connectAckReflex.Task;
-                    await Task.WhenAny( connectedTask, timeout ); // TODO: should I rewrite this to avoid the background unawaited task.delay ?
-
-
+                    ConnectResult res;
+                    using( CancellationTokenSource cts2 = Config.CancellationTokenSourceFactory.Create( cancellationToken, Config.WaitTimeoutMilliseconds ) )
+                    {
+                        cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) );
+                        try
+                        {
+                            res = await connectAckReflex.Task;
+                        }
+                        catch( OperationCanceledException )
+                        {
+                            // This following code wouldn't be better with a sort of ... switch/pattern matching ?
+                            if( cancellationToken.IsCancellationRequested )
+                            {
+                                return await Exit( LogLevel.Trace, ConnectError.Connection_Cancelled, "Given cancellation token was canceled." );
+                            }
+                            else
+                            {
+                                return await Exit( LogLevel.Error, ConnectError.Timeout, $"Server accepted transport connexion but didn't answered to MQTT connexion before the configure timeout({ Config.WaitTimeoutMilliseconds}ms)." );
+                            }
+                        }
+                    }
 
                     // This following code wouldn't be better with a sort of ... switch/pattern matching ?
-                    if( timeout.IsCanceled )
-                        return await Exit( LogLevel.Trace, ConnectError.Connection_Cancelled, "Connection was canceled." );
-                    if( connectedTask.Exception is not null )
-                        return await Exit( LogLevel.Fatal, ConnectError.InternalException, exception: connectedTask.Exception );
+                    if( cancellationToken.IsCancellationRequested )
+                        return await Exit( LogLevel.Trace, ConnectError.Connection_Cancelled, "Given cancellation token was canceled." );
+                    if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
+                        return await Exit( LogLevel.Fatal, ConnectError.InternalException, exception: connectAckReflex.Task.Exception );
                     if( Pumps.IsClosed )
                         return await Exit( LogLevel.Trace, ConnectError.RemoteDisconnected, "Remote disconnected." );
-                    if( !connectedTask.IsCompleted )
-                        return await Exit( LogLevel.Trace, ConnectError.Timeout, "Timeout while waiting for server response." );
 
-                    ConnectResult res = await connectedTask;
                     if( res.ConnectError != ConnectError.Ok )
                     {
                         m?.Trace( "Connect code is not ok." );

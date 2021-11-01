@@ -11,6 +11,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 ChannelFactory = packetReplayer,
                 DelayHandler = packetReplayer.TestDelayHandler,
                 StopwatchFactory = packetReplayer.TestDelayHandler,
+                CancellationTokenSourceFactory = packetReplayer.TestDelayHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 InputLogger = inputLogger ?? new InputLoggerMqttActivityMonitor( new ActivityMonitor( "Input Logger" ) ),
                 OutputLogger = outputLogger ?? new OutputLoggerMqttActivityMonitor( new ActivityMonitor( "Output Logger" ) )

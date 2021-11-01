@@ -24,10 +24,9 @@ namespace CK.MQTT.Client.Tests.Helpers
                     }
                 } );
                 _delays.ForEach( s => s.AdvanceTime( timeSpan ) );
-                _cts.ForEach( s => s.IncrementTime( timeSpan ) );
 
                 _stopwatches.RemoveAll( s => !s.TryGetTarget( out _ ) );
-                _cts.RemoveAll( s => s.CancellationTokenSource.IsCancellationRequested );
+                _cts.RemoveAll( s => !s.IncrementTime( timeSpan ) || s.CancellationTokenSource.IsCancellationRequested );
                 _delays.RemoveAll( s => s.TaskCompletionSource.Task.IsCompleted );
             }
         }
@@ -84,15 +83,32 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         class CTS
         {
-            public CTS( TimeSpan delayToCancel ) => DelayToCancel = delayToCancel;
+            public CTS( TimeSpan delayToCancel )
+            {
+                DelayToCancel = delayToCancel;
+                CancellationTokenSource = new();
+            }
 
-            public CancellationTokenSource CancellationTokenSource { get; } = new CancellationTokenSource();
+            public CTS( TimeSpan delayToCancel, CancellationToken linkedToken )
+            {
+                DelayToCancel = delayToCancel;
+                CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource( linkedToken );
+            }
+            public CancellationTokenSource CancellationTokenSource { get; }
             public TimeSpan DelayToCancel { get; private set; }
 
-            public void IncrementTime( TimeSpan timeSpan )
+            public bool IncrementTime( TimeSpan timeSpan )
             {
                 DelayToCancel -= timeSpan;
-                if( DelayToCancel.TotalMilliseconds < 0 ) CancellationTokenSource.Cancel();
+                try
+                {
+                    if( DelayToCancel.TotalMilliseconds < 0 ) CancellationTokenSource.Cancel();
+                }
+                catch( ObjectDisposedException )
+                {
+                    return false;
+                }
+                return true;
             }
         }
 
@@ -128,6 +144,26 @@ namespace CK.MQTT.Client.Tests.Helpers
             lock( _lock )
             {
                 CTS cts = new( delay );
+                _cts.Add( cts );
+                return cts.CancellationTokenSource;
+            }
+        }
+
+        public CancellationTokenSource Create( CancellationToken linkedToken, int millisecondsDelay )
+        {
+            lock( _lock )
+            {
+                CTS cts = new( TimeSpan.FromMilliseconds( millisecondsDelay ), linkedToken );
+                _cts.Add( cts );
+                return cts.CancellationTokenSource;
+            }
+        }
+
+        public CancellationTokenSource Create( CancellationToken linkedToken, TimeSpan delay )
+        {
+            lock( _lock )
+            {
+                CTS cts = new( delay, linkedToken );
                 _cts.Add( cts );
                 return cts.CancellationTokenSource;
             }

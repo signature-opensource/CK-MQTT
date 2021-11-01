@@ -167,7 +167,9 @@ namespace CK.MQTT.Client.Tests
             } );
             Task<ConnectResult> connectTask = client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
             connectTask.IsCompleted.Should().BeFalse();
+            await Task.Delay(1);
             packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
+            await Task.Delay(1);
             connectTask.IsCompleted.Should().BeFalse();
             packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
             (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );

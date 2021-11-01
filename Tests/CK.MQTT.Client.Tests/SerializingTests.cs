@@ -10,12 +10,12 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
-    public class SerializingTests_Default : ConnectionTests
+    public class SerializingTests_Default : SerializingTests
     {
         public override string ClassCase => "Default";
     }
 
-    public class SerializingTests_BytePerByteChannel : ConnectionTests
+    public class SerializingTests_BytePerByteChannel : SerializingTests
     {
         public override string ClassCase => "BytePerByte";
     }

@@ -74,6 +74,8 @@ namespace CK.MQTT
             }
         }
 
+        public void TrySetCanceled( CancellationToken cancellationToken ) => _tcs.TrySetCanceled( cancellationToken );
+
         static void Deserialize( ReadOnlySequence<byte> buffer, out byte state, out byte code, out SequencePosition position )
         {
             SequenceReader<byte> reader = new( buffer );

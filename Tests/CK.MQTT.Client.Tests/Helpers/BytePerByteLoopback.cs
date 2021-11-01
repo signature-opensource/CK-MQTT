@@ -14,7 +14,7 @@ namespace CK.MQTT.Client.Tests
             Pipe intermediary = new();
             Pipe output = new();
             _ = WorkLoop( input, intermediary );
-            DuplexPipe = new DuplexPipe( input.Reader, output.Writer );
+            DuplexPipe = new DuplexPipe( intermediary.Reader, output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
         }
 
