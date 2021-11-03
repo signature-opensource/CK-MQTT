@@ -43,7 +43,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 }
                 return true;
             };
-        public static async ValueTask<bool> LinkDown( IActivityMonitor m, PacketReplayer replayer )
+        public static async ValueTask<bool> WaitClientDisconnect( IActivityMonitor m, PacketReplayer replayer )
         {
             using( m.OpenInfo( "Waiting for link to be down..." ) )
             {
@@ -61,6 +61,16 @@ namespace CK.MQTT.Client.Tests.Helpers
                 }
                 return true;
             };
+
+        public static ValueTask<bool> Disconnect( IActivityMonitor m, PacketReplayer replayer )
+        {
+            using( m.OpenInfo( "Disconnecting..." ) )
+            {
+                replayer.Channel.Close( null );
+                replayer.Channel.Dispose();
+            }
+            return new ValueTask<bool>( false );
+        }
 
         public static ReadOnlyMemory<byte> FromString( string hexArray )
         {

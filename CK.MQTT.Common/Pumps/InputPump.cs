@@ -3,6 +3,7 @@ using System.Buffers;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -93,6 +94,11 @@ namespace CK.MQTT.Pumps
                 catch( OperationCanceledException e )
                 {
                     _config.InputLogger?.LoopCanceledException( e );
+                }
+                catch( ProtocolViolationException e )
+                {
+                    _config.InputLogger?.ProtocolViolation( e );
+                    await SelfCloseAsync( DisconnectedReason.ProtocolError );
                 }
                 catch( Exception e )
                 {

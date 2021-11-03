@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -177,6 +178,13 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             UnparsedExtraBytesPacketIdCounter++;
             _inputLogger.UnparsedExtraBytesPacketId( unparsedSize );
+        }
+
+        public int ProtocolViolationCounter { get; private set; } = 0;
+        public void ProtocolViolation( ProtocolViolationException e )
+        {
+            ProtocolViolationCounter++;
+            _inputLogger.ProtocolViolation( e );
         }
     }
 }

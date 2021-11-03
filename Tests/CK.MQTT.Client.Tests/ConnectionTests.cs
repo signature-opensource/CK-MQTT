@@ -56,7 +56,7 @@ namespace CK.MQTT.Client.Tests
                 pcktReplayer.PacketsWorker.Writer.TryWrite(
                     TestPacketHelper.SendToClient( "2002" + BitConverter.ToString( new byte[] { i } ) + "00" )
                 );
-                pcktReplayer.PacketsWorker.Writer.TryWrite( TestPacketHelper.LinkDown );
+                pcktReplayer.PacketsWorker.Writer.TryWrite( TestPacketHelper.WaitClientDisconnect );
             }
 
 
@@ -66,11 +66,12 @@ namespace CK.MQTT.Client.Tests
                 return new ValueTask();
             } );
             ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-            res.ConnectError.Should().Be( ConnectError.ProtocolError_SessionNotFlushed );
+            res.Should().Be( new ConnectResult( ConnectError.ProtocolError_SessionNotFlushed ) );
+
             for( byte i = 2; i != 0; i++ )
             {
                 res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-                res.ConnectError.Should().Be( ConnectError.ProtocolError_InvalidConnackState );
+                res.Should().Be( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
             }
             await pcktReplayer.StopAndEnsureValidAsync();
         }
@@ -87,7 +88,7 @@ namespace CK.MQTT.Client.Tests
                 packetReplayer.PacketsWorker.Writer.TryWrite(
                     TestPacketHelper.SendToClient( "200200" + BitConverter.ToString( new byte[] { i } ) )
                 ).Should().BeTrue();
-                packetReplayer.PacketsWorker.Writer.TryWrite( TestPacketHelper.LinkDown );
+                packetReplayer.PacketsWorker.Writer.TryWrite( TestPacketHelper.WaitClientDisconnect );
             }
 
 
@@ -99,7 +100,7 @@ namespace CK.MQTT.Client.Tests
             for( byte i = startSkipCount; i != 0; i++ )
             {
                 ConnectResult res = await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-                res.ConnectError.Should().Be( ConnectError.ProtocolError_UnknownReturnCode );
+                res.Should().Be( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
             }
             await packetReplayer.StopAndEnsureValidAsync();
         }
@@ -115,7 +116,7 @@ namespace CK.MQTT.Client.Tests
                 packetReplayer.PacketsWorker.Writer.TryWrite(
                     TestPacketHelper.SendToClient( "200200" + BitConverter.ToString( new byte[] { i } ) )
                 ).Should().BeTrue();
-                packetReplayer.PacketsWorker.Writer.TryWrite( TestPacketHelper.LinkDown );
+                packetReplayer.PacketsWorker.Writer.TryWrite( TestPacketHelper.WaitClientDisconnect );
             }
 
 
@@ -130,19 +131,19 @@ namespace CK.MQTT.Client.Tests
                 switch( i )
                 {
                     case 1:
-                        res.ConnectReturnCode.Should().Be( ConnectReturnCode.UnacceptableProtocolVersion );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.UnacceptableProtocolVersion ) );
                         continue;
                     case 2:
-                        res.ConnectReturnCode.Should().Be( ConnectReturnCode.IdentifierRejected );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.IdentifierRejected ) );
                         continue;
                     case 3:
-                        res.ConnectReturnCode.Should().Be( ConnectReturnCode.ServerUnavailable );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.ServerUnavailable ) );
                         continue;
                     case 4:
-                        res.ConnectReturnCode.Should().Be( ConnectReturnCode.BadUserNameOrPassword );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.BadUserNameOrPassword ) );
                         continue;
                     case 5:
-                        res.ConnectReturnCode.Should().Be( ConnectReturnCode.NotAuthorized );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.NotAuthorized ) );
                         continue;
                     default:
                         Assert.Fail();
@@ -212,7 +213,7 @@ namespace CK.MQTT.Client.Tests
             {
                 connectPacket,
                 TestPacketHelper.SendToClient( "20021000" ), // Invalid response.
-                TestPacketHelper.LinkDown,
+                TestPacketHelper.WaitClientDisconnect,
                 connectPacket,
                 TestPacketHelper.SendToClient( "20020000" ) // Valid response.
             } );

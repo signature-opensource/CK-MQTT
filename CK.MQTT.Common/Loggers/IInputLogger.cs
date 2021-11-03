@@ -1,6 +1,7 @@
 using CK.MQTT.Pumps;
 using System;
 using System.IO.Pipelines;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -33,5 +34,6 @@ namespace CK.MQTT
         void InvalidMaxPacketSize( int maxPacketSize );
         void InvalidPropertyType();
         void ErrorAuthDataMissing();
+        void ProtocolViolation( ProtocolViolationException e );
     }
 }

@@ -2,6 +2,7 @@ using CK.Core;
 using CK.MQTT.Pumps;
 using System;
 using System.IO.Pipelines;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -85,29 +86,22 @@ namespace CK.MQTT
         public IDisposable? SerializingPacketInMemory( IOutgoingPacket packet )
             => _m?.OpenTrace( $"Serializing {packet} in memory." );
 
-        public void ConnectPropertyFieldDuplicated( PropertyIdentifier sessionExpiryInterval )
-        {
-            throw new NotImplementedException();
-        }
+        public void ConnectPropertyFieldDuplicated( PropertyIdentifier propertyIdentifier )
+            => _m?.Error( $"The property {propertyIdentifier} is present more than once." );
 
-        public void InvalidPropertyValue( PropertyIdentifier requestResponseInformation, byte val1 )
-        {
-            throw new NotImplementedException();
-        }
+        public void InvalidPropertyValue( PropertyIdentifier propertyIdentifier, byte val1 )
+            => _m?.Error( $"The property {propertyIdentifier} has an invalid value {val1}." );
 
         public void InvalidMaxPacketSize( int maxPacketSize )
-        {
-            throw new NotImplementedException();
-        }
+            => _m?.Error("Received packet exceed max packet size.");
 
         public void InvalidPropertyType()
-        {
-            throw new NotImplementedException();
-        }
+            => _m.Error( "Received a packet with an unknown property type." );
 
         public void ErrorAuthDataMissing()
-        {
-            throw new NotImplementedException();
-        }
+            => _m.Error( "Auth data is missing." );
+
+        public void ProtocolViolation( ProtocolViolationException e )
+            => _m.Fatal( "Protocol Violation", e );
     }
 }

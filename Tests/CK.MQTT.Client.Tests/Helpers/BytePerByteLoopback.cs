@@ -25,7 +25,6 @@ namespace CK.MQTT.Client.Tests
 
         async Task WorkLoop( Pipe input, Pipe bytePerByte )
         {
-
             while( true )
             {
                 ReadResult result = await input.Reader.ReadAsync();
@@ -39,9 +38,11 @@ namespace CK.MQTT.Client.Tests
                     }
                 }
                 input.Reader.AdvanceTo( result.Buffer.End );
-                if( result.IsCompleted ) return;
-                if( result.IsCanceled ) return;
+                if( result.IsCompleted ) break;
+                if( result.IsCanceled ) break;
             }
+            bytePerByte.Writer.Complete();
+            input.Writer.Complete();
         }
     }
 }

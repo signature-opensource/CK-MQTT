@@ -23,7 +23,6 @@ namespace CK.MQTT
 
     public static class MqttClientFactories
     {
-
         public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory factory, MqttClientConfiguration config, Func<IActivityMonitor?, ApplicationMessage, CancellationToken, ValueTask> handler )
             => factory.CreateMQTT3Client( config, new BaseHandlerClosure( handler ).HandleMessageAsync );
 
@@ -48,15 +47,5 @@ namespace CK.MQTT
 
         public static IMqttClient CreateMQTTClient( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
             => factory.CreateMQTTClient( config, new DisposableMessageClosure( messageHandler ).HandleMessageAsync );
-
-        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor?, ApplicationMessage, ValueTask> handler )
-    => @this.CreateMQTT3Client( config, new MessagesClosure( handler ).HandleMessageAsync );
-
-        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor?, ApplicationMessage, ValueTask> handler )
-            => @this.CreateMQTT5Client( config, new MessagesClosure( handler ).HandleMessageAsync );
-
-        public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor?, ApplicationMessage, ValueTask> handler )
-            => @this.CreateMQTTClient( config, new MessagesClosure( handler ).HandleMessageAsync );
     }
-
 }

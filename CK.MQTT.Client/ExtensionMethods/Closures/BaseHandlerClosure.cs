@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.IO.Pipelines;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Core.Extension.PipeReaderExtensions;
@@ -17,8 +18,11 @@ namespace CK.MQTT.Client.Closures
             string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
         {
             Memory<byte> memory = new( new byte[payloadLength] );
-            FillStatus status = await pipe.CopyToBufferAsync( memory, cancelToken );
-            if( status != FillStatus.Done ) throw new InvalidOperationException( "Unexpected partial read." );
+            if( !memory.IsEmpty && await pipe.CopyToBufferAsync( memory, cancelToken ) != FillStatus.Done )
+            {
+                m?.Warn( "Partial data reading." );
+                return;
+            }
             await _messageHandler( m, new ApplicationMessage( topic, memory, qos, retain ), cancelToken );
         }
     }

@@ -16,10 +16,5 @@ namespace CK.MQTT
 
         public static void SetMessageHandler( this IMqtt3Client @this, Func<IActivityMonitor?, ApplicationMessage, CancellationToken, ValueTask> handler )
             => @this.SetMessageHandler( new BaseHandlerClosure( handler ).HandleMessageAsync );
-
-        public static void SetMessageHandler( this IMqtt3Client @this, Func<IActivityMonitor?, ApplicationMessage, ValueTask> handler )
-            => @this.SetMessageHandler( new MessagesClosure( handler ).HandleMessageAsync );
-
-
     }
 }

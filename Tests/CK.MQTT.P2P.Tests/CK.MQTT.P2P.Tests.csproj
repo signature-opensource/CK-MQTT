@@ -13,6 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\CK.MQTT.Abstractions\CK.MQTT.Abstractions.csproj" />
+    <ProjectReference Include="..\..\CK.MQTT.Client\CK.MQTT.Client.csproj" />
+    <ProjectReference Include="..\..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
     <ProjectReference Include="..\..\CK.MQTT.P2P\CK.MQTT.P2P.csproj" />
   </ItemGroup>
 

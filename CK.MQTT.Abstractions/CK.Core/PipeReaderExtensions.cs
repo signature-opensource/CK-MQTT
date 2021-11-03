@@ -11,33 +11,6 @@ namespace CK.Core.Extension
     public static class PipeReaderExtensions
     {
         /// <summary>
-        /// Asynchronously reads a sequence of bytes which is size is at least <paramref name="minimumByteCount"/> from the current System.IO.Pipelines.PipeReader.
-        /// Asking big <paramref name="minimumByteCount"/> will make the circular buffer grow, avoid doing that.
-        /// </summary>
-        /// <param name="reader">The instance to read from.</param>
-        /// <returns></returns>
-        /// <remarks>
-        /// The buffer size may be smaller if:
-        /// <list type="bullet">
-        ///     <item>The operation was cancelled by the <paramref name="cancellationToken"/>, you can check it with the flag <see cref="ReadResult.IsCanceled"/>.</item>
-        ///     <item>The pipe was completed before reading all asked bytes, you can check it with the flag <see cref="ReadResult.IsCompleted"/>.</item>
-        /// </list>
-        /// </remarks>
-        [MethodImpl( MethodImplOptions.AggressiveInlining )]
-        public static async ValueTask<ReadResult> ReadAsync( this PipeReader reader, int minimumByteCount, CancellationToken cancellationToken = default )
-        {
-            ReadResult result = await reader.ReadAsync( cancellationToken );
-            while( result.Buffer.Length < minimumByteCount )//Loop until we get the requested bytes.
-            {
-                if( result.IsCanceled || result.IsCompleted ) return result;//Completed/Canceled, we can't read any more bytes, so we return.
-                //We need to signal that we examined the data, so the next read will fetch more data. If we don't the next read won't wait for more data.
-                reader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
-                result = await reader.ReadAsync( cancellationToken );
-            }
-            return result;
-        }
-
-        /// <summary>
         /// Represent if the fill was succesfull, or if it's an error.
         /// </summary>
         public enum FillStatus
