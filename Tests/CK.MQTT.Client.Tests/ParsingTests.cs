@@ -2,13 +2,9 @@ using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
@@ -108,7 +104,7 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.Disconnect
             }, messageProcessor: ( m, msg, token ) =>
             {
-                if(++i == 5)
+                if( ++i == 5 )
                 {
                     tcs.SetResult();
                 }

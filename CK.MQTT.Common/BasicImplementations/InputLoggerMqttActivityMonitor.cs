@@ -93,7 +93,7 @@ namespace CK.MQTT
             => _m?.Error( $"The property {propertyIdentifier} has an invalid value {val1}." );
 
         public void InvalidMaxPacketSize( int maxPacketSize )
-            => _m?.Error("Received packet exceed max packet size.");
+            => _m?.Error( "Received packet exceed max packet size." );
 
         public void InvalidPropertyType()
             => _m.Error( "Received a packet with an unknown property type." );

@@ -1,12 +1,7 @@
 using CK.Core;
-using CK.Core.Extension;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Pipelines;
-using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -72,8 +67,8 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 "Default" => new DefaultLoopback(),
                 "BytePerByte" => new BytePerByteLoopback(),
-                _ => throw new InvalidOperationException( "Unknown channel type.")
-            } ; 
+                _ => throw new InvalidOperationException( "Unknown channel type." )
+            };
             _workLoopTask = WorkLoop();
             return Channel;
         }

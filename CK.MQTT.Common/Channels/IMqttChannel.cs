@@ -10,7 +10,7 @@ namespace CK.MQTT
     /// </summary>
     public interface IMqttChannel : IDisposable
     {
-        ValueTask StartAsync(IActivityMonitor? m);
+        ValueTask StartAsync( IActivityMonitor? m );
 
         /// <summary>
         /// Disconnect the <see cref="IMqttChannel"/>.

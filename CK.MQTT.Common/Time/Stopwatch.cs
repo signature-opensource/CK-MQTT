@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 
 #pragma warning disable RS0030 // Do not used banned APIs
 namespace CK.MQTT

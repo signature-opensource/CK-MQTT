@@ -14,7 +14,7 @@ namespace CK.MQTT
             if( newSession )
             {
                 _stores[storeId] = (new MemoryPacketStore( pConfig, config, ushort.MaxValue ), new MemoryPacketIdStore());
-            } 
+            }
             var currStore = _stores[storeId];
             currStore.Item1.IsRevivedSession = !newSession;
             currStore.Item2.IsRevivedSession = !newSession;

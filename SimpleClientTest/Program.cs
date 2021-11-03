@@ -3,14 +3,6 @@ using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
 using CK.MQTT.Client;
-using CK.Text;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Pipelines;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +31,7 @@ namespace SimpleClientTest
             while( true )
             {
                 string line = System.Console.ReadLine();
-                await client.PublishAsync( m, new ApplicationMessage( "foo", Encoding.UTF8.GetBytes( line ), QualityOfService.AtMostOnce, false) );
+                await client.PublishAsync( m, new ApplicationMessage( "foo", Encoding.UTF8.GetBytes( line ), QualityOfService.AtMostOnce, false ) );
             }
             await client.DisconnectAsync( m, true, true, default );
         }

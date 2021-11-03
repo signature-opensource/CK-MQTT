@@ -1,13 +1,8 @@
 using CK.Core;
 using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
-using CK.MQTT.Server;
-using CK.MQTT.Stores;
 using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -78,7 +73,7 @@ namespace CK.MQTT.P2P
 
                 bool hasExistingSession = connectReflex.OutStore.IsRevivedSession || connectReflex.InStore.IsRevivedSession;
                 await output.QueueMessageAndWaitUntilSentAsync( m, new ConnectAckPacket( hasExistingSession, ConnectReturnCode.Accepted ) );
-                
+
                 return ConnectError.Ok;
             }
             catch( Exception e )

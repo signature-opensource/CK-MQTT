@@ -26,7 +26,7 @@
 //        async ValueTask AcceptClient( IMqttChannel channel )
 //        {
 //            var instance = new ClientInstance( channel );
-            
+
 //        }
 
 //    }

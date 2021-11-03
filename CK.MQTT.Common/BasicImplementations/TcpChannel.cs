@@ -2,10 +2,8 @@ using CK.Core;
 using System;
 using System.IO;
 using System.IO.Pipelines;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace CK.MQTT
 {
@@ -47,7 +45,7 @@ namespace CK.MQTT
         public bool IsConnected => _tcpClient.Connected;
 
         /// <inheritdoc/>
-        public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException("Start the channel before accessing the pipes.");
+        public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException( "Start the channel before accessing the pipes." );
 
         /// <inheritdoc/>
         public void Close( IInputLogger? m ) => _tcpClient.Close();

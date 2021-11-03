@@ -20,7 +20,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             return (pcktReplayer, client);
         }
 
-        public static async ValueTask<(PacketReplayer packetReplayer, IMqtt3Client client)> CreateConnectedTestClient(string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
+        public static async ValueTask<(PacketReplayer packetReplayer, IMqtt3Client client)> CreateConnectedTestClient( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
         {
             PacketReplayer pcktReplayer = new
             (

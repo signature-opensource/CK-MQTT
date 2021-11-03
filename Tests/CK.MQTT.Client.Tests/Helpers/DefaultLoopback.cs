@@ -1,7 +1,5 @@
-using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
 using System.IO.Pipelines;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
 {

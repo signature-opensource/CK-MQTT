@@ -2,8 +2,6 @@ using CK.Core;
 using CK.MQTT.Client;
 using CK.MQTT.Client.Closures;
 using System;
-using System.Buffers;
-using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 

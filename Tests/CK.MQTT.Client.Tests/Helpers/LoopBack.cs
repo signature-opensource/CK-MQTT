@@ -1,9 +1,5 @@
 using CK.Core;
-using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
@@ -16,7 +12,8 @@ namespace CK.MQTT.Client.Tests.Helpers
         public bool IsConnected { get; private set; } = true;
 
         public ValueTask StartAsync( IActivityMonitor? m ) => new();
-        public void Close( IInputLogger? m ) {
+        public void Close( IInputLogger? m )
+        {
             TestDuplexPipe.Output.Complete();
             TestDuplexPipe.Output.CancelPendingFlush();
             TestDuplexPipe.Input.CancelPendingRead();

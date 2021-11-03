@@ -4,10 +4,8 @@ using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 

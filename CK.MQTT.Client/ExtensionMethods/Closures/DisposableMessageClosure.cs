@@ -1,9 +1,7 @@
 using CK.Core;
 using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Core.Extension.PipeReaderExtensions;

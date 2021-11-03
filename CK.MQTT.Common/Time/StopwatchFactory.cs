@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace CK.MQTT
 {
     class StopwatchFactory : IStopwatchFactory

@@ -1,13 +1,6 @@
 using CK.Core;
 using CK.MQTT.Common.BasicImplementations;
-using CK.MQTT.P2P;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 

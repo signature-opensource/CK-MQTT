@@ -1,7 +1,5 @@
 using System;
 using System.Buffers.Binary;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace CK.MQTT

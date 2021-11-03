@@ -12,7 +12,7 @@ namespace CK.MQTT
     /// for more details about the QoS values and description
     /// </remarks>
     [Flags]
-	public enum QualityOfService : byte
+    public enum QualityOfService : byte
     {
         /// <summary>
         /// Represents the QoS level 0 (at most once delivery)

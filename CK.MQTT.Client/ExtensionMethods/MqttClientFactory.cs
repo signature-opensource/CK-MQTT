@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     public class MqttClientFactory
-    {   
+    {
         internal MqttClientFactory() { }
     }
 

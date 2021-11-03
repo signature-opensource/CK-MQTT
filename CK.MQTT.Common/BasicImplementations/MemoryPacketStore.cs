@@ -5,12 +5,8 @@ using CK.MQTT.Stores;
 using Microsoft.Toolkit.HighPerformance.Extensions;
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.IO.Pipelines;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using static CK.MQTT.IOutgoingPacket;
 

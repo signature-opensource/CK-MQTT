@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
 using System;
 using System.IO.Pipelines;

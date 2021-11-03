@@ -2,7 +2,6 @@ using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading;

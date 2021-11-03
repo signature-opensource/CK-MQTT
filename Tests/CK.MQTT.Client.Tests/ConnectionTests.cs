@@ -1,11 +1,8 @@
 using CK.Core;
-using CK.Monitoring;
 using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +45,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task connect_with_clean_session_but_connack_session_present_is_not_zero_should_fail()
         {
-            PacketReplayer pcktReplayer = new( ClassCase);
+            PacketReplayer pcktReplayer = new( ClassCase );
             PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
             for( byte i = 1; i != 0; i++ ) //Ok there we loop over all non zero bytes.
             {
@@ -79,7 +76,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task connect_with_clean_session_but_connack_return_code_is_invalid_should_throw()
         {
-            PacketReplayer packetReplayer = new( ClassCase);
+            PacketReplayer packetReplayer = new( ClassCase );
             PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
             const int startSkipCount = 6; // These packets are valid, so we skip them.
             for( byte i = startSkipCount; i != 0; i++ ) //Ok there we loop over all non zero bytes.
@@ -108,7 +105,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task connect_return_correct_error_code()
         {
-            PacketReplayer packetReplayer = new( ClassCase);
+            PacketReplayer packetReplayer = new( ClassCase );
             PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
             for( byte i = 1; i < 6; i++ ) //Ok there we loop over all non zero bytes.
             {
@@ -168,9 +165,9 @@ namespace CK.MQTT.Client.Tests
             } );
             Task<ConnectResult> connectTask = client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
             connectTask.IsCompleted.Should().BeFalse();
-            await Task.Delay(1);
+            await Task.Delay( 1 );
             packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
-            await Task.Delay(1);
+            await Task.Delay( 1 );
             connectTask.IsCompleted.Should().BeFalse();
             packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
             (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );

@@ -1,5 +1,4 @@
 using CK.Core;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace CK.MQTT

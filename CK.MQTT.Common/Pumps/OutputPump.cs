@@ -1,11 +1,8 @@
 using CK.Core;
 using CK.MQTT.Stores;
-using Microsoft.Toolkit.HighPerformance.Extensions;
 using System;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 

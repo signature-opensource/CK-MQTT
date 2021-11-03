@@ -217,7 +217,7 @@ namespace CodeCake
             ITFBuildProvider vsts = Cake.TFBuild();
             try
             {
-                if( appVeyor.IsRunningOnAppVeyor )  
+                if( appVeyor.IsRunningOnAppVeyor )
                 {
                     appVeyor.UpdateBuildVersion( AddSkipped( BuildInfo.Version.ToString() ) );
                 }

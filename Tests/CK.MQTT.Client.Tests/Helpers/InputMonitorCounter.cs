@@ -1,10 +1,7 @@
 using CK.MQTT.Pumps;
 using System;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
@@ -13,7 +10,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         readonly IInputLogger _inputLogger;
 
-        public InputMonitorCounter(IInputLogger inputLogger)
+        public InputMonitorCounter( IInputLogger inputLogger )
         {
             _inputLogger = inputLogger;
         }

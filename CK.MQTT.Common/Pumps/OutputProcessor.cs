@@ -1,10 +1,7 @@
 using CK.Core;
 using CK.MQTT.Stores;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 

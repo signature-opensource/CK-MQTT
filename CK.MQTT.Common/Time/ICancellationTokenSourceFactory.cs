@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 
 namespace CK.MQTT.Common.Time
@@ -15,7 +13,7 @@ namespace CK.MQTT.Common.Time
         CancellationTokenSource Create( TimeSpan delay );
 #pragma warning restore RS0030 // Do not used banned APIs
 
-        CancellationTokenSource Create(CancellationToken linkedToken, int millisecondsDelay );
-        CancellationTokenSource Create(CancellationToken linkedToken, TimeSpan delay);
+        CancellationTokenSource Create( CancellationToken linkedToken, int millisecondsDelay );
+        CancellationTokenSource Create( CancellationToken linkedToken, TimeSpan delay );
     }
 }

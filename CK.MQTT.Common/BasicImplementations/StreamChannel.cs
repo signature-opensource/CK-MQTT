@@ -1,9 +1,7 @@
 using CK.Core;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.BasicImplementations
@@ -41,7 +39,7 @@ namespace CK.MQTT.Common.BasicImplementations
 
         public StreamChannel( Stream readStream, Stream writeStream )
         {
-            _disposable = new ChainedDispose(readStream, writeStream);
+            _disposable = new ChainedDispose( readStream, writeStream );
             DuplexPipe = new DuplexPipe(
                 PipeReader.Create( readStream ),
                 PipeWriter.Create( writeStream )
