@@ -80,7 +80,16 @@ namespace CK.MQTT.Stores
         }
 
         // Called on output.
-        public CancellationToken DroppedPacketCancelToken => _packetDroppedCTS.Token;
+        public CancellationToken DroppedPacketCancelToken
+        {
+            get
+            {
+                lock( _idStore )
+                {
+                    return _packetDroppedCTS.Token;
+                }
+            }
+        }
 
         /// <summary>
         /// Call it only with a lock.
@@ -245,6 +254,7 @@ namespace CK.MQTT.Stores
                     _droppedCount--;
                     if( _droppedCount == 0 )
                     {
+                        _packetDroppedCTS.Dispose();
                         _packetDroppedCTS = new CancellationTokenSource();
                     }
                 }
@@ -376,6 +386,11 @@ namespace CK.MQTT.Stores
         public void CancelAllAckTask( IActivityMonitor? m )
         {
             throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
+            _packetDroppedCTS.Dispose();
         }
     }
 }
