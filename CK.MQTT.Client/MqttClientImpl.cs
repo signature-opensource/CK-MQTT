@@ -4,8 +4,10 @@ using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,6 +38,7 @@ namespace CK.MQTT
             public Task CloseAsync()
             {
                 Channel.Close( _config.InputLogger );
+                Channel.Dispose();
                 return Task.CompletedTask;
             }
         }
@@ -264,8 +267,14 @@ namespace CK.MQTT
             //TODO: the return type may be not enough there, if the cancellation token was triggered, we may not know the final
             await OutgoingDisconnect.Instance.WriteAsync( ProtocolConfig.ProtocolLevel, duplex.State.Channel.DuplexPipe.Output, cancellationToken );
             await duplex.CloseAsync();
+            duplex.Dispose();
             Pumps = null;
             return true;
+        }
+
+        public void Dispose()
+        {
+            Pumps?.Dispose();
         }
     }
 }

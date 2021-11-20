@@ -47,7 +47,17 @@ namespace CK.MQTT.Stores
         internal int _head;
         readonly int _maxPacketId;
 
-        public bool NoPacketAllocated => _newestIdAllocated == 0;
+        public bool NoPacketAllocated
+        {
+            get
+            {
+                lock( _lock )
+                {
+                    return _newestIdAllocated == 0;
+                }
+            }
+        }
+
         readonly object _lock = new();
 
         public IdStore( int packetIdMaxValue, int startSize )
@@ -85,23 +95,26 @@ namespace CK.MQTT.Stores
         internal void SelfConsistencyCheck()
         {
 #if DEBUG
-            int curr = _head;
-            int count = 1;
-            while( curr != _tail ) // forward
+            lock( _lock )
             {
-                count++;
-                curr = _entries[curr].NextId;
-                if( curr == 0 ) throw new InvalidOperationException( "Error detected in the store: a node is not linked !" );
+                int curr = _head;
+                int count = 1;
+                while( curr != _tail ) // forward
+                {
+                    count++;
+                    curr = _entries[curr].NextId;
+                    if( curr == 0 ) throw new InvalidOperationException( "Error detected in the store: a node is not linked !" );
+                }
+                if( count != _entries.Length ) throw new InvalidOperationException( "Error detected in the store: links are not consistent." );
+                count = 1;
+                while( curr != _head ) // backward
+                {
+                    count++;
+                    curr = _entries[curr].PreviousId;
+                    if( curr == 0 ) throw new InvalidOperationException( "Error detected in the store: a node is not linked !" );
+                }
+                if( count != _entries.Length ) throw new InvalidOperationException( "Error detected in the store: links are not consistent." );
             }
-            if( count != _entries.Length ) throw new InvalidOperationException( "Error detected in the store: links are not consistent." );
-            count = 1;
-            while( curr != _head ) // backward
-            {
-                count++;
-                curr = _entries[curr].PreviousId;
-                if( curr == 0 ) throw new InvalidOperationException( "Error detected in the store: a node is not linked !" );
-            }
-            if( count != _entries.Length ) throw new InvalidOperationException( "Error detected in the store: links are not consistent." );
 #endif
         }
         internal bool CreateNewEntry( T entry, out int packetId )
@@ -150,7 +163,10 @@ namespace CK.MQTT.Stores
             // Removing the element from the linked list.
             if( packetId == _head )
             {
-                _head = next;
+                lock( _lock )
+                {
+                    _head = next;
+                }
             }
             if( next != 0 )
             {

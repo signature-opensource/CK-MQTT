@@ -1,11 +1,12 @@
 using CK.Core;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
 {
-    public interface IOutgoingPacketStore
+    public interface IOutgoingPacketStore : IDisposable
     {
         bool IsRevivedSession { get; set; }
         ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacket packet, QualityOfService qos );

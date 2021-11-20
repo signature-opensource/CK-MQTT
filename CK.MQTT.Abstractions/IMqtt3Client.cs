@@ -9,7 +9,7 @@ namespace CK.MQTT
     /// <summary>
     /// Represent a MQTT3 Client.
     /// </summary>
-    public interface IMqtt3Client
+    public interface IMqtt3Client : IDisposable
     {
         /// <summary>
         /// <see langword="delegate"/> called when the <see cref="IMqtt3Client"/> got Disconnected.
