@@ -48,6 +48,7 @@ namespace CK.MQTT
 
         protected MqttClientConfiguration Config { get; }
         protected ProtocolConfiguration ProtocolConfig { get; }
+
         Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
         /// <summary>
@@ -220,7 +221,11 @@ namespace CK.MQTT
                 {
                     m?.Error( "Error while connecting, closing client.", e );
                     // We may throw before the creation of the duplex pump.
-                    if( Pumps is not null ) await Pumps.CloseAsync(); ;
+                    if( Pumps is not null )
+                    {
+                        await Pumps.CloseAsync();
+                        Pumps.Dispose();
+                    }
                     return new ConnectResult( ConnectError.InternalException );
                 }
             }
