@@ -2,7 +2,7 @@ using CK.Core;
 using CK.MQTT.Common.OutgoingPackets;
 using CK.MQTT.Common.Stores;
 using CK.MQTT.Stores;
-using Microsoft.Toolkit.HighPerformance.Extensions;
+using Microsoft.Toolkit.HighPerformance;
 using System;
 using System.Buffers;
 using System.Diagnostics;

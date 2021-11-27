@@ -158,7 +158,6 @@ namespace CK.MQTT
                     {
                         m?.Log( logLevel, log, exception );
                         await Pumps!.CloseAsync();
-                        channel.Dispose();
                         return new ConnectResult( connectError );
                     }
 
@@ -198,7 +197,6 @@ namespace CK.MQTT
                     {
                         m?.Trace( "Connect code is not ok." );
                         await Pumps!.CloseAsync();
-                        channel.Dispose();
                         return res;
                     }
 

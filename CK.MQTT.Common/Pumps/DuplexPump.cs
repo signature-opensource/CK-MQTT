@@ -36,16 +36,18 @@ namespace CK.MQTT.Common.Pumps
             await State.CloseAsync();
         }
 
+        bool _isDispose;
         public void Dispose()
         {
+            _isDispose = true;
             _pumpA.Dispose();
             _pumpB.Dispose();
             _ctsClose.Dispose();
             _ctsRegistration.Dispose();
         }
 
-        public bool IsRunning => !_pumpA.StopToken.IsCancellationRequested && !_pumpB.StopToken.IsCancellationRequested;
-        public bool IsClosed => _pumpA.CloseToken.IsCancellationRequested || _pumpB.CloseToken.IsCancellationRequested;
+        public bool IsRunning => !_isDispose && !_pumpA.StopToken.IsCancellationRequested && !_pumpB.StopToken.IsCancellationRequested;
+        public bool IsClosed => _isDispose || _pumpA.CloseToken.IsCancellationRequested || _pumpB.CloseToken.IsCancellationRequested;
 
         public T State { get; }
     }

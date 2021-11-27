@@ -107,6 +107,5 @@ namespace CK.MQTT.Client.Tests
             }
         }
 
-
     }
 }

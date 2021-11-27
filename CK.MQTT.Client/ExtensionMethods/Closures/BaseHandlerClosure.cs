@@ -1,9 +1,9 @@
 using CK.Core;
 using System;
+using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.Core.Extension.PipeReaderExtensions;
 
 namespace CK.MQTT.Client.Closures
 {
@@ -17,10 +17,19 @@ namespace CK.MQTT.Client.Closures
             string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
         {
             Memory<byte> memory = new( new byte[payloadLength] );
-            if( !memory.IsEmpty && await pipe.CopyToBufferAsync( memory, cancelToken ) != FillStatus.Done )
+            if( !memory.IsEmpty )
             {
-                m?.Warn( "Partial data reading." );
-                return;
+                ReadResult readResult = await pipe.ReadAtLeastAsync( payloadLength, cancelToken );
+                if( readResult.IsCanceled || readResult.IsCompleted && readResult.Buffer.Length < memory.Length )
+                {
+                    m?.Warn( "Partial data reading." );
+                    pipe.AdvanceTo( readResult.Buffer.Slice( Math.Min( memory.Length, readResult.Buffer.Length ) ).End );
+                    return;
+                }
+                ReadOnlySequence<byte> sliced = readResult.Buffer.Slice( 0, memory.Length );
+                sliced.CopyTo( memory.Span );
+                pipe.AdvanceTo( sliced.End );
+
             }
             await _messageHandler( m, new ApplicationMessage( topic, memory, qos, retain ), cancelToken );
         }

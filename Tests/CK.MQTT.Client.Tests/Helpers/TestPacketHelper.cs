@@ -1,9 +1,10 @@
 using CK.Core;
-using CK.Core.Extension;
 using NUnit.Framework;
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,9 +34,19 @@ namespace CK.MQTT.Client.Tests.Helpers
 
                     using( CancellationTokenSource cts = Debugger.IsAttached ? new() : new( 500 ) )
                     {
-                        PipeReaderExtensions.FillStatus status = await replayer.Channel!.TestDuplexPipe.Input.CopyToBufferAsync( buffer, cts.Token );
-                        if( cts.IsCancellationRequested ) Assert.Fail( "Timeout." );
-                        if( status != PipeReaderExtensions.FillStatus.Done ) Assert.Fail( "Fill status not ok." );
+                        ReadResult readResult = await replayer.Channel!.TestDuplexPipe.Input.ReadAtLeastAsync( buffer.Length, cts.Token );
+
+                        if( cts.IsCancellationRequested || readResult.IsCanceled )
+                        {
+                            replayer.Channel!.TestDuplexPipe.Input.AdvanceTo( readResult.Buffer.Slice( Math.Min( buffer.Length, readResult.Buffer.Length ) ).End );
+                            Assert.Fail( "Timeout." );
+                        }
+                        ReadOnlySequence<byte> sliced = readResult.Buffer.Slice( 0, buffer.Length );
+
+                        if( readResult.IsCompleted && readResult.Buffer.Length < buffer.Length ) Assert.Fail( "Partial read." );
+                        sliced.CopyTo( buffer.Span );
+                        replayer.Channel!.TestDuplexPipe.Input.AdvanceTo( sliced.End );
+
                         if( !buffer.Span.SequenceEqual( truthBuffer.Span ) ) Assert.Fail( "Buffer not equals." );
                     }
                     replayer.TestDelayHandler.IncrementTime( operationTime );

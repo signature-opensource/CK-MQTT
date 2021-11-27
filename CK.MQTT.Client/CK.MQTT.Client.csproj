@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Common\Mqtt.props" />
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>9</LangVersion>
     <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
@@ -11,5 +11,4 @@
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
   </ItemGroup>
-
 </Project>

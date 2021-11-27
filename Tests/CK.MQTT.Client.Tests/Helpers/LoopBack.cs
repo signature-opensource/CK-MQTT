@@ -1,4 +1,6 @@
 using CK.Core;
+using System;
+using System.ComponentModel;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
@@ -24,6 +26,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         readonly TaskCompletionSource _tcs = new();
         public void Dispose()
         {
+            if( !IsConnected ) throw new InvalidOperationException( "Double dispose" );
             IsConnected = false;
             _tcs.SetResult();
         }

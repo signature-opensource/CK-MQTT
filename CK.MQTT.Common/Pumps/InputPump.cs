@@ -108,10 +108,10 @@ namespace CK.MQTT.Pumps
         }
 
 
-        public override Task CloseAsync()
+        public override async Task CloseAsync()
         {
-            _pipeReader.CompleteAsync();
-            return base.CloseAsync();
+            await _pipeReader.CompleteAsync();
+            await base.CloseAsync();
         }
     }
 }
