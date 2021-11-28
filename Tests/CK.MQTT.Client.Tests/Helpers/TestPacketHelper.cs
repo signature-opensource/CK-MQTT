@@ -47,6 +47,11 @@ namespace CK.MQTT.Client.Tests.Helpers
                             replayer.Channel!.TestDuplexPipe.Input.AdvanceTo( readResult.Buffer.Slice( Math.Min( buffer.Length, readResult.Buffer.Length ) ).End );
                             Assert.Fail( "Timeout." );
                         }
+                        if( readResult.IsCompleted && readResult.Buffer.Length < buffer.Length )
+                        {
+                            replayer.Channel!.TestDuplexPipe.Input.AdvanceTo( readResult.Buffer.Slice( Math.Min( buffer.Length, readResult.Buffer.Length ) ).End );
+                            Assert.Fail( "Partial data." );
+                        }
                         ReadOnlySequence<byte> sliced = readResult.Buffer.Slice( 0, buffer.Length );
 
                         if( readResult.IsCompleted && readResult.Buffer.Length < buffer.Length ) Assert.Fail( "Partial read." );

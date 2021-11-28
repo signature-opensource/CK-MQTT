@@ -1,5 +1,6 @@
 using CK.Core;
 using FluentAssertions;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -36,7 +37,13 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             PacketsWorker.Writer.Complete();
             Task? task = _workLoopTask;
-            if( task != null ) await task;
+            if( task != null )
+            {
+                if(!await task.WaitAsync(500))
+                {
+                    Assert.Fail( "Packet replayer didn't stopped in time." );
+                }
+            }
             _workLoopTask?.IsCompletedSuccessfully.Should().BeTrue();
         }
 

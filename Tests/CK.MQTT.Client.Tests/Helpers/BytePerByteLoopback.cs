@@ -11,9 +11,9 @@ namespace CK.MQTT.Client.Tests
     {
         public BytePerByteLoopback()
         {
-            Pipe input = new();
-            Pipe intermediary = new();
-            Pipe output = new();
+            Pipe input = new( new PipeOptions( minimumSegmentSize: 1 ) );
+            Pipe intermediary = new( new PipeOptions( minimumSegmentSize: 1 ) );
+            Pipe output = new( new PipeOptions( minimumSegmentSize: 1 ) );
             _ = WorkLoop( input, intermediary );
             DuplexPipe = new DuplexPipe( intermediary.Reader, output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );

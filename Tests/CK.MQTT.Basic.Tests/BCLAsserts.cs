@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Abstractions.Tests
 {
@@ -31,6 +32,23 @@ namespace CK.MQTT.Client.Abstractions.Tests
             CancellationTokenSource cts = new();
             cts.Cancel();
             cts.Cancel();
+        }
+
+        [Test]
+        public async Task ReadAtLeastAsync_works()
+        {
+            Pipe pipe = new( new PipeOptions( minimumSegmentSize: 1 ) );
+            Task task = Task.Run( async () =>
+            {
+                for ( int i = 0; i<26;i++ )
+                {
+                    await pipe.Writer.WriteAsync( new byte[1] );
+                    await pipe.Writer.FlushAsync();
+                    await Task.Delay( 1 );
+                }
+            } );
+            ReadResult readResult = await pipe.Reader.ReadAtLeastAsync( 26 );
+            readResult.Buffer.Length.Should().Be( 26 );
         }
     }
 }

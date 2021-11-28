@@ -79,23 +79,6 @@ namespace CK.MQTT
         }
 
         /// <summary>
-        /// Read a mqtt string on a <see cref="ReadOnlySequence{T}"/>, usefull when you cannot create a SequenceReader because you are on an async context.
-        /// </summary>
-        /// <param name="buffer">The buffer to read the string from.</param>
-        /// <param name="output">The parsed <see cref="string"/>.</param>
-        /// <param name="sequencePosition">The <see cref="SequencePosition"/> after the string.</param>
-        /// <returns><see langword="true"/> if the <see cref="string"/> was correctly read, <see langword="false"/> if there is not enough data.</returns>
-        static bool TryReadMQTTString( ReadOnlySequence<byte> buffer, [NotNullWhen( true )] out string? output, out SequencePosition sequencePosition )
-        {
-            SequenceReader<byte> reader = new( buffer );
-            bool result = reader.TryReadMQTTString( out output );
-            sequencePosition = reader.Position;
-            Debug.Assert( result == (output != null) );
-            // return result; // TODO when this issue is resolved, simplify this code: https://github.com/dotnet/roslyn/issues/44080
-            return output != null;
-        }
-
-        /// <summary>
         /// Skip bytes on a <see cref="PipeReader"/>, useful when you know the length of some data, but don't care about the content.
         /// </summary>
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>

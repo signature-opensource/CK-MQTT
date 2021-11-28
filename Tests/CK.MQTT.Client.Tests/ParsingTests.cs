@@ -94,6 +94,28 @@ namespace CK.MQTT.Client.Tests
         }
 
         [Test]
+        public async Task message_with_invalid_size_lead_to_protocol_error()
+        {
+            TaskCompletionSource tcs = new();
+
+            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            {
+                TestPacketHelper.SendToClient("308080808080000a7465737420746f70696374657374207061796c"),
+                TestPacketHelper.Disconnect
+            }, messageProcessor: ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken token ) =>
+            {
+                Assert.Fail();
+                return new ValueTask();
+            }, ( reason ) =>
+            {
+                reason.Should().Be( DisconnectedReason.ProtocolError );
+                tcs.SetResult();
+            } );
+            (await tcs.Task.WaitAsync( 500 )).Should().BeTrue();
+            await packetReplayer.StopAndEnsureValidAsync();
+        }
+
+        [Test]
         public async Task can_parse_5_messages()
         {
             TaskCompletionSource tcs = new();
