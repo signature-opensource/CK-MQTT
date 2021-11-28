@@ -1,10 +1,12 @@
 using CK.MQTT.Client.Tests.Helpers;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
 {
+    [ExcludeFromCodeCoverage]
     public class BytePerByteLoopback : LoopBack
     {
         public BytePerByteLoopback()

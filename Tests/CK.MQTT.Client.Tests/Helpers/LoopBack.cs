@@ -1,11 +1,13 @@
 using CK.Core;
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
+    [ExcludeFromCodeCoverage]
     public abstract class LoopBack : IMqttChannel
     {
         public abstract IDuplexPipe TestDuplexPipe { get; set; }

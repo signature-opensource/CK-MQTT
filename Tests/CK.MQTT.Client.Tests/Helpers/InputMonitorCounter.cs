@@ -1,11 +1,13 @@
 using CK.MQTT.Pumps;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
+    [ExcludeFromCodeCoverage]
     class InputMonitorCounter : IInputLogger
     {
         readonly IInputLogger _inputLogger;

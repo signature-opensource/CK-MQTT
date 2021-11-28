@@ -1,6 +1,7 @@
 using CK.Core;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
+    [ExcludeFromCodeCoverage]
     static class Scenario
     {
 

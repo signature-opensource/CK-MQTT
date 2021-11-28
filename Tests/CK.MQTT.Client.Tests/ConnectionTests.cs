@@ -3,6 +3,7 @@ using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,16 +11,19 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
+    [ExcludeFromCodeCoverage]
     public class ConnectionTests_Default : ConnectionTests
     {
         public override string ClassCase => "Default";
     }
 
+    [ExcludeFromCodeCoverage]
     public class ConnectionTests_BytePerByteChannel : ConnectionTests
     {
         public override string ClassCase => "BytePerByte";
     }
 
+    [ExcludeFromCodeCoverage]
     public abstract class ConnectionTests
     {
         public abstract string ClassCase { get; }
@@ -227,13 +231,18 @@ namespace CK.MQTT.Client.Tests
             await packetReplayer.StopAndEnsureValidAsync();
         }
 
-        [Test]
-        public async Task oversized_connack_is_parsed()
+        [TestCase( 8000 )]
+        [TestCase( 3 )]
+        public async Task oversized_connack_is_parsed( int connackSize )
         {
+            int size = 1 + connackSize.CompactByteCount() + connackSize;
+            Memory<byte> connackBuffer = new byte[size];
+            connackBuffer.Span[0] = 0x20;
+            connackBuffer.Span[1..].WriteVariableByteInteger( connackSize );
             PacketReplayer pcktReplayer = new( ClassCase, new[]
             {
                 TestPacketHelper.Outgoing("101600044d5154540402001e000a434b4d71747454657374"),
-                TestPacketHelper.SendToClient("2003000000"),
+                TestPacketHelper.SendToClient(connackBuffer),
                 TestPacketHelper.SendToClient("321a000a7465737420746f706963000174657374207061796c6f6164")
             } );
             TaskCompletionSource tcs = new();

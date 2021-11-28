@@ -1,17 +1,23 @@
 using CK.MQTT.Common.Time;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
+    [ExcludeFromCodeCoverage]
     public class TestDelayHandler : IDelayHandler, IStopwatchFactory, ICancellationTokenSourceFactory
     {
         readonly object _lock = new();
         readonly List<DelayTask> _delays = new();
         readonly List<WeakReference<Stopwatch>> _stopwatches = new();
         readonly List<CTS> _cts = new();
+        const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+        static FieldInfo? IsDisposedField = typeof( CancellationTokenSource ).GetField( "_disposed", bindingFlags );
+
         public void IncrementTime( TimeSpan timeSpan )
         {
             lock( _lock )
@@ -26,7 +32,8 @@ namespace CK.MQTT.Client.Tests.Helpers
                 _delays.ForEach( s => s.AdvanceTime( timeSpan ) );
 
                 _stopwatches.RemoveAll( s => !s.TryGetTarget( out _ ) );
-                _cts.RemoveAll( s => !s.IncrementTime( timeSpan ) || s.CancellationTokenSource.IsCancellationRequested );
+                
+                _cts.RemoveAll( s => !s.IncrementTime( timeSpan ) || (bool)IsDisposedField!.GetValue( s.CancellationTokenSource )! || s.CancellationTokenSource.IsCancellationRequested);
                 _delays.RemoveAll( s => s.TaskCompletionSource.Task.IsCompleted );
             }
         }

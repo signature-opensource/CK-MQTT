@@ -1,5 +1,6 @@
 using CK.Core;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
+    [ExcludeFromCodeCoverage]
     static class MqttTestHelper
     {
         public static (PacketReplayer packetReplayer, IMqtt3Client client) CreateTestClient( string channelType, Queue<PacketReplayer.TestWorker> packets )

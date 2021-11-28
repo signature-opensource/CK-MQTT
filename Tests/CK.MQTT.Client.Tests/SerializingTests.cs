@@ -1,22 +1,26 @@
 using CK.MQTT.Client.Tests.Helpers;
 using NUnit.Framework;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
+    [ExcludeFromCodeCoverage]
     public class SerializingTests_Default : SerializingTests
     {
         public override string ClassCase => "Default";
     }
 
+    [ExcludeFromCodeCoverage]
     public class SerializingTests_BytePerByteChannel : SerializingTests
     {
         public override string ClassCase => "BytePerByte";
     }
 
+    [ExcludeFromCodeCoverage]
     public abstract class SerializingTests
     {
         public abstract string ClassCase { get; }

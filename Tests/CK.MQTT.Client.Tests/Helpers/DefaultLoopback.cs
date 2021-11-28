@@ -1,8 +1,10 @@
 using CK.MQTT.Client.Tests.Helpers;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 
 namespace CK.MQTT.Client.Tests
 {
+    [ExcludeFromCodeCoverage]
     public class DefaultLoopback : LoopBack
     {
         public DefaultLoopback()

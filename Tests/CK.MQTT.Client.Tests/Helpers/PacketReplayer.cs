@@ -2,6 +2,7 @@ using CK.Core;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -10,6 +11,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     /// <summary>
     /// Allow to test the client with weird packet without hacking a the server code.
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class PacketReplayer : IMqttChannelFactory
     {
         public Channel<TestWorker> PacketsWorker { get; }

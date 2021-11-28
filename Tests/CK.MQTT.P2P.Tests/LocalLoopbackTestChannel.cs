@@ -1,11 +1,13 @@
 using CK.Core;
 using CK.MQTT.Common.BasicImplementations;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.P2P.Tests
 {
+    [ExcludeFromCodeCoverage]
     class LocalLoopbackTestChannel : IMqttChannelListener, IMqttChannelFactory
     {
         readonly IMqttChannel _serverChannel;

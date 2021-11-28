@@ -3,6 +3,7 @@ using NUnit.Framework;
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
@@ -10,20 +11,25 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
+    [ExcludeFromCodeCoverage]
     public static class TestPacketHelper
     {
 
-        public static PacketReplayer.TestWorker SendToClient( string hexArray, TimeSpan operationTime = default ) =>
+        public static PacketReplayer.TestWorker SendToClient( ReadOnlyMemory<byte> data, TimeSpan operationTime = default ) =>
             async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
                 using( m.OpenInfo( "Sending to client..." ) )
                 {
-                    await replayer.Channel!.TestDuplexPipe.Output.WriteAsync( FromString( hexArray ) );
+                    await replayer.Channel!.TestDuplexPipe.Output.WriteAsync( data );
                     await replayer.Channel!.TestDuplexPipe.Output.FlushAsync();
                     replayer.TestDelayHandler.IncrementTime( operationTime );
                 }
                 return true;
             };
+
+        public static PacketReplayer.TestWorker SendToClient( string hexArray, TimeSpan operationTime = default ) =>
+            SendToClient( FromString( hexArray ), operationTime );
+
         public static PacketReplayer.TestWorker Outgoing( string hexArray, TimeSpan operationTime = default )
             => async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {

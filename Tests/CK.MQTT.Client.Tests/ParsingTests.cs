@@ -2,21 +2,25 @@ using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
 {
+    [ExcludeFromCodeCoverage]
     public class ParsingTests_Default : ParsingTests
     {
         public override string ClassCase => "Default";
     }
 
+    [ExcludeFromCodeCoverage]
     public class ParsingTests_BytePerByteChannel : ParsingTests
     {
         public override string ClassCase => "BytePerByte";
     }
+    [ExcludeFromCodeCoverage]
     public abstract class ParsingTests
     {
         public abstract string ClassCase { get; }

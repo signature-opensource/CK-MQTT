@@ -1,6 +1,7 @@
 using CK.MQTT.Client.Tests.Helpers;
 using NUnit.Framework;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,16 +9,19 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
+    [ExcludeFromCodeCoverage]
     public class PublishTests_Default : PublishTests
     {
         public override string ClassCase => "Default";
     }
 
+    [ExcludeFromCodeCoverage]
     public class PublishTests_BytePerByteChannel : PublishTests
     {
         public override string ClassCase => "BytePerByte";
     }
 
+    [ExcludeFromCodeCoverage]
     public abstract class PublishTests
     {
         public abstract string ClassCase { get; }

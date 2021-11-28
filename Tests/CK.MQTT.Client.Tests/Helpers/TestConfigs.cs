@@ -1,6 +1,9 @@
 using CK.Core;
+using System.Diagnostics.CodeAnalysis;
+
 namespace CK.MQTT.Client.Tests.Helpers
 {
+    [ExcludeFromCodeCoverage]
     static class TestConfigs
     {
         public static MqttClientConfiguration DefaultTestConfig( PacketReplayer packetReplayer, int timeoutMs = 5_000, IInputLogger? inputLogger = null, IOutputLogger? outputLogger = null )
