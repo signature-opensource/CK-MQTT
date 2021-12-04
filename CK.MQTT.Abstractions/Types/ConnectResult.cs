@@ -81,7 +81,7 @@ namespace CK.MQTT
             ConnectReturnCode = connectReturnCode;
         }
 
-        public override bool Equals( object obj )
+        public override bool Equals( object? obj )
             => obj is ConnectResult result
             && result.ConnectError == ConnectError
             && result.ConnectReturnCode == ConnectReturnCode

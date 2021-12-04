@@ -1,6 +1,7 @@
 using CK.MQTT.Client.Tests.Helpers;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
 
@@ -11,12 +12,15 @@ namespace CK.MQTT.Client.Tests
     {
         public BytePerByteLoopback()
         {
-            Pipe input = new( new PipeOptions( minimumSegmentSize: 1 ) );
-            Pipe intermediary = new( new PipeOptions( minimumSegmentSize: 1 ) );
-            Pipe output = new( new PipeOptions( minimumSegmentSize: 1 ) );
-            _ = WorkLoop( input, intermediary );
+            const int size = 16;
+            Pipe input = new( new PipeOptions( minimumSegmentSize: size ) );
+            Pipe intermediary = new( new PipeOptions( minimumSegmentSize: size ) );
+            Pipe output = new( new PipeOptions( minimumSegmentSize: size ) );
+
+            _ = WorkLoop( input.Writer, input.Reader, intermediary.Writer );
             DuplexPipe = new DuplexPipe( intermediary.Reader, output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
+
         }
 
         readonly byte[] _buffer = new byte[1];
@@ -24,26 +28,26 @@ namespace CK.MQTT.Client.Tests
         public override IDuplexPipe TestDuplexPipe { get; set; }
         public override IDuplexPipe DuplexPipe { get; set; }
 
-        async Task WorkLoop( Pipe input, Pipe bytePerByte )
+        async Task WorkLoop( PipeWriter inputWriter, PipeReader inputReader, PipeWriter bytePerByte )
         {
             while( true )
             {
-                ReadResult result = await input.Reader.ReadAsync();
+                ReadResult result = await inputReader.ReadAsync();
                 foreach( ReadOnlyMemory<byte> memory in result.Buffer )
                 {
                     for( int i = 0; i < memory.Length; i++ )
                     {
                         _buffer[0] = memory.Span[i];
-                        await bytePerByte.Writer.WriteAsync( _buffer );
-                        await bytePerByte.Writer.FlushAsync();
+                        await bytePerByte.WriteAsync( _buffer );
+                        await bytePerByte.FlushAsync();
                     }
                 }
-                input.Reader.AdvanceTo( result.Buffer.End );
+                inputReader.AdvanceTo( result.Buffer.End );
                 if( result.IsCompleted ) break;
                 if( result.IsCanceled ) break;
             }
-            bytePerByte.Writer.Complete();
-            input.Writer.Complete();
+            bytePerByte.Complete();
+            inputWriter.Complete();
         }
     }
 }
