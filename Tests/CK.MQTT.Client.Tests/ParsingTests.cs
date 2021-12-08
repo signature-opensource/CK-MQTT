@@ -10,6 +10,12 @@ using System.Threading.Tasks;
 namespace CK.MQTT.Client.Tests
 {
     [ExcludeFromCodeCoverage]
+    public class ParsingTests_PipeReaderCop : ConnectionTests
+    {
+        public override string ClassCase => "PipeReaderCop";
+    }
+
+    [ExcludeFromCodeCoverage]
     public class ParsingTests_Default : ParsingTests
     {
         public override string ClassCase => "Default";
@@ -111,7 +117,7 @@ namespace CK.MQTT.Client.Tests
                 reason.Should().Be( DisconnectedReason.ProtocolError );
                 tcs.SetResult();
             } );
-            (await tcs.Task.WaitAsync( 500 )).Should().BeTrue();
+            ( await tcs.Task.WaitAsync( 500 )).Should().BeTrue();
             await packetReplayer.StopAndEnsureValidAsync();
         }
 

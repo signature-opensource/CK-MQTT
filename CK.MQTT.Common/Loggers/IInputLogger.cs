@@ -1,5 +1,6 @@
 using CK.MQTT.Pumps;
 using System;
+using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ namespace CK.MQTT
         IDisposable? IncomingPacket( byte header, int length );
         void EndOfStream();
         void UnexpectedEndOfStream();
-        IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos );
+        IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, QualityOfService qos );
         IDisposable? ProcessPacket( PacketType packetType );
         void QueueFullPacketDropped( PacketType packetType, int packetId );
         void UnparsedExtraBytes( InputPump incomingMessageHandler, PacketType packetType, byte header, int packetSize, int unparsedSize );
@@ -35,5 +36,6 @@ namespace CK.MQTT
         void InvalidPropertyType();
         void ErrorAuthDataMissing();
         void ProtocolViolation( ProtocolViolationException e );
+        void ReflexSignaledInvalidData();
     }
 }

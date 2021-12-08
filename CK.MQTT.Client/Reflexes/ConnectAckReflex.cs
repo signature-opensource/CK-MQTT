@@ -29,7 +29,7 @@ namespace CK.MQTT
         /// </remarks>
         public Task<ConnectResult> Task => _tcs.Task;
 
-        public async ValueTask HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             try
             {
@@ -37,23 +37,23 @@ namespace CK.MQTT
                 if( header != (byte)PacketType.ConnectAck )
                 {
                     _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_UnexpectedConnectResponse ) );
-                    return;
+                    return OperationStatus.Done;
                 }
                 using( m?.ProcessPacket( PacketType.ConnectAck ) )
                 {
-                    ReadResult? read = await reader.ReadAsync( m, 2, cancellationToken );
-                    if( !read.HasValue ) return;
-                    Deserialize( read.Value.Buffer, out byte state, out byte code, out SequencePosition position );
+                    ReadResult read = await reader.ReadAtLeastAsync( 2, cancellationToken );
+                    if( read.Buffer.Length < 2) return OperationStatus.NeedMoreData;
+                    Deserialize( read.Buffer, out byte state, out byte code, out SequencePosition position );
                     reader.AdvanceTo( position );
                     if( state > 1 )
                     {
                         _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
-                        return;
+                        return OperationStatus.Done;
                     }
                     if( code > 5 )
                     {
                         _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
-                        return;
+                        return OperationStatus.Done;
                     }
                     if( packetSize > 2 )
                     {
@@ -62,13 +62,14 @@ namespace CK.MQTT
                     }
                     sender.CurrentReflex = Reflex;
                     _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                    return OperationStatus.Done;
                 }
             }
             catch( Exception e )
             {
                 m?.ConnectionUnknownException( e );
                 _tcs.SetResult( new ConnectResult( ConnectError.InternalException ) );
-                return;
+                return OperationStatus.Done;
             }
         }
 

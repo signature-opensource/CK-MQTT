@@ -1,5 +1,6 @@
 using CK.MQTT.Pumps;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace CK.MQTT
     /// If a middleware advance the <see cref="PipeReader"/>, the next middleware can't be aware of it.
     /// </remarks>
     /// <returns>A <see cref="ValueTask"/> that complete when the middleware finished it's job.</returns>
-    public delegate ValueTask ReflexMiddleware( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken );
+    public delegate ValueTask<OperationStatus> ReflexMiddleware( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken );
 
     /// <summary>
     /// An interface exposing a method method that is a <see cref="ReflexMiddleware"/>.
@@ -29,7 +30,7 @@ namespace CK.MQTT
     public interface IReflexMiddleware
     {
         /// <inheritdoc cref="ReflexMiddleware"/>
-        ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken );
+        ValueTask<OperationStatus> ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken );
     }
 
     /// <summary>
@@ -73,7 +74,7 @@ namespace CK.MQTT
             readonly ReflexMiddleware _current;
             readonly Reflex _previous;
             public Closure( ReflexMiddleware current, Reflex previous ) => (_current, _previous) = (current, previous);
-            public ValueTask RunAsync( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c )
+            public ValueTask<OperationStatus> RunAsync( IInputLogger? m, InputPump s, byte h, int l, PipeReader p, CancellationToken c )
             {
                 Reflex previous = _previous;
                 return _current( m, s, h, l, p, () => previous( m, s, h, l, p, c ), c );//TODO: there is a closure here :|

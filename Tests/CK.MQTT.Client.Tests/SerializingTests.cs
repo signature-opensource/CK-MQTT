@@ -9,6 +9,12 @@ using static CK.Testing.MonitorTestHelper;
 namespace CK.MQTT.Client.Tests
 {
     [ExcludeFromCodeCoverage]
+    public class SerializingTests_PipeReaderCop : ConnectionTests
+    {
+        public override string ClassCase => "PipeReaderCop";
+    }
+
+    [ExcludeFromCodeCoverage]
     public class SerializingTests_Default : SerializingTests
     {
         public override string ClassCase => "Default";

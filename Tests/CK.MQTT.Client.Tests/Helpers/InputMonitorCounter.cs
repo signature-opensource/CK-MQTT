@@ -1,5 +1,6 @@
 using CK.MQTT.Pumps;
 using System;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
@@ -107,7 +108,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             return _inputLogger.ProcessPacket( packetType );
         }
         public int ProcessPublishPacketCounter { get; private set; } = 0;
-        public IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos )
+        public IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, QualityOfService qos )
         {
             ProcessPublishPacketCounter++;
             return _inputLogger.ProcessPublishPacket( sender, header, packetLength, reader, next, qos );
@@ -184,6 +185,13 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             ProtocolViolationCounter++;
             _inputLogger.ProtocolViolation( e );
+        }
+
+        public int ReflexSignaledInvalidDataCounter { get; private set; } = 0;
+        public void ReflexSignaledInvalidData()
+        {
+            ReflexSignaledInvalidDataCounter++;
+            _inputLogger.ReflexSignaledInvalidData();
         }
     }
 }

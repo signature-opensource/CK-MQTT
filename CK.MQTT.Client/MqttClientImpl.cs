@@ -4,6 +4,7 @@ using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
@@ -136,7 +137,11 @@ namespace CK.MQTT
                         builder.UseMiddleware( withKeepAlive );
                     }
                     // When receiving the ConnAck, this reflex will replace the reflex with this property.
-                    connectAckReflex.Reflex = builder.Build( ( a, b, c, d, e, f ) => SelfDisconnectAsync( DisconnectedReason.ProtocolError ) );
+                    connectAckReflex.Reflex = builder.Build(  async ( a, b, c, d, e, f ) =>
+                    {
+                        await SelfDisconnectAsync( DisconnectedReason.ProtocolError );
+                        return OperationStatus.Done;
+                    } );
 
                     Pumps = new DuplexPump<ClientState>( // Require channel started.
                         new ClientState( Config, output, channel, packetIdStore, store ),

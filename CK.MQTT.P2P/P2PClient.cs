@@ -2,6 +2,7 @@ using CK.Core;
 using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
 using System;
+using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,7 +59,11 @@ namespace CK.MQTT.P2P
                 // Enable keepalive only if we need it.
 
                 // When receiving the ConnAck, this reflex will replace the reflex with this property.
-                Reflex reflex = builder.Build( ( a, b, c, d, e, f ) => SelfDisconnectAsync( DisconnectedReason.ProtocolError ) );
+                Reflex reflex = builder.Build( async ( a, b, c, d, e, f ) =>
+                {
+                    await SelfDisconnectAsync( DisconnectedReason.ProtocolError );
+                    return OperationStatus.Done;
+                } );
                 connectReflex.EngageNextReflex( reflex );
                 await channel.StartAsync( m ); // Will create the connection to server.
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.

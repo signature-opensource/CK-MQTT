@@ -28,12 +28,11 @@ namespace CK.MQTT
         const byte _dupFlag = 1 << 4;
         const byte _retainFlag = 1;
 
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )
             {
-                await next();
-                return;
+                return await next();
             }
             QualityOfService qos = (QualityOfService)((header >> 1) & 3);
             using( m?.ProcessPublishPacket( sender, header, packetLength, reader, next, qos ) )
@@ -45,8 +44,8 @@ namespace CK.MQTT
                 ushort packetId;
                 while( true )
                 {
-                    ReadResult read = await reader.ReadAsync();
-                    if( read.IsCanceled ) return;
+                    ReadResult read = await reader.ReadAsync( cancellationToken );
+                    if( read.IsCanceled ) return OperationStatus.NeedMoreData;
                     if( qos == QualityOfService.AtMostOnce )
                     {
                         bool ReadString( [NotNullWhen( true )] out string? theTopic )
@@ -68,7 +67,7 @@ namespace CK.MQTT
                             continue;
                         }
                         await _messageHandler( _mqttConfiguration.OnInputMonitor, theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
-                        return;
+                        return OperationStatus.Done;
                     }
                     if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
                     {
@@ -81,12 +80,13 @@ namespace CK.MQTT
                 {
                     await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                     _output.QueueReflexMessage( m, LifecyclePacketV3.Puback( packetId ) );
-                    return;
+                    return OperationStatus.Done;
                 }
                 if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
                 await _store.StoreIdAsync( m, packetId );
                 await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                 _output.QueueReflexMessage( m, LifecyclePacketV3.Pubrec( packetId ) );
+                return OperationStatus.Done;
             }
         }
     }

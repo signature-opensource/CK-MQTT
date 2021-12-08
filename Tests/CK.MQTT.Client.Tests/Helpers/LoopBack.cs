@@ -16,13 +16,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public bool IsConnected { get; private set; } = true;
 
         public ValueTask StartAsync( IActivityMonitor? m ) => new();
-        public void Close( IInputLogger? m )
-        {
-            TestDuplexPipe.Output.Complete();
-            TestDuplexPipe.Output.CancelPendingFlush();
-            TestDuplexPipe.Input.CancelPendingRead();
-            TestDuplexPipe.Input.Complete();
-        }
+        public abstract void Close( IInputLogger? m );
 
         public Task OnDisposeTask => _tcs.Task;
         readonly TaskCompletionSource _tcs = new();

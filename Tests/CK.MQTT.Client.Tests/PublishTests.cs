@@ -10,6 +10,12 @@ using static CK.Testing.MonitorTestHelper;
 namespace CK.MQTT.Client.Tests
 {
     [ExcludeFromCodeCoverage]
+    public class PublishTests_PipeReaderCop : ConnectionTests
+    {
+        public override string ClassCase => "PipeReaderCop";
+    }
+
+    [ExcludeFromCodeCoverage]
     public class PublishTests_Default : PublishTests
     {
         public override string ClassCase => "Default";

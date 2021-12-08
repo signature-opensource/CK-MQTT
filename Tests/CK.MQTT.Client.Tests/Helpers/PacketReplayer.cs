@@ -39,7 +39,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             Task? task = _workLoopTask;
             if( task != null )
             {
-                if(!await task.WaitAsync(500))
+                if( !await task.WaitAsync( 500 ) )
                 {
                     Assert.Fail( "Packet replayer didn't stopped in time." );
                 }
@@ -58,6 +58,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 using( _m.OpenInfo( $"Running test worker {i++}." ) )
                 {
                     if( !await func( _m, this ) ) break;
+
                 }
             }
             _workLoopTask = null;
@@ -76,6 +77,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 "Default" => new DefaultLoopback(),
                 "BytePerByte" => new BytePerByteLoopback(),
+                "PipeReaderCop" => new PipeReaderCopLoopback(),
                 _ => throw new InvalidOperationException( "Unknown channel type." )
             };
             _workLoopTask = WorkLoop();

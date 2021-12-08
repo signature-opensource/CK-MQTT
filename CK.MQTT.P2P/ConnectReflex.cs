@@ -51,7 +51,7 @@ namespace CK.MQTT.P2P
 
         public Task ConnectHandledTask => _taskCompletionSource.Task;
         InputPump _sender;
-        public async ValueTask HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             _sender = sender;
             OperationStatus status = OperationStatus.NeedMoreData;
@@ -88,6 +88,8 @@ namespace CK.MQTT.P2P
             //      Set the next reflex to an Authenticate Handler and handle authentication.
             _taskCompletionSource.SetResult( null );
             await _exitWait.WaitAsync();
+
+            return OperationStatus.Done;
         }
 
 

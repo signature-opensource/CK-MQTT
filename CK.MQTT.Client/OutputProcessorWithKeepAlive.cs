@@ -1,6 +1,7 @@
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
+using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,25 +59,25 @@ namespace CK.MQTT.Client
             WaitingPingResp = true;
         }
 
-        public async ValueTask ProcessIncomingPacketAsync(
+        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync(
             IInputLogger? m,
             InputPump sender,
             byte header,
             int packetLength,
             PipeReader pipeReader,
-            Func<ValueTask> next,
+            Func<ValueTask<OperationStatus>> next,
             CancellationToken cancellationToken )
         {
             if( PacketType.PingResponse != (PacketType)header )
             {
-                await next();
-                return;
+                return await next();
             }
             using( m?.ProcessPacket( PacketType.PingResponse ) )
             {
                 WaitingPingResp = false;
                 if( packetLength > 0 ) m?.UnparsedExtraBytes( sender, PacketType.PingResponse, 0, packetLength, packetLength );
                 await pipeReader.SkipBytesAsync( packetLength );
+                return OperationStatus.Done;
             }
         }
     }

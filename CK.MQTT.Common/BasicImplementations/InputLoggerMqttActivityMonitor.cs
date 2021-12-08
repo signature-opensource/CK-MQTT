@@ -1,6 +1,7 @@
 using CK.Core;
 using CK.MQTT.Pumps;
 using System;
+using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace CK.MQTT
         public IDisposable? ProcessPacket( PacketType packetType ) => _m.OpenTrace( $"Handling incoming packet as {packetType}." );
 
         /// <inheritdoc/>
-        public IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask> next, QualityOfService qos )
+        public IDisposable? ProcessPublishPacket( InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, QualityOfService qos )
             => _m.OpenDebug( $"Handling incoming packet as {PacketType.Publish}." );
 
         /// <inheritdoc/>
@@ -103,5 +104,8 @@ namespace CK.MQTT
 
         public void ProtocolViolation( ProtocolViolationException e )
             => _m.Fatal( "Protocol Violation", e );
+
+        public void ReflexSignaledInvalidData()
+            => _m.Fatal( "Invalid data or protocol error." );
     }
 }

@@ -5,14 +5,14 @@ using System.IO.Pipelines;
 namespace CK.MQTT.Client.Tests
 {
     [ExcludeFromCodeCoverage]
-    public class DefaultLoopback : LoopBack
+    public class PipeReaderCopLoopback : LoopBack
     {
-        public DefaultLoopback()
+        public PipeReaderCopLoopback()
         {
             Pipe input = new();
             Pipe output = new();
-            DuplexPipe = new DuplexPipe( input.Reader, output.Writer );
-            TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
+            DuplexPipe = new DuplexPipe( new PipeReaderCop( input.Reader ), output.Writer );
+            TestDuplexPipe = new DuplexPipe( new PipeReaderCop( output.Reader ), input.Writer );
         }
 
         public override IDuplexPipe DuplexPipe { get; set; }

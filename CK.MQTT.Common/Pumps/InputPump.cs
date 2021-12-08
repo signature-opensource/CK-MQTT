@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Pumps
 {
-    public delegate ValueTask Reflex( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken );
+
+    public delegate ValueTask<OperationStatus> Reflex( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken );
 
     /// <summary>
     /// Message pump that does basic processing on the incoming data
@@ -75,7 +76,26 @@ namespace CK.MQTT.Pumps
                             _pipeReader.AdvanceTo( position );
                             using( m?.IncomingPacket( header, length ) )
                             {
-                                await CurrentReflex( m, this, header, length, _pipeReader, CloseToken );
+                                OperationStatus status = await CurrentReflex( m, this, header, length, _pipeReader, CloseToken );
+                                if( status == OperationStatus.InvalidData )
+                                {
+                                    _config.InputLogger?.ReflexSignaledInvalidData();
+                                    await SelfCloseAsync( DisconnectedReason.ProtocolError );
+                                    return;
+                                }
+                                if( status == OperationStatus.NeedMoreData )
+                                {
+                                    if( CloseToken.IsCancellationRequested )
+                                    {
+                                        _config.InputLogger?.ReadLoopTokenCancelled();
+                                    }
+                                    else
+                                    {
+                                        _config.InputLogger?.UnexpectedEndOfStream();
+                                    }
+                                    return;
+                                    // TODO: I think only the reading may know the connexion is closed, and should close the client.
+                                }
                             }
                             continue;
                         }

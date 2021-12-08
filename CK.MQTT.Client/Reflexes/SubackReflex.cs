@@ -17,20 +17,20 @@ namespace CK.MQTT
         {
             _store = store;
         }
-        public async ValueTask ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask> next, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
         {
             if( PacketType.SubscribeAck != (PacketType)header )
             {
-                await next();
-                return;
+                return await next();
             }
             using( m?.ProcessPacket( PacketType.SubscribeAck ) )
             {
-                ReadResult? read = await pipeReader.ReadAsync( m, packetLength );
-                if( !read.HasValue ) return;
-                Parse( read.Value.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
+                ReadResult read = await pipeReader.ReadAtLeastAsync( packetLength, cancellationToken );
+                if( read.Buffer.Length < packetLength) return OperationStatus.NeedMoreData;
+                Parse( read.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
                 pipeReader.AdvanceTo( position );
                 await _store.OnQos1AckAsync( m, packetId, qos );
+                return OperationStatus.Done;
             }
         }
 
