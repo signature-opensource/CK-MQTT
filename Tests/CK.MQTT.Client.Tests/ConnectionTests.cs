@@ -291,5 +291,26 @@ namespace CK.MQTT.Client.Tests
             inputLogger.UnparsedExtraBytesCounter.Should().Be( 0 );
             await pcktReplayer.StopAndEnsureValidAsync();
         }
+
+        [Test]
+        public async Task anonymous_connect()
+        {
+            PacketReplayer pcktReplayer = new( ClassCase, new[]
+            {
+                TestPacketHelper.Outgoing("100C00044D5154540402001E0000"),
+                TestPacketHelper.SendToClient("20020000")
+            } );
+
+            InputMonitorCounter inputLogger = new( new InputLoggerMqttActivityMonitor( new ActivityMonitor( "Input Logger" ) ) );
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer, inputLogger: inputLogger ),
+                ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
+                {
+                    msg.Dispose();
+                    return new ValueTask();
+                } );
+            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials() );
+            inputLogger.UnparsedExtraBytesCounter.Should().Be( 0 );
+            await pcktReplayer.StopAndEnsureValidAsync();
+        }
     }
 }

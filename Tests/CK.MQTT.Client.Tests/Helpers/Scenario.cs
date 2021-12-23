@@ -64,5 +64,15 @@ namespace CK.MQTT.Client.Tests.Helpers
                 msg.Dispose();
                 return new ValueTask();
             };
+
+        public static async Task<(PacketReplayer packetReplayer, IMqtt3Client client)> ConnectedClientWithKeepAlive( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
+        {
+            PacketReplayer pcktReplayer = CreateConnectedReplayer( channelType, packets );
+
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( pcktReplayer ),
+                NoOpDispose() );
+            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            return (pcktReplayer, client);
+        }
     }
 }

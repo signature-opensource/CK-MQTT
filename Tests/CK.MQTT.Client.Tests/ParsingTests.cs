@@ -58,7 +58,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task partial_message_throws_with_application_message_closure()
         {
-            TaskCompletionSource tcs = new();
+            TaskCompletionSource<DisconnectedReason> tcs = new();
 
             (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
@@ -66,21 +66,20 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.Disconnect
             }, messageProcessor: ( IActivityMonitor? m, ApplicationMessage msg, CancellationToken token ) =>
             {
-                Assert.Fail();
+                tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
                 return new ValueTask();
             }, ( reason ) =>
             {
-                reason.Should().Be( DisconnectedReason.RemoteDisconnected );
-                tcs.SetResult();
+                tcs.SetResult( reason );
             } );
-            (await tcs.Task.WaitAsync( 500 )).Should().BeTrue();
+            (await tcs.Task).Should().Be( DisconnectedReason.RemoteDisconnected );
             await packetReplayer.StopAndEnsureValidAsync();
         }
 
         [Test]
         public async Task partial_message_throws_with_disposable_application_message_closure()
         {
-            TaskCompletionSource tcs = new();
+            TaskCompletionSource<DisconnectedReason> tcs = new();
 
             (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
@@ -88,21 +87,20 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.Disconnect
             }, messageProcessor: ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken token ) =>
             {
-                Assert.Fail();
+                tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
                 return new ValueTask();
             }, ( reason ) =>
             {
-                reason.Should().Be( DisconnectedReason.RemoteDisconnected );
-                tcs.SetResult();
+                tcs.SetResult( reason );
             } );
-            (await tcs.Task.WaitAsync( 500 )).Should().BeTrue();
+            (await tcs.Task).Should().Be( DisconnectedReason.RemoteDisconnected );
             await packetReplayer.StopAndEnsureValidAsync();
         }
 
         [Test]
         public async Task message_with_invalid_size_lead_to_protocol_error()
         {
-            TaskCompletionSource tcs = new();
+            TaskCompletionSource<DisconnectedReason> tcs = new();
 
             (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
@@ -110,14 +108,13 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.Disconnect
             }, messageProcessor: ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken token ) =>
             {
-                Assert.Fail();
+                tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
                 return new ValueTask();
             }, ( reason ) =>
             {
-                reason.Should().Be( DisconnectedReason.ProtocolError );
-                tcs.SetResult();
+                tcs.TrySetResult( reason );
             } );
-            ( await tcs.Task.WaitAsync( 500 )).Should().BeTrue();
+            (await tcs.Task).Should().Be( DisconnectedReason.ProtocolError );
             await packetReplayer.StopAndEnsureValidAsync();
         }
 

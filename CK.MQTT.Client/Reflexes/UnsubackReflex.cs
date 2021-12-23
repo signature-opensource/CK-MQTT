@@ -21,7 +21,7 @@ namespace CK.MQTT
             }
             using( m?.ProcessPacket( PacketType.UnsubscribeAck ) )
             {
-                ushort? packetId = await pipeReader.ReadPacketIdPacketAsync( m, packetLength );
+                ushort? packetId = await pipeReader.ReadPacketIdPacketAsync( m, packetLength, cancellationToken );
                 if( !packetId.HasValue) return OperationStatus.NeedMoreData;
                 await _store.OnQos1AckAsync( m, packetId.Value, null );
                 return OperationStatus.Done;

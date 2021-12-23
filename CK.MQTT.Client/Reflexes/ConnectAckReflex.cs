@@ -57,7 +57,7 @@ namespace CK.MQTT
                     }
                     if( packetSize > 2 )
                     {
-                        await reader.SkipBytesAsync( packetSize - 2 );
+                        await reader.SkipBytesAsync( packetSize - 2, cancellationToken );
                         m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
                     }
                     sender.CurrentReflex = Reflex;

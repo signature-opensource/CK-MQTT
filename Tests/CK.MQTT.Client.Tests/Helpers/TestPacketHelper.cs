@@ -28,14 +28,14 @@ namespace CK.MQTT.Client.Tests.Helpers
             };
 
         public static PacketReplayer.TestWorker SendToClient( string hexArray, TimeSpan operationTime = default ) =>
-            SendToClient( FromString( hexArray ), operationTime );
+            SendToClient( Convert.FromHexString( hexArray ), operationTime );
 
         public static PacketReplayer.TestWorker Outgoing( string hexArray, TimeSpan operationTime = default )
             => async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
                 using( m.OpenInfo( "Outgoing packet..." ) )
                 {
-                    ReadOnlyMemory<byte> truthBuffer = FromString( hexArray );
+                    ReadOnlyMemory<byte> truthBuffer = Convert.FromHexString( hexArray );
                     Memory<byte> buffer = new byte[truthBuffer.Length];
 
                     using( CancellationTokenSource cts = Debugger.IsAttached ? new() : new( 500 ) )
@@ -93,15 +93,15 @@ namespace CK.MQTT.Client.Tests.Helpers
             return new ValueTask<bool>( false );
         }
 
-        public static ReadOnlyMemory<byte> FromString( string hexArray )
-        {
-            hexArray = hexArray.ToLower();
-            byte[] arr = new byte[(hexArray.Length / 2)];
-            for( int i = 0; i < hexArray.Length; i += 2 )
+        public static PacketReplayer.TestWorker IncrementTime( TimeSpan timeToIncrement ) =>
+            async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
-                arr[i / 2] = Convert.ToByte( hexArray.Substring( i, 2 ), 16 );
-            }
-            return arr;
-        }
+                using( m.OpenInfo( "Incrementing time..." ) )
+                {
+                    await Task.Delay( 5 );
+                    replayer.TestDelayHandler.IncrementTime( timeToIncrement );
+                }
+                return true;
+            };
     }
 }

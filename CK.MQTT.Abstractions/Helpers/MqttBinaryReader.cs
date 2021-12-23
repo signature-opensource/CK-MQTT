@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -84,11 +85,11 @@ namespace CK.MQTT
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask SkipBytesAsync( this PipeReader reader, int skipCount )
+        public static async ValueTask SkipBytesAsync( this PipeReader reader, int skipCount, CancellationToken cancellationToken )
         {
             while( skipCount > 0 )
             {
-                ReadResult read = await reader.ReadAsync();
+                ReadResult read = await reader.ReadAsync( cancellationToken );
                 int bufferLength = (int)read.Buffer.Length;
                 // If the read fetched more data than what we wanted to skip,
                 // we need to advance exactly the amount needed.

@@ -76,7 +76,7 @@ namespace CK.MQTT.Client
             {
                 WaitingPingResp = false;
                 if( packetLength > 0 ) m?.UnparsedExtraBytes( sender, PacketType.PingResponse, 0, packetLength, packetLength );
-                await pipeReader.SkipBytesAsync( packetLength );
+                await pipeReader.SkipBytesAsync( packetLength, cancellationToken );
                 return OperationStatus.Done;
             }
         }
