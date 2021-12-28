@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Common\Mqtt.props" />
   <PropertyGroup>
-    <TargetFramework>net6</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Description>Interfaces and basic types for MQTT Clients (v3 and v5).</Description>
     <Nullable>enable</Nullable>
     <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor" Version="14.2.1" />
-    <PackageReference Include="System.IO.Pipelines" Version="6.0.0" />
+    <PackageReference Include="CK.ActivityMonitor" Version="15.0.0-r02" />
+    <PackageReference Include="System.IO.Pipelines" Version="6.0.1" />
   </ItemGroup>
 </Project>
