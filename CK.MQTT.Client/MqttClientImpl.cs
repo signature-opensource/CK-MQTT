@@ -48,7 +48,7 @@ namespace CK.MQTT
         protected DuplexPump<ClientState>? Pumps { get; set; }
 
         protected MqttClientConfiguration Config { get; }
-        protected ProtocolConfiguration ProtocolConfig { get; }
+        protected ProtocolConfiguration ProtocolConfig { get; set; }
 
         Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
