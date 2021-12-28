@@ -26,7 +26,7 @@ namespace SimpleP2PClientTest
             GrandOutput.EnsureActiveDefault( cfg );
 
             ActivityMonitor m = new();
-            P2PClient client = P2PMqttClient.Factory.CreateMQTT3Client( new MqttClientConfiguration( "localhost:1883" )
+            P2PClient client = P2PMqttClient.Factory.CreateMQTTClient( new MqttClientConfiguration( "localhost:1883" )
             {
                 KeepAliveSeconds = 0
             }, MessageHandlerDelegate );

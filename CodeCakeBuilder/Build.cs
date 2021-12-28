@@ -50,8 +50,7 @@ namespace CodeCake
                                      || Cake.ReadInteractiveOption( "RunUnitTests", "Run Unit Tests?", 'Y', 'N' ) == 'Y' )
                .Does( () =>
                 {
-                    var testProjects = globalInfo.GetDotnetSolution().Projects.Where( p => p.Name.EndsWith( "CK.MQTT.Tests" ) );
-                    globalInfo.GetDotnetSolution().Test( testProjects );
+                    globalInfo.GetDotnetSolution().Test();
                 } );
 
 

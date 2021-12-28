@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
+    <ProjectReference Include="..\CK.MQTT.P2P\CK.MQTT.P2P.csproj" />
   </ItemGroup>
 
 </Project>
