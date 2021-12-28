@@ -16,10 +16,9 @@ namespace CK.MQTT.P2P
     public class P2PClient : MqttClientImpl
     {
         internal P2PClient(
-            ProtocolConfiguration pConfig,
             MqttClientConfiguration config,
             Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            : base( pConfig, config, messageHandler )
+            : base( ProtocolConfiguration.Mqtt5, config, messageHandler )
         {
         }
 
@@ -41,7 +40,15 @@ namespace CK.MQTT.P2P
                 InputPump inputPump = new( SelfDisconnectAsync, Config, channel.DuplexPipe.Input, connectReflex.HandleRequestAsync );
 
                 await connectReflex.ConnectHandledTask;
-
+                ProtocolConfig = new ProtocolConfiguration(
+                    ProtocolConfig.SecurePort,
+                    ProtocolConfig.NonSecurePort,
+                    connectReflex.ProtocolLevel,
+                    ProtocolConfig.SingleLevelTopicWildcard,
+                    ProtocolConfig.MultiLevelTopicWildcard,
+                    ProtocolConfig.ProtocolName,
+                    ProtocolConfig.MaximumPacketSize
+                );
                 OutputPump output = new( connectReflex.OutStore, SelfDisconnectAsync, Config );
 
                 // This reflex handle the connection packet.
@@ -78,7 +85,7 @@ namespace CK.MQTT.P2P
 
                 bool hasExistingSession = connectReflex.OutStore.IsRevivedSession || connectReflex.InStore.IsRevivedSession;
                 await output.QueueMessageAndWaitUntilSentAsync( m, new ConnectAckPacket( hasExistingSession, ConnectReturnCode.Accepted ) );
-                
+
                 return ConnectError.Ok;
             }
             catch( Exception e )

@@ -17,7 +17,6 @@ namespace CK.MQTT
         readonly OutgoingLastWill? _lastWill;
         readonly uint _sessionExpiryInterval;
         readonly ushort _receiveMaximum;
-        readonly uint _maximumPacketSize;
         readonly ushort _topicAliasMaximum;
         readonly bool _requestResponseInformation;
         readonly bool _requestProblemInformation;
@@ -40,26 +39,26 @@ namespace CK.MQTT
         }
 
         public OutgoingConnect( ProtocolConfiguration pConfig, MqttClientConfiguration config, MqttClientCredentials? creds, OutgoingLastWill? lastWill = null,
-            uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, uint maximumPacketSize = 268435455, ushort topicAliasMaximum = 0,
+            uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, ushort topicAliasMaximum = 0,
             bool requestResponseInfo = false, bool requestProblemInfo = false, IReadOnlyList<UserProperty>? userProperties = null,
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )
         {
-            Debug.Assert( maximumPacketSize <= 268435455 );
-            (_pConf, _config, _creds, _lastWill, _sessionExpiryInterval, _receiveMaximum, _maximumPacketSize,
+            Debug.Assert( pConfig.MaximumPacketSize <= 268435455 );
+            (_pConf, _config, _creds, _lastWill, _sessionExpiryInterval, _receiveMaximum,
                 _topicAliasMaximum, _requestResponseInformation, _requestProblemInformation, _userProperties, _extendedAuth)
-            = (pConfig, config, creds, lastWill, sessionExpiryInterval, receiveMaximum, maximumPacketSize,
+            = (pConfig, config, creds, lastWill, sessionExpiryInterval, receiveMaximum,
                 topicAliasMaximum, requestResponseInfo, requestProblemInfo, userProperties, extendedAuth);
             _flags = ByteFlag( creds, lastWill );
             _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
 
             if( _pConf.ProtocolLevel > ProtocolLevel.MQTT3 ) // To compute the size of 
             {
-                if( sessionExpiryInterval != 0 ) _propertiesSize += 5;          //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Ref1477159
-                if( receiveMaximum != ushort.MaxValue ) _propertiesSize += 3;   //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Receive_Maximum
-                if( maximumPacketSize != 268435455 ) _propertiesSize += 5;      //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc471483569
-                if( topicAliasMaximum != 0 ) _propertiesSize += 3;              //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547825
-                if( requestResponseInfo ) _propertiesSize += 2;                 //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Request_Response_Information
-                if( requestProblemInfo ) _propertiesSize += 2;                  //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547827
+                if( sessionExpiryInterval != 0 ) _propertiesSize += 5;              //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Ref1477159
+                if( receiveMaximum != ushort.MaxValue ) _propertiesSize += 3;       //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Receive_Maximum
+                if( _pConf.MaximumPacketSize != 268435455 ) _propertiesSize += 5;   //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc471483569
+                if( topicAliasMaximum != 0 ) _propertiesSize += 3;                  //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547825
+                if( requestResponseInfo ) _propertiesSize += 2;                     //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Request_Response_Information
+                if( requestProblemInfo ) _propertiesSize += 2;                      //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547827
                 if( userProperties != null && userProperties.Count > 0 ) _propertiesSize += userProperties.Sum( s => s.Size );
                 if( extendedAuth.HasValue )
                 {
@@ -116,11 +115,11 @@ namespace CK.MQTT
                     BinaryPrimitives.WriteUInt16BigEndian( span, _receiveMaximum );
                     span = span[2..];
                 }
-                if( _maximumPacketSize != 268435455 )
+                if( _pConf.MaximumPacketSize != 268435455 )
                 {
                     span[0] = (byte)PropertyIdentifier.MaximumPacketSize;
                     span = span[1..];
-                    BinaryPrimitives.WriteUInt32BigEndian( span, _maximumPacketSize );
+                    BinaryPrimitives.WriteUInt32BigEndian( span, _pConf.MaximumPacketSize );
                     span = span[4..];
                 }
                 if( _topicAliasMaximum != 0 )
