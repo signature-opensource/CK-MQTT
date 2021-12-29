@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring" Version="14.2.1" />
+    <PackageReference Include="CK.Monitoring" Version="15.0.0-r02" />
   </ItemGroup>
 
   <ItemGroup>
