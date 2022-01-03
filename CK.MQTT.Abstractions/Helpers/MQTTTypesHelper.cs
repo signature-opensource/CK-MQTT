@@ -15,7 +15,7 @@ namespace CK.MQTT
         /// See also <a href="https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_UTF-8_encoded_strings_"> mqtt string specification</a>.
         /// </remarks>
         /// <returns>The serialized size in bytes of the input <see cref="string"/>.</returns>
-        public static int MQTTSize( this string mqttString ) => 2 + Encoding.UTF8.GetByteCount( mqttString );
+        public static uint MQTTSize( this string mqttString ) => 2 + (uint)Encoding.UTF8.GetByteCount( mqttString );
 
         /// <summary>
         /// Get the number of bytes required to express the remaining size of a mqtt packet.
@@ -25,9 +25,9 @@ namespace CK.MQTT
         /// See also <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180836">Remaining length specification</a>.
         /// </remarks>
         /// <returns>The amount of byte required to serialize the given length.</returns>
-        public static int CompactByteCount( this int packetLength )
+        public static uint CompactByteCount( this uint packetLength )
         {
-            int i = 0;
+            uint i = 0;
             while( packetLength >= 0x80 ) // I think unrolling this loop in code could produce more straightforward code... It require only 3 ifs.
             {
                 i++;

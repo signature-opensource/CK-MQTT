@@ -15,8 +15,8 @@ namespace CK.MQTT.Client.Tests.Helpers
         readonly List<DelayTask> _delays = new();
         readonly List<WeakReference<Stopwatch>> _stopwatches = new();
         readonly List<CTS> _cts = new();
-        const BindingFlags bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
-        static FieldInfo? IsDisposedField = typeof( CancellationTokenSource ).GetField( "_disposed", bindingFlags );
+        const BindingFlags _bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+        static readonly FieldInfo? _isDisposedField = typeof( CancellationTokenSource ).GetField( "_disposed", _bindingFlags );
 
         public void IncrementTime( TimeSpan timeSpan )
         {
@@ -33,7 +33,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
                 _stopwatches.RemoveAll( s => !s.TryGetTarget( out _ ) );
                 
-                _cts.RemoveAll( s => !s.IncrementTime( timeSpan ) || (bool)IsDisposedField!.GetValue( s.CancellationTokenSource )! || s.CancellationTokenSource.IsCancellationRequested);
+                _cts.RemoveAll( s => !s.IncrementTime( timeSpan ) || (bool)_isDisposedField!.GetValue( s.CancellationTokenSource )! || s.CancellationTokenSource.IsCancellationRequested);
                 _delays.RemoveAll( s => s.TaskCompletionSource.Task.IsCompleted );
             }
         }

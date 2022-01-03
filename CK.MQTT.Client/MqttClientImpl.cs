@@ -50,14 +50,14 @@ namespace CK.MQTT
         protected MqttClientConfiguration Config { get; }
         protected ProtocolConfiguration ProtocolConfig { get; set; }
 
-        Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
+        Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
         /// <summary>
         /// Instantiate the <see cref="MqttClientImpl"/> with the given configuration.
         /// </summary>
         /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        internal protected MqttClientImpl( ProtocolConfiguration pConfig, MqttClientConfiguration config, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        internal protected MqttClientImpl( ProtocolConfiguration pConfig, MqttClientConfiguration config, Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
         {
             (Config, _messageHandler) = (config, messageHandler);
             if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds * 1000 && config.KeepAliveSeconds != 0 )
@@ -73,7 +73,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="msg"></param>
         /// <returns></returns>
-        protected ValueTask OnMessageAsync( IActivityMonitor m, string topic, PipeReader pipeReader, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
+        protected ValueTask OnMessageAsync( IActivityMonitor m, string topic, PipeReader pipeReader, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
             => _messageHandler( m, topic, pipeReader, payloadLength, qos, retain, cancellationToken );
 
         /// <inheritdoc/>
@@ -246,7 +246,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public void SetMessageHandler( Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        public void SetMessageHandler( Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             => _messageHandler = messageHandler;
 
         public ValueTask<Task<T?>> SendPacketAsync<T>( IActivityMonitor? m, IOutgoingPacket outgoingPacket ) where T : class

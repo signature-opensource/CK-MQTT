@@ -57,7 +57,7 @@ namespace CK.MQTT
         /// <summary>
         /// Initial capacity of the ID Store. May grow bigger.
         /// </summary>
-        public int IdStoreStartCount { get; init; } = 32;
+        public uint IdStoreStartCount { get; init; } = 32;
 
         /// <summary>
         /// Gets the maximal number of retries to send the same packet

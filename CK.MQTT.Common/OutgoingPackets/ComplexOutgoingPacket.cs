@@ -18,30 +18,30 @@ namespace CK.MQTT
         /// The first byte of the packet. This contain the <see cref="PacketType"/> and possibly other data.
         /// </summary>
         protected abstract byte Header { get; }
-        public abstract int PacketId { get; set; }
+        public abstract uint PacketId { get; set; }
         public abstract QualityOfService Qos { get; }
 
         /// <inheritdoc/>
-        public int GetSize( ProtocolLevel protocolLevel )
+        public uint GetSize( ProtocolLevel protocolLevel )
             => GetRemainingSize( protocolLevel ) + 1 + GetRemainingSize( protocolLevel ).CompactByteCount();
 
         /// <summary>
         /// The <see cref="GetSize()"/>, minus the header, and the bytes required to write the <see cref="GetRemainingSize()"/> itself.
         /// </summary>
-        private int GetRemainingSize( ProtocolLevel protocolLevel )
+        private uint GetRemainingSize( ProtocolLevel protocolLevel )
             => GetHeaderSize( protocolLevel ) + GetPayloadSize( protocolLevel );
 
         /// <summary>
         /// The size of the Payload to write asynchronously.
         /// This is the amount of bytes that MUST be written when <see cref="WritePayloadAsync(PipeWriter, CancellationToken)"/> will be called.
         /// </summary>
-        protected abstract int GetPayloadSize( ProtocolLevel protocolLevel );
+        protected abstract uint GetPayloadSize( ProtocolLevel protocolLevel );
 
         /// <summary>
         /// The size of the Header.
         /// This is also the size of the <see cref="Span{T}"/> given when <see cref="WriteHeaderContent(Span{byte})"/> will be called.
         /// </summary>
-        protected abstract int GetHeaderSize( ProtocolLevel protocolLevel );
+        protected abstract uint GetHeaderSize( ProtocolLevel protocolLevel );
 
         /// <summary>
         /// Write the Header, remaining size, and call <see cref="WriteHeaderContent(Span{byte})"/>.
@@ -49,9 +49,9 @@ namespace CK.MQTT
         /// <param name="pw">The <see cref="PipeWriter"/> to write to.</param>
         protected void WriteHeader( ProtocolLevel protocolLevel, PipeWriter pw )
         {
-            int headerSize = GetHeaderSize( protocolLevel );
-            int remainingSize = GetRemainingSize( protocolLevel );
-            int bytesToWrite = headerSize + remainingSize.CompactByteCount() + 1;//Compute how many byte will be written.
+            uint headerSize = GetHeaderSize( protocolLevel );
+            uint remainingSize = GetRemainingSize( protocolLevel );
+            int bytesToWrite = (int)(headerSize + remainingSize.CompactByteCount() + 1);//Compute how many byte will be written.
             Span<byte> span = pw.GetSpan( bytesToWrite )[..bytesToWrite];
             span[0] = Header;
             span = span[1..].WriteVariableByteInteger( remainingSize );//the result span length will be HeaderSize.
@@ -79,11 +79,11 @@ namespace CK.MQTT
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( protocolLevel, pw );
-            pw.FlushAsync(cancellationToken);
+            await pw.FlushAsync( cancellationToken );
             WriteResult result = await WritePayloadAsync( protocolLevel, pw, cancellationToken );
             //WritePayloadAsync can be user code, and users forget to flush the payload. I was this user.
             await pw.FlushAsync( cancellationToken );
-            
+
             return result;
         }
     }

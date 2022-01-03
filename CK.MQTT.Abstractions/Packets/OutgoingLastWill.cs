@@ -39,10 +39,10 @@ namespace CK.MQTT
         /// <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349233">Specification link</a>
         /// </summary>
         public QualityOfService Qos { get; }
-        public int PacketId { get; set; }
+        public uint PacketId { get; set; }
 
         /// <inheritdoc/>
-        public abstract int GetSize( ProtocolLevel protocolLevel );
+        public abstract uint GetSize( ProtocolLevel protocolLevel );
 
         /// <summary>
         /// Should write the payload the the last will.
@@ -60,7 +60,7 @@ namespace CK.MQTT
         /// <returns></returns>
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
-            int stringSize = Topic.MQTTSize();
+            int stringSize = (int)Topic.MQTTSize();
             writer.GetSpan( stringSize ).WriteMQTTString( Topic );
             writer.Advance( stringSize );
             await writer.FlushAsync( cancellationToken );

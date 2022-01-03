@@ -9,10 +9,10 @@ namespace CK.MQTT
     {
         protected abstract byte Header { get; }
 
-        protected abstract int GetRemainingSize( ProtocolLevel protocolLevel );
+        protected abstract uint GetRemainingSize( ProtocolLevel protocolLevel );
 
         /// <inheritdoc/>
-        public override int GetSize( ProtocolLevel protocolLevel ) => GetRemainingSize( protocolLevel ).CompactByteCount() + 1 + GetRemainingSize( protocolLevel );
+        public override uint GetSize( ProtocolLevel protocolLevel ) => GetRemainingSize( protocolLevel ).CompactByteCount() + 1 + GetRemainingSize( protocolLevel );
 
         protected abstract void WriteContent( ProtocolLevel protocolLevel, Span<byte> buffer );
 

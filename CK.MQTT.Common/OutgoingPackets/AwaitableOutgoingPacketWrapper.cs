@@ -18,9 +18,9 @@ namespace CK.MQTT
         public Task Sent => _taskCompletionSource.Task;
 
         public QualityOfService Qos => _outgoingPacket.Qos;
-        public int PacketId { get => _outgoingPacket.PacketId; set => _outgoingPacket.PacketId = value; }
+        public uint PacketId { get => _outgoingPacket.PacketId; set => _outgoingPacket.PacketId = value; }
 
-        public int GetSize( ProtocolLevel protocolLevel ) => _outgoingPacket.GetSize( protocolLevel );
+        public uint GetSize( ProtocolLevel protocolLevel ) => _outgoingPacket.GetSize( protocolLevel );
 
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
@@ -43,9 +43,9 @@ namespace CK.MQTT
         }
 
         public Task Sent => _taskCompletionSource.Task;
-        public int PacketId { get => _outgoingPacket.PacketId; set => _outgoingPacket.PacketId = value; }
+        public uint PacketId { get => _outgoingPacket.PacketId; set => _outgoingPacket.PacketId = value; }
         public QualityOfService Qos => _outgoingPacket.Qos;
-        public int GetSize( ProtocolLevel protocolLevel ) => _outgoingPacket.GetSize( protocolLevel );
+        public uint GetSize( ProtocolLevel protocolLevel ) => _outgoingPacket.GetSize( protocolLevel );
 
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {

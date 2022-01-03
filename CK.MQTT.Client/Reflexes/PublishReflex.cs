@@ -15,10 +15,10 @@ namespace CK.MQTT
     {
         readonly MqttClientConfiguration _mqttConfiguration;
         readonly IIncomingPacketStore _store;
-        readonly Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
+        readonly Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
         readonly OutputPump _output;
 
-        public PublishReflex( MqttClientConfiguration mqttConfiguration, IIncomingPacketStore store, Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
+        public PublishReflex( MqttClientConfiguration mqttConfiguration, IIncomingPacketStore store, Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
         {
             _mqttConfiguration = mqttConfiguration;
             _store = store;
@@ -28,7 +28,7 @@ namespace CK.MQTT
         const byte _dupFlag = 1 << 4;
         const byte _retainFlag = 1;
 
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, uint packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )
             {

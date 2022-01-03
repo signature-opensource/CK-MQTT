@@ -13,7 +13,7 @@ namespace CK.MQTT.P2P
     {
         internal P2PClient(
             MqttClientConfiguration config,
-            Func<IActivityMonitor, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+            Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             : base( ProtocolConfiguration.Mqtt5, config, messageHandler )
         {
         }

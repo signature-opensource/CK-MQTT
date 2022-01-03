@@ -19,7 +19,7 @@ namespace CK.MQTT
         readonly string? _responseTopic;
         readonly ushort _correlationDataSize;
         readonly SpanAction? _correlationDataWriter;
-        readonly int _propertiesLength;
+        readonly uint _propertiesLength;
         /// <summary>
         /// Instantiate a new <see cref="OutgoingMessage"/>.
         /// </summary>
@@ -40,7 +40,7 @@ namespace CK.MQTT
             {
                 if( correlationDataSize == 0 && correlationDataWriter != null ) throw new ArgumentException( $"{nameof( correlationDataSize )} is 0 but {nameof( correlationDataWriter )} is not null. If no data will be written, don't set the writer." );
                 if( correlationDataWriter == null && correlationDataSize > 0 ) throw new ArgumentException( $"You set a {nameof( correlationDataSize )} but the {nameof( correlationDataWriter )} is null." );
-                _propertiesLength += 1 + correlationDataSize + 2;/*2 to write the data size itself*/
+                _propertiesLength += 1u + correlationDataSize + 2;/*2 to write the data size itself*/
             }
             //Assignation
             _retain = retain;
@@ -51,9 +51,9 @@ namespace CK.MQTT
             _correlationDataWriter = correlationDataWriter;
         }
 
-        int _packetId = 0;
+        uint _packetId = 0;
         /// <inheritdoc/>
-        public override int PacketId
+        public override uint PacketId
         {
             get
             {
@@ -71,9 +71,9 @@ namespace CK.MQTT
         public override QualityOfService Qos { get; }
 
         /// <inheritdoc/>
-        protected sealed override int GetHeaderSize( ProtocolLevel protocolLevel )
+        protected sealed override uint GetHeaderSize( ProtocolLevel protocolLevel )
             => _topic.MQTTSize()
-                + (Qos > QualityOfService.AtMostOnce ? 2 : 0)//On QoS 0, no packet id(2bytes).
+                + (Qos > QualityOfService.AtMostOnce ? 2u : 0)//On QoS 0, no packet id(2bytes).
                 + protocolLevel switch
                 {
                     ProtocolLevel.MQTT3 => 0,
@@ -95,8 +95,8 @@ namespace CK.MQTT
                 (byte)(_retain ? _retainFlag : 0)
             );
 
-        protected abstract int PayloadSize { get; }
-        protected sealed override int GetPayloadSize( ProtocolLevel protocolLevel ) => PayloadSize;
+        protected abstract uint PayloadSize { get; }
+        protected sealed override uint GetPayloadSize( ProtocolLevel protocolLevel ) => PayloadSize;
 
         /// <summary>
         /// Write the topic, and the qos if qos>0.

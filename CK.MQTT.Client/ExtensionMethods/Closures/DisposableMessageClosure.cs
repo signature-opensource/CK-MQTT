@@ -13,13 +13,13 @@ namespace CK.MQTT.Client.Closures
         public DisposableMessageClosure( Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )
             => _messageHandler = messageHandler;
 
-        public async ValueTask HandleMessageAsync( IActivityMonitor? m, string topic, PipeReader pipe, int payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
+        public async ValueTask HandleMessageAsync( IActivityMonitor? m, string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
         {
-            IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( payloadLength );
-            Memory<byte> memory = memoryOwner.Memory[..payloadLength];
+            IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent( (int)payloadLength );
+            Memory<byte> memory = memoryOwner.Memory[..(int)payloadLength];
             if( !memory.IsEmpty )
             {
-                ReadResult readResult = await pipe.ReadAtLeastAsync( payloadLength, cancelToken );
+                ReadResult readResult = await pipe.ReadAtLeastAsync( (int)payloadLength, cancelToken );
                 if( readResult.IsCanceled || readResult.IsCompleted && readResult.Buffer.Length < memory.Length )
                 {
                     m?.Warn( "Partial data reading." );

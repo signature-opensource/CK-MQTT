@@ -14,7 +14,7 @@ namespace CK.MQTT
         /// <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349268">
         /// Read the specification fore more information</a>.
         /// </summary>
-        int PacketId { get; set; }
+        uint PacketId { get; set; }
 
         /// <summary>
         /// The QoS of the packet. A packet with an identifier is never at QoS 0.
@@ -53,6 +53,6 @@ namespace CK.MQTT
         /// <summary>
         /// The Size of the packet. May be used by stores to allocate the required space to store the packet.
         /// </summary>
-        int GetSize( ProtocolLevel protocolLevel );
+        uint GetSize( ProtocolLevel protocolLevel );
     }
 }

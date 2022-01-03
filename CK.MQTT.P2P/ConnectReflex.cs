@@ -23,9 +23,9 @@ namespace CK.MQTT.P2P
         string? _authentificationMethod;
         string? _userName;
         string? _password;
-        int _fieldCount = 0;
-        int _propertiesLength;
-        int _maxPacketSize;
+        uint _fieldCount = 0;
+        uint _propertiesLength;
+        uint _maxPacketSize;
         uint _sessionExpiryInterval;
         ushort _receiveMaximum = ushort.MaxValue;
         ushort _topicAliasMaximum = 0;
@@ -51,7 +51,7 @@ namespace CK.MQTT.P2P
 
         public Task ConnectHandledTask => _taskCompletionSource.Task;
         InputPump _sender;
-        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             _sender = sender;
             OperationStatus status = OperationStatus.NeedMoreData;
@@ -106,7 +106,7 @@ namespace CK.MQTT.P2P
         public bool HasLastWill => (_flags & 0b0000_0100) != 0;
         public bool CleanSession => (_flags & 0b0000_0010) != 0;
         public List<(string, string)> UserProperties => _userProperties;
-        public int MaxPacketSize => _maxPacketSize;
+        public uint MaxPacketSize => _maxPacketSize;
         public uint SessionExpiryInterval => _sessionExpiryInterval;
         public ushort ReceiveMaximum => _receiveMaximum;
         public ushort TopicAliasMaximum => _topicAliasMaximum;
@@ -142,7 +142,7 @@ namespace CK.MQTT.P2P
             if( _fieldCount == 3 )
             {
                 if( !sequenceReader.TryReadBigEndian( out _keepAlive ) ) return OperationStatus.NeedMoreData;
-                _fieldCount = ProtocolLevel == ProtocolLevel.MQTT3 ? 6 : 4;
+                _fieldCount = ProtocolLevel == ProtocolLevel.MQTT3 ? 6u : 4;
             }
 
             if( _fieldCount == 4 )
@@ -161,7 +161,7 @@ namespace CK.MQTT.P2P
             if( _fieldCount == 6 )
             {
                 if( !sequenceReader.TryReadMQTTString( out _clientId! ) ) return OperationStatus.NeedMoreData;
-                _fieldCount = ProtocolLevel == ProtocolLevel.MQTT3 ? 8 : 7;
+                _fieldCount = ProtocolLevel == ProtocolLevel.MQTT3 ? 8u : 7;
             }
             return OperationStatus.Done;
         }

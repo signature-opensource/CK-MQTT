@@ -36,16 +36,16 @@ namespace CK.MQTT.Stores
         /// <summary>
         /// When 0, all IDs are free.
         /// </summary>
-        internal int _newestIdAllocated;
+        internal uint _newestIdAllocated;
         /// <summary>
         /// The tail, also the most recent freed packet.
         /// </summary>
-        internal int _tail;
+        internal uint _tail;
         /// <summary>
         /// The head, also point to the newest ID allocated.
         /// </summary>
-        internal int _head;
-        readonly int _maxPacketId;
+        internal uint _head;
+        readonly uint _maxPacketId;
 
         public bool NoPacketAllocated
         {
@@ -60,7 +60,7 @@ namespace CK.MQTT.Stores
 
         readonly object _lock = new();
 
-        public IdStore( int packetIdMaxValue, int startSize )
+        public IdStore( uint packetIdMaxValue, uint startSize )
         {
             if( startSize <= 0 || startSize > packetIdMaxValue )
             {
@@ -74,7 +74,7 @@ namespace CK.MQTT.Stores
         internal void Reset()
         {
             _entries.Clear();
-            for( int i = 1; i < _entries.Length + 1; i++ )
+            for( uint i = 1; i < _entries.Length + 1; i++ )
             {
                 _entries[i] = new IdStoreEntry<T>()
                 {
@@ -84,10 +84,10 @@ namespace CK.MQTT.Stores
             }
             _entries[^0] = new IdStoreEntry<T>()
             {
-                PreviousId = _entries.Length - 1
+                PreviousId = (uint)_entries.Length - 1
             };
             _head = 1;
-            _tail = _entries.Length;
+            _tail = (uint)_entries.Length;
             _newestIdAllocated = 0;
         }
 
@@ -97,8 +97,8 @@ namespace CK.MQTT.Stores
 #if DEBUG
             lock( _lock )
             {
-                int curr = _head;
-                int count = 1;
+                uint curr = _head;
+                uint count = 1;
                 while( curr != _tail ) // forward
                 {
                     count++;
@@ -117,7 +117,7 @@ namespace CK.MQTT.Stores
             }
 #endif
         }
-        internal bool CreateNewEntry( T entry, out int packetId )
+        internal bool CreateNewEntry( T entry, out uint packetId )
         {
             SelfConsistencyCheck();
             lock( _lock )
@@ -148,7 +148,7 @@ namespace CK.MQTT.Stores
             }
         }
 
-        internal void FreeId( IInputLogger? m, int packetId )
+        internal void FreeId( IInputLogger? m, uint packetId )
         {
             SelfConsistencyCheck();
             if( packetId == _newestIdAllocated )
@@ -158,8 +158,8 @@ namespace CK.MQTT.Stores
                 // In this case, the _newestIdAllocated should be set to 0.
                 _newestIdAllocated = _entries[packetId].PreviousId;
             }
-            int next = _entries[packetId].NextId;
-            int previous = _entries[packetId].PreviousId;
+            uint next = _entries[packetId].NextId;
+            uint previous = _entries[packetId].PreviousId;
             // Removing the element from the linked list.
             if( packetId == _head )
             {
@@ -189,13 +189,13 @@ namespace CK.MQTT.Stores
         void GrowEntriesArray()
         {
             SelfConsistencyCheck();
-            int newCount = _entries.Length * 2;
+            uint newCount = (uint)_entries.Length * 2;
             // We dont want that the next grow make the array only 1 item bigger, it would cause a bug later in this function.
             if( newCount + 1 == _maxPacketId ) newCount = _maxPacketId;
             if( newCount > _maxPacketId ) newCount = _maxPacketId;
             var newEntries = new ArrayStartingAt1<IdStoreEntry<T>>( new IdStoreEntry<T>[newCount] );
             _entries.CopyTo( newEntries, 0 );
-            for( int i = _entries.Length + 2; i < newEntries.Length; i++ ) // Link all the new entries.
+            for( uint i = (uint)_entries.Length + 2; i < newEntries.Length; i++ ) // Link all the new entries.
             {
                 newEntries[i] = new IdStoreEntry<T>()
                 {
@@ -203,14 +203,14 @@ namespace CK.MQTT.Stores
                     NextId = i + 1
                 };
             }
-            newEntries[^0].PreviousId = newEntries.Length - 1;
-            newEntries[_tail].NextId = _entries.Length + 1; // Link previous tail to our expansion.
+            newEntries[^0].PreviousId = (uint)newEntries.Length - 1;
+            newEntries[_tail].NextId = (uint)_entries.Length + 1; // Link previous tail to our expansion.
             newEntries[_entries.Length + 1] = new IdStoreEntry<T>()
             {
                 PreviousId = _tail, // Link expansion to previous tail.
-                NextId = _entries.Length + 2 // If the count was increased only by 1, this would fail.
+                NextId = (uint)_entries.Length + 2 // If the count was increased only by 1, this would fail.
             };
-            _tail = newEntries.Length;
+            _tail = (uint)newEntries.Length;
             _entries = newEntries;
             SelfConsistencyCheck();
         }

@@ -16,7 +16,7 @@ namespace CK.MQTT
             Value = value;
         }
 
-        public int Size => 1 + Name.MQTTSize() + Value.MQTTSize();
+        public uint Size => 1 + Name.MQTTSize() + Value.MQTTSize();
 
         public Span<byte> Write( Span<byte> buffer )
         {
@@ -25,7 +25,7 @@ namespace CK.MQTT
                 .WriteMQTTString( Value );
         }
 
-        public override bool Equals( object obj )
+        public override bool Equals( object? obj )
             => obj is UserProperty u && u.Name == Name && u.Value == Value;
 
         public override int GetHashCode() => HashCode.Combine( Name, Value );

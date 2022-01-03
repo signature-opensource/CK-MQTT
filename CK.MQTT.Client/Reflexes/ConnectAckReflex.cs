@@ -29,7 +29,7 @@ namespace CK.MQTT
         /// </remarks>
         public Task<ConnectResult> Task => _tcs.Task;
 
-        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             try
             {

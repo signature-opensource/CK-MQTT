@@ -24,8 +24,8 @@ namespace CK.MQTT
         readonly (string authMethod, ReadOnlyMemory<byte> authData)? _extendedAuth;
         readonly ProtocolConfiguration _pConf;
         readonly byte _flags;
-        readonly int _sizePostPayload;
-        readonly int _propertiesSize;
+        readonly uint _sizePostPayload;
+        readonly uint _propertiesSize;
         static byte ByteFlag( MqttClientCredentials? creds, OutgoingLastWill? lastWill )
         {
             byte flags = 0;
@@ -59,25 +59,25 @@ namespace CK.MQTT
                 if( topicAliasMaximum != 0 ) _propertiesSize += 3;                  //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547825
                 if( requestResponseInfo ) _propertiesSize += 2;                     //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Request_Response_Information
                 if( requestProblemInfo ) _propertiesSize += 2;                      //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547827
-                if( userProperties != null && userProperties.Count > 0 ) _propertiesSize += userProperties.Sum( s => s.Size );
+                if( userProperties != null && userProperties.Count > 0 ) _propertiesSize += (uint)userProperties.Sum( s => s.Size );
                 if( extendedAuth.HasValue )
                 {
                     _propertiesSize += 1 + extendedAuth.Value.authMethod.MQTTSize();
-                    _propertiesSize += 1 + extendedAuth.Value.authData.Length + 2;
+                    _propertiesSize += 1 + (uint)extendedAuth.Value.authData.Length + 2;
                 }
             }
         }
 
-        protected override int GetPayloadSize( ProtocolLevel protocolLevel )
+        protected override uint GetPayloadSize( ProtocolLevel protocolLevel )
             => _sizePostPayload + _lastWill?.GetSize( protocolLevel ) ?? 0;
 
         protected override byte Header => (byte)PacketType.Connect;
 
-        public override int PacketId { get => 0; set => throw new NotSupportedException(); }
+        public override uint PacketId { get => 0; set => throw new NotSupportedException(); }
 
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
-        protected override int GetHeaderSize( ProtocolLevel protocolLevel )
+        protected override uint GetHeaderSize( ProtocolLevel protocolLevel )
             => _pConf.ProtocolName.MQTTSize()
                 + 1 //_protocolLevel
                 + 1 //_flag
@@ -176,10 +176,10 @@ namespace CK.MQTT
         void WriteEndOfPayload( PipeWriter pw )
         {
             if( _sizePostPayload == 0 ) return;
-            Span<byte> span = pw.GetSpan( _sizePostPayload );
+            Span<byte> span = pw.GetSpan( (int)_sizePostPayload );
             if( (_creds?.UserName) != null ) span = span.WriteMQTTString( _creds.UserName );
             if( (_creds?.Password) != null ) span.WriteMQTTString( _creds.Password );
-            pw.Advance( _sizePostPayload );
+            pw.Advance( (int)_sizePostPayload );
         }
     }
 }

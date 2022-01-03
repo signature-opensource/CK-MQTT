@@ -20,7 +20,7 @@ namespace CK.MQTT
         /// <param name="length">The Remaining Length, -1 if there is no enough bytes to read, -2 if the stream is corrupted.</param>
         /// <param name="position">The position after the remaining length.</param>
         /// <returns>An <see cref="OperationStatus"/>.</returns>
-        public static OperationStatus TryReadMQTTRemainingLength( this ref SequenceReader<byte> reader, out int length, out SequencePosition position )
+        public static OperationStatus TryReadMQTTRemainingLength( this ref SequenceReader<byte> reader, out uint length, out SequencePosition position )
         {
             length = 0;
             // Read out an Int32 7 bits at a time.  The high bit
@@ -85,12 +85,12 @@ namespace CK.MQTT
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask SkipBytesAsync( this PipeReader reader, int skipCount, CancellationToken cancellationToken )
+        public static async ValueTask SkipBytesAsync( this PipeReader reader, uint skipCount, CancellationToken cancellationToken )
         {
             while( skipCount > 0 )
             {
                 ReadResult read = await reader.ReadAsync( cancellationToken );
-                int bufferLength = (int)read.Buffer.Length;
+                uint bufferLength = (uint)read.Buffer.Length;
                 // If the read fetched more data than what we wanted to skip,
                 // we need to advance exactly the amount needed.
                 if( bufferLength > skipCount )

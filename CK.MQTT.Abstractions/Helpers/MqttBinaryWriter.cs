@@ -15,7 +15,7 @@ namespace CK.MQTT
         /// <param name="buffer">The buffer to write in.</param>
         /// <param name="packetLength">The length of the packet to write.</param>
         /// <returns>The <paramref name="buffer"/> but sliced after the writtens bytes (at least 1 byte, up to 5 bytes).</returns>
-        public static Span<byte> WriteVariableByteInteger( this Span<byte> buffer, int packetLength )
+        public static Span<byte> WriteVariableByteInteger( this Span<byte> buffer, uint packetLength )
         {
             // Write out an int 7 bits at a time.  The high bit of the byte,
             // when on, tells reader to continue reading more bytes.

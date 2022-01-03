@@ -9,7 +9,7 @@ namespace CK.MQTT
 {
     public abstract class SimpleOutgoingPacket : IOutgoingPacket
     {
-        public abstract int PacketId { get; set; }
+        public abstract uint PacketId { get; set; }
         public abstract QualityOfService Qos { get; }
 
         /// <summary>
@@ -21,8 +21,9 @@ namespace CK.MQTT
 
         void Write( ProtocolLevel protocolLevel, PipeWriter pw )
         {
-            Write( protocolLevel, pw.GetSpan( GetSize( protocolLevel ) ) );
-            pw.Advance( GetSize( protocolLevel ) );
+            int size = (int)GetSize( protocolLevel );
+            Write( protocolLevel, pw.GetSpan( size ) );
+            pw.Advance( size );
         }
 
         /// <inheritdoc/>
@@ -34,6 +35,6 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public abstract int GetSize( ProtocolLevel protocolLevel );
+        public abstract uint GetSize( ProtocolLevel protocolLevel );
     }
 }

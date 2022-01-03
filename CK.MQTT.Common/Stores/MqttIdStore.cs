@@ -94,7 +94,7 @@ namespace CK.MQTT.Stores
         /// <summary>
         /// Call it only with a lock.
         /// </summary>
-        protected ref IdStoreEntry<EntryContent> this[int index] => ref _idStore._entries[index];
+        protected ref IdStoreEntry<EntryContent> this[uint index] => ref _idStore._entries[index];
 
         /// <summary>
         /// Require lock.
@@ -116,7 +116,7 @@ namespace CK.MQTT.Stores
         /// </summary>
         /// <param name="m"></param>
         /// <param name="packetId"></param>
-        void FreeId( IInputLogger? m, int packetId )
+        void FreeId( IInputLogger? m, uint packetId )
         {
             lock( _idStore )
             {
@@ -131,11 +131,11 @@ namespace CK.MQTT.Stores
         /// <param name="m"></param>
         /// <param name="entry"></param>
         /// <param name="packetId"></param>
-        void DropPreviousUnackedPacket( IInputLogger? m, ref IdStoreEntry<EntryContent> entry, int packetId )
+        void DropPreviousUnackedPacket( IInputLogger? m, ref IdStoreEntry<EntryContent> entry, uint packetId )
         {
             lock( _idStore )
             {
-                int currId = packetId;
+                uint currId = packetId;
                 ref var curr = ref _idStore._entries[currId];
                 while( currId != _idStore._head ) // We loop over all older packets.
                 {
@@ -201,7 +201,7 @@ namespace CK.MQTT.Stores
                 _state = (QoSState)(byte)qos,
                 _taskCompletionSource = new()
             };
-            int packetId;
+            uint packetId;
             bool res = false;
             lock( _idStore )
             {
@@ -265,7 +265,7 @@ namespace CK.MQTT.Stores
 
         protected abstract ValueTask RemovePacketDataAsync( IInputLogger? m, ref T storage );
 
-        public async ValueTask OnQos1AckAsync( IInputLogger? m, int packetId, object? result )
+        public async ValueTask OnQos1AckAsync( IInputLogger? m, uint packetId, object? result )
         {
             MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
             Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );

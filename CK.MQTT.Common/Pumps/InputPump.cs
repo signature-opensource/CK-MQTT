@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT.Pumps
 {
 
-    public delegate ValueTask<OperationStatus> Reflex( IInputLogger? m, InputPump sender, byte header, int packetSize, PipeReader reader, CancellationToken cancellationToken );
+    public delegate ValueTask<OperationStatus> Reflex( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken );
 
     /// <summary>
     /// Message pump that does basic processing on the incoming data
@@ -36,7 +36,7 @@ namespace CK.MQTT.Pumps
         /// </summary>
         public Reflex CurrentReflex { get; set; }
 
-        static OperationStatus TryParsePacketHeader( ReadOnlySequence<byte> sequence, out byte header, out int length, out SequencePosition position )
+        static OperationStatus TryParsePacketHeader( ReadOnlySequence<byte> sequence, out byte header, out uint length, out SequencePosition position )
         {
             SequenceReader<byte> reader = new( sequence );
             length = 0;
@@ -64,7 +64,7 @@ namespace CK.MQTT.Pumps
                             break; // When we are notified to stop, we don't need to notify the external world of it.
                         }
                         //The packet header require 2-5 bytes
-                        OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out int length, out SequencePosition position );
+                        OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out uint length, out SequencePosition position );
                         if( res == OperationStatus.InvalidData )
                         {
                             m?.InvalidIncomingData();

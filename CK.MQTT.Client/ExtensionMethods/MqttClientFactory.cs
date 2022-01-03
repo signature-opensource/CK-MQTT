@@ -32,11 +32,11 @@ namespace CK.MQTT
         public static IMqttClient CreateMQTTClient( this MqttClientFactory @this, MqttClientConfiguration config, Func<IActivityMonitor?, ApplicationMessage, CancellationToken, ValueTask> handler )
             => @this.CreateMQTTClient( config, new BaseHandlerClosure( handler ).HandleMessageAsync );
 
-        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             => new MqttClientImpl( ProtocolConfiguration.Mqtt3, config, messageHandler );
-        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        public static IMqtt5Client CreateMQTT5Client( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             => new MqttClientImpl( ProtocolConfiguration.Mqtt5, config, messageHandler );
-        public static IMqttClient CreateMQTTClient( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, int, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        public static IMqttClient CreateMQTTClient( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
             => new MqttClientImpl( ProtocolConfiguration.Mqtt5, config, messageHandler );
 
         public static IMqtt3Client CreateMQTT3Client( this MqttClientFactory? factory, MqttClientConfiguration config, Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> messageHandler )

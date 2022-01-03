@@ -6,6 +6,7 @@ namespace CK.MQTT.Stores
     {
         readonly T[] _array;
         public ArrayStartingAt1( T[] array ) => _array = array;
+        public ref T this[uint index] => ref _array[index - 1];
         public ref T this[int index] => ref _array[index - 1];
 
         public int Length => _array.Length;

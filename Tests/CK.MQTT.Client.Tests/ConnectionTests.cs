@@ -239,9 +239,9 @@ namespace CK.MQTT.Client.Tests
 
         [TestCase( 8000 )]
         [TestCase( 3 )]
-        public async Task oversized_connack_is_parsed( int connackSize )
+        public async Task oversized_connack_is_parsed( uint connackSize )
         {
-            int size = 1 + connackSize.CompactByteCount() + connackSize;
+            uint size = 1 + connackSize.CompactByteCount() + connackSize;
             Memory<byte> connackBuffer = new byte[size];
             connackBuffer.Span[0] = 0x20;
             connackBuffer.Span[1..].WriteVariableByteInteger( connackSize );

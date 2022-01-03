@@ -11,10 +11,10 @@ namespace CK.MQTT
     class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacket
     {
         readonly Subscription[] _subscriptions;
-        readonly int _subscriptionIdentifier;
+        readonly uint _subscriptionIdentifier;
         readonly IReadOnlyList<UserProperty>? _userProperties;
-        readonly int _propertiesLength;
-        public OutgoingSubscribe( Subscription[] subscriptions, int subscriptionIdentifier = 0, IReadOnlyList<UserProperty>? userProperties = null )
+        readonly uint _propertiesLength;
+        public OutgoingSubscribe( Subscription[] subscriptions, uint subscriptionIdentifier = 0, IReadOnlyList<UserProperty>? userProperties = null )
         {
             _subscriptions = subscriptions;
             _subscriptionIdentifier = subscriptionIdentifier;
@@ -26,19 +26,19 @@ namespace CK.MQTT
             }
             if( _userProperties != null )
             {
-                _propertiesLength += userProperties.Sum( s => s.Size );
+                _propertiesLength += (uint)_userProperties.Sum( s => s.Size );
             }
         }
 
-        public override int PacketId { get; set; }
+        public override uint PacketId { get; set; }
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349306
         protected override byte Header => (byte)PacketType.Subscribe | 0b0010;
 
-        protected override int GetRemainingSize( ProtocolLevel protocolLevel )
+        protected override uint GetRemainingSize( ProtocolLevel protocolLevel )
             => 2 //PacketId
-            + _subscriptions.Sum( s => s.TopicFilter.MQTTSize() + 1 ) //topics
+            + ((uint)_subscriptions.Select( s => s.TopicFilter.MQTTSize() + 1 ).Sum( s => (long)s )) //topics
             + (protocolLevel > ProtocolLevel.MQTT3 ? _propertiesLength.CompactByteCount() : 0)
             + _propertiesLength;
 

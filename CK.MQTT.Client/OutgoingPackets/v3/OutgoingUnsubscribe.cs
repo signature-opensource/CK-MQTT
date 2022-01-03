@@ -19,9 +19,9 @@ namespace CK.MQTT
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180829
         protected override byte Header => (byte)PacketType.Unsubscribe | 0b0010;
 
-        protected override int GetRemainingSize( ProtocolLevel protocolLevel )
+        protected override uint GetRemainingSize( ProtocolLevel protocolLevel )
         {
-            return 2 + _topics.Sum( s => s.MQTTSize() );
+            return 2 + (uint)_topics.Sum( s => s.MQTTSize() );
         }
 
         protected override void WriteContent( ProtocolLevel protocolLevel, Span<byte> span )
