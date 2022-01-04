@@ -11,11 +11,11 @@ namespace CK.MQTT.Stores
         bool IsRevivedSession { get; set; }
         ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacket packet, QualityOfService qos );
         void CancelAllAckTask( IActivityMonitor? m );
-        void OnPacketSent( IOutputLogger? m, int packetId );
-        ValueTask OnQos1AckAsync( IInputLogger? m, int packetId, object? result );
+        void OnPacketSent( IOutputLogger? m, uint packetId );
+        ValueTask OnQos1AckAsync( IInputLogger? m, uint packetId, object? result );
         /// <returns>The lifecycle packet to send.</returns>
-        ValueTask<IOutgoingPacket> OnQos2AckStep1Async( IInputLogger? m, int packetId );
-        void OnQos2AckStep2( IInputLogger? m, int packetId );
+        ValueTask<IOutgoingPacket> OnQos2AckStep1Async( IInputLogger? m, uint packetId );
+        void OnQos2AckStep2( IInputLogger? m, uint packetId );
         ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync();
         CancellationToken DroppedPacketCancelToken { get; }
         ValueTask ResetAsync();

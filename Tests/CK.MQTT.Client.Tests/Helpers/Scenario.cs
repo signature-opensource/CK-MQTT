@@ -15,7 +15,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         static PacketReplayer CreateConnectedReplayer( string channelType, IEnumerable<PacketReplayer.TestWorker> packets ) => new( channelType, new[]
             {
-                TestPacketHelper.Outgoing("101600044d5154540402001e000a434b4d71747454657374"),
+                TestPacketHelper.Outgoing("101600044d51545404020000000a434b4d71747454657374"),
                 TestPacketHelper.SendToClient("20020000")
             }.Concat( packets ) );
         public static async Task<(PacketReplayer packetReplayer, IMqtt3Client client)> ConnectedClient( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
@@ -65,14 +65,27 @@ namespace CK.MQTT.Client.Tests.Helpers
                 return new ValueTask();
             };
 
-        public static async Task<(PacketReplayer packetReplayer, IMqtt3Client client)> ConnectedClientWithKeepAlive( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
-        {
-            PacketReplayer pcktReplayer = CreateConnectedReplayer( channelType, packets );
 
+
+        public static async Task RunOnConnectedClientWithKeepAlive( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
+        {
+            PacketReplayer pcktReplayer = new( channelType, new[]
+            {
+                TestPacketHelper.Outgoing("101600044d51545404020005000a434b4d71747454657374"),
+                TestPacketHelper.SendToClient("20020000")
+            } );
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( pcktReplayer ),
                 NoOpDispose() );
-            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
-            return (pcktReplayer, client);
+
+            await pcktReplayer.PacketsWorker.Writer.WriteAsync( TestPacketHelper.Do( async ( m ) =>
+            {
+                await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
+            } ) );
+            foreach( var item in packets )
+            {
+                await pcktReplayer.PacketsWorker.Writer.WriteAsync( item );
+            }
+            await pcktReplayer.StopAndEnsureValidAsync();
         }
     }
 }

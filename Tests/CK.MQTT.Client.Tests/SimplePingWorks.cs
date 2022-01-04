@@ -37,18 +37,11 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task normal_ping_works()
         {
-
-            using( CancellationTokenSource cts = new() )
+            await Scenario.RunOnConnectedClientWithKeepAlive( ClassCase, new[]
             {
-
-                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClientWithKeepAlive( ClassCase, new[]
-                {
-                    TestPacketHelper.IncrementTime(TimeSpan.FromSeconds(5)), // Doesn't work because we increment before waiting.
+                    TestPacketHelper.IncrementTime(TimeSpan.FromSeconds(5)),
                     TestPacketHelper.Outgoing("30")
-                } );
-
-                await packetReplayer.StopAndEnsureValidAsync();
-            }
+            } );
         }
     }
 }

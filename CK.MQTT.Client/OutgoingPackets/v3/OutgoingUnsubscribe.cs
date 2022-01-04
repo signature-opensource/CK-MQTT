@@ -12,7 +12,7 @@ namespace CK.MQTT
 
         public OutgoingUnsubscribe( string[] topics ) => _topics = topics;
 
-        public override int PacketId { get; set; }
+        public override uint PacketId { get; set; }
 
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 

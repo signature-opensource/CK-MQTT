@@ -12,6 +12,6 @@
     <ProjectReference Include="..\CK.MQTT.P2P\CK.MQTT.P2P.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring" Version="15.0.0-r02" />
+    <PackageReference Include="CK.Monitoring" Version="15.0.0-r02-00-0001-develop" />
   </ItemGroup>
 </Project>

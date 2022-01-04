@@ -70,8 +70,8 @@ namespace CK.MQTT.Stores
         protected readonly MqttConfigurationBase Config;
         TaskCompletionSource<object?>? _idFullTCS = null; //TODO: replace by non generic TCS in .NET 5
         CancellationTokenSource _packetDroppedCTS = new();
-        int _droppedCount = 0;
-        protected MqttIdStore( int packetIdMaxValue, MqttConfigurationBase config )
+        uint _droppedCount = 0;
+        protected MqttIdStore( uint packetIdMaxValue, MqttConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
             _stopwatch = config.StopwatchFactory.Create();
@@ -101,7 +101,7 @@ namespace CK.MQTT.Stores
         /// </summary>
         /// <param name="packetId"></param>
         /// <returns></returns>
-        QoSState GetStateAndChecks( int packetId )
+        QoSState GetStateAndChecks( uint packetId )
         {
             if( packetId > _idStore._entries.Length ) throw new ProtocolViolationException( "The sender acknowledged a packet id that does not exist." );
             QoSState state = _idStore._entries[packetId].Content._state;
@@ -245,7 +245,7 @@ namespace CK.MQTT.Stores
             }
         }
 
-        public void OnPacketSent( IOutputLogger? m, int packetId )
+        public void OnPacketSent( IOutputLogger? m, uint packetId )
         {
             lock( _idStore )
             {
@@ -299,7 +299,7 @@ namespace CK.MQTT.Stores
             }
         }
 
-        public async ValueTask<IOutgoingPacket> OnQos2AckStep1Async( IInputLogger? m, int packetId )
+        public async ValueTask<IOutgoingPacket> OnQos2AckStep1Async( IInputLogger? m, uint packetId )
         {
             MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
             Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.ExactlyOnce );
@@ -321,7 +321,7 @@ namespace CK.MQTT.Stores
             return LifecyclePacketV3.Pubrel( packetId );
         }
 
-        public void OnQos2AckStep2( IInputLogger? m, int packetId )
+        public void OnQos2AckStep2( IInputLogger? m, uint packetId )
         {
             lock( _idStore )
             {
@@ -343,9 +343,9 @@ namespace CK.MQTT.Stores
             }
         }
 
-        protected abstract ValueTask<IOutgoingPacket> RestorePacketAsync( int packetId );
+        protected abstract ValueTask<IOutgoingPacket> RestorePacketAsync( uint packetId );
 
-        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( int packetId )
+        async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( uint packetId )
             => (await RestorePacketAsync( packetId ), TimeSpan.Zero);
 
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync()
@@ -358,7 +358,7 @@ namespace CK.MQTT.Stores
             {
                 // If there is no packet id allocated, there is no unacked packet id.
                 if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
-                int currId = _idStore._head;
+                uint currId = _idStore._head;
                 ref var curr = ref _idStore._entries[currId];
                 if( (curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped )) )
                 {

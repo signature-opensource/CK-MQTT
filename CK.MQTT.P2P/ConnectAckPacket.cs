@@ -12,10 +12,10 @@ namespace CK.MQTT.P2P
             _sessionPresent = sessionPresent;
             _connectReturnCode = connectReturnCode;
         }
-        public override int PacketId { get => 0; set => throw new NotSupportedException(); }
+        public override uint PacketId { get => 0; set => throw new NotSupportedException(); }
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
-        public override int GetSize( ProtocolLevel protocolLevel ) => 4;
+        public override uint GetSize( ProtocolLevel protocolLevel ) => 4;
 
         protected override void Write( ProtocolLevel protocolLevel, Span<byte> buffer )
         {

@@ -11,20 +11,22 @@ namespace CK.MQTT
     class ConnectAckReflex
     {
         readonly TaskCompletionSource<ConnectResult> _tcs = new();
+        readonly Reflex? _reflex;
 
         /// <summary>
-        /// Upon receiving the CONNACK packet, will set <see cref="InputPump.CurrentReflex"/> to this property value.
+        /// Upon receiving the CONNACK packet, will set <see cref="InputPump.CurrentReflex"/> to this value.
         /// </summary>
-        public Reflex? Reflex { get; set; } // TODO .NET5: Maybe we can use "init" ?
+        /// <param name="reflex"></param>
+        public ConnectAckReflex( Reflex? reflex ) => _reflex = reflex;
 
         /// <summary>
         /// <see cref="Task{TResult}"/> that complete when receiving the CONNACK packet.
         /// </summary>
         /// <remarks>
-        /// Code awaiting this will run concurrently with <see cref="Reflex"/> delegate.
+        /// Code awaiting this will run concurrently with <see cref="_reflex"/> delegate.
         /// You should not await this to set the <see cref="InputPump.CurrentReflex"/>. <br/>
         /// Explanation:
-        /// The input pump messages in a loop. The mqtt spec allow to send a CONNECTACK and immediatly following retained messages.
+        /// The input pump messages in a loop. The mqtt spec allow to send a CONNECTACK and immediately following retained messages.
         /// This mean while your task will be processed, the <see cref="InputPump"/> will be processing the next message.
         /// </remarks>
         public Task<ConnectResult> Task => _tcs.Task;
@@ -33,26 +35,26 @@ namespace CK.MQTT
         {
             try
             {
-                if( Reflex == null ) throw new NullReferenceException( nameof( Reflex ) );
+                if( _reflex == null ) throw new NullReferenceException( nameof( _reflex ) );
                 if( header != (byte)PacketType.ConnectAck )
                 {
-                    _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_UnexpectedConnectResponse ) );
+                    _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_UnexpectedConnectResponse ) );
                     return OperationStatus.Done;
                 }
                 using( m?.ProcessPacket( PacketType.ConnectAck ) )
                 {
                     ReadResult read = await reader.ReadAtLeastAsync( 2, cancellationToken );
-                    if( read.Buffer.Length < 2) return OperationStatus.NeedMoreData;
+                    if( read.Buffer.Length < 2 ) return OperationStatus.NeedMoreData;
                     Deserialize( read.Buffer, out byte state, out byte code, out SequencePosition position );
                     reader.AdvanceTo( position );
                     if( state > 1 )
                     {
-                        _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
+                        _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
                         return OperationStatus.Done;
                     }
                     if( code > 5 )
                     {
-                        _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
+                        _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
                         return OperationStatus.Done;
                     }
                     if( packetSize > 2 )
@@ -60,8 +62,8 @@ namespace CK.MQTT
                         await reader.SkipBytesAsync( packetSize - 2, cancellationToken );
                         m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
                     }
-                    sender.CurrentReflex = Reflex;
-                    _tcs.SetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                    sender.CurrentReflex = _reflex;
+                    _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
                     return OperationStatus.Done;
                 }
             }

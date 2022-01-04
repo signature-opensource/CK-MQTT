@@ -63,7 +63,7 @@ namespace CK.MQTT.Client
             IInputLogger? m,
             InputPump sender,
             byte header,
-            int packetLength,
+            uint packetLength,
             PipeReader pipeReader,
             Func<ValueTask<OperationStatus>> next,
             CancellationToken cancellationToken )

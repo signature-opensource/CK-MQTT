@@ -109,7 +109,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 DelayToCancel -= timeSpan;
                 try
                 {
-                    if( DelayToCancel.TotalMilliseconds < 0 ) CancellationTokenSource.Cancel();
+                    if( DelayToCancel.TotalMilliseconds <= 0 ) CancellationTokenSource.Cancel();
                 }
                 catch( ObjectDisposedException )
                 {

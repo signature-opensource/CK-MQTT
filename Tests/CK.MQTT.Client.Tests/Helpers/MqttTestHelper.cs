@@ -29,7 +29,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 channelType,
                 new Queue<PacketReplayer.TestWorker>( new[] {
                     TestPacketHelper.Outgoing( "20020000" ),
-                    TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" )
+                    TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" )
                 }.Concat( packets ) )
             );
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>

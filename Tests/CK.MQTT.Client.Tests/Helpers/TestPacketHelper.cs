@@ -98,9 +98,15 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 using( m.OpenInfo( "Incrementing time..." ) )
                 {
-                    await Task.Delay( 5 );
                     replayer.TestDelayHandler.IncrementTime( timeToIncrement );
                 }
+                return true;
+            };
+
+        public static PacketReplayer.TestWorker Do( Func<IActivityMonitor, Task> func ) =>
+            async ( IActivityMonitor m, PacketReplayer replayer ) =>
+            {
+                await func( m );
                 return true;
             };
     }

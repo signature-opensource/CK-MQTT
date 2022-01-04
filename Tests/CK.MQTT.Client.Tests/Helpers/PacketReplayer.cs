@@ -39,7 +39,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             Task? task = _workLoopTask;
             if( task != null )
             {
-                if( !await task.WaitAsync( 500 ) )
+                if( !await task.WaitAsync( 50000 ) )
                 {
                     Assert.Fail( "Packet replayer didn't stopped in time." );
                 }

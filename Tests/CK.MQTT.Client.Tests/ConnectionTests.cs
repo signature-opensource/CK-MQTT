@@ -39,7 +39,7 @@ namespace CK.MQTT.Client.Tests
         {
             PacketReplayer pcktReplayer = new( ClassCase, new[]
             {
-                TestPacketHelper.Outgoing("101600044d5154540402001e000a434b4d71747454657374"),
+                TestPacketHelper.Outgoing("101600044d51545404020000000a434b4d71747454657374"),
                 TestPacketHelper.SendToClient("20020000")
             } );
 
@@ -56,7 +56,7 @@ namespace CK.MQTT.Client.Tests
         public async Task connect_with_clean_session_but_connack_session_present_is_not_zero_should_fail()
         {
             PacketReplayer pcktReplayer = new( ClassCase );
-            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
+            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" );
             for( byte i = 1; i != 0; i++ ) //Ok there we loop over all non zero bytes.
             {
                 pcktReplayer.PacketsWorker.Writer.TryWrite( connectPacket );
@@ -87,7 +87,7 @@ namespace CK.MQTT.Client.Tests
         public async Task connect_with_clean_session_but_connack_return_code_is_invalid_should_throw()
         {
             PacketReplayer packetReplayer = new( ClassCase );
-            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
+            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" );
             const int startSkipCount = 6; // These packets are valid, so we skip them.
             for( byte i = startSkipCount; i != 0; i++ ) //Ok there we loop over all non zero bytes.
             {
@@ -116,7 +116,7 @@ namespace CK.MQTT.Client.Tests
         public async Task connect_return_correct_error_code()
         {
             PacketReplayer packetReplayer = new( ClassCase );
-            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
+            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" );
             for( byte i = 1; i < 6; i++ ) //Ok there we loop over all non zero bytes.
             {
                 packetReplayer.PacketsWorker.Writer.TryWrite( connectPacket ).Should().BeTrue();
@@ -166,7 +166,7 @@ namespace CK.MQTT.Client.Tests
 
             PacketReplayer packetReplayer = new( ClassCase, new[]
             {
-                TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" )
+                TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" )
             } );
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
@@ -189,7 +189,7 @@ namespace CK.MQTT.Client.Tests
         {
             PacketReplayer packetReplayer = new( ClassCase, new[]
             {
-                TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" ),
+                TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" ),
                 TestPacketHelper.SendToClient( "20020000" )
             } );
 
@@ -215,7 +215,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task connect_after_failed_connect_works()
         {
-            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d5154540402001e000a434b4d71747454657374" );
+            PacketReplayer.TestWorker connectPacket = TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" );
             PacketReplayer packetReplayer = new( ClassCase, new[]
             {
                 connectPacket,
@@ -237,8 +237,8 @@ namespace CK.MQTT.Client.Tests
             await packetReplayer.StopAndEnsureValidAsync();
         }
 
-        [TestCase( 8000 )]
-        [TestCase( 3 )]
+        [TestCase( 8000u )]
+        [TestCase( 3u )]
         public async Task oversized_connack_is_parsed( uint connackSize )
         {
             uint size = 1 + connackSize.CompactByteCount() + connackSize;
@@ -247,7 +247,7 @@ namespace CK.MQTT.Client.Tests
             connackBuffer.Span[1..].WriteVariableByteInteger( connackSize );
             PacketReplayer pcktReplayer = new( ClassCase, new[]
             {
-                TestPacketHelper.Outgoing("101600044d5154540402001e000a434b4d71747454657374"),
+                TestPacketHelper.Outgoing("101600044d51545404020000000a434b4d71747454657374"),
                 TestPacketHelper.SendToClient(connackBuffer),
                 TestPacketHelper.SendToClient("321a000a7465737420746f706963000174657374207061796c6f6164")
             } );
@@ -276,7 +276,7 @@ namespace CK.MQTT.Client.Tests
         {
             PacketReplayer pcktReplayer = new( ClassCase, new[]
             {
-                TestPacketHelper.Outgoing("101600044d5154540402001e000a434b4d71747454657374"),
+                TestPacketHelper.Outgoing("101600044d51545404020000000a434b4d71747454657374"),
                 TestPacketHelper.SendToClient("20020000")
             } );
 
@@ -297,7 +297,7 @@ namespace CK.MQTT.Client.Tests
         {
             PacketReplayer pcktReplayer = new( ClassCase, new[]
             {
-                TestPacketHelper.Outgoing("100C00044D5154540402001E0000"),
+                TestPacketHelper.Outgoing("100C00044D515454040200000000"),
                 TestPacketHelper.SendToClient("20020000")
             } );
 

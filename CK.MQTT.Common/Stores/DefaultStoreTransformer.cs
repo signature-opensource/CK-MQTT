@@ -41,11 +41,11 @@ namespace CK.MQTT
 
             public PacketWrapper( IOutgoingPacket packet ) => _packet = packet;
 
-            public int PacketId { get => _packet.PacketId; set => _packet.PacketId = value; }
+            public uint PacketId { get => _packet.PacketId; set => _packet.PacketId = value; }
 
             public QualityOfService Qos => _packet.Qos;
 
-            public int GetSize( ProtocolLevel protocolLevel ) => _packet.GetSize( protocolLevel );
+            public uint GetSize( ProtocolLevel protocolLevel ) => _packet.GetSize( protocolLevel );
 
             public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
                 => _packet.WriteAsync( protocolLevel, new PipeWriterWrapper( writer ), cancellationToken );

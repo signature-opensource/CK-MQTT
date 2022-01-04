@@ -105,9 +105,7 @@ namespace CK.MQTT
                     // Creating channel. The channel is not yet connected, but other object need a reference to it.
                     IMqttChannel channel = await Config.ChannelFactory.CreateAsync( m, Config.ConnectionString );
 
-                    // This reflex handle the connection packet.
-                    // It will replace itself with the regular packet processing.
-                    ConnectAckReflex connectAckReflex = new();
+
 
                     // Creating pumps. Need to be started.
                     OutputPump output = new( store, SelfDisconnectAsync, Config );
@@ -136,12 +134,17 @@ namespace CK.MQTT
                         outputProcessor = withKeepAlive;
                         builder.UseMiddleware( withKeepAlive );
                     }
+                    // This reflex handle the connection packet.
+                    // It will replace itself with the regular packet processing.
+                    ConnectAckReflex connectAckReflex = new
+                    (
+                        builder.Build( async ( a, b, c, d, e, f ) =>
+                        {
+                            await SelfDisconnectAsync( DisconnectedReason.ProtocolError );
+                            return OperationStatus.Done;
+                        } )
+                    );
                     // When receiving the ConnAck, this reflex will replace the reflex with this property.
-                    connectAckReflex.Reflex = builder.Build(  async ( a, b, c, d, e, f ) =>
-                    {
-                        await SelfDisconnectAsync( DisconnectedReason.ProtocolError );
-                        return OperationStatus.Done;
-                    } );
 
                     Pumps = new DuplexPump<ClientState>( // Require channel started.
                         new ClientState( Config, output, channel, packetIdStore, store ),
@@ -170,8 +173,8 @@ namespace CK.MQTT
                         return await Exit( LogLevel.Error, ConnectError.Timeout, "Timeout while writing connect packet." );
                     ConnectResult res;
                     using( CancellationTokenSource cts2 = Config.CancellationTokenSourceFactory.Create( cancellationToken, Config.WaitTimeoutMilliseconds ) )
+                    using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
                     {
-                        cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) );
                         try
                         {
                             res = await connectAckReflex.Task;

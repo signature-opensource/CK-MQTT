@@ -39,7 +39,7 @@ namespace CK.MQTT
                     position = reader.Position;
                     return OperationStatus.NeedMoreData;
                 }
-                length |= (b & 0x7F) << shift;
+                length |= (b & 0x7Fu) << shift;
                 shift += 7;
             } while( (b & 0x80) != 0 );
             position = reader.Position;
