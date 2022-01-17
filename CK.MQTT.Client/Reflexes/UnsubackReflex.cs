@@ -10,9 +10,9 @@ namespace CK.MQTT
 {
     public class UnsubackReflex : IReflexMiddleware
     {
-        readonly IOutgoingPacketStore _store;
+        readonly ILocalPacketStore _store;
 
-        public UnsubackReflex( IOutgoingPacketStore store ) => _store = store;
+        public UnsubackReflex( ILocalPacketStore store ) => _store = store;
         public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, int packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
         {
             if( PacketType.UnsubscribeAck != (PacketType)header )

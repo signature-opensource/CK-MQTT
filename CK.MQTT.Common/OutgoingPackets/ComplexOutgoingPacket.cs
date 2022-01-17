@@ -20,6 +20,7 @@ namespace CK.MQTT
         protected abstract byte Header { get; }
         public abstract int PacketId { get; set; }
         public abstract QualityOfService Qos { get; }
+        public abstract bool IsRemoteOwnedPacketId { get; }
 
         /// <inheritdoc/>
         public int GetSize( ProtocolLevel protocolLevel )
@@ -79,7 +80,7 @@ namespace CK.MQTT
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( protocolLevel, pw );
-            pw.FlushAsync(cancellationToken);
+            await pw.FlushAsync(cancellationToken);
             WriteResult result = await WritePayloadAsync( protocolLevel, pw, cancellationToken );
             //WritePayloadAsync can be user code, and users forget to flush the payload. I was this user.
             await pw.FlushAsync( cancellationToken );

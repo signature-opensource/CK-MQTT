@@ -12,6 +12,8 @@ namespace CK.MQTT
 
         public OutgoingUnsubscribe( string[] topics ) => _topics = topics;
 
+        public override bool IsRemoteOwnedPacketId => false;
+
         public override int PacketId { get; set; }
 
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;

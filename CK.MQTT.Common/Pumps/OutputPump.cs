@@ -15,7 +15,7 @@ namespace CK.MQTT.Pumps
     public class OutputPump : PumpBase
     {
         OutputProcessor? _outputProcessor;
-        readonly IOutgoingPacketStore _outgoingPacketStore;
+        readonly ILocalPacketStore _outgoingPacketStore;
 
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace CK.MQTT.Pumps
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( IOutgoingPacketStore outgoingPacketStore, Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
+        public OutputPump( ILocalPacketStore outgoingPacketStore, Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
         {
             _outgoingPacketStore = outgoingPacketStore;
             Config = config;
@@ -80,11 +80,21 @@ namespace CK.MQTT.Pumps
 
         public void QueueReflexMessage( IInputLogger? m, IOutgoingPacket item )
         {
-            _outgoingPacketStore.BeforeQueueReflexPacket( m, ( packet ) =>
-             {
-                 bool result = ReflexesChannel.Writer.TryWrite( item );
-                 if( !result ) m?.QueueFullPacketDropped( PacketType.PublishAck, item.PacketId );
-             }, item );
+            void QueuePacket( IOutgoingPacket packet )
+            {
+                bool result = ReflexesChannel.Writer.TryWrite( item );
+                if( !result ) m?.QueueFullPacketDropped( PacketType.PublishAck, item.PacketId );
+            }
+            if( !item.IsRemoteOwnedPacketId )
+            {
+
+                _outgoingPacketStore.BeforeQueueReflexPacket( m, QueuePacket, item );
+            }
+            else
+            {
+                QueuePacket( item );
+            }
+
         }
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>

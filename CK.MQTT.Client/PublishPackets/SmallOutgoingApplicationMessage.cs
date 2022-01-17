@@ -18,7 +18,7 @@ namespace CK.MQTT
         {
             _memory = payload;
         }
-        
+
         protected override int PayloadSize => _memory.Length;
 
         protected async override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )

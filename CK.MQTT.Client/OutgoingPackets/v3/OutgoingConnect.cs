@@ -77,6 +77,8 @@ namespace CK.MQTT
 
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
+        public override bool IsRemoteOwnedPacketId => throw new NotSupportedException();
+
         protected override int GetHeaderSize( ProtocolLevel protocolLevel )
             => _pConf.ProtocolName.MQTTSize()
                 + 1 //_protocolLevel

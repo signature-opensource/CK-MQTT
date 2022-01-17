@@ -7,8 +7,8 @@ namespace CK.MQTT
 {
     class MemoryStoreFactory : IStoreFactory
     {
-        readonly Dictionary<string, (IOutgoingPacketStore, IIncomingPacketStore)> _stores = new();
-        public ValueTask<(IOutgoingPacketStore, IIncomingPacketStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore )
+        readonly Dictionary<string, (ILocalPacketStore, IRemotePacketStore)> _stores = new();
+        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( IActivityMonitor? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore )
         {
             bool newSession = resetStore || !_stores.ContainsKey( storeId );
             if( newSession )
@@ -18,10 +18,10 @@ namespace CK.MQTT
             var currStore = _stores[storeId];
             currStore.Item1.IsRevivedSession = !newSession;
             currStore.Item2.IsRevivedSession = !newSession;
-            return new ValueTask<(IOutgoingPacketStore, IIncomingPacketStore)>( currStore );
+            return new ValueTask<(ILocalPacketStore, IRemotePacketStore)>( currStore );
         }
 
-        public ValueTask<(IOutgoingPacketStore, IIncomingPacketStore)> CreateAsync(
+        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync(
             IInputLogger? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId,
             bool resetStore )
         {
@@ -33,7 +33,7 @@ namespace CK.MQTT
             var currStore = _stores[storeId];
             currStore.Item1.IsRevivedSession = !newSession;
             currStore.Item2.IsRevivedSession = !newSession;
-            return new ValueTask<(IOutgoingPacketStore, IIncomingPacketStore)>( currStore );
+            return new ValueTask<(ILocalPacketStore, IRemotePacketStore)>( currStore );
         }
     }
 }

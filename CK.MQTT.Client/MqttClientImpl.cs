@@ -21,7 +21,7 @@ namespace CK.MQTT
         /// </summary>
         protected class ClientState : IState
         {
-            public ClientState( MqttConfigurationBase config, OutputPump outputPump, IMqttChannel channel, IIncomingPacketStore packetIdStore, IOutgoingPacketStore store )
+            public ClientState( MqttConfigurationBase config, OutputPump outputPump, IMqttChannel channel, IRemotePacketStore packetIdStore, ILocalPacketStore store )
             {
                 _config = config;
                 OutputPump = outputPump;
@@ -31,8 +31,8 @@ namespace CK.MQTT
             }
 
             public readonly IMqttChannel Channel;
-            public readonly IIncomingPacketStore PacketIdStore;
-            public readonly IOutgoingPacketStore Store;
+            public readonly IRemotePacketStore PacketIdStore;
+            public readonly ILocalPacketStore Store;
             readonly MqttConfigurationBase _config;
             public OutputPump OutputPump { get; }
 
@@ -98,7 +98,7 @@ namespace CK.MQTT
                 try
                 {
                     // Creating store from credentials (this allow to have one state per endpoint).
-                    (IOutgoingPacketStore store, IIncomingPacketStore packetIdStore) = await Config.StoreFactory.CreateAsync(
+                    (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await Config.StoreFactory.CreateAsync(
                         m, ProtocolConfig, Config, Config.ConnectionString, credentials?.CleanSession ?? true
                     );
 
@@ -110,15 +110,15 @@ namespace CK.MQTT
                     ConnectAckReflex connectAckReflex = new();
 
                     // Creating pumps. Need to be started.
-                    OutputPump output = new( store, SelfDisconnectAsync, Config );
+                    OutputPump output = new( localStore, SelfDisconnectAsync, Config );
 
 
                     // Middleware that will processes the requests.
                     ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
-                        .UseMiddleware( new PublishReflex( Config, packetIdStore, OnMessageAsync, output ) )
-                        .UseMiddleware( new PublishLifecycleReflex( packetIdStore, store, output ) )
-                        .UseMiddleware( new SubackReflex( store ) )
-                        .UseMiddleware( new UnsubackReflex( store ) );
+                        .UseMiddleware( new PublishReflex( Config, remoteStore, OnMessageAsync, output ) )
+                        .UseMiddleware( new PublishLifecycleReflex( remoteStore, localStore, output ) )
+                        .UseMiddleware( new SubackReflex( localStore ) )
+                        .UseMiddleware( new UnsubackReflex( localStore ) );
 
 
                     await channel.StartAsync( m ); // Will create the connection to server.
@@ -127,12 +127,12 @@ namespace CK.MQTT
                     // Enable keepalive only if we need it.
                     if( Config.KeepAliveSeconds == 0 )
                     {
-                        outputProcessor = new OutputProcessor( ProtocolConfig, output, channel.DuplexPipe.Output, store );
+                        outputProcessor = new OutputProcessor( ProtocolConfig, output, channel.DuplexPipe.Output, localStore, remoteStore );
                     }
                     else
                     {
                         // If keepalive is enabled, we add it's handler to the middlewares.
-                        OutputProcessorWithKeepAlive withKeepAlive = new( ProtocolConfig, Config, output, channel.DuplexPipe.Output, store ); // Require channel started.
+                        OutputProcessorWithKeepAlive withKeepAlive = new( ProtocolConfig, Config, output, channel.DuplexPipe.Output, localStore, remoteStore ); // Require channel started.
                         outputProcessor = withKeepAlive;
                         builder.UseMiddleware( withKeepAlive );
                     }
@@ -144,7 +144,7 @@ namespace CK.MQTT
                     } );
 
                     Pumps = new DuplexPump<ClientState>( // Require channel started.
-                        new ClientState( Config, output, channel, packetIdStore, store ),
+                        new ClientState( Config, output, channel, remoteStore, localStore ),
                         output,
                         new InputPump( SelfDisconnectAsync, Config, channel.DuplexPipe.Input, connectAckReflex.HandleRequestAsync )
                     );
@@ -210,8 +210,8 @@ namespace CK.MQTT
                         return await Exit( LogLevel.Warn, ConnectError.ProtocolError_SessionNotFlushed, "Session was not flushed while we asked for it." );
                     if( res.SessionState == SessionState.CleanSession )
                     {
-                        ValueTask task = packetIdStore.ResetAsync();
-                        await store.ResetAsync();
+                        ValueTask task = remoteStore.ResetAsync();
+                        await localStore.ResetAsync();
                         await task;
                     }
                     else

@@ -15,6 +15,8 @@ namespace CK.MQTT.P2P
         public override int PacketId { get => 0; set => throw new NotSupportedException(); }
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
+        public override bool IsRemoteOwnedPacketId => false;
+
         public override int GetSize( ProtocolLevel protocolLevel ) => 4;
 
         protected override void Write( ProtocolLevel protocolLevel, Span<byte> buffer )

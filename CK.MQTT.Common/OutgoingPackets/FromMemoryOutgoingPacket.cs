@@ -11,15 +11,17 @@ namespace CK.MQTT.Common.OutgoingPackets
         readonly ReadOnlyMemory<byte> _readOnlyMemory;
         readonly int _packetId;
 
-        public FromMemoryOutgoingPacket( ReadOnlyMemory<byte> readOnlyMemory, QualityOfService qos, int packetId )
+        public FromMemoryOutgoingPacket( ReadOnlyMemory<byte> readOnlyMemory, QualityOfService qos, int packetId, bool isRemoteOwnedPacketId )
         {
             Debug.Assert( readOnlyMemory.Length > 0 );
             _readOnlyMemory = readOnlyMemory;
             Qos = qos;
             _packetId = packetId;
+            IsRemoteOwnedPacketId = isRemoteOwnedPacketId;
         }
 
         public QualityOfService Qos { get; }
+        public bool IsRemoteOwnedPacketId { get; }
         public int PacketId { get => _packetId; set => throw new NotSupportedException(); }
 
         public int GetSize( ProtocolLevel protocolLevel ) => _readOnlyMemory.Length;
