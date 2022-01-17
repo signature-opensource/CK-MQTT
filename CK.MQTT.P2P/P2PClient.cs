@@ -62,7 +62,7 @@ namespace CK.MQTT.P2P
                     .UseMiddleware( new PublishLifecycleReflex( connectReflex.InStore, connectReflex.OutStore, output ) )
                     .UseMiddleware( new SubackReflex( connectReflex.OutStore ) )
                     .UseMiddleware( new UnsubackReflex( connectReflex.OutStore ) );
-                OutputProcessor outputProcessor = new( ProtocolConfig, output, channel.DuplexPipe.Output, connectReflex.OutStore );
+                OutputProcessor outputProcessor = new( ProtocolConfig, output, channel.DuplexPipe.Output, connectReflex.OutStore, connectReflex.InStore );
                 // Enable keepalive only if we need it.
 
                 // When receiving the ConnAck, this reflex will replace the reflex with this property.

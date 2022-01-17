@@ -87,7 +87,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             using( m.OpenInfo( "Disconnecting..." ) )
             {
-                replayer.Channel.Close( null );
+                replayer.Channel!.Close( null );
                 replayer.Channel.Dispose();
             }
             return new ValueTask<bool>( false );

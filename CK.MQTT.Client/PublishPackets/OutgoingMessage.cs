@@ -51,7 +51,9 @@ namespace CK.MQTT
             _correlationDataWriter = correlationDataWriter;
         }
 
+        public override bool IsRemoteOwnedPacketId => false;
         uint _packetId = 0;
+
         /// <inheritdoc/>
         public override uint PacketId
         {

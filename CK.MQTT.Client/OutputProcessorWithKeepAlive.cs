@@ -13,8 +13,8 @@ namespace CK.MQTT.Client
         readonly MqttClientConfiguration _config;
         readonly IStopwatch _stopwatch;
 
-        public OutputProcessorWithKeepAlive( ProtocolConfiguration pConfig, MqttClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore store )
-            : base( pConfig, outputPump, pipeWriter, store )
+        public OutputProcessorWithKeepAlive( ProtocolConfiguration pConfig, MqttClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, ILocalPacketStore store, IRemotePacketStore remotePacketStore )
+            : base( pConfig, outputPump, pipeWriter, store, remotePacketStore )
         {
             _config = config;
             _stopwatch = config.StopwatchFactory.Create();

@@ -6,9 +6,9 @@ namespace CK.MQTT.Stores
     /// Store packet identifier that were sent by the endpoint.
     /// </summary>
     /// <remarks>
-    /// We don't use a <see cref="IOutgoingPacketStore"/> for incoming packet identified because they are not corellated to the locally generated packet identifier.
+    /// We don't use a <see cref="ILocalPacketStore"/> for incoming packet identified because they are not corellated to the locally generated packet identifier.
     /// </remarks>
-    public interface IIncomingPacketStore
+    public interface IRemotePacketStore
     {
         bool IsRevivedSession { get; set; }
         ValueTask StoreIdAsync( IInputLogger? m, int id );

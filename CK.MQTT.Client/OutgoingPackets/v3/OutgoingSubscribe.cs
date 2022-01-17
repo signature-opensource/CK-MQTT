@@ -33,6 +33,8 @@ namespace CK.MQTT
         public override uint PacketId { get; set; }
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
+        public override bool IsRemoteOwnedPacketId => false;
+
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349306
         protected override byte Header => (byte)PacketType.Subscribe | 0b0010;
 

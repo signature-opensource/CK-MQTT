@@ -3,6 +3,7 @@ using CK.MQTT.Stores;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
@@ -40,7 +41,6 @@ namespace CK.MQTT.P2P
         byte _protocolLevel;
         PropertyIdentifier _currentProp;
         byte _flags;
-        public IIncomingPacketStore InStore { get; private set; }
         // Currently the parsed data is available when the packet is not parsed yet and can lead to errors.
         readonly SemaphoreSlim _exitWait = new( 0 );
         public ConnectReflex( ProtocolConfiguration pConfig, MqttConfigurationBase config )
@@ -51,8 +51,11 @@ namespace CK.MQTT.P2P
 
         public Task ConnectHandledTask => _taskCompletionSource.Task;
         InputPump _sender;
+        
+        [MemberNotNull( nameof( InStore ), nameof( OutStore ) )]
         public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
+#pragma warning disable CS8774 // https://github.com/dotnet/csharplang/discussions/5657
             _sender = sender;
             OperationStatus status = OperationStatus.NeedMoreData;
             ReadResult res;
@@ -87,9 +90,10 @@ namespace CK.MQTT.P2P
             // - AUTHENTICATE Packet
             //      Set the next reflex to an Authenticate Handler and handle authentication.
             _taskCompletionSource.SetResult( null );
-            await _exitWait.WaitAsync();
+            await _exitWait.WaitAsync( cancellationToken );
 
             return OperationStatus.Done;
+#pragma warning restore CS8774 
         }
 
 
@@ -98,7 +102,10 @@ namespace CK.MQTT.P2P
             _sender.CurrentReflex = reflex;
             _exitWait.Release();
         }
-        public IOutgoingPacketStore OutStore { get; set; }
+
+
+        public IRemotePacketStore? InStore { get; private set; }
+        public ILocalPacketStore? OutStore { get; set; }
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
         public bool Retain => (_flags & 0b0010_0000) != 0;
