@@ -112,7 +112,7 @@ namespace CK.MQTT.Pumps
 
         public override Task CloseAsync()
         {
-            Debug.Assert( _outputProcessor != null ); // TODO: Put non nullable init on output processor when it will be available.
+            if( _outputProcessor == null ) throw new NullReferenceException($"{nameof(_outputProcessor)} is null.");
             _outputProcessor.Stopping();
             return base.CloseAsync();
         }

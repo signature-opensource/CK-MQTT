@@ -68,7 +68,7 @@ namespace CK.MQTT.Stores
         readonly IdStore<EntryContent> _idStore;
         readonly IStopwatch _stopwatch;
         protected readonly MqttConfigurationBase Config;
-        TaskCompletionSource<object?>? _idFullTCS = null; //TODO: replace by non generic TCS in .NET 5
+        TaskCompletionSource? _idFullTCS = null;
         CancellationTokenSource _packetDroppedCTS = new();
         uint _droppedCount = 0;
         protected MqttIdStore( uint packetIdMaxValue, MqttConfigurationBase config )
@@ -121,7 +121,7 @@ namespace CK.MQTT.Stores
             lock( _idStore )
             {
                 _idStore.FreeId( m, packetId );
-                _idFullTCS?.SetResult( null );
+                _idFullTCS?.SetResult();
             }
         }
 
@@ -215,7 +215,7 @@ namespace CK.MQTT.Stores
                 lock( _idStore )
                 {
                     res = _idStore.CreateNewEntry( entry, out packetId );
-                    _idFullTCS = new TaskCompletionSource<object?>();
+                    _idFullTCS = new();
                 }
                 // Asynchronously wait that a new packet id is available.
                 await _idFullTCS.Task;

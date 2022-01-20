@@ -40,7 +40,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         class DelayTask
         {
-            public readonly TaskCompletionSource<object?> TaskCompletionSource;
+            public readonly TaskCompletionSource TaskCompletionSource;
             public TimeSpan TimeUntilCompletion;
 
             public DelayTask( TimeSpan timeUntilCompletion, CancellationToken cancellationToken = default )
@@ -55,7 +55,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 if( TaskCompletionSource.Task.IsCompleted ) return;
                 TimeUntilCompletion -= timeSpan;
-                if( TimeUntilCompletion.Ticks < 0 ) TaskCompletionSource.SetResult( null );
+                if( TimeUntilCompletion.Ticks < 0 ) TaskCompletionSource.SetResult();
             }
         }
 

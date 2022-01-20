@@ -94,13 +94,13 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
 
         public static PacketReplayer.TestWorker IncrementTime( TimeSpan timeToIncrement ) =>
-            async ( IActivityMonitor m, PacketReplayer replayer ) =>
+            ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
                 using( m.OpenInfo( "Incrementing time..." ) )
                 {
                     replayer.TestDelayHandler.IncrementTime( timeToIncrement );
                 }
-                return true;
+                return new ValueTask<bool>( true );
             };
 
         public static PacketReplayer.TestWorker Do( Func<IActivityMonitor, Task> func ) =>
