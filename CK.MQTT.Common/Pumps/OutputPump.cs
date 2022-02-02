@@ -3,6 +3,7 @@ using CK.MQTT.Stores;
 using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -76,8 +77,24 @@ namespace CK.MQTT.Pumps
             }
         }
 
-        public bool QueueMessage( IOutgoingPacket item ) => MessagesChannel.Writer.TryWrite( item );
+        /// <summary>
+        /// Packet used to wake up the wait
+        /// Packet will never be published.
+        /// </summary>
+        public class TriggerPacket : IOutgoingPacket
+        {
+            public static IOutgoingPacket Instance { get; } = new TriggerPacket();
+            private TriggerPacket() { }
+            public uint PacketId { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
+            public QualityOfService Qos => throw new NotSupportedException();
+
+            public bool IsRemoteOwnedPacketId => throw new NotSupportedException();
+
+            public uint GetSize( ProtocolLevel protocolLevel ) => throw new NotSupportedException();
+
+            public ValueTask<IOutgoingPacket.WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
+        }
         public void QueueReflexMessage( IInputLogger? m, IOutgoingPacket item )
         {
             void QueuePacket( IOutgoingPacket packet )
@@ -105,6 +122,10 @@ namespace CK.MQTT.Pumps
                 var wrapper = new AwaitableOutgoingPacketWrapper( packet );
                 m?.Trace( $"Queuing the packet '{packet}'. " );
                 await MessagesChannel.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
+                if( ReflexesChannel.Reader.Count == 0 )
+                {
+                    ReflexesChannel.Writer.TryWrite( TriggerPacket.Instance );
+                }
                 m?.Trace( $"Awaiting that the packet '{packet}' has been written." );
                 await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
             }
@@ -112,7 +133,7 @@ namespace CK.MQTT.Pumps
 
         public override Task CloseAsync()
         {
-            if( _outputProcessor == null ) throw new NullReferenceException($"{nameof(_outputProcessor)} is null.");
+            if( _outputProcessor == null ) throw new NullReferenceException( $"{nameof( _outputProcessor )} is null." );
             _outputProcessor.Stopping();
             return base.CloseAsync();
         }

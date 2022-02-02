@@ -42,7 +42,11 @@ namespace CK.MQTT.Pumps
             }
 
         }
-        public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken cancellationToken )
+
+        readonly SemaphoreSlim _semaphore = new( 0, 1 );
+        public void SignalWorkAvailable() => _semaphore.Release();
+
+        public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken stopToken )
         {
             using( IDisposableGroup? grp = m?.AwaitingWork() )
             {
@@ -50,13 +54,10 @@ namespace CK.MQTT.Pumps
                 CancellationToken cancelOnPacketDropped = _localPacketStore.DroppedPacketCancelToken;
 
                 using( var ctsRetry = OutputPump.Config.CancellationTokenSourceFactory.Create( _timeUntilNextRetry ) )
-                using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, cancellationToken ) )
+                using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, stopToken ) )
+                using( linkedCts.Token.Register( () => OutputPump.ReflexesChannel.Writer.TryWrite( OutputPump.TriggerPacket.Instance ) ) )
                 {
-                    Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
-                    Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
-                    await Task.WhenAny( reflexesWait, messagesWait );
-                    m?.AwaitCompletedDueTo( grp, reflexesWait, messagesWait, ctsRetry.Token, cancelOnPacketDropped, cancellationToken );
-                    linkedCts.Cancel(); //Avoid leaking useless background task.
+                    await OutputPump.ReflexesChannel.Reader.WaitToReadAsync( stopToken );
                 }
             }
         }
@@ -67,11 +68,16 @@ namespace CK.MQTT.Pumps
 
         async ValueTask<bool> SendAMessageFromQueueAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
-            if( !OutputPump.ReflexesChannel.Reader.TryRead( out IOutgoingPacket? packet ) && !OutputPump.MessagesChannel.Reader.TryRead( out packet ) )
+            IOutgoingPacket? packet;
+            do
             {
-                m?.QueueEmpty();
-                return false;
+                if( !OutputPump.ReflexesChannel.Reader.TryRead( out packet ) && !OutputPump.MessagesChannel.Reader.TryRead( out packet ) )
+                {
+                    m?.QueueEmpty();
+                    return false;
+                }
             }
+            while( packet == OutputPump.TriggerPacket.Instance );
             using( m?.SendingMessageFromQueue() )
             {
                 await ProcessOutgoingPacketAsync( m, packet, cancellationToken );

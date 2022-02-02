@@ -1,7 +1,6 @@
 using Cake.Common.IO;
 using Cake.Core;
 using Cake.Core.Diagnostics;
-using System.Linq;
 
 namespace CodeCake
 {

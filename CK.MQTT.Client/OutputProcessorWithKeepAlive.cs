@@ -47,7 +47,7 @@ namespace CK.MQTT.Client
             using( CancellationTokenSource cts = _config.CancellationTokenSourceFactory.Create( _config.KeepAliveSeconds * 1000 ) )
             using( cancellationToken.Register( () => cts.Cancel() ) )
             {
-                await base.WaitPacketAvailableToSendAsync( m, cts.Token );
+                await base.WaitPacketAvailableToSendAsync( m,  cancellationToken );
                 // We didn't get cancelled, or the cancellation is due to the processor being cancelled.
                 if( !cts.IsCancellationRequested || cancellationToken.IsCancellationRequested ) return;
             }
