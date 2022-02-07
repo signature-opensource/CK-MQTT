@@ -46,7 +46,7 @@ namespace CK.MQTT.Pumps
         readonly SemaphoreSlim _semaphore = new( 0, 1 );
         public void SignalWorkAvailable() => _semaphore.Release();
 
-        public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken stopToken )
+        public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken stopWaitToken, CancellationToken stopToken )
         {
             using( IDisposableGroup? grp = m?.AwaitingWork() )
             {
@@ -54,7 +54,7 @@ namespace CK.MQTT.Pumps
                 CancellationToken cancelOnPacketDropped = _localPacketStore.DroppedPacketCancelToken;
 
                 using( var ctsRetry = OutputPump.Config.CancellationTokenSourceFactory.Create( _timeUntilNextRetry ) )
-                using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, stopToken ) )
+                using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, stopWaitToken ) )
                 using( linkedCts.Token.Register( () => OutputPump.ReflexesChannel.Writer.TryWrite( OutputPump.TriggerPacket.Instance ) ) )
                 {
                     await OutputPump.ReflexesChannel.Reader.WaitToReadAsync( stopToken );

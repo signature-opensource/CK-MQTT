@@ -61,7 +61,7 @@ namespace CK.MQTT.Pumps
                         if( !packetSent )
                         {
                             if( StopToken.IsCancellationRequested ) return;
-                            await _outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, StopToken );
+                            await _outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, CancellationToken.None, StopToken );
                         }
                     }
                 }

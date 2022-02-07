@@ -37,23 +37,22 @@ namespace CK.MQTT.Client
             return await base.SendPacketsAsync( m, cancellationToken );
         }
 
-        public override async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken cancellationToken )
+        public override async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken stopWaitToken, CancellationToken stopToken )
         {
             if( IsPingReqTimeout )
             {
                 await SelfDisconnectAsync( DisconnectedReason.PingReqTimeout );
                 return;
             }
-            using( CancellationTokenSource cts = _config.CancellationTokenSourceFactory.Create( _config.KeepAliveSeconds * 1000 ) )
-            using( cancellationToken.Register( () => cts.Cancel() ) )
+            using( CancellationTokenSource cts = _config.CancellationTokenSourceFactory.Create( stopWaitToken, _config.KeepAliveSeconds * 1000 ) )
             {
-                await base.WaitPacketAvailableToSendAsync( m,  cancellationToken );
+                await base.WaitPacketAvailableToSendAsync( m, cts.Token, stopToken );
                 // We didn't get cancelled, or the cancellation is due to the processor being cancelled.
-                if( !cts.IsCancellationRequested || cancellationToken.IsCancellationRequested ) return;
+                if( !cts.IsCancellationRequested || stopToken.IsCancellationRequested ) return;
             }
             using( m?.MainLoopSendingKeepAlive() )
             {
-                await ProcessOutgoingPacketAsync( m, OutgoingPingReq.Instance, cancellationToken );
+                await ProcessOutgoingPacketAsync( m, OutgoingPingReq.Instance, stopToken);
             }
             _stopwatch.Restart();
             WaitingPingResp = true;
