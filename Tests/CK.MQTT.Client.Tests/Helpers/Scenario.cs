@@ -76,15 +76,11 @@ namespace CK.MQTT.Client.Tests.Helpers
             } );
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( pcktReplayer ),
                 NoOpDispose() );
-
-            await pcktReplayer.PacketsWorker.Writer.WriteAsync( TestPacketHelper.Do( async ( m ) =>
-            {
-                await client.ConnectAsync( m, new MqttClientCredentials( "CKMqttTest", true ) );
-            } ) );
             foreach( var item in packets )
             {
                 await pcktReplayer.PacketsWorker.Writer.WriteAsync( item );
             }
+            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
             await pcktReplayer.StopAndEnsureValidAsync();
         }
     }

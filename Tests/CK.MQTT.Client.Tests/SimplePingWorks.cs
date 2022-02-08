@@ -39,9 +39,14 @@ namespace CK.MQTT.Client.Tests
         {
             await Scenario.RunOnConnectedClientWithKeepAlive( ClassCase, new[]
             {
-                    TestPacketHelper.IncrementTime(TimeSpan.FromSeconds(5)),
-                    TestPacketHelper.Outgoing("30")
+                TestPacketHelper.Do( async (m) =>
+                {
+                    await Task.Delay(500);
+                } ),
+                TestPacketHelper.IncrementTime(TimeSpan.FromSeconds(5)),
+                TestPacketHelper.Outgoing("C0")
             } );
+
         }
     }
 }
