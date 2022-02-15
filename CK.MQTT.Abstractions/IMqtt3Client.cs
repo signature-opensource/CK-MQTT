@@ -43,7 +43,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the connection protocol.
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( IActivityMonitor? m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default );
+        Task<ConnectResult> ConnectAsync( IActivityMonitor? m, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default );
 
         ValueTask<Task<T?>> SendPacketAsync<T>( IActivityMonitor? m, IOutgoingPacket outgoingPacket ) where T : class;
 

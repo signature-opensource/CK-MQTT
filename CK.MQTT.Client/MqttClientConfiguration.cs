@@ -1,4 +1,5 @@
 using CK.Core;
+using System;
 
 namespace CK.MQTT
 {
@@ -7,6 +8,8 @@ namespace CK.MQTT
     /// </summary>
     public class MqttClientConfiguration : MqttConfigurationBase
     {
+        private DisconnectBehavior _disconnectBehavior = DisconnectBehavior.Nothing;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MqttClientConfiguration" /> class.
         /// </summary>
@@ -25,10 +28,19 @@ namespace CK.MQTT
         /// </summary>
         public ushort KeepAliveSeconds { get; init; } = 30;
 
-        public DisconnectBehavior DisconnectBehavior { get; init; } = DisconnectBehavior.Nothing;
-
+        public DisconnectBehavior DisconnectBehavior
+        {
+            get => _disconnectBehavior;
+            init
+            {
+                if( !Enum.IsDefined( value ) ) throw new ArgumentOutOfRangeException( nameof( value ) );
+                _disconnectBehavior = value;
+            }
+        }
         public IMqttChannelFactory ChannelFactory { get; init; } = new TcpChannelFactory();
         public IActivityMonitor OnInputMonitor { get; init; } = new ActivityMonitor();
+
+        public MqttClientCredentials? Credentials { get; set; }
 
     }
 }

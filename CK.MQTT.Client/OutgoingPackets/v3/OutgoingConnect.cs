@@ -13,7 +13,6 @@ namespace CK.MQTT
     class OutgoingConnect : ComplexOutgoingPacket
     {
         readonly MqttClientConfiguration _config;
-        readonly MqttClientCredentials? _creds;
         readonly OutgoingLastWill? _lastWill;
         readonly uint _sessionExpiryInterval;
         readonly ushort _receiveMaximum;
@@ -38,18 +37,24 @@ namespace CK.MQTT
             return flags;
         }
 
-        public OutgoingConnect( ProtocolConfiguration pConfig, MqttClientConfiguration config, MqttClientCredentials? creds, OutgoingLastWill? lastWill = null,
+        public OutgoingConnect( ProtocolConfiguration pConfig, MqttClientConfiguration config, OutgoingLastWill? lastWill = null,
             uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, ushort topicAliasMaximum = 0,
             bool requestResponseInfo = false, bool requestProblemInfo = false, IReadOnlyList<UserProperty>? userProperties = null,
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )
         {
             Debug.Assert( pConfig.MaximumPacketSize <= 268435455 );
-            (_pConf, _config, _creds, _lastWill, _sessionExpiryInterval, _receiveMaximum,
-                _topicAliasMaximum, _requestResponseInformation, _requestProblemInformation, _userProperties, _extendedAuth)
-            = (pConfig, config, creds, lastWill, sessionExpiryInterval, receiveMaximum,
-                topicAliasMaximum, requestResponseInfo, requestProblemInfo, userProperties, extendedAuth);
-            _flags = ByteFlag( creds, lastWill );
-            _sizePostPayload = creds?.UserName?.MQTTSize() ?? 0 + creds?.Password?.MQTTSize() ?? 0;
+            _pConf = pConfig;
+            _config = config;
+            _lastWill = lastWill;
+            _sessionExpiryInterval = sessionExpiryInterval;
+            _receiveMaximum = receiveMaximum;
+            _topicAliasMaximum = topicAliasMaximum;
+            _requestResponseInformation = requestResponseInfo;
+            _requestProblemInformation = requestProblemInfo;
+            _userProperties = userProperties;
+            _extendedAuth = extendedAuth;
+            _flags = ByteFlag( config.Credentials, lastWill );
+            _sizePostPayload = config.Credentials?.UserName?.MQTTSize() ?? 0 + config.Credentials?.Password?.MQTTSize() ?? 0;
 
             if( _pConf.ProtocolLevel > ProtocolLevel.MQTT3 ) // To compute the size of 
             {
@@ -84,7 +89,7 @@ namespace CK.MQTT
                 + 1 //_protocolLevel
                 + 1 //_flag
                 + 2 //_keepAlive
-                + (_creds?.ClientId.MQTTSize() ?? 2)//clientId
+                + (_config.Credentials?.ClientId.MQTTSize() ?? 2)//clientId
                 + _propertiesSize
                 + (protocolLevel == ProtocolLevel.MQTT3 ? 0 : _propertiesSize.CompactByteCount());
 
@@ -159,7 +164,7 @@ namespace CK.MQTT
                     span = span[1..].WriteBinaryData( _extendedAuth.Value.authData );
                 }
             }
-            span = span.WriteMQTTString( _creds?.ClientId ?? "" );
+            span = span.WriteMQTTString( _config.Credentials?.ClientId ?? "" );
             Debug.Assert( span.Length == 0 );
         }
 
@@ -179,8 +184,8 @@ namespace CK.MQTT
         {
             if( _sizePostPayload == 0 ) return;
             Span<byte> span = pw.GetSpan( (int)_sizePostPayload );
-            if( (_creds?.UserName) != null ) span = span.WriteMQTTString( _creds.UserName );
-            if( (_creds?.Password) != null ) span.WriteMQTTString( _creds.Password );
+            if( (_config.Credentials?.UserName) != null ) span = span.WriteMQTTString( _config.Credentials.UserName );
+            if( (_config.Credentials?.Password) != null ) span.WriteMQTTString( _config.Credentials.Password );
             pw.Advance( (int)_sizePostPayload );
         }
     }

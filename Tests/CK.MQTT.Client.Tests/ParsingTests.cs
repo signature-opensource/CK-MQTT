@@ -68,7 +68,7 @@ namespace CK.MQTT.Client.Tests
             {
                 tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
                 return new ValueTask();
-            }, ( reason ) =>
+            }, ( reason, task ) =>
             {
                 tcs.SetResult( reason );
             } );
@@ -89,7 +89,7 @@ namespace CK.MQTT.Client.Tests
             {
                 tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
                 return new ValueTask();
-            }, ( reason ) =>
+            }, ( reason, task ) =>
             {
                 tcs.SetResult( reason );
             } );
@@ -110,7 +110,7 @@ namespace CK.MQTT.Client.Tests
             {
                 tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
                 return new ValueTask();
-            }, ( reason ) =>
+            }, ( reason, task ) =>
             {
                 tcs.TrySetResult( reason );
             } );

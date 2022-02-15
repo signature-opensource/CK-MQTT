@@ -24,7 +24,7 @@ namespace CK.MQTT.Pumps
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( ILocalPacketStore outgoingPacketStore, Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
+        public OutputPump( ILocalPacketStore outgoingPacketStore, Func<IActivityMonitor, DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
         {
             _outgoingPacketStore = outgoingPacketStore;
             Config = config;

@@ -77,19 +77,11 @@ namespace CK.MQTT
             => _messageHandler( m, topic, pipeReader, payloadLength, qos, retain, cancellationToken );
 
         /// <inheritdoc/>
-        public async Task<ConnectResult> ConnectAsync( IActivityMonitor? m, MqttClientCredentials? credentials = null, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public async Task<ConnectResult> ConnectAsync( IActivityMonitor? m, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
             if( lastWill != null )
             {
                 MqttBinaryWriter.ThrowIfInvalidMQTTString( lastWill.Topic );
-            }
-            if( credentials != null )
-            {
-                MqttBinaryWriter.ThrowIfInvalidMQTTString( credentials.ClientId );
-                if( credentials.Password != null )
-                {
-                    MqttBinaryWriter.ThrowIfInvalidMQTTString( credentials.Password );
-                }
             }
 
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
@@ -99,7 +91,7 @@ namespace CK.MQTT
                 {
                     // Creating store from credentials (this allow to have one state per endpoint).
                     (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await Config.StoreFactory.CreateAsync(
-                        m, ProtocolConfig, Config, Config.ConnectionString, credentials?.CleanSession ?? true
+                        m, ProtocolConfig, Config, Config.ConnectionString, Config.Credentials?.CleanSession ?? true
                     );
 
                     // Creating channel. The channel is not yet connected, but other object need a reference to it.
@@ -153,7 +145,7 @@ namespace CK.MQTT
                     );
                     output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
-                    OutgoingConnect outgoingConnect = new( ProtocolConfig, Config, credentials, lastWill );
+                    OutgoingConnect outgoingConnect = new( ProtocolConfig, Config, lastWill );
 
                     IOutgoingPacket.WriteResult writeConnectResult;
                     using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
@@ -208,7 +200,7 @@ namespace CK.MQTT
                         return res;
                     }
 
-                    bool askedCleanSession = credentials?.CleanSession ?? true;
+                    bool askedCleanSession = Config.Credentials?.CleanSession ?? true;
                     if( askedCleanSession && res.SessionState != SessionState.CleanSession )
                         return await Exit( LogLevel.Warn, ConnectError.ProtocolError_SessionNotFlushed, "Session was not flushed while we asked for it." );
                     if( res.SessionState == SessionState.CleanSession )
@@ -241,12 +233,34 @@ namespace CK.MQTT
 
         public Disconnected? DisconnectedHandler { get; set; }
 
-        protected async ValueTask SelfDisconnectAsync( DisconnectedReason disconnectedReason )
+        protected async ValueTask SelfDisconnectAsync( IActivityMonitor m, DisconnectedReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );
             await Pumps.CloseAsync();
-            DisconnectedHandler?.Invoke( disconnectedReason );
+            DisconnectedHandler?.Invoke( disconnectedReason,
+            Config.DisconnectBehavior switch
+            {
+                DisconnectBehavior.Nothing => null,
+                DisconnectBehavior.AutoReconnect => TryReconnectAsync( m ),
+                _ =>
+#if DEBUG
+                throw new InvalidOperationException( "Should not happen in this scenario." )
+#else
+                null
+#endif
+            } );
         }
+
+        async Task TryReconnectAsync( IActivityMonitor m )
+        {
+            ConnectResult result;
+            do
+            {
+                result = await ConnectAsync( m, null, CancellationToken.None );
+            } while( result.ConnectError != ConnectError.Ok );
+        }
+
+
 
         /// <inheritdoc/>
         public void SetMessageHandler( Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )

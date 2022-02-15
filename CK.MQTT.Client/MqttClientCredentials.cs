@@ -16,6 +16,7 @@ namespace CK.MQTT
         public MqttClientCredentials( string clientId, bool cleanSession )
         {
             if( clientId.Length == 0 && !cleanSession ) throw new ArgumentException( "If the Client supplies a zero-byte ClientId, the Client MUST also set CleanSession to 1 [MQTT-3.1.3-7]. http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242" );
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( clientId );
             ClientId = clientId;
             CleanSession = cleanSession;
         }
@@ -31,6 +32,7 @@ namespace CK.MQTT
         /// <param name="password">Password for authentication</param>
         public MqttClientCredentials( string clientId, bool cleanSession, string? userName, string? password ) : this( clientId, cleanSession )
         {
+            if( password != null ) MqttBinaryWriter.ThrowIfInvalidMQTTString( password );
             UserName = userName;
             Password = password;
         }
