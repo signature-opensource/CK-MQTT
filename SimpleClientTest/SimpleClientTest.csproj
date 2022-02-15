@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <IsPackable>false</IsPackable>
     <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>
@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring" Version="15.0.0-r02-00-0001-develop" />
+    <PackageReference Include="CK.Monitoring" Version="14.2.2" />
   </ItemGroup>
 
   <ItemGroup>
