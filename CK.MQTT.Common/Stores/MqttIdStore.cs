@@ -68,7 +68,7 @@ namespace CK.MQTT.Stores
         readonly IdStore<EntryContent> _idStore;
         readonly IStopwatch _stopwatch;
         protected readonly MqttConfigurationBase Config;
-        TaskCompletionSource<object?>? _idFullTCS = null;
+        TaskCompletionSource? _idFullTCS = null;
         CancellationTokenSource _packetDroppedCTS = new();
         uint _droppedCount = 0;
         protected MqttIdStore( uint packetIdMaxValue, MqttConfigurationBase config )
@@ -121,7 +121,7 @@ namespace CK.MQTT.Stores
             lock( _idStore )
             {
                 _idStore.FreeId( m, packetId );
-                _idFullTCS?.SetResult(null);
+                _idFullTCS?.SetResult();
             }
         }
 

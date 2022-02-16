@@ -9,7 +9,7 @@ namespace CK.MQTT
     public class AwaitableOutgoingPacketWrapper : IOutgoingPacket
     {
         readonly IOutgoingPacket _outgoingPacket;
-        readonly TaskCompletionSource<object?> _taskCompletionSource = new();
+        readonly TaskCompletionSource _taskCompletionSource = new();
         public AwaitableOutgoingPacketWrapper( IOutgoingPacket outgoingPacket )
         {
             _outgoingPacket = outgoingPacket;
@@ -26,7 +26,7 @@ namespace CK.MQTT
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
             WriteResult res = await _outgoingPacket.WriteAsync( protocolLevel, writer, cancellationToken );
-            _taskCompletionSource.SetResult(null);
+            _taskCompletionSource.SetResult();
             return res;
         }
 

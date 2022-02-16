@@ -122,7 +122,7 @@ namespace CK.MQTT.Pumps
                 var wrapper = new AwaitableOutgoingPacketWrapper( packet );
                 m?.Trace( $"Queuing the packet '{packet}'. " );
                 await MessagesChannel.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-                //if( ReflexesChannel.Reader.Count == 0 )
+                if( ReflexesChannel.Reader.Count == 0 )
                 {
                     ReflexesChannel.Writer.TryWrite( TriggerPacket.Instance );
                 }

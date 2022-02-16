@@ -14,7 +14,7 @@ namespace CK.MQTT.P2P
     class ConnectReflex
     {
         readonly List<(string, string)> _userProperties = new();
-        readonly TaskCompletionSource<object?> _taskCompletionSource = new();
+        readonly TaskCompletionSource _taskCompletionSource = new();
         readonly ProtocolConfiguration _pConfig;
         readonly MqttConfigurationBase _config;
         ReadOnlyMemory<byte> _authData;
@@ -49,7 +49,7 @@ namespace CK.MQTT.P2P
             _config = config;
         }
 
-        //[MemberNotNull( nameof( InStore ), nameof( OutStore ), nameof( _sender ) )]
+        [MemberNotNull( nameof( InStore ), nameof( OutStore ), nameof( _sender ) )]
 #pragma warning disable CS8774 
         public Task ConnectHandledTask => _taskCompletionSource.Task;
 #pragma warning restore CS8774 
@@ -90,7 +90,7 @@ namespace CK.MQTT.P2P
             //      Store that doesn't exist.
             // - AUTHENTICATE Packet
             //      Set the next reflex to an Authenticate Handler and handle authentication.
-            _taskCompletionSource.SetResult(null);
+            _taskCompletionSource.SetResult();
             await _exitWait.WaitAsync( cancellationToken );
 
             return OperationStatus.Done;

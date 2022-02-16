@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<Import Project="..\Common\Mqtt.props" />
 	<PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6</TargetFramework>
     <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>
     <Description>Common implementations of CK.MQTT.Client and CK.MQTT.Server.</Description>
@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="14.2.2" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="15.0.0-r02-00-0001-develop" />
     <PackageReference Include="Microsoft.Toolkit.HighPerformance" Version="7.1.2" />
   </ItemGroup>
 

@@ -9,8 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Testing.Monitoring" Version="2.2.2" />
-    <PackageReference Include="CK.Text" Version="9.0.3" />
+    <PackageReference Include="CK.Testing.Monitoring" Version="3.0.0-r02" />
     <PackageReference Include="FluentAssertions" Version="6.2.0" />
     <PackageReference Include="nunit" Version="3.13.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.2.0" />
