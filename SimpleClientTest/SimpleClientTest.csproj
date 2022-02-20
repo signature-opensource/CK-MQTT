@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Common\Mqtt.props" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
