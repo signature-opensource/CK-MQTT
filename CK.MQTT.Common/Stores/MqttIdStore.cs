@@ -385,7 +385,18 @@ namespace CK.MQTT.Stores
 
         public void CancelAllAckTask( IActivityMonitor? m )
         {
-            throw new NotImplementedException();
+            lock( _idStore )
+            {
+                uint currId = _idStore._newestIdAllocated;
+                if( currId == 0 ) return;
+                ref var curr = ref _idStore._entries[currId];
+                do // We loop over all older packets.
+                {
+                    curr.Content._taskCompletionSource.TrySetCanceled();
+                    currId = curr.PreviousId;
+                    curr = ref _idStore._entries[currId];
+                } while( currId != _idStore._head );
+            }
         }
 
         public void Dispose()

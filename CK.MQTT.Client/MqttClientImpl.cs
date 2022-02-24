@@ -269,7 +269,7 @@ namespace CK.MQTT
             DuplexPump<ClientState>? duplex = Pumps;
             if( clearSession && !cancelAckTasks ) throw new ArgumentException( "When the session is cleared, the ACK tasks must be canceled too." );
             if( duplex is null ) return false;
-            if( duplex.IsRunning ) return false;
+            if( !duplex.IsRunning ) return false;
             if( cancelAckTasks ) duplex.State.Store.CancelAllAckTask( m );
             await duplex.StopWorkAsync();
             if( duplex.IsClosed ) return false;

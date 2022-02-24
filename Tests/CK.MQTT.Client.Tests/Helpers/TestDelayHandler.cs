@@ -33,7 +33,10 @@ namespace CK.MQTT.Client.Tests.Helpers
 
                 _stopwatches.RemoveAll( s => !s.TryGetTarget( out _ ) );
                 
-                _cts.RemoveAll( s => !s.IncrementTime( timeSpan ) || (bool)_isDisposedField!.GetValue( s.CancellationTokenSource )! || s.CancellationTokenSource.IsCancellationRequested);
+                _cts.RemoveAll( s => !s.IncrementTime( timeSpan )
+                    || (bool)_isDisposedField!.GetValue( s.CancellationTokenSource )!
+                    || s.CancellationTokenSource.IsCancellationRequested
+                );
                 _delays.RemoveAll( s => s.TaskCompletionSource.Task.IsCompleted );
             }
         }
