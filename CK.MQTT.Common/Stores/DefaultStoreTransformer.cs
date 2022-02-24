@@ -42,6 +42,7 @@ namespace CK.MQTT
             public PacketWrapper( IOutgoingPacket packet ) => _packet = packet;
 
             public uint PacketId { get => _packet.PacketId; set => _packet.PacketId = value; }
+            public bool IsRemoteOwnedPacketId => _packet.IsRemoteOwnedPacketId;
 
             public QualityOfService Qos => _packet.Qos;
 

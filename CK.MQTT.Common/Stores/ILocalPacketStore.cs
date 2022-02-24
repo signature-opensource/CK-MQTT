@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
 {
-    public interface IOutgoingPacketStore : IDisposable
+    public interface ILocalPacketStore : IDisposable
     {
         bool IsRevivedSession { get; set; }
         ValueTask<(Task<object?> ackTask, IOutgoingPacket packetToSend)> StoreMessageAsync( IActivityMonitor? m, IOutgoingPacket packet, QualityOfService qos );

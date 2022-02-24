@@ -1,3 +1,4 @@
+using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,8 @@ namespace CK.MQTT
     public abstract class OutgoingLastWill : IOutgoingPacket
     {
         public string Topic { get; }
+
+        public bool IsRemoteOwnedPacketId => throw new NotSupportedException();
 
         /// <summary>
         /// Instantiate a new <see cref="OutgoingLastWill"/>.

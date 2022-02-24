@@ -9,22 +9,24 @@ namespace CK.MQTT
 {
     public static class SenderHelper
     {
-        public static ValueTask<Task<T?>> SendPacketAsync<T>( IActivityMonitor? m, IOutgoingPacketStore store, OutputPump output, IOutgoingPacket packet )
+        public static async ValueTask<Task<T?>> SendPacketAsync<T>( IActivityMonitor? m, ILocalPacketStore store, OutputPump output, IOutgoingPacket packet )
             where T : class
         {
-            IDisposableGroup? group = m?.OpenTrace( $"Sending a packet '{packet}' in QoS {packet.Qos}" );
-            return packet.Qos switch
+            using( m?.OpenTrace( $"Sending a packet '{packet}' in QoS {packet.Qos}" ) )
             {
-                QualityOfService.AtMostOnce => PublishQoS0Async<T>( m, group, output, packet ),
-                QualityOfService.AtLeastOnce => StoreAndSendAsync<T>( m, group, output, store, packet, packet.Qos ),
-                QualityOfService.ExactlyOnce => StoreAndSendAsync<T>( m, group, output, store, packet, packet.Qos ),
-                _ => throw new ArgumentException( "Invalid QoS." ),
-            };
+
+                return packet.Qos switch
+                {
+                    QualityOfService.AtMostOnce => await PublishQoS0Async<T>( m, output, packet ),
+                    QualityOfService.AtLeastOnce => await StoreAndSendAsync<T>( m, output, store, packet, packet.Qos ),
+                    QualityOfService.ExactlyOnce => await StoreAndSendAsync<T>( m, output, store, packet, packet.Qos ),
+                    _ => throw new ArgumentException( "Invalid QoS." ),
+                };
+            }
         }
 
-        static async ValueTask<Task<T?>> PublishQoS0Async<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp, OutputPump output, IOutgoingPacket msg ) where T : class
+        static async ValueTask<Task<T?>> PublishQoS0Async<T>( IActivityMonitor? m, OutputPump output, IOutgoingPacket msg ) where T : class
         {
-            using( disposableGrp )
             using( m?.OpenTrace( "Executing Publish protocol with QoS 0." ) )
             {
                 await output.QueueMessageAndWaitUntilSentAsync( m, msg );
@@ -32,36 +34,24 @@ namespace CK.MQTT
             }
         }
 
-        static async ValueTask<Task<T?>> StoreAndSendAsync<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp,
-            OutputPump output, IOutgoingPacketStore messageStore, IOutgoingPacket msg, QualityOfService qos )
+        static async ValueTask<Task<T?>> StoreAndSendAsync<T>( IActivityMonitor? m,
+            OutputPump output, ILocalPacketStore messageStore, IOutgoingPacket msg, QualityOfService qos )
             where T : class
         {
-            Task<object?> ackReceived;
-            IOutgoingPacket newPacket;
-            try
-            {
-                (ackReceived, newPacket) = await messageStore.StoreMessageAsync( m, msg, qos );
-            }
-            catch( Exception )
-            {
-                disposableGrp?.Dispose();
-                throw;
-            }
-            return SendAsync<T>( m, disposableGrp, output, newPacket, ackReceived );
+            (Task<object?> ackReceived, IOutgoingPacket newPacket) = await messageStore.StoreMessageAsync( m, msg, qos );
+            return SendAsync<T>( output, newPacket, ackReceived );
         }
 
-        static async Task<T?> SendAsync<T>( IActivityMonitor? m, IDisposableGroup? disposableGrp, OutputPump output, IOutgoingPacket packet, Task<object?> ackReceived )
+        static async Task<T?> SendAsync<T>( OutputPump output, IOutgoingPacket packet, Task<object?> ackReceived )
             where T : class
         {
-            using( disposableGrp )
-            {
-                await output.QueueMessageAndWaitUntilSentAsync( m, packet );
-                object? res = await ackReceived;
-                if( res is null ) return null;
-                if( res is T a ) return a;
-            }
+            // TODO: Investigate if we can log in a way or another there.
+            await output.QueueMessageAndWaitUntilSentAsync( null, packet );
+            object? res = await ackReceived;
+            if( res is null ) return null;
+            if( res is T a ) return a;
             //For example: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
-            throw new ProtocolViolationException( "We received a packet id ack from an unexpected packet type." );
+            throw new ProtocolViolationException( "We received a packet id ack of an unexpected packet type." );
         }
     }
 }

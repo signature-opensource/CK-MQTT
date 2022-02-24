@@ -87,20 +87,20 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             using( m.OpenInfo( "Disconnecting..." ) )
             {
-                replayer.Channel.Close( null );
+                replayer.Channel!.Close( null );
                 replayer.Channel.Dispose();
             }
             return new ValueTask<bool>( false );
         }
 
         public static PacketReplayer.TestWorker IncrementTime( TimeSpan timeToIncrement ) =>
-            async ( IActivityMonitor m, PacketReplayer replayer ) =>
+            ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
                 using( m.OpenInfo( "Incrementing time..." ) )
                 {
                     replayer.TestDelayHandler.IncrementTime( timeToIncrement );
                 }
-                return true;
+                return new ValueTask<bool>( true );
             };
 
         public static PacketReplayer.TestWorker Do( Func<IActivityMonitor, Task> func ) =>

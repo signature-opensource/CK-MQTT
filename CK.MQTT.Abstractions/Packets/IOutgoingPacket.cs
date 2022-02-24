@@ -21,6 +21,8 @@ namespace CK.MQTT
         /// </summary>
         QualityOfService Qos { get; }
 
+        bool IsRemoteOwnedPacketId { get; }
+
         /// <summary>
         /// Result of a Write Operation.
         /// </summary>

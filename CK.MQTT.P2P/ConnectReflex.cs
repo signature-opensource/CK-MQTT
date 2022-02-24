@@ -3,6 +3,7 @@ using CK.MQTT.Stores;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
@@ -13,7 +14,7 @@ namespace CK.MQTT.P2P
     class ConnectReflex
     {
         readonly List<(string, string)> _userProperties = new();
-        readonly TaskCompletionSource<object?> _taskCompletionSource = new();
+        readonly TaskCompletionSource _taskCompletionSource = new();
         readonly ProtocolConfiguration _pConfig;
         readonly MqttConfigurationBase _config;
         ReadOnlyMemory<byte> _authData;
@@ -40,7 +41,6 @@ namespace CK.MQTT.P2P
         byte _protocolLevel;
         PropertyIdentifier _currentProp;
         byte _flags;
-        public IIncomingPacketStore InStore { get; private set; }
         // Currently the parsed data is available when the packet is not parsed yet and can lead to errors.
         readonly SemaphoreSlim _exitWait = new( 0 );
         public ConnectReflex( ProtocolConfiguration pConfig, MqttConfigurationBase config )
@@ -49,8 +49,12 @@ namespace CK.MQTT.P2P
             _config = config;
         }
 
+        [MemberNotNull( nameof( InStore ), nameof( OutStore ), nameof( _sender ) )]
+#pragma warning disable CS8774 
         public Task ConnectHandledTask => _taskCompletionSource.Task;
-        InputPump _sender;
+#pragma warning restore CS8774 
+        InputPump? _sender;
+
         public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             _sender = sender;
@@ -86,19 +90,21 @@ namespace CK.MQTT.P2P
             //      Store that doesn't exist.
             // - AUTHENTICATE Packet
             //      Set the next reflex to an Authenticate Handler and handle authentication.
-            _taskCompletionSource.SetResult( null );
-            await _exitWait.WaitAsync();
+            _taskCompletionSource.SetResult();
+            await _exitWait.WaitAsync( cancellationToken );
 
             return OperationStatus.Done;
         }
-
 
         public void EngageNextReflex( Reflex reflex )
         {
             _sender.CurrentReflex = reflex;
             _exitWait.Release();
         }
-        public IOutgoingPacketStore OutStore { get; set; }
+
+
+        public IRemotePacketStore? InStore { get; private set; }
+        public ILocalPacketStore? OutStore { get; set; }
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
         public bool Retain => (_flags & 0b0010_0000) != 0;
@@ -320,11 +326,6 @@ namespace CK.MQTT.P2P
                         _currentUserPropKey = null;
                         break;
                     case PropertyIdentifier.MaximumPacketSize:
-                        if( MaxPacketSize != -1 )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.MaximumPacketSize );
-                            return OperationStatus.InvalidData;
-                        }
 
                         if( !sequenceReader.TryReadBigEndian( out _maxPacketSize ) ) return OperationStatus.NeedMoreData;
                         if( MaxPacketSize < 1 )
@@ -338,7 +339,6 @@ namespace CK.MQTT.P2P
                         return OperationStatus.InvalidData;
                 }
             }
-            if( MaxPacketSize == -1 ) _maxPacketSize = int.MaxValue;
             if( _authDataRead && _authentificationMethod == null )
             {
                 m?.ErrorAuthDataMissing();

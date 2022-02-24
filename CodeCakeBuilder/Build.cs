@@ -1,7 +1,6 @@
 using Cake.Common.IO;
 using Cake.Core;
 using Cake.Core.Diagnostics;
-using System.Linq;
 
 namespace CodeCake
 {
@@ -50,7 +49,7 @@ namespace CodeCake
                                      || Cake.ReadInteractiveOption( "RunUnitTests", "Run Unit Tests?", 'Y', 'N' ) == 'Y' )
                .Does( () =>
                 {
-                    //globalInfo.GetDotnetSolution().Test();
+                    globalInfo.GetDotnetSolution().Test();
                 } );
 
 

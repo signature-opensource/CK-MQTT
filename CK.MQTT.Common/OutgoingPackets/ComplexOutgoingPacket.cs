@@ -20,6 +20,7 @@ namespace CK.MQTT
         protected abstract byte Header { get; }
         public abstract uint PacketId { get; set; }
         public abstract QualityOfService Qos { get; }
+        public abstract bool IsRemoteOwnedPacketId { get; }
 
         /// <inheritdoc/>
         public uint GetSize( ProtocolLevel protocolLevel )

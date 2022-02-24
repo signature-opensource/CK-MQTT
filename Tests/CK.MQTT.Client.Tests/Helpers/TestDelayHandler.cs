@@ -13,7 +13,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         readonly object _lock = new();
         readonly List<DelayTask> _delays = new();
-        readonly List<WeakReference<Stopwatch>> _stopwatches = new();
+        readonly List<WeakReference<TestStopwatch>> _stopwatches = new();
         readonly List<CTS> _cts = new();
         const BindingFlags _bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
         static readonly FieldInfo? _isDisposedField = typeof( CancellationTokenSource ).GetField( "_disposed", _bindingFlags );
@@ -24,7 +24,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 _stopwatches.ForEach( s =>
                 {
-                    if( s.TryGetTarget( out Stopwatch? stopwatch ) )
+                    if( s.TryGetTarget( out TestStopwatch? stopwatch ) )
                     {
                         stopwatch.IncrementTime( timeSpan );
                     }
@@ -43,7 +43,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         class DelayTask
         {
-            public readonly TaskCompletionSource<object?> TaskCompletionSource;
+            public readonly TaskCompletionSource TaskCompletionSource;
             public TimeSpan TimeUntilCompletion;
 
             public DelayTask( TimeSpan timeUntilCompletion, CancellationToken cancellationToken = default )
@@ -58,11 +58,11 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 if( TaskCompletionSource.Task.IsCompleted ) return;
                 TimeUntilCompletion -= timeSpan;
-                if( TimeUntilCompletion.Ticks < 0 ) TaskCompletionSource.SetResult( null );
+                if( TimeUntilCompletion.Ticks < 0 ) TaskCompletionSource.SetResult();
             }
         }
 
-        class Stopwatch : IStopwatch
+        class TestStopwatch : IStopwatch
         {
             public void IncrementTime( TimeSpan timeSpan )
             {
@@ -124,10 +124,10 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public IStopwatch Create()
         {
-            Stopwatch stopwatch = new();
+            TestStopwatch stopwatch = new();
             lock( _lock )
             {
-                _stopwatches.Add( new WeakReference<Stopwatch>( stopwatch ) );
+                _stopwatches.Add( new WeakReference<TestStopwatch>( stopwatch ) );
             }
             return stopwatch;
         }

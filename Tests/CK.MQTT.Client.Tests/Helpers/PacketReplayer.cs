@@ -32,19 +32,18 @@ namespace CK.MQTT.Client.Tests.Helpers
         public TestDelayHandler TestDelayHandler { get; } = new();
         public string ChannelType { get; set; }
 
-        Task? _workLoopTask;
+        Task _workLoopTask = Task.CompletedTask;
         public async Task StopAndEnsureValidAsync()
         {
             PacketsWorker.Writer.Complete();
-            Task? task = _workLoopTask;
-            if( task != null )
+            Task task = _workLoopTask;
+            if( !await task.WaitAsync( 50000 ) )
             {
-                if( !await task.WaitAsync( 50000 ) )
-                {
-                    Assert.Fail( "Packet replayer didn't stopped in time." );
-                }
+                Assert.Fail( "Packet replayer didn't stopped in time." );
             }
+            if( _workLoopTask.IsFaulted ) await _workLoopTask;
             _workLoopTask?.IsCompletedSuccessfully.Should().BeTrue();
+            PacketsWorker.Reader.Count.Should().Be( 0 );
         }
 
         public delegate ValueTask<bool> TestWorker( IActivityMonitor m, PacketReplayer packetReplayer );
@@ -58,10 +57,8 @@ namespace CK.MQTT.Client.Tests.Helpers
                 using( _m.OpenInfo( $"Running test worker {i++}." ) )
                 {
                     if( !await func( _m, this ) ) break;
-
                 }
             }
-            _workLoopTask = null;
         }
 
         public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
@@ -70,7 +67,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             if( task != null )
             {
                 await task;
-                if( _workLoopTask != null ) throw new InvalidOperationException( "A work is already running." );
+                if( !_workLoopTask.IsCompleted ) throw new InvalidOperationException( "A work is already running." );
             }
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch

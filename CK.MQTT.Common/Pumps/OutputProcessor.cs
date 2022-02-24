@@ -13,14 +13,20 @@ namespace CK.MQTT.Pumps
 
         readonly ProtocolConfiguration _pConfig;
         readonly PipeWriter _pipeWriter;
-        readonly IOutgoingPacketStore _outgoingPacketStore;
+        readonly ILocalPacketStore _localPacketStore;
+        readonly IRemotePacketStore _remotePacketStore;
 
-        public OutputProcessor( ProtocolConfiguration pConfig, OutputPump outputPump, PipeWriter pipeWriter, IOutgoingPacketStore outgoingPacketStore )
+        public OutputProcessor( ProtocolConfiguration pConfig,
+                               OutputPump outputPump,
+                               PipeWriter pipeWriter,
+                               ILocalPacketStore outgoingPacketStore,
+                               IRemotePacketStore remotePacketStore )
         {
             _pConfig = pConfig;
             OutputPump = outputPump;
             _pipeWriter = pipeWriter;
-            _outgoingPacketStore = outgoingPacketStore;
+            _localPacketStore = outgoingPacketStore;
+            _remotePacketStore = remotePacketStore;
         }
 
         TimeSpan _timeUntilNextRetry = TimeSpan.MaxValue;
@@ -36,21 +42,22 @@ namespace CK.MQTT.Pumps
             }
 
         }
-        public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken cancellationToken )
+
+        readonly SemaphoreSlim _semaphore = new( 0, 1 );
+        public void SignalWorkAvailable() => _semaphore.Release();
+
+        public virtual async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken stopWaitToken, CancellationToken stopToken )
         {
             using( IDisposableGroup? grp = m?.AwaitingWork() )
             {
                 // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-                CancellationToken cancelOnPacketDropped = _outgoingPacketStore.DroppedPacketCancelToken;
+                CancellationToken cancelOnPacketDropped = _localPacketStore.DroppedPacketCancelToken;
 
                 using( var ctsRetry = OutputPump.Config.CancellationTokenSourceFactory.Create( _timeUntilNextRetry ) )
-                using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, cancellationToken ) )
+                using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, stopWaitToken ) )
+                using( linkedCts.Token.Register( () => OutputPump.ReflexesChannel.Writer.TryWrite( OutputPump.TriggerPacket.Instance ) ) )
                 {
-                    Task<bool> reflexesWait = OutputPump.ReflexesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
-                    Task<bool> messagesWait = OutputPump.MessagesChannel.Reader.WaitToReadAsync( linkedCts.Token ).AsTask();
-                    await Task.WhenAny( reflexesWait, messagesWait );
-                    m?.AwaitCompletedDueTo( grp, reflexesWait, messagesWait, ctsRetry.Token, cancelOnPacketDropped, cancellationToken );
-                    linkedCts.Cancel(); //Avoid leaking useless background task.
+                    await OutputPump.ReflexesChannel.Reader.WaitToReadAsync( stopToken );
                 }
             }
         }
@@ -61,11 +68,16 @@ namespace CK.MQTT.Pumps
 
         async ValueTask<bool> SendAMessageFromQueueAsync( IOutputLogger? m, CancellationToken cancellationToken )
         {
-            if( !OutputPump.ReflexesChannel.Reader.TryRead( out IOutgoingPacket packet ) && !OutputPump.MessagesChannel.Reader.TryRead( out packet ) )
+            IOutgoingPacket? packet;
+            do
             {
-                m?.QueueEmpty();
-                return false;
+                if( !OutputPump.ReflexesChannel.Reader.TryRead( out packet ) && !OutputPump.MessagesChannel.Reader.TryRead( out packet ) )
+                {
+                    m?.QueueEmpty();
+                    return false;
+                }
             }
+            while( packet == OutputPump.TriggerPacket.Instance );
             using( m?.SendingMessageFromQueue() )
             {
                 await ProcessOutgoingPacketAsync( m, packet, cancellationToken );
@@ -77,7 +89,7 @@ namespace CK.MQTT.Pumps
         {
             if( OutputPump.Config.WaitTimeoutMilliseconds == int.MaxValue ) return false; // Resend is disabled.
 
-            (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResendAsync();
+            (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await _localPacketStore.GetPacketToResendAsync();
             if( outgoingPacket is null )
             {
                 m?.NoUnackPacketSent( timeUntilAnotherRetry );
@@ -89,7 +101,7 @@ namespace CK.MQTT.Pumps
                 await ProcessOutgoingPacketAsync( m, outgoingPacket, cancellationToken );
                 while( true )
                 {
-                    (outgoingPacket, timeUntilAnotherRetry) = await _outgoingPacketStore.GetPacketToResendAsync();
+                    (outgoingPacket, timeUntilAnotherRetry) = await _localPacketStore.GetPacketToResendAsync();
                     if( outgoingPacket is null )
                     {
                         m?.ConcludeTimeUntilNextUnackRetry( grp!, timeUntilAnotherRetry );
@@ -109,7 +121,10 @@ namespace CK.MQTT.Pumps
                 if( outgoingPacket.Qos != QualityOfService.AtMostOnce )
                 {
                     // This must be done BEFORE writing the packet to avoid concurrency issues.
-                    _outgoingPacketStore.OnPacketSent( m, outgoingPacket.PacketId );
+                    if( !outgoingPacket.IsRemoteOwnedPacketId )
+                    {
+                        _localPacketStore.OnPacketSent( m, outgoingPacket.PacketId );
+                    }
                     // Explanation:
                     // The receiver and input loop can run before the next line is executed.
                 }

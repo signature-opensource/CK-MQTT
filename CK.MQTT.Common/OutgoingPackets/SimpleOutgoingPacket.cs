@@ -11,6 +11,7 @@ namespace CK.MQTT
     {
         public abstract uint PacketId { get; set; }
         public abstract QualityOfService Qos { get; }
+        public abstract bool IsRemoteOwnedPacketId { get; }
 
         /// <summary>
         /// Allow to write synchronously to the input buffer.

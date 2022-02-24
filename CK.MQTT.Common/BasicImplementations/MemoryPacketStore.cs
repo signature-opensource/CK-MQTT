@@ -64,7 +64,7 @@ namespace CK.MQTT
             }
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
-            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId );
+            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
         }
 
         protected override ValueTask DoResetAsync( ArrayStartingAt1<IdStoreEntry<EntryContent>> entries )
@@ -80,7 +80,7 @@ namespace CK.MQTT
         {
             EntryContent content = base[packetId].Content;
             Debug.Assert( content.Storage.Payload.Length > 0 );
-            return new( new FromMemoryOutgoingPacket( content.Storage.Payload, (QualityOfService)(content._state & QoSState.QosMask), packetId ) );
+            return new( new FromMemoryOutgoingPacket( content.Storage.Payload, (QualityOfService)(content._state & QoSState.QosMask), packetId, false ) );
         }
 
         protected async override ValueTask<IOutgoingPacket> OverwriteMessageAsync( IInputLogger? m, IOutgoingPacket packet )
@@ -96,7 +96,7 @@ namespace CK.MQTT
             }
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
-            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId );
+            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
         }
     }
 }
