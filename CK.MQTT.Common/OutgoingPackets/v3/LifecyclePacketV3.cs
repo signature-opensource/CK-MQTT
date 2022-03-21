@@ -1,3 +1,4 @@
+using CK.MQTT.Packets;
 using System;
 using System.Buffers.Binary;
 
@@ -9,11 +10,11 @@ namespace CK.MQTT
 
         public override bool IsRemoteOwnedPacketId { get; }
 
-        public override uint PacketId { get; set; }
+        public override ushort PacketId { get; set; }
 
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
-        public LifecyclePacketV3( byte header, uint packetId, bool isRemoteOwnedPacketId )
+        public LifecyclePacketV3( byte header, ushort packetId, bool isRemoteOwnedPacketId )
         {
             _header = header;
             PacketId = packetId;
@@ -32,10 +33,10 @@ namespace CK.MQTT
             BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
         }
 
-        public static IOutgoingPacket Pubrel( uint packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishRelease | 0b0010, packetId, false );
-        public static IOutgoingPacket Pubrec( uint packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishReceived, packetId, true );
-        public static IOutgoingPacket Pubcomp( uint packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishComplete, packetId, true );
-        public static IOutgoingPacket Puback( uint packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishAck, packetId, true );
+        public static IOutgoingPacket Pubrel( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishRelease | 0b0010, packetId, false );
+        public static IOutgoingPacket Pubrec( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishReceived, packetId, true );
+        public static IOutgoingPacket Pubcomp( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishComplete, packetId, true );
+        public static IOutgoingPacket Puback( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishAck, packetId, true );
 
         public override string ToString() => ((PacketType)(_header ^ 0b0010)).ToString();
     }

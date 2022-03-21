@@ -55,7 +55,7 @@ namespace CK.MQTT.P2P
 #pragma warning restore CS8774 
         InputPump? _sender;
 
-        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> HandleRequestAsync( InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             _sender = sender;
             OperationStatus status = OperationStatus.NeedMoreData;
@@ -68,7 +68,7 @@ namespace CK.MQTT.P2P
                 {
                     SequenceReader<byte> sequenceReader = new( res.Buffer );
                     // We need the ClientID to instantiate the store to the client.
-                    status = ParseFirstPart( m, ref sequenceReader );
+                    status = ParseFirstPart( ref sequenceReader );
                     if( status == OperationStatus.InvalidData ) throw new ProtocolViolationException( "Invalid data while parsing the Connect packet." );
                     if( status == OperationStatus.NeedMoreData )
                     {
@@ -80,7 +80,7 @@ namespace CK.MQTT.P2P
                     }
                 }
             }
-            (OutStore, InStore) = await _config.StoreFactory.CreateAsync( m, _pConfig, _config, ClientId, CleanSession );
+            (OutStore, InStore) = await _config.StoreFactory.CreateAsync(  _pConfig, _config, ClientId, CleanSession );
             // TODO:
             // - Last Will
             //      We need to:
@@ -98,12 +98,11 @@ namespace CK.MQTT.P2P
 
         public void EngageNextReflex( Reflex reflex )
         {
-            _sender.CurrentReflex = reflex;
+            _sender!.CurrentReflex = reflex;
             _exitWait.Release();
         }
 
 
-        public IRemotePacketStore? InStore { get; private set; }
         public ILocalPacketStore? OutStore { get; set; }
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
@@ -128,7 +127,7 @@ namespace CK.MQTT.P2P
 
         public string? Password => _password;
 
-        OperationStatus ParseFirstPart( IInputLogger? m, ref SequenceReader<byte> sequenceReader )
+        OperationStatus ParseFirstPart( ref SequenceReader<byte> sequenceReader )
         {
             if( _fieldCount == 0 )
             {
@@ -159,7 +158,7 @@ namespace CK.MQTT.P2P
 
             if( _fieldCount == 5 )
             {
-                OperationStatus res = ParsePropertiesFields( m, ref sequenceReader );
+                OperationStatus res = ParsePropertiesFields( ref sequenceReader );
                 if( res == OperationStatus.InvalidData ) return OperationStatus.InvalidData;
                 _fieldCount++;
             }

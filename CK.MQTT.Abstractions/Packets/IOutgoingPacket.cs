@@ -2,7 +2,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     /// <summary>
     /// A packet that will be sent.
@@ -14,7 +14,7 @@ namespace CK.MQTT
         /// <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349268">
         /// Read the specification fore more information</a>.
         /// </summary>
-        uint PacketId { get; set; }
+        ushort PacketId { get; set; }
 
         /// <summary>
         /// The QoS of the packet. A packet with an identifier is never at QoS 0.
@@ -22,25 +22,6 @@ namespace CK.MQTT
         QualityOfService Qos { get; }
 
         bool IsRemoteOwnedPacketId { get; }
-
-        /// <summary>
-        /// Result of a Write Operation.
-        /// </summary>
-        public enum WriteResult
-        {
-            /// <summary>
-            /// The <see cref="IOutgoingPacket"/> is expired. No write operation has been made.
-            /// </summary>
-            Expired,
-            /// <summary>
-            /// The <see cref="IOutgoingPacket"/> has been written. It may or may not be reused.
-            /// </summary>
-            Written,
-            /// <summary>
-            /// The write has been cancelled.
-            /// </summary>
-            Cancelled
-        }
 
         /// <summary>
         /// Ask to write asynchronously on a <see cref="PipeWriter"/> the packet.

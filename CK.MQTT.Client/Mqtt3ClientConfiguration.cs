@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 
 namespace CK.MQTT
@@ -6,15 +5,15 @@ namespace CK.MQTT
     /// <summary>
     /// Configuration of a <see cref="IMqtt3Client"/>.
     /// </summary>
-    public class MqttClientConfiguration : MqttConfigurationBase
+    public class Mqtt3ClientConfiguration : MqttConfigurationBase
     {
         private DisconnectBehavior _disconnectBehavior = DisconnectBehavior.Nothing;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MqttClientConfiguration" /> class.
+        /// Initializes a new instance of the <see cref="Mqtt3ClientConfiguration" /> class.
         /// </summary>
         /// <param name="connectionString">The connection string that will be used by the <see cref="IMqttChannelFactory"/>.</param>
-        public MqttClientConfiguration( string connectionString ) => ConnectionString = connectionString;
+        public Mqtt3ClientConfiguration( ProtocolConfiguration pConfig, string connectionString ) : base( pConfig ) => ConnectionString = connectionString;
 
         public string ConnectionString { get; }
 
@@ -37,8 +36,8 @@ namespace CK.MQTT
                 _disconnectBehavior = value;
             }
         }
+
         public IMqttChannelFactory ChannelFactory { get; init; } = new TcpChannelFactory();
-        public IActivityMonitor OnInputMonitor { get; init; } = new ActivityMonitor();
 
         public MqttClientCredentials? Credentials { get; set; }
 

@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 using System.IO;
 using System.IO.Pipelines;
@@ -30,7 +29,7 @@ namespace CK.MQTT
             _port = port;
         }
 
-        public async ValueTask StartAsync( IActivityMonitor? m )
+        public async ValueTask StartAsync()
         {
             _tcpClient = new TcpClient
             {
@@ -48,7 +47,7 @@ namespace CK.MQTT
         public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException( "Start the channel before accessing the pipes." );
 
         /// <inheritdoc/>
-        public void Close( IInputLogger? m ) => _tcpClient.Close();
+        public void Close() => _tcpClient.Close();
 
         /// <inheritdoc/>
         public void Dispose()

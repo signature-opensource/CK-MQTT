@@ -12,9 +12,9 @@ namespace CK.MQTT
         Task _readLoop = null!;
         readonly CancellationTokenSource _stopSource = new();
         readonly CancellationTokenSource _closeSource = new();
-        readonly Func<DisconnectedReason, ValueTask> _onDisconnect;
+        readonly Func<DisconnectReason, ValueTask> _onDisconnect;
 
-        private protected PumpBase( Func<DisconnectedReason, ValueTask> onDisconnect ) => _onDisconnect = onDisconnect;
+        private protected PumpBase( Func<DisconnectReason, ValueTask> onDisconnect ) => _onDisconnect = onDisconnect;
 
         /// <summary>
         /// Must be called at the end of the specialized constructors.
@@ -46,7 +46,7 @@ namespace CK.MQTT
             return _readLoop;
         }
 
-        internal protected ValueTask SelfCloseAsync( DisconnectedReason disconnectedReason )
+        internal protected ValueTask SelfCloseAsync( DisconnectReason disconnectedReason )
         {
             CancelTokens();
             return _onDisconnect( disconnectedReason );

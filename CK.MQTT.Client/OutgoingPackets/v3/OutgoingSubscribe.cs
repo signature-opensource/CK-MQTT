@@ -1,4 +1,4 @@
-using CK.Core;
+using CK.MQTT.Packets;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     class OutgoingSubscribe : VariableOutgointPacket, IOutgoingPacket
     {
@@ -30,7 +30,7 @@ namespace CK.MQTT
             }
         }
 
-        public override uint PacketId { get; set; }
+        public override ushort PacketId { get; set; }
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         public override bool IsRemoteOwnedPacketId => false;
@@ -75,32 +75,6 @@ namespace CK.MQTT
                 span[0] = (byte)_subscriptions[i].MaximumQualityOfService;
                 span = span[1..];
             }
-        }
-    }
-
-    public static class SubscribeExtensions
-    {
-        /// <summary>
-        /// Susbscribe the <see cref="IMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
-        /// </summary>
-        /// <param name="m">The logger used to log the activities about the subscription process.</param>
-        /// <param name="subscriptions">The subscriptions to send to the broker.</param>
-        /// <returns>
-        /// A <see cref="ValueTask{TResult}"/> that complete when the subscribe is guaranteed to be sent.
-        /// The <see cref="Task{T}"/> complete when the client received the <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800441">Subscribe acknowledgement</a>.
-        /// It's Task result contain a <see cref="SubscribeReturnCode"/> per subcription, with the same order than the array given in parameters.
-        /// </returns>
-        /// <remarks>
-        /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180876">MQTT Subscribe</a>
-        /// for more details about the protocol subscription.
-        /// </remarks>
-        public static ValueTask<Task<SubscribeReturnCode[]?>> SubscribeAsync( this IMqtt3Client client, IActivityMonitor? m, params Subscription[] subscriptions )
-        {
-            foreach( Subscription sub in subscriptions )
-            {
-                MqttBinaryWriter.ThrowIfInvalidMQTTString( sub.TopicFilter );
-            }
-            return client.SendPacketAsync<SubscribeReturnCode[]>( m, new OutgoingSubscribe( subscriptions ) );
         }
     }
 }

@@ -3,9 +3,8 @@ using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     public delegate ValueTask<WriteResult> PayloadWriterDelegate( PipeWriter writer, CancellationToken cancellationToken );
     class BasicOutgoingApplicationMessage : OutgoingMessage

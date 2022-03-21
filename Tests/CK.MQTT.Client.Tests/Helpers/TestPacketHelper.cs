@@ -73,6 +73,12 @@ namespace CK.MQTT.Client.Tests.Helpers
             return false;
         }
 
+        public static async ValueTask<bool> WaitClientConnected(IActivityMonitor m, PacketReplayer replayer )
+        {
+            await replayer.WhenConnected();
+            return true;
+        }
+
         public static PacketReplayer.TestWorker SwallowEverything( CancellationToken stopToken )
             => async ( IActivityMonitor m, PacketReplayer replayer ) =>
             {
@@ -88,9 +94,8 @@ namespace CK.MQTT.Client.Tests.Helpers
             using( m.OpenInfo( "Disconnecting..." ) )
             {
                 replayer.Channel!.Close( null );
-                replayer.Channel.Dispose();
             }
-            return new ValueTask<bool>( false );
+            return new ValueTask<bool>( true );
         }
 
         public static PacketReplayer.TestWorker IncrementTime( TimeSpan timeToIncrement ) =>
@@ -101,13 +106,6 @@ namespace CK.MQTT.Client.Tests.Helpers
                     replayer.TestDelayHandler.IncrementTime( timeToIncrement );
                 }
                 return new ValueTask<bool>( true );
-            };
-
-        public static PacketReplayer.TestWorker Do( Func<IActivityMonitor, Task> func ) =>
-            async ( IActivityMonitor m, PacketReplayer replayer ) =>
-            {
-                await func( m );
-                return true;
             };
     }
 }

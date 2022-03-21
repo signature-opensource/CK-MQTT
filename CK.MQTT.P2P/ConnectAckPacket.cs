@@ -12,7 +12,7 @@ namespace CK.MQTT.P2P
             _sessionPresent = sessionPresent;
             _connectReturnCode = connectReturnCode;
         }
-        public override uint PacketId { get => 0; set => throw new NotSupportedException(); }
+        public override ushort PacketId { get => 0; set => throw new NotSupportedException(); }
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
         public override uint GetSize( ProtocolLevel protocolLevel ) => 4;

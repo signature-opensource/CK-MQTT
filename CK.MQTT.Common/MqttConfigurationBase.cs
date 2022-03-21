@@ -1,4 +1,5 @@
 using CK.MQTT.Common.Time;
+using CK.MQTT.Stores;
 using System;
 
 namespace CK.MQTT
@@ -8,14 +9,20 @@ namespace CK.MQTT
     /// </summary>
     public class MqttConfigurationBase
     {
+        public MqttConfigurationBase( ProtocolConfiguration protocolConfiguration )
+        {
+            _protocolConfiguration = protocolConfiguration;
+        }
         readonly int _waitTimeoutMilliseconds = 5_000;
+        readonly ProtocolConfiguration _protocolConfiguration;
+
         /// <summary>
         /// Time to wait before a non acknowledged packet is resent.
         /// Defaults to 5 seconds (and always greater than 20 ms).
         /// To disable this (but please be sure to understand the consequences), use
         /// the <see cref="int.MaxValue"/> special value.
         /// </summary>
-		public int WaitTimeoutMilliseconds
+        public int WaitTimeoutMilliseconds
         {
             get => _waitTimeoutMilliseconds;
             init
@@ -25,25 +32,23 @@ namespace CK.MQTT
             }
         }
 
-        /// <summary>
-        /// Gets or sets the input logger to use. This can be changed at any moment.
-        /// When null (the default), logging overhead is practically null.
-        /// </summary>
-        public IInputLogger? InputLogger { get; set; }
+        ILocalPacketStore? _localStore;
+        public ILocalPacketStore LocalPacketStore
+        {
+            get => _localStore ??= new MemoryPacketStore( _protocolConfiguration, this, ushort.MaxValue );
+            init => _localStore = value;
+        }
+
+        IRemotePacketStore? _remoteStore;
+        public IRemotePacketStore RemotePacketStore
+        {
+            get => _remoteStore ??= new MemoryPacketIdStore();
+            init => _remoteStore = value;
+        }
 
         /// <summary>
-        /// Gets or sets the output logger to use. This can be changed at any moment.
-        /// When null (the default), logging overhead is practically null.
-        /// </summary>
-        public IOutputLogger? OutputLogger { get; set; }
-
-        /// <summary>
-        /// Gets the store factory to use.
-        /// </summary>
-        public IStoreFactory StoreFactory { get; init; } = new MemoryStoreFactory();
-
-        /// <summary>
-        /// Gets the store transformer to use.
+        /// Gets the store transformer to use when sending packets.
+        /// The default one set the dup flag when resending packets.
         /// </summary>
         public IStoreTransformer StoreTransformer { get; init; } = DefaultStoreTransformer.Default;
 
@@ -57,7 +62,7 @@ namespace CK.MQTT
         /// <summary>
         /// Initial capacity of the ID Store. May grow bigger.
         /// </summary>
-        public uint IdStoreStartCount { get; init; } = 32;
+        public ushort IdStoreStartCount { get; init; } = 32;
 
         /// <summary>
         /// Gets the maximal number of retries to send the same packet
@@ -77,6 +82,7 @@ namespace CK.MQTT
         public IStopwatchFactory StopwatchFactory { get; init; } = new StopwatchFactory();
 
         public ICancellationTokenSourceFactory CancellationTokenSourceFactory { get; init; } = new CancellationTokenSourceFactory();
+        public int StoreFullWaitTimeoutMs { get; set; } = 500;
 
     }
 }

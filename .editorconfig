@@ -7,7 +7,7 @@ root = true
 [*]
 charset = utf-8
 indent_style = space
-indent_size = 2
+indent_size = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
 dotnet_diagnostic.CA2100.severity=warning
@@ -15,6 +15,14 @@ dotnet_diagnostic.CA2012.severity=warning
 dotnet_diagnostic.CA2011.severity=error
 dotnet_diagnostic.CA1041.severity=error
 dotnet_diagnostic.CA1068.severity=warning
+dotnet_style_operator_placement_when_wrapping = beginning_of_line
+tab_width = 4
+end_of_line = crlf
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+dotnet_style_prefer_auto_properties = false:silent
+dotnet_style_object_initializer = true:suggestion
  
 [*.{cs,js,ts,sql,tql}]
 indent_size = 4
@@ -30,7 +38,7 @@ csharp_space_between_parentheses = control_flow_statements
 # internal and private fields should be _camelCase
 dotnet_naming_rule.camel_case_for_private_internal_fields.severity = suggestion
 dotnet_naming_rule.camel_case_for_private_internal_fields.symbols  = private_internal_fields
-dotnet_naming_rule.camel_case_for_private_internal_fields.style    = camel_case_underscore_style
+dotnet_naming_rule.camel_case_for_private_internal_fields.style = camel_case_underscore_style
 
 dotnet_naming_symbols.private_internal_fields.applicable_kinds = field
 dotnet_naming_symbols.private_internal_fields.applicable_accessibilities = private, internal
@@ -46,7 +54,7 @@ dotnet_diagnostic.CA1063.severity = none
 # If you feel like you NEED to handle an umanaged resource, please let's talk about this first: it may well be a bad idea...
 
 # IDE0063: Use simple 'using' statement. 
-csharp_prefer_simple_using_statement = false:none 
+csharp_prefer_simple_using_statement = false:none
 # Motive: Most of the time, the 'not simple' using scope is better.
 
 # CA1031: Do not catch general exception types.
@@ -75,3 +83,16 @@ dotnet_diagnostic.CA2016.severity=warning
 
 # CA1816: Dispose methods should call SuppressFinalize
 dotnet_diagnostic.CA1816.severity = none
+csharp_indent_labels = one_less_than_current
+csharp_space_around_binary_operators = before_and_after
+csharp_using_directive_placement = outside_namespace:silent
+csharp_prefer_braces = true:silent
+csharp_style_namespace_declarations = block_scoped:silent
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = false:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_accessors = true:silent
+csharp_style_expression_bodied_lambdas = true:silent
+csharp_style_expression_bodied_local_functions = false:silent

@@ -1,3 +1,4 @@
+using CK.MQTT.Client;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -85,24 +86,13 @@ namespace CK.MQTT
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask SkipBytesAsync( this PipeReader reader, uint skipCount, CancellationToken cancellationToken )
+        public static async ValueTask SkipBytesAsync( this PipeReader reader, IMqtt3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
         {
-            while( skipCount > 0 )
-            {
-                ReadResult read = await reader.ReadAsync( cancellationToken );
-                uint bufferLength = (uint)read.Buffer.Length;
-                // If the read fetched more data than what we wanted to skip,
-                // we need to advance exactly the amount needed.
-                if( bufferLength > skipCount )
-                {
-                    reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
-                    // And the job is done.
-                    return;
-                }
-                // We mark the data as consumed.
-                reader.AdvanceTo( read.Buffer.End );
-                skipCount -= bufferLength;
-            };
+            ReadResult read = await reader.ReadAtLeastAsync( (int)skipCount, cancellationToken );
+            sink.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, read.Buffer.Length > skipCount ? skipCount : read.Buffer.Length ) );
+            reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
+            // We mark the data as consumed.
+            reader.AdvanceTo( read.Buffer.End );
         }
     }
 }

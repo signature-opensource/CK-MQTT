@@ -1,3 +1,4 @@
+using CK.MQTT.Packets;
 using System;
 
 namespace CK.MQTT
@@ -9,7 +10,7 @@ namespace CK.MQTT
         /// Return the default instance of <see cref="OutgoingPingReq"/>.
         /// </summary>
         public static OutgoingPingReq Instance { get; } = new OutgoingPingReq();
-        public override uint PacketId { get => 0; set => throw new NotSupportedException(); }
+        public override ushort PacketId { get => 0; set => throw new NotSupportedException(); }
         public override bool IsRemoteOwnedPacketId => throw new NotSupportedException();
 
         public override QualityOfService Qos => QualityOfService.AtMostOnce;

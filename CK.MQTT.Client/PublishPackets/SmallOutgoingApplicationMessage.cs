@@ -1,12 +1,10 @@
-using CK.Core;
 using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     class SmallOutgoingApplicationMessage : OutgoingMessage
     {

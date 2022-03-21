@@ -3,7 +3,7 @@ namespace CK.MQTT
     /// <summary>
     /// Reason of an MQTT Client or Server disconnection
     /// </summary>
-	public enum DisconnectedReason
+	public enum DisconnectReason
     {
         /// <summary>
         /// Non applicable.

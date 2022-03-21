@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     /// <summary>
     /// Represent a disconnect packet to be serialized.
@@ -13,7 +13,7 @@ namespace CK.MQTT
         /// Return the default instance of <see cref="OutgoingDisconnect"/>.
         /// </summary>
         public static OutgoingDisconnect Instance { get; } = new OutgoingDisconnect();
-        public override uint PacketId { get => 0; set => throw new NotSupportedException(); }
+        public override ushort PacketId { get => 0; set => throw new NotSupportedException(); }
 
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 

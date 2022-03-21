@@ -1,6 +1,6 @@
-using CK.Core;
 using CK.MQTT.Client;
 using CK.MQTT.Common.Pumps;
+using CK.MQTT.Packets;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
@@ -8,7 +8,9 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,29 +18,21 @@ namespace CK.MQTT
 {
     public class MqttClientImpl : IMqttClient
     {
-        /// <summary>
-        /// Allow to atomically get/set multiple fields.
-        /// </summary>
         protected class ClientState : IState
         {
-            public ClientState( MqttConfigurationBase config, OutputPump outputPump, IMqttChannel channel, IRemotePacketStore packetIdStore, ILocalPacketStore store )
+            public ClientState( OutputPump outputPump, IMqttChannel channel )
             {
-                _config = config;
                 OutputPump = outputPump;
                 Channel = channel;
-                PacketIdStore = packetIdStore;
-                Store = store;
             }
 
             public readonly IMqttChannel Channel;
-            public readonly IRemotePacketStore PacketIdStore;
-            public readonly ILocalPacketStore Store;
             readonly MqttConfigurationBase _config;
             public OutputPump OutputPump { get; }
 
             public Task CloseAsync()
             {
-                Channel.Close( _config.InputLogger );
+                Channel.Close();
                 Channel.Dispose();
                 return Task.CompletedTask;
             }
@@ -47,23 +41,27 @@ namespace CK.MQTT
 
         protected DuplexPump<ClientState>? Pumps { get; set; }
 
-        protected MqttClientConfiguration Config { get; }
+        protected Mqtt3ClientConfiguration Config { get; }
         protected ProtocolConfiguration ProtocolConfig { get; set; }
 
-        Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
+        readonly Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
+
+        readonly IRemotePacketStore _remotePacketStore;
+        readonly ILocalPacketStore _localPacketStore;
 
         /// <summary>
         /// Instantiate the <see cref="MqttClientImpl"/> with the given configuration.
         /// </summary>
         /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        internal protected MqttClientImpl( ProtocolConfiguration pConfig, MqttClientConfiguration config, Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        internal protected MqttClientImpl( IMqtt3Sink sink, ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
         {
             (Config, _messageHandler) = (config, messageHandler);
             if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds * 1000 && config.KeepAliveSeconds != 0 )
             {
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
             }
+            _sink = sink;
             ProtocolConfig = pConfig;
 
         }
@@ -73,11 +71,13 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="msg"></param>
         /// <returns></returns>
-        protected ValueTask OnMessageAsync( IActivityMonitor m, string topic, PipeReader pipeReader, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
-            => _messageHandler( m, topic, pipeReader, payloadLength, qos, retain, cancellationToken );
+        protected ValueTask OnMessageAsync( string topic, PipeReader pipeReader, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
+            => _messageHandler( topic, pipeReader, payloadLength, qos, retain, cancellationToken );
+
+
 
         /// <inheritdoc/>
-        public async Task<ConnectResult> ConnectAsync( IActivityMonitor? m, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public async Task<ConnectResult> ConnectAsync( bool waitForConnection = true, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
             if( lastWill != null )
             {
@@ -85,206 +85,237 @@ namespace CK.MQTT
             }
 
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
-            using( m?.OpenTrace( "Connecting..." ) )
+
+            var res = await DoConnectAsync( lastWill, cancellationToken );
+            if( res.ConnectReturnCode == ConnectReturnCode.Accepted && Config.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
             {
-                try
+                _autoReconnectTask = ReconnectBackgroundAsync();
+            }
+            return res;
+        }
+
+
+
+        async Task<ConnectResult> DoConnectAsync( OutgoingLastWill? lastWill, CancellationToken cancellationToken )
+        {
+            try
+            {
+                if( Config.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
                 {
-                    // Creating store from credentials (this allow to have one state per endpoint).
-                    (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await Config.StoreFactory.CreateAsync(
-                        m, ProtocolConfig, Config, Config.ConnectionString, Config.Credentials?.CleanSession ?? true
-                    );
+                    _disconnectTCS = new TaskCompletionSource();
+                }
+                // Creating channel. The channel is not yet connected, but other object need a reference to it.
+                IMqttChannel channel = await Config.ChannelFactory.CreateAsync( Config.ConnectionString );
 
-                    // Creating channel. The channel is not yet connected, but other object need a reference to it.
-                    IMqttChannel channel = await Config.ChannelFactory.CreateAsync( m, Config.ConnectionString );
+                // Creating pumps. Need to be started.
+                OutputPump output = new( _sink, _localPacketStore, SelfDisconnectAsync, Config );
 
+                // Middleware that will processes the requests.
+                ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
+                    .UseMiddleware( new PublishReflex( Config, _remotePacketStore, OnMessageAsync, output ) )
+                    .UseMiddleware( new PublishLifecycleReflex( _remotePacketStore, _localPacketStore, output ) )
+                    .UseMiddleware( new SubackReflex( _localPacketStore ) )
+                    .UseMiddleware( new UnsubackReflex( _localPacketStore ) );
 
+                await channel.StartAsync(); // Will create the connection to server.
 
-                    // Creating pumps. Need to be started.
-                    OutputPump output = new( localStore, SelfDisconnectAsync, Config );
-
-
-                    // Middleware that will processes the requests.
-                    ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
-                        .UseMiddleware( new PublishReflex( Config, remoteStore, OnMessageAsync, output ) )
-                        .UseMiddleware( new PublishLifecycleReflex( remoteStore, localStore, output ) )
-                        .UseMiddleware( new SubackReflex( localStore ) )
-                        .UseMiddleware( new UnsubackReflex( localStore ) );
-
-
-                    await channel.StartAsync( m ); // Will create the connection to server.
-
-                    OutputProcessor outputProcessor;
-                    // Enable keepalive only if we need it.
-                    if( Config.KeepAliveSeconds == 0 )
+                OutputProcessor outputProcessor;
+                // Enable keepalive only if we need it.
+                if( Config.KeepAliveSeconds == 0 )
+                {
+                    outputProcessor = new OutputProcessor( ProtocolConfig, output, channel.DuplexPipe.Output, _localPacketStore );
+                }
+                else
+                {
+                    // If keepalive is enabled, we add it's handler to the middlewares.
+                    OutputProcessorWithKeepAlive withKeepAlive = new( ProtocolConfig, Config, output, channel.DuplexPipe.Output, _localPacketStore, _remotePacketStore ); // Require channel started.
+                    outputProcessor = withKeepAlive;
+                    builder.UseMiddleware( withKeepAlive );
+                }
+                // This reflex handle the connection packet.
+                // It will replace itself with the regular packet processing.
+                ConnectAckReflex connectAckReflex = new
+                (
+                    builder.Build( async ( _, _, _, _, _, _ ) =>
                     {
-                        outputProcessor = new OutputProcessor( ProtocolConfig, output, channel.DuplexPipe.Output, localStore, remoteStore );
-                    }
-                    else
+                        await SelfDisconnectAsync( DisconnectReason.ProtocolError );
+                        return OperationStatus.Done;
+                    } )
+                );
+                // When receiving the ConnAck, this reflex will replace the reflex with this property.
+
+                Pumps = new DuplexPump<ClientState>( // Require channel started.
+                    new ClientState( output, channel ),
+                    output,
+                    new InputPump( _sink, SelfDisconnectAsync, Config, channel.DuplexPipe.Input, connectAckReflex.HandleRequestAsync )
+                );
+                output.StartPumping( outputProcessor ); // Start processing incoming messages.
+
+                OutgoingConnect outgoingConnect = new( ProtocolConfig, Config, lastWill );
+
+                WriteResult writeConnectResult;
+                using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
+                {
+                    // Send the packet.
+                    writeConnectResult = await outgoingConnect.WriteAsync( ProtocolConfig.ProtocolLevel, channel.DuplexPipe.Output, cts.Token );
+                }
+
+                async ValueTask<ConnectResult> Exit( ConnectError connectError )
+                {
+                    await Pumps!.CloseAsync();
+                    return new ConnectResult( connectError );
+                }
+
+                if( writeConnectResult != WriteResult.Written )
+                    return await Exit( ConnectError.Timeout );
+                ConnectResult res;
+                using( CancellationTokenSource cts2 = Config.CancellationTokenSourceFactory.Create( cancellationToken, Config.WaitTimeoutMilliseconds ) )
+                using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
+                {
+                    try
                     {
-                        // If keepalive is enabled, we add it's handler to the middlewares.
-                        OutputProcessorWithKeepAlive withKeepAlive = new( ProtocolConfig, Config, output, channel.DuplexPipe.Output, localStore, remoteStore ); // Require channel started.
-                        outputProcessor = withKeepAlive;
-                        builder.UseMiddleware( withKeepAlive );
+                        res = await connectAckReflex.Task;
                     }
-                    // This reflex handle the connection packet.
-                    // It will replace itself with the regular packet processing.
-                    ConnectAckReflex connectAckReflex = new
-                    (
-                        builder.Build( async ( a, b, c, d, e, f ) =>
+                    catch( OperationCanceledException )
+                    {
+                        // This following code wouldn't be better with a sort of ... switch/pattern matching ?
+                        if( cancellationToken.IsCancellationRequested )
                         {
-                            await SelfDisconnectAsync( DisconnectedReason.ProtocolError );
-                            return OperationStatus.Done;
-                        } )
-                    );
-                    // When receiving the ConnAck, this reflex will replace the reflex with this property.
-
-                    Pumps = new DuplexPump<ClientState>( // Require channel started.
-                        new ClientState( Config, output, channel, remoteStore, localStore ),
-                        output,
-                        new InputPump( SelfDisconnectAsync, Config, channel.DuplexPipe.Input, connectAckReflex.HandleRequestAsync )
-                    );
-                    output.StartPumping( outputProcessor ); // Start processing incoming messages.
-
-                    OutgoingConnect outgoingConnect = new( ProtocolConfig, Config, lastWill );
-
-                    IOutgoingPacket.WriteResult writeConnectResult;
-                    using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
-                    {
-                        // Send the packet.
-                        writeConnectResult = await outgoingConnect.WriteAsync( ProtocolConfig.ProtocolLevel, channel.DuplexPipe.Output, cts.Token );
-                    };
-
-                    async ValueTask<ConnectResult> Exit( LogLevel logLevel, ConnectError connectError, string? log = null, Exception? exception = null )
-                    {
-                        m?.Log( logLevel, log, exception );
-                        await Pumps!.CloseAsync();
-                        return new ConnectResult( connectError );
-                    }
-
-                    if( writeConnectResult != IOutgoingPacket.WriteResult.Written )
-                        return await Exit( LogLevel.Error, ConnectError.Timeout, "Timeout while writing connect packet." );
-                    ConnectResult res;
-                    using( CancellationTokenSource cts2 = Config.CancellationTokenSourceFactory.Create( cancellationToken, Config.WaitTimeoutMilliseconds ) )
-                    using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
-                    {
-                        try
-                        {
-                            res = await connectAckReflex.Task;
+                            return await Exit( ConnectError.Connection_Cancelled );
                         }
-                        catch( OperationCanceledException )
+                        else
                         {
-                            // This following code wouldn't be better with a sort of ... switch/pattern matching ?
-                            if( cancellationToken.IsCancellationRequested )
-                            {
-                                return await Exit( LogLevel.Trace, ConnectError.Connection_Cancelled, "Given cancellation token was canceled." );
-                            }
-                            else
-                            {
-                                return await Exit( LogLevel.Error, ConnectError.Timeout, $"Server accepted transport connexion but didn't answered to MQTT connexion before the configure timeout({ Config.WaitTimeoutMilliseconds}ms)." );
-                            }
+                            return await Exit( ConnectError.Timeout );
                         }
                     }
+                }
 
-                    // This following code wouldn't be better with a sort of ... switch/pattern matching ?
-                    if( cancellationToken.IsCancellationRequested )
-                        return await Exit( LogLevel.Trace, ConnectError.Connection_Cancelled, "Given cancellation token was canceled." );
-                    if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
-                        return await Exit( LogLevel.Fatal, ConnectError.InternalException, exception: connectAckReflex.Task.Exception );
-                    if( Pumps.IsClosed )
-                        return await Exit( LogLevel.Trace, ConnectError.RemoteDisconnected, "Remote disconnected." );
+                // This following code wouldn't be better with a sort of ... switch/pattern matching ?
+                if( cancellationToken.IsCancellationRequested )
+                    return await Exit( ConnectError.Connection_Cancelled );
+                if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
+                    return await Exit( ConnectError.InternalException );
+                if( Pumps.IsClosed )
+                    return await Exit( ConnectError.RemoteDisconnected );
 
-                    if( res.ConnectError != ConnectError.Ok )
-                    {
-                        m?.Trace( "Connect code is not ok." );
-                        await Pumps!.CloseAsync();
-                        return res;
-                    }
-
-                    bool askedCleanSession = Config.Credentials?.CleanSession ?? true;
-                    if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-                        return await Exit( LogLevel.Warn, ConnectError.ProtocolError_SessionNotFlushed, "Session was not flushed while we asked for it." );
-                    if( res.SessionState == SessionState.CleanSession )
-                    {
-                        ValueTask task = remoteStore.ResetAsync();
-                        await localStore.ResetAsync();
-                        await task;
-                    }
-                    else
-                    {
-                        throw new NotImplementedException();
-                    }
+                if( res.ConnectError != ConnectError.None )
+                {
+                    await Pumps!.CloseAsync();
                     return res;
                 }
-                catch( Exception e )
+
+                bool askedCleanSession = Config.Credentials?.CleanSession ?? true;
+                if( askedCleanSession && res.SessionState != SessionState.CleanSession )
+                    return await Exit( ConnectError.ProtocolError_SessionNotFlushed );
+                if( res.SessionState == SessionState.CleanSession )
                 {
-                    m?.Error( "Error while connecting, closing client.", e );
-                    // We may throw before the creation of the duplex pump.
-                    if( Pumps is not null )
-                    {
-                        await Pumps.CloseAsync();
-                        Pumps.Dispose();
-                    }
-                    return new ConnectResult( ConnectError.InternalException );
+                    ValueTask task = _remotePacketStore.ResetAsync();
+                    await _localPacketStore.ResetAsync();
+                    await task;
                 }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+                return res;
+            }
+            catch( Exception e )
+            {
+                // We may throw before the creation of the duplex pump.
+                if( Pumps is not null )
+                {
+                    await Pumps.CloseAsync();
+                    Pumps.Dispose();
+                }
+                return new ConnectResult( ConnectError.InternalException );
             }
         }
 
         public bool IsConnected => Pumps?.IsRunning ?? false;
 
-        public Disconnected? DisconnectedHandler { get; set; }
+        readonly IMqtt3Sink _sink;
 
-        protected async ValueTask SelfDisconnectAsync( IActivityMonitor m, DisconnectedReason disconnectedReason )
+        protected async ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );
             await Pumps.CloseAsync();
-            DisconnectedHandler?.Invoke( disconnectedReason,
-            Config.DisconnectBehavior switch
-            {
-                DisconnectBehavior.Nothing => null,
-                DisconnectBehavior.AutoReconnect => TryReconnectAsync( m ),
-                _ =>
-#if DEBUG
-                throw new InvalidOperationException( "Should not happen in this scenario." )
-#else
-                null
-#endif
-            } );
+            _sink.OnUnattendedDisconnect( disconnectedReason );
+            _disconnectTCS?.TrySetResult(); //TrySet because we can have the user ask concurrently to Disconnect.
         }
 
-        async Task TryReconnectAsync( IActivityMonitor m )
+        CancellationTokenSource? _running;
+
+        Task _autoReconnectTask;
+        TaskCompletionSource? _disconnectTCS;
+        public async Task ReconnectBackgroundAsync()
         {
-            ConnectResult result;
-            do
+            await _disconnectTCS!.Task;
+            _running = new();
+            while( !_running.IsCancellationRequested )
             {
-                result = await ConnectAsync( m, null, CancellationToken.None );
-            } while( result.ConnectError != ConnectError.Ok );
+                ConnectResult result = await DoConnectAsync( null, _running.Token );
+                if( result.ConnectError != ConnectError.None ) continue;
+                await _disconnectTCS.Task;
+            }
         }
 
 
-
-        /// <inheritdoc/>
-        public void SetMessageHandler( Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => _messageHandler = messageHandler;
-
-        public ValueTask<Task<T?>> SendPacketAsync<T>( IActivityMonitor? m, IOutgoingPacket outgoingPacket ) where T : class
+        public ValueTask<Task<T?>> SendPacketAsync<T>( IOutgoingPacket outgoingPacket )
         {
             if( !IsConnected ) throw new InvalidOperationException( "Client is Disconnected." );
             DuplexPump<ClientState>? duplex = Pumps;
             if( duplex is null ) throw new NullReferenceException();
-            return SenderHelper.SendPacketAsync<T>( m, duplex.State.Store, duplex.State.OutputPump, outgoingPacket );
+            return SenderHelper.SendPacketAsync<T>( _localPacketStore, duplex.State.OutputPump, outgoingPacket );
+        }
+
+        public async ValueTask<Task> PublishAsync( OutgoingMessage message )
+        {
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( message.Topic );
+            return await SendPacketAsync<object?>( message );
+        }
+
+        /// <inheritdoc/>
+        public ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
+        {
+            var subs = subscriptions.ToArray();
+            foreach( Subscription sub in subs )
+            {
+                MqttBinaryWriter.ThrowIfInvalidMQTTString( sub.TopicFilter );
+            }
+            return SendPacketAsync<SubscribeReturnCode[]>( new OutgoingSubscribe( subs ) )!;
+        }
+
+        /// <inheritdoc/>
+        public ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
+        {
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( subscriptions.TopicFilter );
+            return SendPacketAsync<SubscribeReturnCode>( new OutgoingSubscribe( new[] { subscriptions } ) );
+        }
+
+        /// <inheritdoc/>
+        public async ValueTask<Task> UnsubscribeAsync( params string[] topics )
+        {
+            foreach( string topic in topics )
+            {
+                MqttBinaryWriter.ThrowIfInvalidMQTTString( topic );
+            }
+            return await SendPacketAsync<object>( new OutgoingUnsubscribe( topics ) );
         }
 
         /// <summary>
         /// Called by the external world to explicitly close the connection to the remote.
         /// </summary>
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        public async Task<bool> DisconnectAsync( IActivityMonitor? m, bool clearSession, bool cancelAckTasks, CancellationToken cancellationToken )
+        public async Task<bool> DisconnectAsync( bool clearSession, bool cancelAckTasks, CancellationToken cancellationToken )
         {
+            _running?.Cancel();
+            _disconnectTCS?.TrySetResult();
+            await _autoReconnectTask;
             DuplexPump<ClientState>? duplex = Pumps;
             if( clearSession && !cancelAckTasks ) throw new ArgumentException( "When the session is cleared, the ACK tasks must be canceled too." );
             if( duplex is null ) return false;
-            if( duplex.IsRunning ) return false;
-            if( cancelAckTasks ) duplex.State.Store.CancelAllAckTask( m );
+            if( !duplex.IsRunning ) return false;
+            if( cancelAckTasks ) _localPacketStore.CancelAllAckTask();
             await duplex.StopWorkAsync();
             if( duplex.IsClosed ) return false;
             // Because we stopped the pumps, their states cannot change concurrently.

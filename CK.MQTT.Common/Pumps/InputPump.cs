@@ -1,3 +1,4 @@
+using CK.MQTT.Client;
 using System;
 using System.Buffers;
 using System.Diagnostics;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT.Pumps
 {
 
-    public delegate ValueTask<OperationStatus> Reflex( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken );
+    public delegate ValueTask<OperationStatus> Reflex( IMqtt3Sink sink, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken );
 
     /// <summary>
     /// Message pump that does basic processing on the incoming data
@@ -19,16 +20,18 @@ namespace CK.MQTT.Pumps
     {
         readonly MqttConfigurationBase _config;
         readonly PipeReader _pipeReader;
+        readonly IMqtt3Sink _sink;
 
         /// <summary>
         /// Initializes an <see cref="InputPump"/> and immediatly starts to process incoming packets.
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public InputPump( Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config, PipeReader pipeReader, Reflex reflex ) : base( onDisconnect )
+        public InputPump( IMqtt3Sink sink, Func<DisconnectReason, ValueTask> onDisconnect, MqttConfigurationBase config, PipeReader pipeReader, Reflex reflex ) : base( onDisconnect )
         {
             (_config, _pipeReader, CurrentReflex) = (config, pipeReader, reflex);
             SetRunningLoop( ReadLoopAsync() );
+            _sink = sink;
         }
 
         /// <summary>
@@ -50,80 +53,63 @@ namespace CK.MQTT.Pumps
 
         async Task ReadLoopAsync()
         {
-            using( _config.InputLogger?.InputLoopStarting() )
+            try
             {
-                try
+                while( !StopToken.IsCancellationRequested )
                 {
-                    while( !StopToken.IsCancellationRequested )
+                    ReadResult read = await _pipeReader.ReadAsync( CloseToken );
+                    if( CloseToken.IsCancellationRequested || read.IsCanceled )
                     {
-                        ReadResult read = await _pipeReader.ReadAsync( CloseToken );
-                        IInputLogger? m = _config.InputLogger;
-                        if( CloseToken.IsCancellationRequested || read.IsCanceled )
-                        {
-                            m?.ReadLoopTokenCancelled();
-                            break; // When we are notified to stop, we don't need to notify the external world of it.
-                        }
-                        //The packet header require 2-5 bytes
-                        OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out uint length, out SequencePosition position );
-                        if( res == OperationStatus.InvalidData )
-                        {
-                            m?.InvalidIncomingData();
-                            await SelfCloseAsync( DisconnectedReason.ProtocolError );
-                            break;
-                        }
-                        if( res == OperationStatus.Done )
-                        {
-                            _pipeReader.AdvanceTo( position );
-                            using( m?.IncomingPacket( header, length ) )
-                            {
-                                OperationStatus status = await CurrentReflex( m, this, header, length, _pipeReader, CloseToken );
-                                if( status == OperationStatus.InvalidData )
-                                {
-                                    _config.InputLogger?.ReflexSignaledInvalidData();
-                                    await SelfCloseAsync( DisconnectedReason.ProtocolError );
-                                    return;
-                                }
-                                if( status == OperationStatus.NeedMoreData )
-                                {
-                                    if( CloseToken.IsCancellationRequested )
-                                    {
-                                        _config.InputLogger?.ReadLoopTokenCancelled();
-                                    }
-                                    else
-                                    {
-                                        _config.InputLogger?.UnexpectedEndOfStream();
-                                    }
-                                    return;
-                                    // TODO: I think only the reading may know the connexion is closed, and should close the client.
-                                }
-                            }
-                            continue;
-                        }
-                        Debug.Assert( res == OperationStatus.NeedMoreData );
-                        if( read.IsCompleted )
-                        {
-                            if( read.Buffer.Length == 0 ) m?.EndOfStream();
-                            else m?.UnexpectedEndOfStream();
-                            await SelfCloseAsync( DisconnectedReason.RemoteDisconnected );
-                            break;
-                        }
-                        _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                        break; // When we are notified to stop, we don't need to notify the external world of it.
                     }
+                    //The packet header require 2-5 bytes
+                    OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out uint length, out SequencePosition position );
+                    if( res == OperationStatus.InvalidData )
+                    {
+                        await SelfCloseAsync( DisconnectReason.ProtocolError );
+                        break;
+                    }
+                    if( res == OperationStatus.Done )
+                    {
+                        _pipeReader.AdvanceTo( position );
+                        OperationStatus status = await CurrentReflex( _sink, this, header, length, _pipeReader, CloseToken );
+                        if( status == OperationStatus.InvalidData )
+                        {
+                            await SelfCloseAsync( DisconnectReason.ProtocolError );
+                            return;
+                        }
+                        if( status == OperationStatus.NeedMoreData )
+                        {
+                            if( !CloseToken.IsCancellationRequested )
+                            {
+                                //End Of Stream
+                                await SelfCloseAsync( DisconnectReason.RemoteDisconnected );
+                            }
+                            return;
+                            // TODO: I think only the reading may know the connexion is closed, and should close the client.
+                        }
+                        continue;
+                    }
+                    Debug.Assert( res == OperationStatus.NeedMoreData );
+                    if( read.IsCompleted )
+                    {
+                        if( read.Buffer.Length == 0 ) return;
+                        await SelfCloseAsync( DisconnectReason.RemoteDisconnected );
+                        break;
+                    }
+                    _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                 }
-                catch( OperationCanceledException e )
-                {
-                    _config.InputLogger?.LoopCanceledException( e );
-                }
-                catch( ProtocolViolationException e )
-                {
-                    _config.InputLogger?.ProtocolViolation( e );
-                    await SelfCloseAsync( DisconnectedReason.ProtocolError );
-                }
-                catch( Exception e )
-                {
-                    _config.InputLogger?.ExceptionOnParsingIncomingData( e );
-                    await SelfCloseAsync( DisconnectedReason.InternalException );
-                }
+            }
+            catch( OperationCanceledException )
+            {
+            }
+            catch( ProtocolViolationException )
+            {
+                await SelfCloseAsync( DisconnectReason.ProtocolError );
+            }
+            catch( Exception )
+            {
+                await SelfCloseAsync( DisconnectReason.InternalException );
             }
         }
 

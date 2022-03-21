@@ -6,13 +6,13 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
+using static CK.MQTT.Packets.IOutgoingPacket;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     class OutgoingConnect : ComplexOutgoingPacket
     {
-        readonly MqttClientConfiguration _config;
+        readonly Mqtt3ClientConfiguration _config;
         readonly OutgoingLastWill? _lastWill;
         readonly uint _sessionExpiryInterval;
         readonly ushort _receiveMaximum;
@@ -37,7 +37,7 @@ namespace CK.MQTT
             return flags;
         }
 
-        public OutgoingConnect( ProtocolConfiguration pConfig, MqttClientConfiguration config, OutgoingLastWill? lastWill = null,
+        public OutgoingConnect( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, OutgoingLastWill? lastWill = null,
             uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, ushort topicAliasMaximum = 0,
             bool requestResponseInfo = false, bool requestProblemInfo = false, IReadOnlyList<UserProperty>? userProperties = null,
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )
@@ -78,7 +78,7 @@ namespace CK.MQTT
 
         protected override byte Header => (byte)PacketType.Connect;
 
-        public override uint PacketId { get => 0; set => throw new NotSupportedException(); }
+        public override ushort PacketId { get => 0; set => throw new NotSupportedException(); }
 
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 

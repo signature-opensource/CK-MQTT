@@ -3,9 +3,8 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     /// <summary>
     /// An <see cref="IOutgoingPacket"/> that have a variable header writable synchronously, and a variable payload writable asynchronously. <br/>
@@ -18,7 +17,7 @@ namespace CK.MQTT
         /// The first byte of the packet. This contain the <see cref="PacketType"/> and possibly other data.
         /// </summary>
         protected abstract byte Header { get; }
-        public abstract uint PacketId { get; set; }
+        public abstract ushort PacketId { get; set; }
         public abstract QualityOfService Qos { get; }
         public abstract bool IsRemoteOwnedPacketId { get; }
 

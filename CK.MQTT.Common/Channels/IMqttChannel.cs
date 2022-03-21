@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 using System.IO.Pipelines;
 using System.Threading.Tasks;
@@ -10,13 +9,13 @@ namespace CK.MQTT
     /// </summary>
     public interface IMqttChannel : IDisposable
     {
-        ValueTask StartAsync( IActivityMonitor? m );
+        ValueTask StartAsync();
 
         /// <summary>
         /// Disconnect the <see cref="IMqttChannel"/>.
         /// </summary>
         /// <param name="m">The logger to use.</param>
-        void Close( IInputLogger? m );
+        void Close();
 
         /// <summary>
         /// <see langword="true"/> if the channel was connected in the last operation on the <see cref="DuplexPipe"/>.

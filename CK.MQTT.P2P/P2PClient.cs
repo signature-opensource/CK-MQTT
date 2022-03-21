@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Client;
 using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
 using System;
@@ -11,14 +12,12 @@ namespace CK.MQTT.P2P
 {
     public class P2PClient : MqttClientImpl
     {
-        internal P2PClient(
-            MqttClientConfiguration config,
-            Func<IActivityMonitor, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            : base( ProtocolConfiguration.Mqtt5, config, messageHandler )
+        internal P2PClient( IMqtt3Sink sink, Mqtt3ClientConfiguration config, Func<IActivityMonitor?, string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+            : base( sink, ProtocolConfiguration.Mqtt5, config, messageHandler )
         {
         }
 
-        public async Task<ConnectError> AcceptClientAsync( IActivityMonitor? m, IMqttChannelListener channelFactory, CancellationToken cancellationToken )
+        public async Task<ConnectError> AcceptClientAsync( IMqttChannelListener channelFactory, CancellationToken cancellationToken )
         {
             if( Config.KeepAliveSeconds != 0 ) throw new NotSupportedException( "Server KeepAlive is not yet supported." );
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
@@ -26,10 +25,7 @@ namespace CK.MQTT.P2P
             {
                 IMqttChannel channel;
                 string clientAddress;
-                using( m?.OpenTrace( "Awaiting remote connection." ) )
-                {
-                    (channel, clientAddress) = await channelFactory.AcceptIncomingConnection( cancellationToken );
-                }
+                (channel, clientAddress) = await channelFactory.AcceptIncomingConnection( cancellationToken );
 
                 ConnectReflex connectReflex = new( ProtocolConfig, Config );
                 // Creating pumps. Need to be started.
@@ -51,7 +47,7 @@ namespace CK.MQTT.P2P
                 // It will replace itself with the regular packet processing.
 
                 Pumps = new DuplexPump<ClientState>(
-                    new ClientState( Config, output, channel, connectReflex.InStore, connectReflex.OutStore ),
+                    new ClientState( output, channel, connectReflex.InStore, connectReflex.OutStore ),
                     output,
                     inputPump
                 );
@@ -62,13 +58,13 @@ namespace CK.MQTT.P2P
                     .UseMiddleware( new PublishLifecycleReflex( connectReflex.InStore, connectReflex.OutStore, output ) )
                     .UseMiddleware( new SubackReflex( connectReflex.OutStore ) )
                     .UseMiddleware( new UnsubackReflex( connectReflex.OutStore ) );
-                OutputProcessor outputProcessor = new( ProtocolConfig, output, channel.DuplexPipe.Output, connectReflex.OutStore, connectReflex.InStore );
+                OutputProcessor outputProcessor = new( ProtocolConfig, output, channel.DuplexPipe.Output, connectReflex.OutStore );
                 // Enable keepalive only if we need it.
 
                 // When receiving the ConnAck, this reflex will replace the reflex with this property.
                 Reflex reflex = builder.Build( async ( a, b, c, d, e, f ) =>
                 {
-                    await SelfDisconnectAsync( DisconnectedReason.ProtocolError );
+                    await SelfDisconnectAsync( a?.Monitor, DisconnectReason.ProtocolError );
                     return OperationStatus.Done;
                 } );
                 connectReflex.EngageNextReflex( reflex );
@@ -86,7 +82,7 @@ namespace CK.MQTT.P2P
                 bool hasExistingSession = connectReflex.OutStore.IsRevivedSession || connectReflex.InStore.IsRevivedSession;
                 await output.QueueMessageAndWaitUntilSentAsync( m, new ConnectAckPacket( hasExistingSession, ConnectReturnCode.Accepted ) );
 
-                return ConnectError.Ok;
+                return ConnectError.None;
             }
             catch( Exception e )
             {

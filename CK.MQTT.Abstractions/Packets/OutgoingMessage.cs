@@ -6,7 +6,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     /// <summary>
     /// Represent an outgoing mqtt message that will be sent.
@@ -15,7 +15,6 @@ namespace CK.MQTT
     public abstract class OutgoingMessage : ComplexOutgoingPacket, IOutgoingPacket
     {
         readonly bool _retain;
-        readonly string _topic;
         readonly string? _responseTopic;
         readonly ushort _correlationDataSize;
         readonly SpanAction? _correlationDataWriter;
@@ -44,18 +43,19 @@ namespace CK.MQTT
             }
             //Assignation
             _retain = retain;
-            _topic = topic;
+            Topic = topic;
             Qos = qos;
             _responseTopic = responseTopic;
             _correlationDataSize = correlationDataSize;
             _correlationDataWriter = correlationDataWriter;
         }
+        public string Topic { get; }
 
         public override bool IsRemoteOwnedPacketId => false;
-        uint _packetId = 0;
+        ushort _packetId = 0;
 
         /// <inheritdoc/>
-        public override uint PacketId
+        public override ushort PacketId
         {
             get
             {
@@ -74,7 +74,7 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         protected sealed override uint GetHeaderSize( ProtocolLevel protocolLevel )
-            => _topic.MQTTSize()
+            => Topic.MQTTSize()
                 + (Qos > QualityOfService.AtMostOnce ? 2u : 0)//On QoS 0, no packet id(2bytes).
                 + protocolLevel switch
                 {
@@ -106,7 +106,7 @@ namespace CK.MQTT
         /// <param name="span"></param>
         protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            span = span.WriteMQTTString( _topic );
+            span = span.WriteMQTTString( Topic );
             if( Qos > QualityOfService.AtMostOnce )
             {
                 BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId ); //packet id is not present on qos=0.
@@ -137,9 +137,9 @@ namespace CK.MQTT
             }
         }
 
-        protected abstract ValueTask<IOutgoingPacket.WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
+        protected abstract ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
 
-        protected sealed override ValueTask<IOutgoingPacket.WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
+        protected sealed override ValueTask<WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
             => WritePayloadAsync( pw, cancellationToken );
     }
 }

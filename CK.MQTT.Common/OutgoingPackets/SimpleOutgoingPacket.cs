@@ -1,15 +1,13 @@
-using CK.Core;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     public abstract class SimpleOutgoingPacket : IOutgoingPacket
     {
-        public abstract uint PacketId { get; set; }
+        public abstract ushort PacketId { get; set; }
         public abstract QualityOfService Qos { get; }
         public abstract bool IsRemoteOwnedPacketId { get; }
 

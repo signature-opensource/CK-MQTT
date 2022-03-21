@@ -18,7 +18,7 @@ namespace CK.MQTT.P2P
 
         public async Task<(IMqttChannel channel, string clientAddress)> AcceptIncomingConnection( CancellationToken cancellationToken )
         {
-            TcpClient client = await _listener.AcceptTcpClientAsync();
+            TcpClient client = await _listener.AcceptTcpClientAsync( cancellationToken );
 
             return (new StreamChannel( client.GetStream() ), ""); //TODO: this should be the client address.
         }

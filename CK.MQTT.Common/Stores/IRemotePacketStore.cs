@@ -11,9 +11,9 @@ namespace CK.MQTT.Stores
     public interface IRemotePacketStore
     {
         bool IsRevivedSession { get; set; }
-        ValueTask StoreIdAsync( IInputLogger? m, int id );
+        ValueTask StoreIdAsync( int id );
 
-        ValueTask RemoveIdAsync( IInputLogger? m, int id );
+        ValueTask RemoveIdAsync( int id );
 
         bool Empty { get; }
 

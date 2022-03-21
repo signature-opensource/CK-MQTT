@@ -23,20 +23,22 @@ namespace CK.MQTT.Client.Tests.Helpers
             PacketReplayer pcktReplayer = CreateConnectedReplayer( channelType, packets );
 
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ),
-                NoOpDispose() );
-            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+                ClientHelpers.NotListening_Dispose );
+            await client.ConnectAsync( TestHelper.Monitor );
             return (pcktReplayer, client);
         }
 
-        public static async Task<(PacketReplayer packetReplayer, IMqtt3Client client)> ConnectedClient( string channelType, IEnumerable<PacketReplayer.TestWorker> packets,
-            Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> messageProcessor, Disconnected? disconnectedHandler = null )
+        public static async Task<(PacketReplayer packetReplayer, IMqtt3Client client)> ConnectedClient( string channelType,
+            IEnumerable<PacketReplayer.TestWorker> packets,
+            Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> messageProcessor,
+            Disconnected? disconnectedHandler = null )
         {
             PacketReplayer pcktReplayer = CreateConnectedReplayer( channelType, packets );
 
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ),
-                messageProcessor ?? NoOpDispose() );
+                messageProcessor ?? ClientHelpers.NotListening_Dispose );
             client.DisconnectedHandler += disconnectedHandler;
-            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            await client.ConnectAsync( TestHelper.Monitor );
             return (pcktReplayer, client);
         }
 
@@ -46,9 +48,9 @@ namespace CK.MQTT.Client.Tests.Helpers
             PacketReplayer pcktReplayer = CreateConnectedReplayer( channelType, packets );
 
             IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ),
-                messageProcessor ?? NoOpNew() );
+                messageProcessor ?? ClientHelpers.NotListening_New );
             client.DisconnectedHandler += disconnectedHandler;
-            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            await client.ConnectAsync( TestHelper.Monitor );
             return (pcktReplayer, client);
         }
 
@@ -58,29 +60,20 @@ namespace CK.MQTT.Client.Tests.Helpers
                 return new ValueTask();
             };
 
-        static Func<IActivityMonitor?, DisposableApplicationMessage, CancellationToken, ValueTask> NoOpDispose()
-            => ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
-            {
-                msg.Dispose();
-                return new ValueTask();
-            };
-
-
-
-        public static async Task RunOnConnectedClientWithKeepAlive( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
+        public static async Task RunOnConnectedClientWithKeepAlive( string channelType, IEnumerable<PacketReplayer.TestWorker> packets, DisconnectBehavior disconnectBehavior = DisconnectBehavior.Nothing )
         {
             PacketReplayer pcktReplayer = new( channelType, new[]
             {
                 TestPacketHelper.Outgoing("101600044d51545404020005000a434b4d71747454657374"),
                 TestPacketHelper.SendToClient("20020000")
             } );
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( pcktReplayer ),
-                NoOpDispose() );
+            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( pcktReplayer, disconnectBehavior: disconnectBehavior ), ClientHelpers.NotListening_Dispose );
+            pcktReplayer.Client = client;
             foreach( var item in packets )
             {
                 await pcktReplayer.PacketsWorker.Writer.WriteAsync( item );
             }
-            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            await client.ConnectAsync( TestHelper.Monitor );
             await pcktReplayer.StopAndEnsureValidAsync();
         }
     }

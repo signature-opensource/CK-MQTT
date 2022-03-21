@@ -37,7 +37,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 msg.Dispose();
                 return new ValueTask();
             } );
-            await client.ConnectAsync( TestHelper.Monitor, new MqttClientCredentials( "CKMqttTest", true ) );
+            await client.ConnectAsync( TestHelper.Monitor );
             return (pcktReplayer, client);
         }
     }

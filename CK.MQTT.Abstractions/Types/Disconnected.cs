@@ -7,5 +7,5 @@ namespace CK.MQTT
     /// </summary>
     /// <param name="reason">The reason of the disconnection.</param>
     /// <param name="selfReconnectTask">Not null when <see cref="ProtocolConfiguration"/>. after the connection has been lost </param>
-    public delegate void Disconnected( DisconnectedReason reason, Task? selfReconnectTask );
+    public delegate void Disconnected( DisconnectReason reason );
 }

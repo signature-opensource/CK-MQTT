@@ -3,7 +3,9 @@ using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
 using CK.MQTT.Client;
+using CK.MQTT.Client.Closures;
 using System;
+using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,10 +15,22 @@ namespace SimpleClientTest
 {
     class Program
     {
-        static ValueTask MessageHandlerDelegate( IActivityMonitor? m, ApplicationMessage msg, CancellationToken cancellationToken )
+        bool _isLowLevel;
+        async ValueTask MessageHandlerDelegate( IActivityMonitor? m, string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
         {
-            System.Console.WriteLine( msg.Topic + Encoding.UTF8.GetString( msg.Payload.Span ) );
-            return new();
+            if( !topic.Contains( "lowlevel" ) )
+            {
+                await new DisposableMessageClosure( OtherHandler ).HandleMessageAsync( m, topic, pipe, payloadLength, qos, retain, cancelToken );
+            }
+            else
+            {
+                // low level handling
+            }
+        }
+
+        static ValueTask OtherHandler( IActivityMonitor? m, DisposableApplicationMessage message, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
         static async Task Main()
         {
@@ -30,10 +44,10 @@ namespace SimpleClientTest
             },
                 MessageHandlerDelegate
             );
-            client.DisconnectedHandler += ( reason, task ) =>
-            {
-                System.Console.WriteLine( reason );
-            };
+            //client.DisconnectedHandler += ( reason, task ) =>
+            //{
+            //    System.Console.WriteLine( reason );
+            //};
             var res = await client.ConnectAsync( m );
             await Task.Delay( 3000000 );
             await client.DisconnectAsync( m, true, true, default );

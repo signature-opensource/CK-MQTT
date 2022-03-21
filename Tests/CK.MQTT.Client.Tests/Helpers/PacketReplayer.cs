@@ -10,13 +10,14 @@ using System.Threading.Tasks;
 namespace CK.MQTT.Client.Tests.Helpers
 {
     /// <summary>
-    /// Allow to test the client with weird packet without hacking a the server code.
+    /// Allow to test the client with weird packet without hacking the server code.
     /// </summary>
     [ExcludeFromCodeCoverage]
     public class PacketReplayer : IMqttChannelFactory
     {
         public Channel<TestWorker> PacketsWorker { get; }
         public LoopBack? Channel { get; private set; }
+        public IMqtt3Client Client { get; set; } = null!;
         public PacketReplayer( string channelType, IEnumerable<TestWorker>? packets = null )
         {
             PacketsWorker = System.Threading.Channels.Channel.CreateUnbounded<TestWorker>();
@@ -32,16 +33,16 @@ namespace CK.MQTT.Client.Tests.Helpers
         public TestDelayHandler TestDelayHandler { get; } = new();
         public string ChannelType { get; set; }
 
-        Task _workLoopTask = Task.CompletedTask;
+        Task? _workLoopTask;
         public async Task StopAndEnsureValidAsync()
         {
             PacketsWorker.Writer.Complete();
-            Task task = _workLoopTask;
+            Task task = _workLoopTask!;
             if( !await task.WaitAsync( 50000 ) )
             {
                 Assert.Fail( "Packet replayer didn't stopped in time." );
             }
-            if( _workLoopTask.IsFaulted ) await _workLoopTask;
+            if( _workLoopTask!.IsFaulted ) await _workLoopTask;
             _workLoopTask?.IsCompletedSuccessfully.Should().BeTrue();
             PacketsWorker.Reader.Count.Should().Be( 0 );
         }
@@ -61,14 +62,22 @@ namespace CK.MQTT.Client.Tests.Helpers
             }
         }
 
-        public async ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
+        TaskCompletionSource? _tcs;
+        public Task WhenConnected()
         {
-            Task? task = _workLoopTask; //Capturing reference to avoid concurrency issue
-            if( task != null )
+            lock( this )
             {
-                await task;
-                if( !_workLoopTask.IsCompleted ) throw new InvalidOperationException( "A work is already running." );
+                _tcs = new( TaskCreationOptions.RunContinuationsAsynchronously );
+                if( Client?.IsConnected ?? false )
+                {
+                    _tcs.SetResult();
+                }
             }
+            return _tcs.Task;
+        }
+
+        public ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
+        {
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch
             {
@@ -77,8 +86,18 @@ namespace CK.MQTT.Client.Tests.Helpers
                 "PipeReaderCop" => new PipeReaderCopLoopback(),
                 _ => throw new InvalidOperationException( "Unknown channel type." )
             };
-            _workLoopTask = WorkLoop();
-            return Channel;
+            if( _workLoopTask == null )
+            {
+                _workLoopTask = WorkLoop();
+            }
+            lock( this )
+            {
+                if( _tcs is not null )
+                {
+                    _tcs.TrySetResult();
+                }
+            }
+            return new ValueTask<IMqttChannel>(Channel);
         }
     }
 }

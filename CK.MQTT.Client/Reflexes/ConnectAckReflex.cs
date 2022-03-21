@@ -1,3 +1,4 @@
+using CK.MQTT.Client;
 using CK.MQTT.Pumps;
 using System;
 using System.Buffers;
@@ -31,7 +32,7 @@ namespace CK.MQTT
         /// </remarks>
         public Task<ConnectResult> Task => _tcs.Task;
 
-        public async ValueTask<OperationStatus> HandleRequestAsync( IInputLogger? m, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> HandleRequestAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             try
             {
@@ -41,35 +42,30 @@ namespace CK.MQTT
                     _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_UnexpectedConnectResponse ) );
                     return OperationStatus.Done;
                 }
-                using( m?.ProcessPacket( PacketType.ConnectAck ) )
+                ReadResult read = await reader.ReadAtLeastAsync( 2, cancellationToken );
+                if( read.Buffer.Length < 2 ) return OperationStatus.NeedMoreData;
+                Deserialize( read.Buffer, out byte state, out byte code, out SequencePosition position );
+                reader.AdvanceTo( position );
+                if( state > 1 )
                 {
-                    ReadResult read = await reader.ReadAtLeastAsync( 2, cancellationToken );
-                    if( read.Buffer.Length < 2 ) return OperationStatus.NeedMoreData;
-                    Deserialize( read.Buffer, out byte state, out byte code, out SequencePosition position );
-                    reader.AdvanceTo( position );
-                    if( state > 1 )
-                    {
-                        _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
-                        return OperationStatus.Done;
-                    }
-                    if( code > 5 )
-                    {
-                        _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
-                        return OperationStatus.Done;
-                    }
-                    if( packetSize > 2 )
-                    {
-                        await reader.SkipBytesAsync( packetSize - 2, cancellationToken );
-                        m?.UnparsedExtraBytes( sender, PacketType.ConnectAck, header, packetSize, packetSize );
-                    }
-                    sender.CurrentReflex = _reflex;
-                    _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                    _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
                     return OperationStatus.Done;
                 }
+                if( code > 5 )
+                {
+                    _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
+                    return OperationStatus.Done;
+                }
+                if( packetSize > 2 )
+                {
+                    await reader.SkipBytesAsync( sink, 0, (ushort)(packetSize - 2), cancellationToken );
+                }
+                sender.CurrentReflex = _reflex;
+                _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                return OperationStatus.Done;
             }
-            catch( Exception e )
+            catch( Exception )
             {
-                m?.ConnectionUnknownException( e );
                 _tcs.SetResult( new ConnectResult( ConnectError.InternalException ) );
                 return OperationStatus.Done;
             }

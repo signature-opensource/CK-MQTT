@@ -10,7 +10,7 @@ namespace CK.MQTT
         /// <summary>
         /// No Error.
         /// </summary>
-        Ok = 0,
+        None = 0,
         /// <summary>
         /// The server answered a ConnAck which telling us why the server refused the connexion.
         /// </summary>
@@ -38,8 +38,10 @@ namespace CK.MQTT
     /// <summary>
     /// Represent the result of a connect operation.
     /// </summary>
-    public readonly struct ConnectResult // TODO net6: Use struct records.
+    public readonly struct ConnectResult
     {
+        //TODO: ToString() for logs.
+
         /// <summary>
         /// The error if the client could not connect.
         /// </summary>
@@ -70,13 +72,13 @@ namespace CK.MQTT
 
         /// <summary>
         /// Instantiate a new <see cref="ConnectResult"/> where the client got connected.
-        /// <see cref="ConnectError"/> will be <see cref="ConnectError.Ok"/>.
+        /// <see cref="ConnectError"/> will be <see cref="ConnectError.None"/>.
         /// </summary>
         /// <param name="sessionState">The session state.</param>
         /// <param name="connectReturnCode">The connection return code.</param>
         public ConnectResult( SessionState sessionState, ConnectReturnCode connectReturnCode )
         {
-            ConnectError = connectReturnCode == ConnectReturnCode.Accepted ? ConnectError.Ok : ConnectError.SeeReturnCode;
+            ConnectError = connectReturnCode == ConnectReturnCode.Accepted ? ConnectError.None : ConnectError.SeeReturnCode;
             SessionState = sessionState;
             ConnectReturnCode = connectReturnCode;
         }

@@ -21,9 +21,7 @@ namespace CK.MQTT
             return new ValueTask<(ILocalPacketStore, IRemotePacketStore)>( currStore );
         }
 
-        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync(
-            IInputLogger? m, ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId,
-            bool resetStore )
+        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, MqttConfigurationBase config, string storeId, bool resetStore )
         {
             bool newSession = resetStore || !_stores.ContainsKey( storeId );
             if( newSession )

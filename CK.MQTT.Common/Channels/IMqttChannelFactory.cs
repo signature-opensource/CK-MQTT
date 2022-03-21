@@ -1,4 +1,3 @@
-using CK.Core;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -16,6 +15,6 @@ namespace CK.MQTT
         /// <param name="m">The monitor to log activities of creating the channel.</param>
         /// <param name="connectionString">The connection string indicate where the channel must be connected.</param>
         /// <returns>A connected, ready to use, <see cref="IMqttChannel"/>.</returns>
-        ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString );
+        ValueTask<IMqttChannel> CreateAsync( string connectionString );
     }
 }

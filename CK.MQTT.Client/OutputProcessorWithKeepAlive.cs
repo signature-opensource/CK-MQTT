@@ -10,10 +10,10 @@ namespace CK.MQTT.Client
 {
     class OutputProcessorWithKeepAlive : OutputProcessor, IReflexMiddleware
     {
-        readonly MqttClientConfiguration _config;
+        readonly Mqtt3ClientConfiguration _config;
         readonly IStopwatch _stopwatch;
 
-        public OutputProcessorWithKeepAlive( ProtocolConfiguration pConfig, MqttClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, ILocalPacketStore store, IRemotePacketStore remotePacketStore )
+        public OutputProcessorWithKeepAlive( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, ILocalPacketStore store, IRemotePacketStore remotePacketStore )
             : base( pConfig, outputPump, pipeWriter, store, remotePacketStore )
         {
             _config = config;
@@ -27,21 +27,21 @@ namespace CK.MQTT.Client
 
         public bool WaitingPingResp { get; set; }
 
-        public override async ValueTask<bool> SendPacketsAsync( IOutputLogger? m, CancellationToken cancellationToken )
+        public override async ValueTask<bool> SendPacketsAsync( CancellationToken cancellationToken )
         {
             if( IsPingReqTimeout )
             {
-                await SelfDisconnectAsync( DisconnectedReason.PingReqTimeout );
+                await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
                 return true;
             }
-            return await base.SendPacketsAsync( m, cancellationToken );
+            return await base.SendPacketsAsync( cancellationToken );
         }
 
         public override async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken stopWaitToken, CancellationToken stopToken )
         {
             if( IsPingReqTimeout )
             {
-                await SelfDisconnectAsync( DisconnectedReason.PingReqTimeout );
+                await SelfDisconnectAsync( m?.Monitor, DisconnectReason.PingReqTimeout );
                 return;
             }
             using( CancellationTokenSource cts = _config.CancellationTokenSourceFactory.Create( stopWaitToken, _config.KeepAliveSeconds * 1000 ) )
@@ -52,7 +52,7 @@ namespace CK.MQTT.Client
             }
             using( m?.MainLoopSendingKeepAlive() )
             {
-                await ProcessOutgoingPacketAsync( m, OutgoingPingReq.Instance, stopToken);
+                await ProcessOutgoingPacketAsync( m, OutgoingPingReq.Instance, stopToken );
             }
             _stopwatch.Restart();
             WaitingPingResp = true;
