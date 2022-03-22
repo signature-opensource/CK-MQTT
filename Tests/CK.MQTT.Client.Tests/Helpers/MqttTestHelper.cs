@@ -11,10 +11,10 @@ namespace CK.MQTT.Client.Tests.Helpers
     [ExcludeFromCodeCoverage]
     static class MqttTestHelper
     {
-        public static (PacketReplayer packetReplayer, IMqtt3Client client) CreateTestClient( string channelType, Queue<PacketReplayer.TestWorker> packets )
+        public static (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) CreateTestClient( string channelType, Queue<PacketReplayer.TestWorker> packets )
         {
             PacketReplayer pcktReplayer = new( channelType, packets );
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
+            var client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
@@ -22,7 +22,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             return (pcktReplayer, client);
         }
 
-        public static async ValueTask<(PacketReplayer packetReplayer, IMqtt3Client client)> CreateConnectedTestClient( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
+        public static async ValueTask<(PacketReplayer packetReplayer, SimpleTestMqtt3Client client)> CreateConnectedTestClient( string channelType, IEnumerable<PacketReplayer.TestWorker> packets )
         {
             PacketReplayer pcktReplayer = new
             (
@@ -32,12 +32,12 @@ namespace CK.MQTT.Client.Tests.Helpers
                     TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" )
                 }.Concat( packets ) )
             );
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken ) =>
             {
                 msg.Dispose();
                 return new ValueTask();
             } );
-            await client.ConnectAsync( TestHelper.Monitor );
+            await client.ConnectAsync(  );
             return (pcktReplayer, client);
         }
     }

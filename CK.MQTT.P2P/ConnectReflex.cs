@@ -1,3 +1,5 @@
+using CK.MQTT.Client;
+using CK.MQTT.P2P;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
@@ -9,14 +11,15 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Packets
 {
     class ConnectReflex
     {
         readonly List<(string, string)> _userProperties = new();
         readonly TaskCompletionSource _taskCompletionSource = new();
+        readonly IMqtt5ServerClientSink _sink;
         readonly ProtocolConfiguration _pConfig;
-        readonly MqttConfigurationBase _config;
+        readonly P2PMqttConfiguration _config;
         ReadOnlyMemory<byte> _authData;
         string _protocolName = null!; // See TODO below.
         string _clientId = null!;
@@ -43,8 +46,9 @@ namespace CK.MQTT.P2P
         byte _flags;
         // Currently the parsed data is available when the packet is not parsed yet and can lead to errors.
         readonly SemaphoreSlim _exitWait = new( 0 );
-        public ConnectReflex( ProtocolConfiguration pConfig, MqttConfigurationBase config )
+        public ConnectReflex( IMqtt5ServerClientSink sink, ProtocolConfiguration pConfig, P2PMqttConfiguration config )
         {
+            _sink = sink;
             _pConfig = pConfig;
             _config = config;
         }
@@ -55,7 +59,7 @@ namespace CK.MQTT.P2P
 #pragma warning restore CS8774 
         InputPump? _sender;
 
-        public async ValueTask<OperationStatus> HandleRequestAsync( InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> HandleRequestAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             _sender = sender;
             OperationStatus status = OperationStatus.NeedMoreData;
@@ -104,6 +108,8 @@ namespace CK.MQTT.P2P
 
 
         public ILocalPacketStore? OutStore { get; set; }
+        public IRemotePacketStore? InStore { get; set; }
+
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
         public bool Retain => (_flags & 0b0010_0000) != 0;
@@ -213,7 +219,7 @@ namespace CK.MQTT.P2P
         }
 
 
-        OperationStatus ParsePropertiesFields( IInputLogger? m, ref SequenceReader<byte> sequenceReader )
+        OperationStatus ParsePropertiesFields( ref SequenceReader<byte> sequenceReader )
         {
             SequencePosition sequencePosition;
             if( sequenceReader.Remaining > _propertiesLength )
@@ -235,82 +241,45 @@ namespace CK.MQTT.P2P
                 switch( _currentProp )
                 {
                     case PropertyIdentifier.SessionExpiryInterval:
-                        if( _sessionExpiryIntervalRead )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.SessionExpiryInterval );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( _sessionExpiryIntervalRead ) return OperationStatus.InvalidData;
                         if( !sequenceReader.TryReadBigEndian( out _sessionExpiryInterval ) ) return OperationStatus.NeedMoreData;
                         _sessionExpiryIntervalRead = true;
                         _propertiesLength -= 5;
                         break;
                     case PropertyIdentifier.AuthenticationMethod:
-                        if( _authentificationMethod != null )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.AuthenticationMethod );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( _authentificationMethod != null ) return OperationStatus.InvalidData;
 
                         if( !sequenceReader.TryReadMQTTString( out _authentificationMethod ) ) return OperationStatus.NeedMoreData;
                         break;
                     case PropertyIdentifier.AuthenticationData:
-                        if( _authDataRead )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.AuthenticationData );
-                            return OperationStatus.InvalidData;
-                        }
-
+                        if( _authDataRead ) return OperationStatus.InvalidData;
                         if( !sequenceReader.TryReadMQTTBinaryData( out _authData ) ) return OperationStatus.NeedMoreData;
                         break;
                     case PropertyIdentifier.RequestProblemInformation:
-                        if( _requestProblemInformationRead )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.RequestProblemInformation );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( _requestProblemInformationRead ) return OperationStatus.InvalidData;
 
                         if( !sequenceReader.TryRead( out byte val1 ) ) return OperationStatus.NeedMoreData;
-                        if( val1 > 1 )
-                        {
-                            m?.InvalidPropertyValue( PropertyIdentifier.RequestResponseInformation, val1 );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( val1 > 1 ) return OperationStatus.InvalidData;
                         _requestProblemInformationRead = true;
                         _requestProblemInformation = val1 == 1;
                         break;
                     case PropertyIdentifier.RequestResponseInformation:
-                        if( _requestResponseInformationRead )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.RequestResponseInformation );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( _requestResponseInformationRead ) return OperationStatus.InvalidData;
 
                         if( !sequenceReader.TryRead( out byte val2 ) ) return OperationStatus.NeedMoreData;
-                        if( val2 > 1 )
-                        {
-                            m?.InvalidPropertyValue( PropertyIdentifier.RequestResponseInformation, val2 );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( val2 > 1 ) return OperationStatus.InvalidData;
                         _requestResponseInformationRead = true;
                         _requestResponseInformation = val2 == 1;
                         break;
                     case PropertyIdentifier.ReceiveMaximum:
-                        if( ReceiveMaximum != 0 )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.ReceiveMaximum );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( ReceiveMaximum != 0 ) return OperationStatus.InvalidData;
 
                         if( !sequenceReader.TryReadBigEndian( out _receiveMaximum ) ) return OperationStatus.NeedMoreData;
                         if( ReceiveMaximum == 0 ) return OperationStatus.InvalidData;
                         _propertiesLength -= 3;
                         break;
                     case PropertyIdentifier.TopicAliasMaximum:
-                        if( _topicAliasMaxiumRead )
-                        {
-                            m?.ConnectPropertyFieldDuplicated( PropertyIdentifier.TopicAliasMaximum );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( _topicAliasMaxiumRead ) return OperationStatus.InvalidData;
 
                         if( !sequenceReader.TryReadBigEndian( out _topicAliasMaximum ) ) return OperationStatus.NeedMoreData;
                         _topicAliasMaxiumRead = true;
@@ -327,22 +296,13 @@ namespace CK.MQTT.P2P
                     case PropertyIdentifier.MaximumPacketSize:
 
                         if( !sequenceReader.TryReadBigEndian( out _maxPacketSize ) ) return OperationStatus.NeedMoreData;
-                        if( MaxPacketSize < 1 )
-                        {
-                            m?.InvalidMaxPacketSize( MaxPacketSize );
-                            return OperationStatus.InvalidData;
-                        }
+                        if( MaxPacketSize < 1 ) return OperationStatus.InvalidData;
                         break;
                     default:
-                        m?.InvalidPropertyType();
                         return OperationStatus.InvalidData;
                 }
             }
-            if( _authDataRead && _authentificationMethod == null )
-            {
-                m?.ErrorAuthDataMissing();
-                return OperationStatus.InvalidData;
-            }
+            if( _authDataRead && _authentificationMethod == null ) return OperationStatus.InvalidData;
             return OperationStatus.Done;
         }
     }

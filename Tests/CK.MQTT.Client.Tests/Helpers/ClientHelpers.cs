@@ -12,12 +12,13 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         public static ValueTask NotListening_Dispose( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken cancellationToken )
         {
-            throw new InvalidOperationException();
+            msg.Dispose();
+            return new ValueTask();
         }
 
         public static ValueTask NotListening_New( IActivityMonitor? m, ApplicationMessage msg, CancellationToken cancellationToken )
         {
-            throw new InvalidOperationException();
+            return new ValueTask();
         }
     }
 }

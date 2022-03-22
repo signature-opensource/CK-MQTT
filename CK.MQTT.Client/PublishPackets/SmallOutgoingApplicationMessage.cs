@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Packets
 {
-    class SmallOutgoingApplicationMessage : OutgoingMessage
+    public class SmallOutgoingApplicationMessage : OutgoingMessage
     {
         private readonly ReadOnlyMemory<byte> _memory;
 

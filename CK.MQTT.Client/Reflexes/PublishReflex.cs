@@ -64,7 +64,7 @@ namespace CK.MQTT
                     {
                         continue;
                     }
-                    await _messageHandler( _mqttConfiguration.OnInputMonitor, theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
+                    await _messageHandler( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                     return OperationStatus.Done;
                 }
                 if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
@@ -76,13 +76,13 @@ namespace CK.MQTT
             }
             if( qos == QualityOfService.AtLeastOnce )
             {
-                await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+                await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                 _output.QueueReflexMessage( LifecyclePacketV3.Puback( packetId ) );
                 return OperationStatus.Done;
             }
             if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
             await _store.StoreIdAsync( packetId );
-            await _messageHandler( _mqttConfiguration.OnInputMonitor, topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+            await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
             _output.QueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) );
             return OperationStatus.Done;
         }

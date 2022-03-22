@@ -147,7 +147,7 @@ namespace CK.MQTT.Client.Tests
         public override IDuplexPipe DuplexPipe { get; set; }
 
 
-        public override void Close( IInputLogger? m )
+        public override void Close()
         {
         
             TestDuplexPipe.Input.Complete();

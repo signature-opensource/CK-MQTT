@@ -13,8 +13,8 @@ namespace CK.MQTT.Client
         readonly Mqtt3ClientConfiguration _config;
         readonly IStopwatch _stopwatch;
 
-        public OutputProcessorWithKeepAlive( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, ILocalPacketStore store, IRemotePacketStore remotePacketStore )
-            : base( pConfig, outputPump, pipeWriter, store, remotePacketStore )
+        public OutputProcessorWithKeepAlive( Mqtt3ClientConfiguration config, OutputPump outputPump, PipeWriter pipeWriter, ILocalPacketStore store, IRemotePacketStore remotePacketStore )
+            : base( config.ProtocolConfiguration, outputPump, pipeWriter, store )
         {
             _config = config;
             _stopwatch = config.StopwatchFactory.Create();
@@ -37,29 +37,26 @@ namespace CK.MQTT.Client
             return await base.SendPacketsAsync( cancellationToken );
         }
 
-        public override async Task WaitPacketAvailableToSendAsync( IOutputLogger? m, CancellationToken stopWaitToken, CancellationToken stopToken )
+        public override async Task WaitPacketAvailableToSendAsync( CancellationToken stopWaitToken, CancellationToken stopToken )
         {
             if( IsPingReqTimeout )
             {
-                await SelfDisconnectAsync( m?.Monitor, DisconnectReason.PingReqTimeout );
+                await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
                 return;
             }
             using( CancellationTokenSource cts = _config.CancellationTokenSourceFactory.Create( stopWaitToken, _config.KeepAliveSeconds * 1000 ) )
             {
-                await base.WaitPacketAvailableToSendAsync( m, cts.Token, stopToken );
+                await base.WaitPacketAvailableToSendAsync( cts.Token, stopToken );
                 // We didn't get cancelled, or the cancellation is due to the processor being cancelled.
                 if( !cts.IsCancellationRequested || stopToken.IsCancellationRequested ) return;
             }
-            using( m?.MainLoopSendingKeepAlive() )
-            {
-                await ProcessOutgoingPacketAsync( m, OutgoingPingReq.Instance, stopToken );
-            }
+            await ProcessOutgoingPacketAsync( OutgoingPingReq.Instance, stopToken );
             _stopwatch.Restart();
             WaitingPingResp = true;
         }
 
         public async ValueTask<OperationStatus> ProcessIncomingPacketAsync(
-            IInputLogger? m,
+            IMqtt3Sink sink,
             InputPump sender,
             byte header,
             uint packetLength,
@@ -71,13 +68,9 @@ namespace CK.MQTT.Client
             {
                 return await next();
             }
-            using( m?.ProcessPacket( PacketType.PingResponse ) )
-            {
-                WaitingPingResp = false;
-                if( packetLength > 0 ) m?.UnparsedExtraBytes( sender, PacketType.PingResponse, 0, packetLength, packetLength );
-                await pipeReader.SkipBytesAsync( packetLength, cancellationToken );
-                return OperationStatus.Done;
-            }
+            WaitingPingResp = false;
+            await pipeReader.SkipBytesAsync( sink, 0, packetLength, cancellationToken );
+            return OperationStatus.Done;
         }
     }
 }

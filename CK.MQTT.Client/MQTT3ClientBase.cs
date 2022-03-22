@@ -15,15 +15,18 @@ namespace CK.MQTT.Client
 
         protected MQTT3ClientBase( Mqtt3ClientConfiguration configuration )
         {
-            //_client = MQTTClient.Factory.Create( configuration, this );
+            _client = new MqttClientImpl( this, configuration, ReceiveAsync );
         }
 
-        protected MQTT3ClientBase( string host, int port )
-        : this( new Mqtt3ClientConfiguration( ProtocolConfiguration.Mqtt3, $"{host}:{port}" ) )
+        public bool IsConnected => _client.IsConnected;
+
+        protected MQTT3ClientBase( string host, int port ) : this( new Mqtt3ClientConfiguration( $"{host}:{port}" ) )
         {
         }
 
-        public virtual Task<ConnectResult> ConnectAsync( OutgoingLastWill lastwill, CancellationToken cancellationToken )
+        protected abstract ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
+
+        public virtual Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill = null, CancellationToken cancellationToken = default )
         {
             return _client.ConnectAsync( lastwill, cancellationToken );
         }
@@ -38,7 +41,6 @@ namespace CK.MQTT.Client
             return _client.UnsubscribeAsync( topics.ToArray() );
         }
 
-        protected abstract ValueTask ReceiveAsync( string topic, uint size, PipeReader reader, bool retain, QualityOfService q );
 
         protected abstract void OnUnattendedDisconnect( DisconnectReason reason );
 
@@ -91,9 +93,9 @@ namespace CK.MQTT.Client
             return _client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
         }
 
-        ValueTask IMqtt3Sink.ReceiveAsync( string topic, uint size, PipeReader reader, bool retain, QualityOfService q )
+        ValueTask IMqtt3Sink.ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
         {
-            return ReceiveAsync( topic, size, reader, retain, q );
+            return ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
         }
 
         void IMqtt3Sink.OnUnattendedDisconnect( DisconnectReason reason ) => OnUnattendedDisconnect( reason );

@@ -37,11 +37,11 @@ namespace CK.MQTT.Client.Tests
             using( CancellationTokenSource cts = new() )
             {
 
-                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+                (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
                 {
                     TestPacketHelper.SwallowEverything(cts.Token),
                 } );
-                await await client.PublishAsync( TestHelper.Monitor, new string( 'a', 128 - 2/*packet id size*/ ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
+                await await client.PublishAsync( new string( 'a', 128 - 2/*packet id size*/ ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
             }
         }
     }

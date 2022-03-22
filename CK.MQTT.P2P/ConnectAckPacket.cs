@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Packets
 {
     public class ConnectAckPacket : SimpleOutgoingPacket
     {

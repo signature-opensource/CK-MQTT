@@ -43,8 +43,8 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.SendToClient("20020000")
             } );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ClientHelpers.NotListening_Dispose );
-            await client.ConnectAsync( TestHelper.Monitor );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ClientHelpers.NotListening_Dispose );
+            await client.ConnectAsync();
             await pcktReplayer.StopAndEnsureValidAsync();
         }
 
@@ -63,19 +63,19 @@ namespace CK.MQTT.Client.Tests
             }
 
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ClientHelpers.NotListening_Dispose );
-            ConnectResult res = await client.ConnectAsync( TestHelper.Monitor );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ), ClientHelpers.NotListening_Dispose );
+            ConnectResult res = await client.ConnectAsync();
             res.Should().Be( new ConnectResult( ConnectError.ProtocolError_SessionNotFlushed ) );
 
             for( byte i = 2; i != 0; i++ )
             {
-                res = await client.ConnectAsync( TestHelper.Monitor );
+                res = await client.ConnectAsync();
                 res.Should().Be( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
             }
             await pcktReplayer.StopAndEnsureValidAsync();
         }
 
-        
+
 
         [Test]
         public async Task connect_with_clean_session_but_connack_return_code_is_invalid_should_throw()
@@ -93,10 +93,10 @@ namespace CK.MQTT.Client.Tests
             }
 
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
             for( byte i = startSkipCount; i != 0; i++ )
             {
-                ConnectResult res = await client.ConnectAsync( TestHelper.Monitor );
+                ConnectResult res = await client.ConnectAsync();
                 res.Should().Be( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
             }
             await packetReplayer.StopAndEnsureValidAsync();
@@ -117,10 +117,10 @@ namespace CK.MQTT.Client.Tests
             }
 
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
             for( byte i = 1; i < 6; i++ )
             {
-                ConnectResult res = await client.ConnectAsync( TestHelper.Monitor );
+                ConnectResult res = await client.ConnectAsync();
                 switch( i )
                 {
                     case 1:
@@ -154,8 +154,8 @@ namespace CK.MQTT.Client.Tests
             {
                 TestPacketHelper.Outgoing( "101600044d51545404020000000a434b4d71747454657374" )
             } );
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
-            Task<ConnectResult> connectTask = client.ConnectAsync( TestHelper.Monitor );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
+            Task<ConnectResult> connectTask = client.ConnectAsync();
             connectTask.IsCompleted.Should().BeFalse();
             await Task.Delay( 1 );
             packetReplayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
@@ -175,11 +175,11 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.SendToClient( "20020000" )
             } );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
-            await client.ConnectAsync( TestHelper.Monitor );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
+            await client.ConnectAsync();
             try
             {
-                await client.ConnectAsync( TestHelper.Monitor );
+                await client.ConnectAsync();
                 Assert.Fail();
             }
             catch( Exception e )
@@ -203,10 +203,10 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.SendToClient( "20020000" ) // Valid response.
             } );
 
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
-            ConnectResult res = await client.ConnectAsync( TestHelper.Monitor );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( packetReplayer ), ClientHelpers.NotListening_Dispose );
+            ConnectResult res = await client.ConnectAsync();
             res.ConnectError.Should().NotBe( ConnectError.None );
-            ConnectResult res2 = await client.ConnectAsync( TestHelper.Monitor );
+            ConnectResult res2 = await client.ConnectAsync();
             res2.ConnectError.Should().Be( ConnectError.None );
             await packetReplayer.StopAndEnsureValidAsync();
         }
@@ -227,16 +227,21 @@ namespace CK.MQTT.Client.Tests
             } );
             TaskCompletionSource tcs = new();
             ApplicationMessage? msg = null;
-            InputMonitorCounter inputLogger = new( new InputLoggerMqttActivityMonitor( new ActivityMonitor( "Input Logger" ) ) );
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer, inputLogger: inputLogger ),
-                ClientHelpers.NotListening_Dispose );
-            await client.ConnectAsync( TestHelper.Monitor );
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ),
+                ( IActivityMonitor? m, ApplicationMessage incMsg, CancellationToken cancellationToken ) =>
+                {
+                    msg = incMsg;
+                    tcs.SetResult();
+                    return new ValueTask();
+                }
+            );
+            await client.ConnectAsync();
             await tcs.Task;
             msg.Should().NotBeNull();
             msg.Should().BeEquivalentTo( new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtLeastOnce, false )
             );
-            inputLogger.UnparsedExtraBytesCounter.Should().Be( 1 );
+            client.OnUnparsedExtraDataCount.Should().Be( 1 );
             await pcktReplayer.StopAndEnsureValidAsync();
         }
 
@@ -249,11 +254,10 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.SendToClient("20020000")
             } );
 
-            InputMonitorCounter inputLogger = new( new InputLoggerMqttActivityMonitor( new ActivityMonitor( "Input Logger" ) ) );
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer, inputLogger: inputLogger ),
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client( TestConfigs.DefaultTestConfig( pcktReplayer ),
                 ClientHelpers.NotListening_Dispose );
-            await client.ConnectAsync( TestHelper.Monitor );
-            inputLogger.UnparsedExtraBytesCounter.Should().Be( 0 );
+            await client.ConnectAsync();
+            client.OnUnparsedExtraDataCount.Should().Be( 0 );
             await pcktReplayer.StopAndEnsureValidAsync();
         }
 
@@ -266,13 +270,12 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.SendToClient("20020000")
             } );
 
-            InputMonitorCounter inputLogger = new( new InputLoggerMqttActivityMonitor( new ActivityMonitor( "Input Logger" ) ) );
-            IMqtt3Client client = MqttClient.Factory.CreateMQTT3Client(
-                TestConfigs.DefaultTestConfig( pcktReplayer, inputLogger: inputLogger, credentials: new MqttClientCredentials() ),
+            SimpleTestMqtt3Client client = TestMqttClient.Factory.CreateMQTT3Client(
+                TestConfigs.DefaultTestConfig( pcktReplayer, credentials: new MqttClientCredentials() ),
                  ClientHelpers.NotListening_Dispose
             );
-            await client.ConnectAsync( TestHelper.Monitor );
-            inputLogger.UnparsedExtraBytesCounter.Should().Be( 0 );
+            await client.ConnectAsync();
+            client.OnUnparsedExtraDataCount.Should().Be( 0 );
             await pcktReplayer.StopAndEnsureValidAsync();
         }
     }

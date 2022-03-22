@@ -3,7 +3,7 @@ using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using CK.MQTT;
 using CK.MQTT.Client;
-using CK.MQTT.Client.Closures;
+using CK.MQTT.Client.Tests.Helpers;
 using System;
 using System.IO.Pipelines;
 using System.Text;
@@ -16,11 +16,11 @@ namespace SimpleClientTest
     class Program
     {
         bool _isLowLevel;
-        async ValueTask MessageHandlerDelegate( IActivityMonitor? m, string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
+        async ValueTask MessageHandlerDelegate( string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancelToken )
         {
             if( !topic.Contains( "lowlevel" ) )
             {
-                await new DisposableMessageClosure( OtherHandler ).HandleMessageAsync( m, topic, pipe, payloadLength, qos, retain, cancelToken );
+                await new DisposableMessageClosure( OtherHandler ).HandleMessageAsync( topic, pipe, payloadLength, qos, retain, cancelToken );
             }
             else
             {

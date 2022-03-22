@@ -1,3 +1,4 @@
+using CK.MQTT.Client;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
@@ -17,21 +18,18 @@ namespace CK.MQTT
         {
             _store = store;
         }
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IInputLogger? m, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
         {
             if( PacketType.SubscribeAck != (PacketType)header )
             {
                 return await next();
             }
-            using( m?.ProcessPacket( PacketType.SubscribeAck ) )
-            {
-                ReadResult read = await pipeReader.ReadAtLeastAsync( (int)packetLength, cancellationToken );
-                if( read.Buffer.Length < packetLength) return OperationStatus.NeedMoreData;
-                Parse( read.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
-                pipeReader.AdvanceTo( position );
-                await _store.OnQos1AckAsync( m, packetId, qos );
-                return OperationStatus.Done;
-            }
+            ReadResult read = await pipeReader.ReadAtLeastAsync( (int)packetLength, cancellationToken );
+            if( read.Buffer.Length < packetLength ) return OperationStatus.NeedMoreData;
+            Parse( read.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
+            pipeReader.AdvanceTo( position );
+            await _store.OnQos1AckAsync( sink, packetId, qos );
+            return OperationStatus.Done;
         }
 
         static void Parse( ReadOnlySequence<byte> buffer,

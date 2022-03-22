@@ -1,7 +1,7 @@
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     class OutgoingUnsuscribeAck
     {
-        public static IOutgoingPacket UnsuscribeAck( ushort PacketId ) => new LifecyclePacketV3( (byte)PacketType.UnsubscribeAck, packetId, true);
+        public static IOutgoingPacket UnsuscribeAck( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.UnsubscribeAck, packetId, true);
     }
 }

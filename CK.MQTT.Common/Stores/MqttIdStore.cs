@@ -68,11 +68,11 @@ namespace CK.MQTT.Stores
 
         readonly IdStore<EntryContent> _idStore;
         readonly IStopwatch _stopwatch;
-        protected readonly MqttConfigurationBase Config;
+        protected readonly Mqtt3ConfigurationBase Config;
         TaskCompletionSource? _idFullTCS = null;
         CancellationTokenSource _packetDroppedCTS = new();
         uint _droppedCount = 0;
-        protected MqttIdStore( ushort packetIdMaxValue, MqttConfigurationBase config )
+        protected MqttIdStore( ushort packetIdMaxValue, Mqtt3ConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
             _stopwatch = config.StopwatchFactory.Create();

@@ -35,12 +35,12 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task simple_publish_qos0_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.Outgoing("3018000a7465737420746f70696374657374207061796c6f6164")
             } );
 
-            await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
+            await await client.PublishAsync( new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false )
             );
             await packetReplayer.StopAndEnsureValidAsync();
@@ -49,13 +49,13 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task simple_publish_qos1_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.Outgoing("321a000a7465737420746f706963000174657374207061796c6f6164"),
                 TestPacketHelper.SendToClient("40020001")
             } );
 
-            await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
+            await await client.PublishAsync( new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtLeastOnce, false )
             );
 
@@ -65,7 +65,7 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task simple_publish_qos2_works()
         {
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.Outgoing("341a000a7465737420746f706963000174657374207061796c6f6164"),
                 TestPacketHelper.SendToClient("50020001"),
@@ -73,7 +73,7 @@ namespace CK.MQTT.Client.Tests
                 TestPacketHelper.SendToClient("70020001")
             } );
 
-            await await client.PublishAsync( TestHelper.Monitor, new ApplicationMessage(
+            await await client.PublishAsync( new ApplicationMessage(
                 "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.ExactlyOnce, false )
             );
             await packetReplayer.StopAndEnsureValidAsync();
@@ -85,11 +85,11 @@ namespace CK.MQTT.Client.Tests
             using( CancellationTokenSource cts = new() )
             {
 
-                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+                (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
                 {
                     TestPacketHelper.SwallowEverything(cts.Token),
                 } );
-                await await client.PublishAsync( TestHelper.Monitor, new string( 'a', ushort.MaxValue ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
+                await await client.PublishAsync( new string( 'a', ushort.MaxValue ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
                 cts.Cancel();
             }
         }
@@ -100,13 +100,13 @@ namespace CK.MQTT.Client.Tests
             using( CancellationTokenSource cts = new() )
             {
 
-                (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+                (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
                 {
                     TestPacketHelper.SwallowEverything(cts.Token),
                 } );
                 try
                 {
-                    await await client.PublishAsync( TestHelper.Monitor, new string( 'a', ushort.MaxValue + 1 ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
+                    await await client.PublishAsync( new string( 'a', ushort.MaxValue + 1 ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
                     Assert.Fail();
                 }
                 catch( Exception )

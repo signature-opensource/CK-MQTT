@@ -7,14 +7,10 @@ namespace CK.MQTT
     /// <summary>
     /// Base configuration that applies to a server as well as a MQTT client.
     /// </summary>
-    public class MqttConfigurationBase
+    public class Mqtt3ConfigurationBase
     {
-        public MqttConfigurationBase( ProtocolConfiguration protocolConfiguration )
-        {
-            _protocolConfiguration = protocolConfiguration;
-        }
         readonly int _waitTimeoutMilliseconds = 5_000;
-        readonly ProtocolConfiguration _protocolConfiguration;
+        public virtual ProtocolConfiguration ProtocolConfiguration => ProtocolConfiguration.Mqtt3;
 
         /// <summary>
         /// Time to wait before a non acknowledged packet is resent.
@@ -35,7 +31,7 @@ namespace CK.MQTT
         ILocalPacketStore? _localStore;
         public ILocalPacketStore LocalPacketStore
         {
-            get => _localStore ??= new MemoryPacketStore( _protocolConfiguration, this, ushort.MaxValue );
+            get => _localStore ??= new MemoryPacketStore( ProtocolConfiguration, this, ushort.MaxValue );
             init => _localStore = value;
         }
 

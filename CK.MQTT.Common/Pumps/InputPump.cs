@@ -18,7 +18,7 @@ namespace CK.MQTT.Pumps
     /// </summary>
     public class InputPump : PumpBase
     {
-        readonly MqttConfigurationBase _config;
+        readonly Mqtt3ConfigurationBase _config;
         readonly PipeReader _pipeReader;
         readonly IMqtt3Sink _sink;
 
@@ -27,7 +27,7 @@ namespace CK.MQTT.Pumps
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public InputPump( IMqtt3Sink sink, Func<DisconnectReason, ValueTask> onDisconnect, MqttConfigurationBase config, PipeReader pipeReader, Reflex reflex ) : base( onDisconnect )
+        public InputPump( IMqtt3Sink sink, Func<DisconnectReason, ValueTask> onDisconnect, Mqtt3ConfigurationBase config, PipeReader pipeReader, Reflex reflex ) : base( onDisconnect )
         {
             (_config, _pipeReader, CurrentReflex) = (config, pipeReader, reflex);
             SetRunningLoop( ReadLoopAsync() );

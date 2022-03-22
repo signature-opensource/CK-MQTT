@@ -42,7 +42,7 @@ namespace CK.MQTT.Client.Tests
             {
                 sb.Append( "61" );
             }
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.SendToClient(sb.ToString()),
             }, messageProcessor: ( m, msg, token ) =>
@@ -60,7 +60,7 @@ namespace CK.MQTT.Client.Tests
         {
             TaskCompletionSource<DisconnectReason> tcs = new();
 
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c"),
                 TestPacketHelper.Disconnect
@@ -81,7 +81,7 @@ namespace CK.MQTT.Client.Tests
         {
             TaskCompletionSource<DisconnectReason> tcs = new();
 
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c"),
                 TestPacketHelper.Disconnect
@@ -102,7 +102,7 @@ namespace CK.MQTT.Client.Tests
         {
             TaskCompletionSource<DisconnectReason> tcs = new();
 
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.SendToClient("308080808080000a7465737420746f70696374657374207061796c"),
                 TestPacketHelper.Disconnect
@@ -123,7 +123,7 @@ namespace CK.MQTT.Client.Tests
         {
             TaskCompletionSource tcs = new();
             int i = 0;
-            (PacketReplayer packetReplayer, IMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
             {
                 TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c6f6164"),
                 TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c6f6164"),

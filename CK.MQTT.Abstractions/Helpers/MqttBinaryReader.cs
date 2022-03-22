@@ -3,6 +3,7 @@ using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -89,10 +90,9 @@ namespace CK.MQTT
         public static async ValueTask SkipBytesAsync( this PipeReader reader, IMqtt3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
         {
             ReadResult read = await reader.ReadAtLeastAsync( (int)skipCount, cancellationToken );
-            sink.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, read.Buffer.Length > skipCount ? skipCount : read.Buffer.Length ) );
+            if( read.Buffer.Length < skipCount ) throw new EndOfStreamException("Unexpected end of stream.");
+            sink.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, skipCount) );
             reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
-            // We mark the data as consumed.
-            reader.AdvanceTo( read.Buffer.End );
         }
     }
 }

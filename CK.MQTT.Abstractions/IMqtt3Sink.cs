@@ -4,13 +4,16 @@ using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
     public interface IMqtt3Sink
     {
-        ValueTask ReceiveAsync( string topic, uint size, PipeReader reader, bool retain, QualityOfService q );
+        public bool IsConnected { get; }
+
+        ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
 
         void OnUnattendedDisconnect( DisconnectReason reason );
 

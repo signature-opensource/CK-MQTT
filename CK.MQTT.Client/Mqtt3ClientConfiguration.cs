@@ -5,7 +5,7 @@ namespace CK.MQTT
     /// <summary>
     /// Configuration of a <see cref="IMqtt3Client"/>.
     /// </summary>
-    public class Mqtt3ClientConfiguration : MqttConfigurationBase
+    public class Mqtt3ClientConfiguration : Mqtt3ConfigurationBase
     {
         private DisconnectBehavior _disconnectBehavior = DisconnectBehavior.Nothing;
 
@@ -13,7 +13,7 @@ namespace CK.MQTT
         /// Initializes a new instance of the <see cref="Mqtt3ClientConfiguration" /> class.
         /// </summary>
         /// <param name="connectionString">The connection string that will be used by the <see cref="IMqttChannelFactory"/>.</param>
-        public Mqtt3ClientConfiguration( ProtocolConfiguration pConfig, string connectionString ) : base( pConfig ) => ConnectionString = connectionString;
+        public Mqtt3ClientConfiguration(string connectionString ) => ConnectionString = connectionString;
 
         public string ConnectionString { get; }
 

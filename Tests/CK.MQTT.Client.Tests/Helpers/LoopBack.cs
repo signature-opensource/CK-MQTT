@@ -15,8 +15,8 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public bool IsConnected { get; private set; } = true;
 
-        public ValueTask StartAsync( IActivityMonitor? m ) => new();
-        public abstract void Close( IInputLogger? m );
+        public ValueTask StartAsync( ) => new();
+        public abstract void Close();
 
         public Task OnDisposeTask => _tcs.Task;
         readonly TaskCompletionSource _tcs = new();

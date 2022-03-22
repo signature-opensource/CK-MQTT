@@ -27,7 +27,7 @@ namespace CK.MQTT
             }
 
             public readonly IMqttChannel Channel;
-            readonly MqttConfigurationBase _config;
+            readonly Mqtt3ConfigurationBase _config;
             public OutputPump OutputPump { get; }
 
             public Task CloseAsync()
@@ -42,7 +42,6 @@ namespace CK.MQTT
         protected DuplexPump<ClientState>? Pumps { get; set; }
 
         protected Mqtt3ClientConfiguration Config { get; }
-        protected ProtocolConfiguration ProtocolConfig { get; set; }
 
         readonly Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
 
@@ -54,7 +53,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        internal protected MqttClientImpl( IMqtt3Sink sink, ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        internal protected MqttClientImpl( IMqtt3Sink sink, Mqtt3ClientConfiguration config, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
         {
             (Config, _messageHandler) = (config, messageHandler);
             if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds * 1000 && config.KeepAliveSeconds != 0 )
@@ -62,8 +61,8 @@ namespace CK.MQTT
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
             }
             _sink = sink;
-            ProtocolConfig = pConfig;
-
+            _remotePacketStore = config.RemotePacketStore;
+            _localPacketStore = config.LocalPacketStore;
         }
 
         /// <summary>
@@ -77,7 +76,7 @@ namespace CK.MQTT
 
 
         /// <inheritdoc/>
-        public async Task<ConnectResult> ConnectAsync( bool waitForConnection = true, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
             if( lastWill != null )
             {
@@ -123,12 +122,12 @@ namespace CK.MQTT
                 // Enable keepalive only if we need it.
                 if( Config.KeepAliveSeconds == 0 )
                 {
-                    outputProcessor = new OutputProcessor( ProtocolConfig, output, channel.DuplexPipe.Output, _localPacketStore );
+                    outputProcessor = new OutputProcessor( Config.ProtocolConfiguration, output, channel.DuplexPipe.Output, _localPacketStore );
                 }
                 else
                 {
                     // If keepalive is enabled, we add it's handler to the middlewares.
-                    OutputProcessorWithKeepAlive withKeepAlive = new( ProtocolConfig, Config, output, channel.DuplexPipe.Output, _localPacketStore, _remotePacketStore ); // Require channel started.
+                    OutputProcessorWithKeepAlive withKeepAlive = new( Config, output, channel.DuplexPipe.Output, _localPacketStore, _remotePacketStore ); // Require channel started.
                     outputProcessor = withKeepAlive;
                     builder.UseMiddleware( withKeepAlive );
                 }
@@ -151,13 +150,13 @@ namespace CK.MQTT
                 );
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
-                OutgoingConnect outgoingConnect = new( ProtocolConfig, Config, lastWill );
+                OutgoingConnect outgoingConnect = new( Config, lastWill );
 
                 WriteResult writeConnectResult;
                 using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
                 {
                     // Send the packet.
-                    writeConnectResult = await outgoingConnect.WriteAsync( ProtocolConfig.ProtocolLevel, channel.DuplexPipe.Output, cts.Token );
+                    writeConnectResult = await outgoingConnect.WriteAsync( Config.ProtocolConfiguration.ProtocolLevel, channel.DuplexPipe.Output, cts.Token );
                 }
 
                 async ValueTask<ConnectResult> Exit( ConnectError connectError )
@@ -245,7 +244,7 @@ namespace CK.MQTT
 
         CancellationTokenSource? _running;
 
-        Task _autoReconnectTask;
+        Task? _autoReconnectTask;
         TaskCompletionSource? _disconnectTCS;
         public async Task ReconnectBackgroundAsync()
         {
@@ -321,7 +320,7 @@ namespace CK.MQTT
             // Because we stopped the pumps, their states cannot change concurrently.
 
             //TODO: the return type may be not enough there, if the cancellation token was triggered, we may not know the final
-            await OutgoingDisconnect.Instance.WriteAsync( ProtocolConfig.ProtocolLevel, duplex.State.Channel.DuplexPipe.Output, cancellationToken );
+            await OutgoingDisconnect.Instance.WriteAsync( Config.ProtocolConfiguration.ProtocolLevel, duplex.State.Channel.DuplexPipe.Output, cancellationToken );
             await duplex.CloseAsync();
             duplex.Dispose();
             Pumps = null;

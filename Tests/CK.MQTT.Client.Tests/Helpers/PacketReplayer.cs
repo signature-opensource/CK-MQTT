@@ -17,7 +17,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         public Channel<TestWorker> PacketsWorker { get; }
         public LoopBack? Channel { get; private set; }
-        public IMqtt3Client Client { get; set; } = null!;
+        public SimpleTestMqtt3Client Client { get; set; } = null!;
         public PacketReplayer( string channelType, IEnumerable<TestWorker>? packets = null )
         {
             PacketsWorker = System.Threading.Channels.Channel.CreateUnbounded<TestWorker>();
@@ -76,7 +76,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             return _tcs.Task;
         }
 
-        public ValueTask<IMqttChannel> CreateAsync( IActivityMonitor? m, string connectionString )
+        public ValueTask<IMqttChannel> CreateAsync( string connectionString )
         {
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch

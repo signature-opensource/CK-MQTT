@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace CK.MQTT.Packets
 {
     public delegate ValueTask<WriteResult> PayloadWriterDelegate( PipeWriter writer, CancellationToken cancellationToken );
-    class BasicOutgoingApplicationMessage : OutgoingMessage
+    public class BasicOutgoingApplicationMessage : OutgoingMessage
     {
         readonly Func<uint> _getPayloadSize;
         readonly PayloadWriterDelegate _payloadWriter;

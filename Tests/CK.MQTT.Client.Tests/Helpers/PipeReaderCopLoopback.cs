@@ -19,7 +19,7 @@ namespace CK.MQTT.Client.Tests
 
         public override IDuplexPipe TestDuplexPipe { get; set; }
 
-        public override void Close( IInputLogger? m )
+        public override void Close()
         {
             TestDuplexPipe.Output.Complete();
             TestDuplexPipe.Output.CancelPendingFlush();
