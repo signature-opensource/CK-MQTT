@@ -33,16 +33,16 @@ namespace CK.MQTT.Client.Tests.Helpers
         public TestDelayHandler TestDelayHandler { get; } = new();
         public string ChannelType { get; set; }
 
-        Task? _workLoopTask;
+        Task _workLoopTask;
         public async Task StopAndEnsureValidAsync()
         {
             PacketsWorker.Writer.Complete();
-            Task task = _workLoopTask!;
+            Task task = _completedTcs.Task;
             if( !await task.WaitAsync( 50000 ) )
             {
                 Assert.Fail( "Packet replayer didn't stopped in time." );
             }
-            if( _workLoopTask!.IsFaulted ) await _workLoopTask;
+            await _workLoopTask;
             _workLoopTask?.IsCompletedSuccessfully.Should().BeTrue();
             PacketsWorker.Reader.Count.Should().Be( 0 );
         }
@@ -57,11 +57,13 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 using( _m.OpenInfo( $"Running test worker {i++}." ) )
                 {
-                    if( !await func( _m, this ) ) break;
+                    if( !await func( _m, this ) ) return;
                 }
             }
+            _completedTcs.SetResult();
         }
 
+        readonly TaskCompletionSource _completedTcs = new();
         TaskCompletionSource? _tcs;
         public Task WhenConnected()
         {
@@ -76,7 +78,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             return _tcs.Task;
         }
 
-        public ValueTask<IMqttChannel> CreateAsync( string connectionString )
+        public async ValueTask<IMqttChannel> CreateAsync( string connectionString )
         {
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch
@@ -86,10 +88,8 @@ namespace CK.MQTT.Client.Tests.Helpers
                 "PipeReaderCop" => new PipeReaderCopLoopback(),
                 _ => throw new InvalidOperationException( "Unknown channel type." )
             };
-            if( _workLoopTask == null )
-            {
-                _workLoopTask = WorkLoop();
-            }
+            if( _workLoopTask != null ) await _workLoopTask;
+            _workLoopTask = WorkLoop();
             lock( this )
             {
                 if( _tcs is not null )
@@ -97,7 +97,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                     _tcs.TrySetResult();
                 }
             }
-            return new ValueTask<IMqttChannel>(Channel);
+            return Channel;
         }
     }
 }

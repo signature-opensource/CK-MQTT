@@ -55,47 +55,47 @@ namespace CK.MQTT.Client.Tests
             await packetReplayer.StopAndEnsureValidAsync();
         }
 
-        [Test]
-        public async Task partial_message_throws_with_application_message_closure()
-        {
-            TaskCompletionSource<DisconnectReason> tcs = new();
+        //[Test]
+        //public async Task partial_message_throws_with_application_message_closure()
+        //{
+        //    TaskCompletionSource<DisconnectReason> tcs = new();
 
-            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
-            {
-                TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c"),
-                TestPacketHelper.Disconnect
-            }, messageProcessor: ( IActivityMonitor? m, ApplicationMessage msg, CancellationToken token ) =>
-            {
-                tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
-                return new ValueTask();
-            }, ( reason ) =>
-            {
-                tcs.SetResult( reason );
-            } );
-            (await tcs.Task).Should().Be( DisconnectReason.RemoteDisconnected );
-            await packetReplayer.StopAndEnsureValidAsync();
-        }
+        //    (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+        //    {
+        //        TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c"),
+        //        TestPacketHelper.Disconnect
+        //    }, messageProcessor: ( IActivityMonitor? m, ApplicationMessage msg, CancellationToken token ) =>
+        //    {
+        //        tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
+        //        return new ValueTask();
+        //    }, ( reason ) =>
+        //    {
+        //        tcs.SetResult( reason );
+        //    } );
+        //    (await tcs.Task).Should().Be( DisconnectReason.RemoteDisconnected );
+        //    await packetReplayer.StopAndEnsureValidAsync();
+        //} //TODO: enable for client thats doesn't expose PipeReader
 
-        [Test]
-        public async Task partial_message_throws_with_disposable_application_message_closure()
-        {
-            TaskCompletionSource<DisconnectReason> tcs = new();
+        //[Test]
+        //public async Task partial_message_throws_with_disposable_application_message_closure()
+        //{
+        //    TaskCompletionSource<DisconnectReason> tcs = new();
 
-            (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
-            {
-                TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c"),
-                TestPacketHelper.Disconnect
-            }, messageProcessor: ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken token ) =>
-            {
-                tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
-                return new ValueTask();
-            }, ( reason ) =>
-            {
-                tcs.SetResult( reason );
-            } );
-            (await tcs.Task).Should().Be( DisconnectReason.RemoteDisconnected );
-            await packetReplayer.StopAndEnsureValidAsync();
-        }
+        //    (PacketReplayer packetReplayer, SimpleTestMqtt3Client client) = await Scenario.ConnectedClient( ClassCase, new[]
+        //    {
+        //        TestPacketHelper.SendToClient("3018000a7465737420746f70696374657374207061796c"),
+        //        TestPacketHelper.Disconnect
+        //    }, messageProcessor: ( IActivityMonitor? m, DisposableApplicationMessage msg, CancellationToken token ) =>
+        //    {
+        //        tcs.TrySetException( new AssertionException( "We shouldn't receive a message in this scenario." ) );
+        //        return new ValueTask();
+        //    }, ( reason ) =>
+        //    {
+        //        tcs.SetResult( reason );
+        //    } );
+        //    (await tcs.Task).Should().Be( DisconnectReason.RemoteDisconnected );
+        //    await packetReplayer.StopAndEnsureValidAsync();
+        //}//TODO: enable for client thats doesn't expose PipeReader
 
         [Test]
         public async Task message_with_invalid_size_lead_to_protocol_error()
