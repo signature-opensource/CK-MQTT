@@ -52,7 +52,6 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static async Task ConnectClient( this PacketReplayer @this, IActivityMonitor m, TestMqttClient client )
         {
             var task = client.ConnectAsync();
-
             await @this.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             await @this.SendToClient( TestHelper.Monitor, "20020000" );
             await task;
@@ -62,7 +61,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static async Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this )
         {
             var task = @this.Events.Reader.ReadAsync().AsTask();
-            if( !await task.WaitAsync( 500 ) )
+            if( !await task.WaitAsync( 30000 ) )
             {
                 Assert.Fail( "The replayer didn't had any event." );
             }

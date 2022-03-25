@@ -1,9 +1,11 @@
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Abstractions.Tests
 {
@@ -30,5 +32,23 @@ namespace CK.MQTT.Client.Abstractions.Tests
             cts.Cancel();
             cts.Cancel();
         }
+
+        [Test]
+        public void StreamPipeReader_ReadAtLeastAsync0()
+        {
+            MemoryStream mem = new();
+            var piperReader = PipeReader.Create( mem );
+            ValueTask<ReadResult> task = piperReader.ReadAtLeastAsync( 0 );
+            task.IsCompleted.Should().BeTrue();
+        }
+
+        //[Test]
+        //public void DefaultPipeReader_ReadAtLeastAsync0()
+        //{
+        //    var pipe = new Pipe();
+        //    var piperReader = pipe.Reader;
+        //    ValueTask<ReadResult> task = piperReader.ReadAtLeastAsync( 0 );
+        //    task.IsCompleted.Should().BeTrue();
+        //}
     }
 }

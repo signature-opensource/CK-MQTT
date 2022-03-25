@@ -12,8 +12,11 @@ namespace CK.MQTT.Client
     {
         readonly ChannelWriter<object?> _writer;
 
+        public Mqtt3ClientConfiguration Config { get; }
+
         public TestMqttClient( Mqtt3ClientConfiguration config, ChannelWriter<object?> writer ) : base(config)
         {
+            Config = config;
             _writer = writer;
         }
 
