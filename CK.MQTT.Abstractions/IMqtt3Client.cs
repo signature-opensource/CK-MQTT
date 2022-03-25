@@ -1,7 +1,6 @@
 using CK.MQTT.Packets;
 using System;
 using System.Collections.Generic;
-using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -49,7 +48,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
         /// for more details about the protocol disconnection
         /// </remarks>
-        Task<bool> DisconnectAsync( bool deleteSession, bool cancelAckTasks, CancellationToken cancellationToken );
+        Task<bool> DisconnectAsync( bool deleteSession, CancellationToken cancellationToken );
 
         /// <summary>
         /// Unsubscribe the client from topics.

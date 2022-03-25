@@ -1,9 +1,5 @@
-using CK.Core;
-using System.Diagnostics.CodeAnalysis;
-
 namespace CK.MQTT.Client.Tests.Helpers
 {
-    [ExcludeFromCodeCoverage]
     static class TestConfigs
     {
         public static Mqtt3ClientConfiguration DefaultTestConfig(

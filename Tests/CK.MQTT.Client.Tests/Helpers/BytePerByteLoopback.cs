@@ -1,17 +1,14 @@
 using CK.MQTT.Client.Tests.Helpers;
 using System;
 using System.Buffers;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Drawing;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
 {
-    [ExcludeFromCodeCoverage]
     class BytePerBytePipeReader : PipeReader
     {
         readonly PipeReader _pr;
@@ -102,7 +99,6 @@ namespace CK.MQTT.Client.Tests
         }
     }
 
-    [ExcludeFromCodeCoverage]
     public class BytePerByteLoopback : LoopBack
     {
         class SingleBytePool : MemoryPool<byte>
@@ -133,7 +129,7 @@ namespace CK.MQTT.Client.Tests
             {
             }
         }
-        public BytePerByteLoopback()
+        public BytePerByteLoopback(ChannelWriter<object?> writer ) : base( writer )
         {
             const int size = 16;
             Pipe input = new( new PipeOptions( minimumSegmentSize: size, pool: new SingleBytePool() ) );

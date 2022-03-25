@@ -1,10 +1,8 @@
-using CK.MQTT.Client;
 using CK.MQTT.Common.Pumps;
 using CK.MQTT.Packets;
 using CK.MQTT.Pumps;
 using System;
 using System.Buffers;
-using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,8 +12,8 @@ namespace CK.MQTT.P2P
     {
         readonly IMqtt5ServerClientSink _sink;
 
-        internal P2PClient( IMqtt5ServerClientSink sink, P2PMqttConfiguration config, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            : base( sink, config, messageHandler )
+        internal P2PClient( IMqtt5ServerClientSink sink, P2PMqttConfiguration config )
+            : base( sink, config )
         {
             _sink = sink;
             P2PConfig = config;
@@ -81,7 +79,7 @@ namespace CK.MQTT.P2P
 
                 return ConnectError.None;
             }
-            catch( Exception e )
+            catch( Exception )
             {
                 // We may throw before the creation of the duplex pump.
                 if( Pumps is not null ) await Pumps.CloseAsync(); ;

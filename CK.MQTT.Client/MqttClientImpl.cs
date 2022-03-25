@@ -9,8 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,7 +25,6 @@ namespace CK.MQTT
             }
 
             public readonly IMqttChannel Channel;
-            readonly Mqtt3ConfigurationBase _config;
             public OutputPump OutputPump { get; }
 
             public Task CloseAsync()
@@ -43,8 +40,6 @@ namespace CK.MQTT
 
         protected Mqtt3ClientConfiguration Config { get; }
 
-        readonly Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
-
         readonly IRemotePacketStore _remotePacketStore;
         readonly ILocalPacketStore _localPacketStore;
 
@@ -53,9 +48,9 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        internal protected MqttClientImpl( IMqtt3Sink sink, Mqtt3ClientConfiguration config, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
+        public MqttClientImpl( IMqtt3Sink sink, Mqtt3ClientConfiguration config )
         {
-            (Config, _messageHandler) = (config, messageHandler);
+            Config = config;
             if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds * 1000 && config.KeepAliveSeconds != 0 )
             {
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
@@ -71,7 +66,7 @@ namespace CK.MQTT
         /// <param name="msg"></param>
         /// <returns></returns>
         protected ValueTask OnMessageAsync( string topic, PipeReader pipeReader, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
-            => _messageHandler( topic, pipeReader, payloadLength, qos, retain, cancellationToken );
+            => _sink.ReceiveAsync( topic, pipeReader, payloadLength, qos, retain, cancellationToken );
 
 
 
@@ -218,7 +213,7 @@ namespace CK.MQTT
                 }
                 return res;
             }
-            catch( Exception e )
+            catch( Exception )
             {
                 // We may throw before the creation of the duplex pump.
                 if( Pumps is not null )
@@ -305,17 +300,16 @@ namespace CK.MQTT
         /// Called by the external world to explicitly close the connection to the remote.
         /// </summary>
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        public async Task<bool> DisconnectAsync( bool clearSession, bool cancelAckTasks, CancellationToken cancellationToken )
+        public async Task<bool> DisconnectAsync( bool clearSession, CancellationToken cancellationToken )
         {
             _running?.Cancel();
             _disconnectTCS?.TrySetResult();
-            await _autoReconnectTask;
+            if( _autoReconnectTask != null ) await _autoReconnectTask;
             DuplexPump<ClientState>? duplex = Pumps;
-            if( clearSession && !cancelAckTasks ) throw new ArgumentException( "When the session is cleared, the ACK tasks must be canceled too." );
             if( duplex is null ) return false;
             if( !duplex.IsRunning ) return false;
-            if( cancelAckTasks ) _localPacketStore.CancelAllAckTask();
             await duplex.StopWorkAsync();
+            _localPacketStore.CancelAllAckTask(); //Cancel acks when we know no more work will come.
             if( duplex.IsClosed ) return false;
             // Because we stopped the pumps, their states cannot change concurrently.
 

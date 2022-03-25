@@ -1,7 +1,6 @@
 using CK.MQTT.Client;
 using CK.MQTT.Packets;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 

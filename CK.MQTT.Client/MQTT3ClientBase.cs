@@ -3,19 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public abstract class MQTT3ClientBase : IMqtt3Sink
+    public abstract class MQTT3ClientBase : IMqtt3Sink, IMqtt3Client
     {
         readonly IMqtt3Client _client;
 
         protected MQTT3ClientBase( Mqtt3ClientConfiguration configuration )
         {
-            _client = new MqttClientImpl( this, configuration, ReceiveAsync );
+            _client = new MqttClientImpl( this, configuration );
         }
 
         public bool IsConnected => _client.IsConnected;
@@ -31,9 +30,9 @@ namespace CK.MQTT.Client
             return _client.ConnectAsync( lastwill, cancellationToken );
         }
 
-        public virtual Task<bool> DisconnectAsync( bool deleteSession )
+        public virtual Task<bool> DisconnectAsync( bool deleteSession, CancellationToken cancellationToken )
         {
-            return _client.DisconnectAsync( deleteSession, true, default );
+            return _client.DisconnectAsync( deleteSession, cancellationToken );
         }
 
         public virtual ValueTask<Task> UnsubscribeAsync( IEnumerable<string> topics )
@@ -113,5 +112,10 @@ namespace CK.MQTT.Client
         void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => OnQueueFullPacketDropped( packetId, packetType );
         void IMqtt3Sink.OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData )
             => OnUnparsedExtraData( packetId, unparsedData );
+
+        public void Dispose()
+        {
+            _client.Dispose();
+        }
     }
 }

@@ -1,14 +1,12 @@
 using CK.MQTT.Common.Time;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
-    [ExcludeFromCodeCoverage]
     public class TestDelayHandler : IDelayHandler, IStopwatchFactory, ICancellationTokenSourceFactory
     {
         readonly object _lock = new();

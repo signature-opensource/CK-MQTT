@@ -6,7 +6,6 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.Packets.IOutgoingPacket;
 
 namespace CK.MQTT.Packets
 {

@@ -1,19 +1,15 @@
 using FluentAssertions;
 using NUnit.Framework;
 using System;
-using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Abstractions.Tests
 {
     /// <summary>
     /// Simple assertions on the behavior of the BCL.
     /// </summary>
-    [ExcludeFromCodeCoverage]
     public class BCLAsserts
     {
         [Test]

@@ -1,35 +1,26 @@
 using CK.MQTT.Client.Tests.Helpers;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
-    [ExcludeFromCodeCoverage]
     public class PingTests_PipeReaderCop : PingTests
     {
         public override string ClassCase => "PipeReaderCop";
     }
 
-    [ExcludeFromCodeCoverage]
     public class PingTests_Default : PingTests
     {
         public override string ClassCase => "Default";
     }
 
-    [ExcludeFromCodeCoverage]
     public class PingTests_BytePerByteChannel : PingTests
     {
         public override string ClassCase => "BytePerByte";
     }
 
-    [ExcludeFromCodeCoverage]
     public abstract class PingTests
     {
         public abstract string ClassCase { get; }
@@ -37,17 +28,12 @@ namespace CK.MQTT.Client.Tests
         [Test]
         public async Task normal_ping_works()
         {
-            await Scenario.RunOnConnectedClientWithKeepAlive( ClassCase, new[]
-            {
-                async (m, replayer) =>
-                {
-                    await Task.Delay(500);
-                    return true;
-                },
-                TestPacketHelper.IncrementTime(TimeSpan.FromSeconds(5)),
-                TestPacketHelper.Outgoing("C0")
-            } );
-
+            var replayer = new PacketReplayer( ClassCase );
+            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer ) );
+            await replayer.ConnectClient( TestHelper.Monitor, client );
+            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
+            await Task.Delay( 50 );
+            await replayer.AssertClientSent( TestHelper.Monitor, "C0" );
         }
     }
 }

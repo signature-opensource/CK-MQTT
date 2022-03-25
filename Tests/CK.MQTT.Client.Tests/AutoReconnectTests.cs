@@ -1,30 +1,21 @@
-using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
-using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
-    [ExcludeFromCodeCoverage]
     public class AutoReconnectTests_PipeReaderCop : AutoReconnectTests
     {
         public override string ClassCase => "PipeReaderCop";
     }
 
-    [ExcludeFromCodeCoverage]
     public class AutoReconnectTests_Default : AutoReconnectTests
     {
         public override string ClassCase => "Default";
     }
 
-    [ExcludeFromCodeCoverage]
     public class AutoReconnectTests_BytePerByteChannel : AutoReconnectTests
     {
         public override string ClassCase => "BytePerByte";
@@ -33,29 +24,21 @@ namespace CK.MQTT.Client.Tests
     {
         public abstract string ClassCase { get; }
 
-        [Test]
         public async Task auto_reconnect_works()
         {
+            var replayer = new PacketReplayer( ClassCase );
+            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer, disconnectBehavior: DisconnectBehavior.AutoReconnect ) );
+            await replayer.ConnectClient( TestHelper.Monitor, client );
+            replayer.Channel!.Close(); // Fake a server disconnect.
             //Doesn't reconnect if the first connect fails.
-            await Scenario.RunOnConnectedClientWithKeepAlive( ClassCase, new[]
-            {
-                TestPacketHelper.Disconnect,
-                TestPacketHelper.IncrementTime(TimeSpan.FromSeconds(6)),
-                async (m, replayer) =>
-                {
-                    await Task.Delay(1000);
-                    replayer.Client.IsConnected.Should().BeFalse();
-                    return true;
-                },
-                TestPacketHelper.WaitClientConnected,
-                TestPacketHelper.Outgoing("101600044d51545404020000000a434b4d71747454657374"),
-                TestPacketHelper.SendToClient("20020000"),
-                (m, replayer) =>
-                {
-                    replayer.Client.IsConnected.Should().BeTrue();
-                    return new ValueTask<bool>(true);
-                }
-            }, DisconnectBehavior.AutoReconnect );
+            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
+            await Task.Delay( 1000 );
+            client.IsConnected.Should().BeFalse();
+            await replayer.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();
+
+            await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
+            await replayer.SendToClient( TestHelper.Monitor, "20020000" );
+            client.IsConnected.Should().BeTrue();
         }
     }
 }

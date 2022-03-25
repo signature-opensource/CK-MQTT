@@ -1,9 +1,4 @@
-using CK.MQTT.Client;
 using CK.MQTT.P2P;
-using System;
-using System.IO.Pipelines;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -23,8 +18,8 @@ namespace CK.MQTT
     public static class MqttClientFactories
     {
 
-        public static P2PClient CreateMQTTClient( this P2PMqttClientFactory? factory, IMqtt5ServerClientSink sink, P2PMqttConfiguration config, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler )
-            => new(sink, config, messageHandler );
+        public static P2PClient CreateMQTTClient( this P2PMqttClientFactory? factory, IMqtt5ServerClientSink sink, P2PMqttConfiguration config )
+            => new( sink, config );
     }
 
 }

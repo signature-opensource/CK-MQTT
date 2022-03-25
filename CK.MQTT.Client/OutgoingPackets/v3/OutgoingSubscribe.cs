@@ -1,10 +1,8 @@
-using CK.MQTT.Packets;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Packets
 {

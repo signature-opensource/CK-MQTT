@@ -1,13 +1,12 @@
 using CK.MQTT.Client.Tests.Helpers;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
+using System.Threading.Channels;
 
 namespace CK.MQTT.Client.Tests
 {
-    [ExcludeFromCodeCoverage]
     public class PipeReaderCopLoopback : LoopBack
     {
-        public PipeReaderCopLoopback()
+        public PipeReaderCopLoopback( ChannelWriter<object?> writer ) : base( writer )
         {
             Pipe input = new();
             Pipe output = new();

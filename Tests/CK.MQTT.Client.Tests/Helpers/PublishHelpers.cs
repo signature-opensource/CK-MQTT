@@ -2,10 +2,7 @@ using CK.Core;
 using CK.MQTT.Packets;
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -64,9 +61,9 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
     }
 
-    public static class SimpleOutgoingApplicationMessageExtensions
+    static class SimpleOutgoingApplicationMessageExtensions
     {
-        public static async ValueTask<Task> PublishAsync( this SimpleTestMqtt3Client client, string topic, QualityOfService qos, bool retain,
+        public static async ValueTask<Task> PublishAsync( this TestMqttClient client, string topic, QualityOfService qos, bool retain,
             Func<uint> getPayloadSize, PayloadWriterDelegate payloadWriter ) //Async required to convert wrapped Task<object> to Task.
         {
             return await client.PublishAsync( new BasicOutgoingApplicationMessage( topic, qos, retain, getPayloadSize, payloadWriter ) );
@@ -82,9 +79,9 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
     }
 
-    public static class SmallOutgoingApplicationMessageExtensions
+    static class SmallOutgoingApplicationMessageExtensions
     {
-        public static async ValueTask<Task> PublishAsync( this SimpleTestMqtt3Client client, string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
+        public static async ValueTask<Task> PublishAsync( this TestMqttClient client, string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
         {
             return await client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
         }
@@ -111,9 +108,9 @@ namespace CK.MQTT.Client.Tests.Helpers
             await _messageHandler( null, new ApplicationMessage( topic, buffer, qos, retain ), cancelToken );
         }
     }
-    public static class ApplicationMessageExtensions
+    static class ApplicationMessageExtensions
     {
-        public static ValueTask<Task> PublishAsync( this SimpleTestMqtt3Client @this, ApplicationMessage message )
+        public static ValueTask<Task> PublishAsync( this TestMqttClient @this, ApplicationMessage message )
             => @this.PublishAsync( message.Topic, message.QoS, message.Retain, message.Payload );
     }
 }
