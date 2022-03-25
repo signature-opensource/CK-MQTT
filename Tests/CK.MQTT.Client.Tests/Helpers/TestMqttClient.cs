@@ -10,7 +10,6 @@ namespace CK.MQTT.Client
 {
     class TestMqttClient : MQTT3ClientBase
     {
-        
         readonly ChannelWriter<object?> _writer;
 
         public TestMqttClient( Mqtt3ClientConfiguration config, ChannelWriter<object?> writer ) : base(config)
