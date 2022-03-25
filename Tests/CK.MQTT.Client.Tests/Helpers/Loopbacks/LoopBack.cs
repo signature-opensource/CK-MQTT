@@ -9,10 +9,8 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         readonly ChannelWriter<object?> _writer;
 
-        public LoopBack( ChannelWriter<object?> writer )
-        {
-            _writer = writer;
-        }
+        public LoopBack( ChannelWriter<object?> writer ) => _writer = writer;
+
         public abstract IDuplexPipe TestDuplexPipe { get; set; }
         public abstract IDuplexPipe DuplexPipe { get; set; }
 

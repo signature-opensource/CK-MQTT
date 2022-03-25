@@ -8,8 +8,8 @@ namespace CK.MQTT.Client.Tests
     {
         public DefaultLoopback( ChannelWriter<object?> writer ) : base(writer)
         {
-            Pipe input = new();
-            Pipe output = new();
+            Pipe input = new( new PipeOptions( pauseWriterThreshold: long.MaxValue ) );
+            Pipe output = new( new PipeOptions( pauseWriterThreshold: long.MaxValue ) );
             DuplexPipe = new DuplexPipe( input.Reader, output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
         }

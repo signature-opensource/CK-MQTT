@@ -2,6 +2,7 @@ using CK.Core;
 using NUnit.Framework;
 using System;
 using System.Buffers;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
@@ -52,7 +53,9 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static async Task ConnectClient( this PacketReplayer @this, IActivityMonitor m, TestMqttClient client )
         {
             var task = client.ConnectAsync();
-            await @this.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
+            await @this.AssertClientSent( TestHelper.Monitor,
+                "101600044d5154540402" + Convert.ToHexString( BitConverter.GetBytes( client.Config.KeepAliveSeconds ).Reverse().ToArray() ) + "000a434b4d71747454657374"
+            );
             await @this.SendToClient( TestHelper.Monitor, "20020000" );
             await task;
             await @this.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();

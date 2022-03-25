@@ -14,7 +14,7 @@ namespace CK.MQTT.Client.Tests
         readonly PipeReader _pr;
         public BytePerBytePipeReader( PipeReader pr )
         {
-            _pr=pr;
+            _pr = pr;
         }
 
         int _readCount = 1;
@@ -129,11 +129,11 @@ namespace CK.MQTT.Client.Tests
             {
             }
         }
-        public BytePerByteLoopback(ChannelWriter<object?> writer ) : base( writer )
+        public BytePerByteLoopback( ChannelWriter<object?> writer ) : base( writer )
         {
             const int size = 16;
-            Pipe input = new( new PipeOptions( minimumSegmentSize: size, pool: new SingleBytePool() ) );
-            Pipe output = new( new PipeOptions( minimumSegmentSize: size, pool: new SingleBytePool() ) );
+            Pipe input = new( new PipeOptions( pauseWriterThreshold: long.MaxValue, minimumSegmentSize: size, pool: new SingleBytePool() ) );
+            Pipe output = new( new PipeOptions( pauseWriterThreshold: long.MaxValue, minimumSegmentSize: size, pool: new SingleBytePool() ) );
 
             DuplexPipe = new DuplexPipe( new BytePerBytePipeReader( input.Reader ), output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
@@ -145,7 +145,7 @@ namespace CK.MQTT.Client.Tests
 
         public override void Close()
         {
-        
+
             TestDuplexPipe.Input.Complete();
             TestDuplexPipe.Output.Complete();
         }
