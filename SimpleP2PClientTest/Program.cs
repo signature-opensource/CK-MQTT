@@ -14,9 +14,10 @@ namespace SimpleP2PClientTest
 {
     class Program
     {
-        async static ValueTask MessageHandlerDelegate( IActivityMonitor? m, ApplicationMessage msg, CancellationToken cancellationToken )
+        static ValueTask MessageHandlerDelegate( IActivityMonitor? m, ApplicationMessage msg, CancellationToken cancellationToken )
         {
             System.Console.WriteLine( msg.Topic + Encoding.UTF8.GetString( msg.Payload.Span ) );
+            return new ValueTask();
         }
         static async Task Main()
         {

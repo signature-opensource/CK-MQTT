@@ -14,14 +14,14 @@ namespace CK.MQTT
         public bool IsRevivedSession { get; set; }
 
         /// <inheritdoc/>
-        public ValueTask RemoveIdAsync( IInputLogger? m, int id )
+        public ValueTask RemoveIdAsync( int id )
         {
             _ids.Remove( id );
             return new ValueTask();
         }
 
         /// <inheritdoc/>
-        public ValueTask StoreIdAsync( IInputLogger? m, int id )
+        public ValueTask StoreIdAsync( int id )
         {
             _ids.Add( id );
             return new ValueTask();

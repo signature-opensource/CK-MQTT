@@ -1,4 +1,5 @@
-using CK.Core;
+using CK.MQTT.Client;
+using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
 using System.Diagnostics;
@@ -16,6 +17,7 @@ namespace CK.MQTT.Pumps
     public class OutputPump : PumpBase
     {
         OutputProcessor? _outputProcessor;
+        readonly IMqtt3Sink _sink;
         readonly ILocalPacketStore _outgoingPacketStore;
 
 
@@ -24,8 +26,9 @@ namespace CK.MQTT.Pumps
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( ILocalPacketStore outgoingPacketStore, Func<DisconnectedReason, ValueTask> onDisconnect, MqttConfigurationBase config ) : base( onDisconnect )
+        public OutputPump( IMqtt3Sink sink, ILocalPacketStore outgoingPacketStore, Func<DisconnectReason, ValueTask> onDisconnect, Mqtt3ConfigurationBase config ) : base( onDisconnect )
         {
+            _sink = sink;
             _outgoingPacketStore = outgoingPacketStore;
             Config = config;
             MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
@@ -40,7 +43,7 @@ namespace CK.MQTT.Pumps
 
         public Channel<IOutgoingPacket> MessagesChannel { get; }
         public Channel<IOutgoingPacket> ReflexesChannel { get; }
-        public MqttConfigurationBase Config { get; }
+        public Mqtt3ConfigurationBase Config { get; }
 
         public void StartPumping( OutputProcessor outputProcessor )
         {
@@ -51,41 +54,36 @@ namespace CK.MQTT.Pumps
         async Task WriteLoopAsync()
         {
             Debug.Assert( _outputProcessor != null ); // TODO: Put non nullable init on output processor when it will be available.
-            using( Config.OutputLogger?.OutputLoopStarting() )
+            try
             {
-                try
+                while( !StopToken.IsCancellationRequested )
                 {
-                    while( !StopToken.IsCancellationRequested )
+                    bool packetSent = await _outputProcessor.SendPacketsAsync( CloseToken );
+                    if( !packetSent )
                     {
-                        bool packetSent = await _outputProcessor.SendPacketsAsync( Config.OutputLogger, CloseToken );
-                        if( !packetSent )
-                        {
-                            if( StopToken.IsCancellationRequested ) return;
-                            await _outputProcessor.WaitPacketAvailableToSendAsync( Config.OutputLogger, CancellationToken.None, StopToken );
-                        }
+                        if( StopToken.IsCancellationRequested ) return;
+                        await _outputProcessor.WaitPacketAvailableToSendAsync( CancellationToken.None, StopToken );
                     }
                 }
-                catch( OperationCanceledException e )
-                {
-                    Config.OutputLogger?.OutputLoopCancelled( e );
-                }
-                catch( Exception e )
-                {
-                    Config.OutputLogger?.ExceptionInOutputLoop( e );
-                    await SelfCloseAsync( DisconnectedReason.InternalException );
-                }
+            }
+            catch( OperationCanceledException )
+            {
+            }
+            catch( Exception )
+            {
+                await SelfCloseAsync( DisconnectReason.InternalException );
             }
         }
 
         /// <summary>
         /// Packet used to wake up the wait
-        /// Packet will never be published.
+        /// This packet will never be published.
         /// </summary>
-        public class TriggerPacket : IOutgoingPacket
+        public class FlushPacket : IOutgoingPacket
         {
-            public static IOutgoingPacket Instance { get; } = new TriggerPacket();
-            private TriggerPacket() { }
-            public uint PacketId { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+            public static IOutgoingPacket Instance { get; } = new FlushPacket();
+            private FlushPacket() { }
+            public ushort PacketId { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
             public QualityOfService Qos => throw new NotSupportedException();
 
@@ -93,19 +91,19 @@ namespace CK.MQTT.Pumps
 
             public uint GetSize( ProtocolLevel protocolLevel ) => throw new NotSupportedException();
 
-            public ValueTask<IOutgoingPacket.WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
+            public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
         }
-        public void QueueReflexMessage( IInputLogger? m, IOutgoingPacket item )
+        public void QueueReflexMessage( IOutgoingPacket item )
         {
             void QueuePacket( IOutgoingPacket packet )
             {
                 bool result = ReflexesChannel.Writer.TryWrite( item );
-                if( !result ) m?.QueueFullPacketDropped( PacketType.PublishAck, item.PacketId );
+                if( !result ) _sink.OnQueueFullPacketDropped( item.PacketId, PacketType.PublishAck );
             }
             if( !item.IsRemoteOwnedPacketId )
             {
 
-                _outgoingPacketStore.BeforeQueueReflexPacket( m, QueuePacket, item );
+                _outgoingPacketStore.BeforeQueueReflexPacket( QueuePacket, item );
             }
             else
             {
@@ -115,20 +113,15 @@ namespace CK.MQTT.Pumps
         }
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        public async Task QueueMessageAndWaitUntilSentAsync( IActivityMonitor? m, IOutgoingPacket packet )
+        public async Task QueueMessageAndWaitUntilSentAsync( IOutgoingPacket packet )
         {
-            using( m?.OpenTrace( "Sending a message ..." ) )
+            var wrapper = new AwaitableOutgoingPacketWrapper( packet );
+            await MessagesChannel.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
+            if( ReflexesChannel.Reader.Count == 0 )
             {
-                var wrapper = new AwaitableOutgoingPacketWrapper( packet );
-                m?.Trace( $"Queuing the packet '{packet}'. " );
-                await MessagesChannel.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-                if( ReflexesChannel.Reader.Count == 0 )
-                {
-                    ReflexesChannel.Writer.TryWrite( TriggerPacket.Instance );
-                }
-                m?.Trace( $"Awaiting that the packet '{packet}' has been written." );
-                await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
+                ReflexesChannel.Writer.TryWrite( FlushPacket.Instance );
             }
+            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
         }
 
         public override Task CloseAsync()

@@ -1,4 +1,4 @@
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     public enum ReasonCode : byte //generate this from doc with: \s[a-z]
     {

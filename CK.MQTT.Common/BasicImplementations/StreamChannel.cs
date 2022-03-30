@@ -1,4 +1,3 @@
-using CK.Core;
 using System;
 using System.IO;
 using System.IO.Pipelines;
@@ -50,7 +49,7 @@ namespace CK.MQTT.Common.BasicImplementations
 
         public IDuplexPipe DuplexPipe { get; private set; }
 
-        public void Close( IInputLogger? m )
+        public void Close()
         {
             IsConnected = false;
             DuplexPipe.Input.Complete();
@@ -59,6 +58,6 @@ namespace CK.MQTT.Common.BasicImplementations
 
         public void Dispose() => _disposable.Dispose();
 
-        public ValueTask StartAsync( IActivityMonitor? m ) => new();
+        public ValueTask StartAsync() => new();
     }
 }

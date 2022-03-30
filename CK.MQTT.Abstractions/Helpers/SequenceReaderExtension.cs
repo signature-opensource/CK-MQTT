@@ -59,7 +59,7 @@ namespace CK.MQTT
             Debug.Assert( reader.UnreadSpan.Length < length );
 
             // Not enough data in the current segment, try to peek for the data we need.
-            // In my use case, these strings cannot be more than 64kb, so stack memory is fine.
+            // In my use case, these strings cannot be more than 65kb, so stack memory is fine.
             Span<byte> buffer = stackalloc byte[length];
             if( !reader.TryCopyTo( buffer ) )
             {

@@ -2,9 +2,8 @@ using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     /// <summary>
     /// This represent the <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Will_Flag">last will</a>
@@ -42,7 +41,7 @@ namespace CK.MQTT
         /// <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349233">Specification link</a>
         /// </summary>
         public QualityOfService Qos { get; }
-        public uint PacketId { get; set; }
+        public ushort PacketId { get; set; }
 
         /// <inheritdoc/>
         public abstract uint GetSize( ProtocolLevel protocolLevel );

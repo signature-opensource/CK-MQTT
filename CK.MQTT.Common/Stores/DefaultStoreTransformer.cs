@@ -1,8 +1,8 @@
+using CK.MQTT.Packets;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
 
 namespace CK.MQTT
 {
@@ -41,7 +41,7 @@ namespace CK.MQTT
 
             public PacketWrapper( IOutgoingPacket packet ) => _packet = packet;
 
-            public uint PacketId { get => _packet.PacketId; set => _packet.PacketId = value; }
+            public ushort PacketId { get => _packet.PacketId; set => _packet.PacketId = value; }
             public bool IsRemoteOwnedPacketId => _packet.IsRemoteOwnedPacketId;
 
             public QualityOfService Qos => _packet.Qos;

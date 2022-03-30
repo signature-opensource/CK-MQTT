@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     public sealed class LifecyclePacketV5 : SimpleOutgoingPacket, IOutgoingPacket
     {
@@ -14,7 +14,7 @@ namespace CK.MQTT
         readonly IReadOnlyList<UserProperty> _userProperties;
         readonly uint _contentSize;
         readonly uint _propertiesSize;
-        public LifecyclePacketV5( uint packetId, byte header, ReasonCode reason, string reasonString, bool isRemoteOwnedPacketId, IReadOnlyList<UserProperty>? userProperties )
+        public LifecyclePacketV5( ushort packetId, byte header, ReasonCode reason, string reasonString, bool isRemoteOwnedPacketId, IReadOnlyList<UserProperty>? userProperties )
         {
             PacketId = packetId;
             _header = header;
@@ -35,7 +35,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public override uint PacketId { get; set; }
+        public override ushort PacketId { get; set; }
 
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
@@ -76,13 +76,13 @@ namespace CK.MQTT
         }
 
 
-        public static IOutgoingPacket Pubrel( uint packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
+        public static IOutgoingPacket Pubrel( ushort packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
             => new LifecyclePacketV5( packetId, (byte)PacketType.PublishRelease | 0b0010, reasonCode, reasonString, false, userProperties );
-        public static IOutgoingPacket Pubrec( uint packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
+        public static IOutgoingPacket Pubrec( ushort packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
             => new LifecyclePacketV5( packetId, (byte)PacketType.PublishReceived, reasonCode, reasonString, true, userProperties );
-        public static IOutgoingPacket Puback( uint packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
+        public static IOutgoingPacket Puback( ushort packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
            => new LifecyclePacketV5( packetId, (byte)PacketType.PublishAck, reasonCode, reasonString, true, userProperties );
-        public static IOutgoingPacket Pubcomp( uint packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
+        public static IOutgoingPacket Pubcomp( ushort packetId, ReasonCode reasonCode, string reasonString, IReadOnlyList<UserProperty>? userProperties )
            => new LifecyclePacketV5( packetId, (byte)PacketType.PublishComplete, reasonCode, reasonString, true, userProperties );
     }
 }

@@ -1,6 +1,6 @@
+using CK.MQTT.Client;
 using System;
 using System.Buffers;
-using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,23 +32,21 @@ namespace CK.MQTT
         /// <param name="m">The <see cref="IMqttLogger"/> to use.</param>
         /// <param name="remainingLength">The remaining length of the packet. If it's bigger than 2, will log a warning.</param>
         /// <returns>A <see cref="ValueTask{TResult}"/> that contain a <see cref="ushort"/> when completed.</returns>
-        public static async ValueTask<ushort?> ReadPacketIdPacketAsync( this PipeReader pipeReader, IInputLogger? m, uint remainingLength, CancellationToken cancellationToken )
+        public static async ValueTask<ushort?> ReadPacketIdPacketAsync( this PipeReader pipeReader, IMqtt3Sink sink, uint remainingLength, CancellationToken cancellationToken )
         {
             while( true )//If the data was not available on the first try, we redo the process.
             {
                 ReadResult result = await pipeReader.ReadAsync( cancellationToken );
                 if( result.IsCanceled ) return null;
-                if( TryReadUInt16( result.Buffer, out ushort output, out SequencePosition sequencePosition ) )
+                if( TryReadUInt16( result.Buffer, out ushort packetId, out SequencePosition sequencePosition ) )
                 { //ushort was correctly read.
                     pipeReader.AdvanceTo( sequencePosition );//we mark that the data was read.
                     remainingLength -= 2;
                     if( remainingLength > 0 ) //The packet may contain more data, but we don't know how to process it, so we skip it.
                     {
-
-                        m?.UnparsedExtraBytesPacketId( remainingLength );
-                        await pipeReader.SkipBytesAsync( remainingLength, cancellationToken );
+                        await pipeReader.SkipBytesAsync( sink, packetId, remainingLength, cancellationToken );
                     }
-                    return output;
+                    return packetId;
                 }
                 //We mark that all the data was observed, the next Read operation won't complete until more data are available.
                 pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );//We are really not lucky, we needed only TWO bytes.

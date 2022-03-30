@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Common\Mqtt.props" />
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
@@ -16,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Client\CK.MQTT.Client.csproj" />
+    <ProjectReference Include="..\Tests\CK.MQTT.Client.Tests\CK.MQTT.Client.Tests.csproj" />
   </ItemGroup>
 
 </Project>

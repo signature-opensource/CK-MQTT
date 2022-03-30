@@ -4,14 +4,14 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Common.OutgoingPackets
+namespace CK.MQTT.Packets
 {
     public class FromMemoryOutgoingPacket : IOutgoingPacket
     {
         readonly ReadOnlyMemory<byte> _readOnlyMemory;
-        readonly uint _packetId;
+        readonly ushort _packetId;
 
-        public FromMemoryOutgoingPacket( ReadOnlyMemory<byte> readOnlyMemory, QualityOfService qos, uint packetId, bool isRemoteOwnedPacketId )
+        public FromMemoryOutgoingPacket( ReadOnlyMemory<byte> readOnlyMemory, QualityOfService qos, ushort packetId, bool isRemoteOwnedPacketId )
         {
             Debug.Assert( readOnlyMemory.Length > 0 );
             _readOnlyMemory = readOnlyMemory;
@@ -21,17 +21,17 @@ namespace CK.MQTT.Common.OutgoingPackets
         }
 
         public QualityOfService Qos { get; }
-        public uint PacketId { get => _packetId; set => throw new NotSupportedException(); }
+        public ushort PacketId { get => _packetId; set => throw new NotSupportedException(); }
         public bool IsRemoteOwnedPacketId { get; }
 
         public uint GetSize( ProtocolLevel protocolLevel ) => (uint)_readOnlyMemory.Length;
 
-        public async ValueTask<IOutgoingPacket.WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
             FlushResult res = await writer.WriteAsync( _readOnlyMemory, cancellationToken );
-            if( res.IsCanceled ) return IOutgoingPacket.WriteResult.Cancelled;
+            if( res.IsCanceled ) return WriteResult.Cancelled;
             await writer.FlushAsync( cancellationToken );
-            return IOutgoingPacket.WriteResult.Written;
+            return WriteResult.Written;
         }
     }
 }

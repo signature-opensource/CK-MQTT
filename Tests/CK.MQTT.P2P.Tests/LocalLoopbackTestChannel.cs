@@ -1,13 +1,10 @@
-using CK.Core;
 using CK.MQTT.Common.BasicImplementations;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.P2P.Tests
 {
-    [ExcludeFromCodeCoverage]
     class LocalLoopbackTestChannel : IMqttChannelListener, IMqttChannelFactory
     {
         readonly IMqttChannel _serverChannel;
@@ -23,7 +20,7 @@ namespace CK.MQTT.P2P.Tests
         public Task<(IMqttChannel channel, string clientAddress)> AcceptIncomingConnection( CancellationToken cancellationToken )
             => Task.FromResult( (_serverChannel, "loopback") );
 
-        public ValueTask<IMqttChannel> CreateAsync( IActivityMonitor m, string connectionString )
+        public ValueTask<IMqttChannel> CreateAsync( string connectionString )
          => new( _clientChannel );
     }
 }

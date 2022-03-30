@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Pumps
 {
-    public class DuplexPump<T> : IDisposable where T : IState
+    public class DuplexPump<T> : IAsyncDisposable where T : IState
     {
         readonly PumpBase _pumpA;
         readonly PumpBase _pumpB;
@@ -27,16 +27,27 @@ namespace CK.MQTT.Common.Pumps
             _pumpB.CancelTokens();
         }
 
+        /// <summary>
+        /// Order to stop initiated form the user.
+        /// </summary>
+        /// <returns></returns>
         public Task StopWorkAsync() => Task.WhenAll( _pumpA.StopWorkAsync(), _pumpB.StopWorkAsync() );
 
-        public async Task CloseAsync()
+        bool _isDispose;
+
+
+
+        /// <summary>
+        /// Called by the client itself.
+        /// </summary>
+        /// <returns></returns>
+        public async ValueTask DisposeAsync()
         {
-            if( IsClosed ) return;
             await Task.WhenAll( _pumpA.CloseAsync(), _pumpB.CloseAsync() );
             await State.CloseAsync();
+            Dispose();
         }
 
-        bool _isDispose;
         public void Dispose()
         {
             _isDispose = true;
@@ -45,6 +56,7 @@ namespace CK.MQTT.Common.Pumps
             _ctsClose.Dispose();
             _ctsRegistration.Dispose();
         }
+
 
         public bool IsRunning => !_isDispose && !_pumpA.StopToken.IsCancellationRequested && !_pumpB.StopToken.IsCancellationRequested;
         public bool IsClosed => _isDispose || _pumpA.CloseToken.IsCancellationRequested || _pumpB.CloseToken.IsCancellationRequested;

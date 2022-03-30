@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Packets
 {
     public class ConnectAckPacket : SimpleOutgoingPacket
     {
@@ -12,7 +12,7 @@ namespace CK.MQTT.P2P
             _sessionPresent = sessionPresent;
             _connectReturnCode = connectReturnCode;
         }
-        public override uint PacketId { get => 0; set => throw new NotSupportedException(); }
+        public override ushort PacketId { get => 0; set => throw new NotSupportedException(); }
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
         public override uint GetSize( ProtocolLevel protocolLevel ) => 4;
