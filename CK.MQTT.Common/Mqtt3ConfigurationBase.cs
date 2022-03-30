@@ -73,8 +73,6 @@ namespace CK.MQTT
         /// </summary>
         public ushort AttemptCountBeforeGivingUpPacket { get; set; } = 50;
 
-        public IDelayHandler DelayHandler { get; init; } = MQTT.DelayHandler.Default;
-
         public IStopwatchFactory StopwatchFactory { get; init; } = new StopwatchFactory();
 
         public ICancellationTokenSourceFactory CancellationTokenSourceFactory { get; init; } = new CancellationTokenSourceFactory();
