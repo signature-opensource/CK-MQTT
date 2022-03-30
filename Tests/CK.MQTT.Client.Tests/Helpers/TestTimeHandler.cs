@@ -7,10 +7,9 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
-    public class TestDelayHandler : IDelayHandler, IStopwatchFactory, ICancellationTokenSourceFactory
+    public class TestTimeHandler : IStopwatchFactory, ICancellationTokenSourceFactory
     {
         readonly object _lock = new();
-        readonly List<DelayTask> _delays = new();
         readonly List<WeakReference<TestStopwatch>> _stopwatches = new();
         readonly List<CTS> _cts = new();
         const BindingFlags _bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -27,7 +26,6 @@ namespace CK.MQTT.Client.Tests.Helpers
                         stopwatch.IncrementTime( timeSpan );
                     }
                 } );
-                _delays.ForEach( s => s.AdvanceTime( timeSpan ) );
 
                 _stopwatches.RemoveAll( s => !s.TryGetTarget( out _ ) );
 
@@ -35,7 +33,6 @@ namespace CK.MQTT.Client.Tests.Helpers
                     || (bool)_isDisposedField!.GetValue( s.CancellationTokenSource )!
                     || s.CancellationTokenSource.IsCancellationRequested
                 );
-                _delays.RemoveAll( s => s.TaskCompletionSource.Task.IsCompleted );
             }
         }
 
@@ -128,22 +125,6 @@ namespace CK.MQTT.Client.Tests.Helpers
                 _stopwatches.Add( new WeakReference<TestStopwatch>( stopwatch ) );
             }
             return stopwatch;
-        }
-
-        public Task Delay( int msDelay ) => Delay( TimeSpan.FromMilliseconds( msDelay ), default );
-
-        public Task Delay( int msDelay, CancellationToken cancelToken ) => Delay( TimeSpan.FromMilliseconds( msDelay ), cancelToken );
-
-        public Task Delay( TimeSpan delay ) => Delay( delay, default );
-
-        public Task Delay( TimeSpan delay, CancellationToken cancellationToken )
-        {
-            var delayTask = new DelayTask( delay, cancellationToken );
-            lock( _lock )
-            {
-                _delays.Add( delayTask );
-            }
-            return delayTask.TaskCompletionSource.Task;
         }
 
         public CancellationTokenSource Create( int millisecondsDelay ) => Create( TimeSpan.FromMilliseconds( millisecondsDelay ) );

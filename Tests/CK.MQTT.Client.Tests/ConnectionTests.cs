@@ -143,10 +143,10 @@ namespace CK.MQTT.Client.Tests
             await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             connectTask.IsCompleted.Should().BeFalse();
             await Task.Delay( 1 );
-            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
+            replayer.TestTimeHandler.IncrementTime( TimeSpan.FromMilliseconds( 4999 ) );
             await Task.Delay( 1 );
             connectTask.IsCompleted.Should().BeFalse();
-            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
+            replayer.TestTimeHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
             (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );
             await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
             replayer.Events.Reader.Count.Should().Be( 0 );

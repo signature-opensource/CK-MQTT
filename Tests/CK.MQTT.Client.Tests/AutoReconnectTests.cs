@@ -32,9 +32,9 @@ namespace CK.MQTT.Client.Tests
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer, disconnectBehavior: DisconnectBehavior.AutoReconnect ) );
             await replayer.ConnectClient( TestHelper.Monitor, client );
             //Doesn't reconnect if the first connect fails.
-            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
+            replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
             await Task.Delay( 1000 );
-            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
+            replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
             await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
             await replayer.ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>();
             await replayer.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();

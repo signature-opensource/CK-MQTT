@@ -32,7 +32,7 @@ namespace CK.MQTT.Client.Tests
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer ) );
             await replayer.ConnectClient( TestHelper.Monitor, client );
-            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
+            replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
             await replayer.AssertClientSent( TestHelper.Monitor, "C0" );
         }
 
@@ -42,11 +42,11 @@ namespace CK.MQTT.Client.Tests
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer ) );
             await replayer.ConnectClient( TestHelper.Monitor, client );
-            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
+            replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
             await replayer.AssertClientSent( TestHelper.Monitor, "C0" );
             for( int i = 0; i < 5; i++ )
             {
-                replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
+                replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
                 await Task.Delay( 5 );
             }
             await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();

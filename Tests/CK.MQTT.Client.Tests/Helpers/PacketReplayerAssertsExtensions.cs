@@ -64,7 +64,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static async Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this )
         {
             var task = @this.Events.Reader.ReadAsync().AsTask();
-            if( !await task.WaitAsync( 30000 ) )
+            if( !await task.WaitAsync( 60000 ) )
             {
                 Assert.Fail( "The replayer didn't had any event." );
             }

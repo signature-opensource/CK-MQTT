@@ -17,7 +17,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             ChannelType = channelType;
         }
-        public TestDelayHandler TestDelayHandler { get; } = new();
+        public TestTimeHandler TestTimeHandler { get; } = new();
         public string ChannelType { get; set; }
 
         public delegate ValueTask<bool> ScenarioStep( IActivityMonitor m, PacketReplayer packetReplayer );

@@ -11,9 +11,8 @@ namespace CK.MQTT.Client.Tests.Helpers
             return new Mqtt3ClientConfiguration( "" )
             {
                 ChannelFactory = packetReplayer,
-                DelayHandler = packetReplayer.TestDelayHandler,
-                StopwatchFactory = packetReplayer.TestDelayHandler,
-                CancellationTokenSourceFactory = packetReplayer.TestDelayHandler,
+                StopwatchFactory = packetReplayer.TestTimeHandler,
+                CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 0,
                 Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true )
@@ -29,9 +28,8 @@ namespace CK.MQTT.Client.Tests.Helpers
             return new Mqtt3ClientConfiguration( "" )
             {
                 ChannelFactory = packetReplayer,
-                DelayHandler = packetReplayer.TestDelayHandler,
-                StopwatchFactory = packetReplayer.TestDelayHandler,
-                CancellationTokenSourceFactory = packetReplayer.TestDelayHandler,
+                StopwatchFactory = packetReplayer.TestTimeHandler,
+                CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 5,
                 Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true ),
