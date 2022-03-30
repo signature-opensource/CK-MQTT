@@ -3,7 +3,7 @@ using System;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Configuration of a <see cref="IMqtt3Client"/>.
+    /// Configuration of a <see cref="ILowLevelMqtt3Client"/>.
     /// </summary>
     public class Mqtt3ClientConfiguration : Mqtt3ConfigurationBase
     {

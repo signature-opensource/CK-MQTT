@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class MqttClientImpl : IMqttClient
+    public class MqttClientImpl : ILowLevelMqttClient
     {
         protected class ClientState : IState
         {
@@ -156,7 +156,7 @@ namespace CK.MQTT
 
                 async ValueTask<ConnectResult> Exit( ConnectError connectError )
                 {
-                    await Pumps!.CloseAsync();
+                    await Pumps!.DisposeAsync();
                     return new ConnectResult( connectError );
                 }
 
@@ -194,7 +194,7 @@ namespace CK.MQTT
 
                 if( res.ConnectError != ConnectError.None )
                 {
-                    await Pumps!.CloseAsync();
+                    await Pumps!.DisposeAsync();
                     return res;
                 }
 
@@ -218,8 +218,7 @@ namespace CK.MQTT
                 // We may throw before the creation of the duplex pump.
                 if( Pumps is not null )
                 {
-                    await Pumps.CloseAsync();
-                    Pumps.Dispose();
+                    await Pumps.DisposeAsync();
                 }
                 return new ConnectResult( ConnectError.InternalException );
             }
@@ -232,7 +231,7 @@ namespace CK.MQTT
         protected async ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );
-            await Pumps.CloseAsync();
+            await Pumps.DisposeAsync();
             _sink.OnUnattendedDisconnect( disconnectedReason );
             _disconnectTCS?.TrySetResult(); //TrySet because we can have the user ask concurrently to Disconnect.
         }
@@ -300,7 +299,7 @@ namespace CK.MQTT
         /// Called by the external world to explicitly close the connection to the remote.
         /// </summary>
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        public async Task<bool> DisconnectAsync( bool clearSession, CancellationToken cancellationToken )
+        public async Task<bool> DisconnectAsync( bool clearSession )
         {
             _running?.Cancel();
             _disconnectTCS?.TrySetResult();
@@ -314,9 +313,14 @@ namespace CK.MQTT
             // Because we stopped the pumps, their states cannot change concurrently.
 
             //TODO: the return type may be not enough there, if the cancellation token was triggered, we may not know the final
-            await OutgoingDisconnect.Instance.WriteAsync( Config.ProtocolConfiguration.ProtocolLevel, duplex.State.Channel.DuplexPipe.Output, cancellationToken );
-            await duplex.CloseAsync();
-            duplex.Dispose();
+            if( clearSession )
+            {
+                using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
+                {
+                    await OutgoingDisconnect.Instance.WriteAsync( Config.ProtocolConfiguration.ProtocolLevel, duplex.State.Channel.DuplexPipe.Output, cts.Token );
+                }
+            }
+            await duplex.DisposeAsync();
             Pumps = null;
             return true;
         }

@@ -20,10 +20,10 @@ namespace CK.MQTT.Client.Tests
 
         public override void Close()
         {
-            TestDuplexPipe.Output.Complete();
-            TestDuplexPipe.Output.CancelPendingFlush();
-            TestDuplexPipe.Input.CancelPendingRead();
-            TestDuplexPipe.Input.Complete();
+            DuplexPipe.Output.Complete();
+            DuplexPipe.Output.CancelPendingFlush();
+            DuplexPipe.Input.CancelPendingRead();
+            DuplexPipe.Input.Complete();
         }
     }
 }

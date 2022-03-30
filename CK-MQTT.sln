@@ -3,8 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31808.319
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client", "CK.MQTT.Client\CK.MQTT.Client.csproj", "{6481B999-0479-4162-AC53-5936CE5FD8BF}"
-EndProject
+
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1A5ABB89-2797-4946-8D46-F07144F616F3}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
@@ -33,7 +32,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Abstractions", "CK.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Common", "CK.MQTT.Common\CK.MQTT.Common.csproj", "{C1C6D60D-7667-4E3A-8607-627B00D2E451}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleClientTest", "SimpleClientTest\SimpleClientTest.csproj", "{94C70015-DF05-4353-B7B6-3E88A226CC84}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.LowLevelClient", "CK.MQTT.LowLevelClient\CK.MQTT.LowLevelClient.csproj", "{6481B999-0479-4162-AC53-5936CE5FD8BF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.MQTT.Client", "CK.MQTT.Client\CK.MQTT.Client.csproj", "{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Server", "CK.MQTT.Server\CK.MQTT.Server.csproj", "{7A3BC93E-96A9-426D-8458-9DEEF7FB6978}"
 EndProject
@@ -43,10 +44,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client.Tests", "Tes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.P2P", "CK.MQTT.P2P\CK.MQTT.P2P.csproj", "{18F6F38C-AB5E-4D6A-B0C1-D6272178047D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleClientTest", "SimpleClientTest\SimpleClientTest.csproj", "{94C70015-DF05-4353-B7B6-3E88A226CC84}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleP2PClientTest", "SimpleP2PClientTest\SimpleP2PClientTest.csproj", "{8D6F2533-FECB-4495-A5A1-9680E94F9D85}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.P2P.Tests", "Tests\CK.MQTT.P2P.Tests\CK.MQTT.P2P.Tests.csproj", "{03AC5740-6B51-40AB-8C05-ACFD971C4388}"
 EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -143,6 +147,14 @@ Global
 		{03AC5740-6B51-40AB-8C05-ACFD971C4388}.Release|Any CPU.Build.0 = Release|Any CPU
 		{03AC5740-6B51-40AB-8C05-ACFD971C4388}.Release|x64.ActiveCfg = Release|Any CPU
 		{03AC5740-6B51-40AB-8C05-ACFD971C4388}.Release|x64.Build.0 = Release|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Debug|x64.Build.0 = Debug|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Release|x64.ActiveCfg = Release|Any CPU
+		{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

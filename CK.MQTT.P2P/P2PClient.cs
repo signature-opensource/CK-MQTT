@@ -28,15 +28,14 @@ namespace CK.MQTT.P2P
             try
             {
                 IMqttChannel channel;
-                string clientAddress;
-                (channel, clientAddress) = await channelFactory.AcceptIncomingConnection( cancellationToken );
+                (channel, _) = await channelFactory.AcceptIncomingConnection( cancellationToken );
 
                 ConnectReflex connectReflex = new( _sink, P2PConfig.ProtocolConfiguration, P2PConfig );
                 // Creating pumps. Need to be started.
                 InputPump inputPump = new( _sink, SelfDisconnectAsync, Config, channel.DuplexPipe.Input, connectReflex.HandleRequestAsync );
 
                 await connectReflex.ConnectHandledTask;
-                
+
                 OutputPump output = new( _sink, connectReflex.OutStore, SelfDisconnectAsync, Config );
 
                 // This reflex handle the connection packet.
@@ -70,7 +69,7 @@ namespace CK.MQTT.P2P
 
                 if( Pumps.IsClosed )
                 {
-                    await Pumps!.CloseAsync();
+                    await Pumps!.DisposeAsync();
                     return ConnectError.RemoteDisconnected;
                 }
 
@@ -82,7 +81,7 @@ namespace CK.MQTT.P2P
             catch( Exception )
             {
                 // We may throw before the creation of the duplex pump.
-                if( Pumps is not null ) await Pumps.CloseAsync(); ;
+                if( Pumps is not null ) await Pumps.DisposeAsync(); ;
                 return ConnectError.InternalException;
             }
         }

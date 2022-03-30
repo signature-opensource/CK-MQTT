@@ -8,18 +8,16 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public abstract class MQTT3ClientBase : IMqtt3Sink, IMqtt3Client
+    public abstract class Mqtt3ClientBase : IMqtt3Sink, ILowLevelMqtt3Client
     {
-        readonly IMqtt3Client _client;
+        readonly ILowLevelMqtt3Client _client;
 
-        protected MQTT3ClientBase( Mqtt3ClientConfiguration configuration )
+        protected Mqtt3ClientBase( Mqtt3ClientConfiguration configuration )
         {
             _client = new MqttClientImpl( this, configuration );
         }
 
-        public bool IsConnected => _client.IsConnected;
-
-        protected MQTT3ClientBase( string host, int port ) : this( new Mqtt3ClientConfiguration( $"{host}:{port}" ) )
+        protected Mqtt3ClientBase( string host, int port ) : this( new Mqtt3ClientConfiguration( $"{host}:{port}" ) )
         {
         }
 
@@ -30,9 +28,9 @@ namespace CK.MQTT.Client
             return _client.ConnectAsync( lastwill, cancellationToken );
         }
 
-        public virtual Task<bool> DisconnectAsync( bool deleteSession, CancellationToken cancellationToken )
+        public virtual Task<bool> DisconnectAsync( bool deleteSession )
         {
-            return _client.DisconnectAsync( deleteSession, cancellationToken );
+            return _client.DisconnectAsync( deleteSession );
         }
 
         public virtual ValueTask<Task> UnsubscribeAsync( IEnumerable<string> topics )
@@ -57,6 +55,10 @@ namespace CK.MQTT.Client
         {
         }
         protected abstract void OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData );
+
+        protected virtual void OnPacketWithDupFlagReceived( PacketType packetType )
+        {
+        }
 
         public virtual ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscription )
             => _client.SubscribeAsync( subscription );
@@ -112,6 +114,9 @@ namespace CK.MQTT.Client
         void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => OnQueueFullPacketDropped( packetId, packetType );
         void IMqtt3Sink.OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData )
             => OnUnparsedExtraData( packetId, unparsedData );
+        void IMqtt3Sink.OnPacketWithDupFlagReceived( PacketType packetType )
+            => OnPacketWithDupFlagReceived( packetType );
+
 
         public void Dispose()
         {

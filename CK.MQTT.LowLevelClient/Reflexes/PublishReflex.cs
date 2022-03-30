@@ -28,7 +28,7 @@ namespace CK.MQTT
         const byte _dupFlag = 1 << 4;
         const byte _retainFlag = 1;
 
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink? sink, InputPump sender, byte header, uint packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )
             {
@@ -36,6 +36,10 @@ namespace CK.MQTT
             }
             QualityOfService qos = (QualityOfService)((header >> 1) & 3);
             bool dup = (header & _dupFlag) > 0;
+            if( dup )
+            {
+                sink?.OnPacketWithDupFlagReceived( PacketType.Publish );
+            }
             bool retain = (header & _retainFlag) > 0;
             if( (byte)qos > 2 ) throw new ProtocolViolationException( $"Parsed QoS byte is invalid({(byte)qos})." );
             string? topic;

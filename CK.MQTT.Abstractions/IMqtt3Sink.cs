@@ -25,5 +25,6 @@ namespace CK.MQTT.Client
         void OnQueueFullPacketDropped( ushort packetId, PacketType packetType );
 
         void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData );
+        void OnPacketWithDupFlagReceived( PacketType packetType );
     }
 }

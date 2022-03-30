@@ -9,15 +9,10 @@ namespace CK.MQTT
     /// <summary>
     /// Represent a MQTT3 Client.
     /// </summary>
-    public interface IMqtt3Client : IDisposable
+    public interface ILowLevelMqtt3Client : IDisposable
     {
         /// <summary>
-        /// Return <see langword="false"/> if the last operation on the underlying Communication Channel was not successfull.
-        /// </summary>
-        bool IsConnected { get; }
-
-        /// <summary>
-        /// Connect the <see cref="IMqtt3Client"/> to a Broker.
+        /// Connect the <see cref="ILowLevelMqtt3Client"/> to a Broker.
         /// </summary>
         /// <param name="m">The logger used to log activities about the connection.</param>
         /// <param name="credentials">
@@ -48,7 +43,7 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
         /// for more details about the protocol disconnection
         /// </remarks>
-        Task<bool> DisconnectAsync( bool deleteSession, CancellationToken cancellationToken );
+        Task<bool> DisconnectAsync( bool deleteSession );
 
         /// <summary>
         /// Unsubscribe the client from topics.
@@ -68,7 +63,7 @@ namespace CK.MQTT
         ValueTask<Task> UnsubscribeAsync( params string[] topics );
 
         /// <summary>
-        /// Susbscribe the <see cref="IMqtt3Client"/> to multiples <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
+        /// Susbscribe the <see cref="ILowLevelMqtt3Client"/> to multiples <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
         /// </summary>
         /// <param name="m">The logger used to log the activities about the subscription process.</param>
         /// <param name="subscriptions">The subscriptions to send to the broker.</param>
@@ -84,7 +79,7 @@ namespace CK.MQTT
         ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions );
 
         /// <summary>
-        /// Susbscribe the <see cref="IMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
+        /// Susbscribe the <see cref="ILowLevelMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
         /// </summary>
         /// <param name="m">The logger used to log the activities about the subscription process.</param>
         /// <param name="subscriptions">The subscriptions to send to the broker.</param>

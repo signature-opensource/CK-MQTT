@@ -1,5 +1,6 @@
 using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
+using NUnit.Framework;
 using System;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
@@ -24,21 +25,23 @@ namespace CK.MQTT.Client.Tests
     {
         public abstract string ClassCase { get; }
 
+        [Test]
         public async Task auto_reconnect_works()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer, disconnectBehavior: DisconnectBehavior.AutoReconnect ) );
             await replayer.ConnectClient( TestHelper.Monitor, client );
-            replayer.Channel!.Close(); // Fake a server disconnect.
             //Doesn't reconnect if the first connect fails.
             replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
             await Task.Delay( 1000 );
-            client.IsConnected.Should().BeFalse();
+            replayer.TestDelayHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
+            await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+            await replayer.ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>();
             await replayer.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();
 
-            await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
+            await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020005000a434b4d71747454657374" );
             await replayer.SendToClient( TestHelper.Monitor, "20020000" );
-            client.IsConnected.Should().BeTrue();
+            await Task.Delay( 1000 );
         }
     }
 }
