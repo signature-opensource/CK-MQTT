@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.Client\CK.MQTT.LowLevelClient.csproj" />
+    <ProjectReference Include="..\CK.MQTT.Client\CK.MQTT.Client.csproj" />
   </ItemGroup>
 
 </Project>
