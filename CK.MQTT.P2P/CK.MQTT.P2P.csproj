@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\Common\Mqtt.props" />
 
-  <PropertyGroup>
+    <PropertyGroup>
     <TargetFramework>net6</TargetFramework>
     <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>

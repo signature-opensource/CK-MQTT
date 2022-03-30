@@ -12,6 +12,6 @@ namespace CK.MQTT.Server
         /// may be used with strict security.</param>
         /// <param name="clientId"></param>
         /// <returns></returns>
-        ValueTask<(ILocalPacketStore, IRemotePacketStore)> GetStores( string addressId, string clientId );
+        ValueTask<(ILocalPacketStore, IRemotePacketStore)> GetStoresAsync( string addressId, string clientId );
     }
 }
