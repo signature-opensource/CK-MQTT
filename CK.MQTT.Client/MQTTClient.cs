@@ -1,17 +1,14 @@
 using CK.Core;
+using CK.MQTT.Packets;
 using CK.PerfectEvent;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using static CK.MQTT.Client.MQTTClientChannel;
 
 namespace CK.MQTT.Client
 {
-    public class MQTTClient
+    public class MQTTClient : MQTTClientChannel
     {
-        readonly MQTTClientChannel _clientChannel = TODO;
         readonly PerfectEventSender<ApplicationMessage> _onMessageSender = new();
         readonly PerfectEventSender<DisconnectReason> _onConnectionChangeSender = new();
         readonly PerfectEventSender<ushort> _onStoreQueueFilling = new();
@@ -22,10 +19,51 @@ namespace CK.MQTT.Client
 
         public PerfectEvent<ushort> OnStoreQueueFilling => _onStoreQueueFilling.PerfectEvent;
 
-        async Task WorkLoop()
+        public MQTTClient( Mqtt3ClientConfiguration configuration ) : base( configuration )
+        {
+        }
+
+        Task? _workLoop;
+        public override async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        {
+            var res = await base.ConnectAsync( lastWill, cancellationToken );
+            _workLoop = WorkLoopAsync( Messages );
+            return res;
+        }
+
+        public async Task<ConnectResult> ConnectAsync( bool waitForCompletion, OutgoingLastWill ? lastWill = null, CancellationToken cancellationToken = default )
+        {
+            var res = await base.ConnectAsync( lastWill, cancellationToken );
+            _workLoop = WorkLoopAsync( Messages );
+            if( !res.IsSuccess && waitForCompletion )
+            {
+                await _workLoop;
+            }
+            return res;
+        }
+
+        public override Task<bool> DisconnectAsync( bool deleteSession )
+            => DisconnectAsync( deleteSession, true );
+
+
+        /// <param name="deleteSession"></param>
+        /// <param name="waitForCompletion">Wait the pump messages to empty all the messages.</param>
+        /// <returns></returns>
+        public async Task<bool> DisconnectAsync( bool deleteSession, bool waitForCompletion )
+        {
+            var res = await base.DisconnectAsync( deleteSession );
+            if( waitForCompletion )
+            {
+                await _workLoop!;
+            }
+            return res;
+        }
+
+
+        async Task WorkLoopAsync( ChannelReader<object?> channel )
         {
             ActivityMonitor m = new();
-            await foreach( var item in _clientChannel.Messages.ReadAllAsync( TODO ) )
+            await foreach( var item in channel.ReadAllAsync() )
             {
                 if( item is ApplicationMessage msg )
                 {
@@ -54,7 +92,8 @@ namespace CK.MQTT.Client
                 else if( item is QueueFullPacketDestroyed queueFullPacketDestroyed )
                 {
                     m.Warn( $"Because the queue is full, {queueFullPacketDestroyed.PacketType} with id {queueFullPacketDestroyed.PacketId} has been dropped. " );
-                } else
+                }
+                else
                 {
                     m.Error( "Unknown event has been sent on the channel." );
                 }

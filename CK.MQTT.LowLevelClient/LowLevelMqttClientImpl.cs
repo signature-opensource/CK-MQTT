@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class MqttClientImpl : ILowLevelMqttClient
+    public class LowLevelMqttClientImpl : ILowLevelMqttClient
     {
         protected class ClientState : IState
         {
@@ -35,7 +35,6 @@ namespace CK.MQTT
             }
         }
 
-
         protected DuplexPump<ClientState>? Pumps { get; set; }
 
         protected Mqtt3ClientConfiguration Config { get; }
@@ -44,11 +43,11 @@ namespace CK.MQTT
         readonly ILocalPacketStore _localPacketStore;
 
         /// <summary>
-        /// Instantiate the <see cref="MqttClientImpl"/> with the given configuration.
+        /// Instantiate the <see cref="LowLevelMqttClientImpl"/> with the given configuration.
         /// </summary>
         /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        public MqttClientImpl( IMqtt3Sink sink, Mqtt3ClientConfiguration config )
+        public LowLevelMqttClientImpl( IMqtt3Sink sink, Mqtt3ClientConfiguration config )
         {
             Config = config;
             if( config.WaitTimeoutMilliseconds > config.KeepAliveSeconds * 1000 && config.KeepAliveSeconds != 0 )
@@ -71,7 +70,7 @@ namespace CK.MQTT
 
 
         /// <inheritdoc/>
-        public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public async virtual Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
             if( lastWill != null )
             {

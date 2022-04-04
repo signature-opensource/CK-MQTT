@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.P2P
 {
-    public class P2PClient : MqttClientImpl
+    public class P2PClient : LowLevelMqttClientImpl
     {
         readonly IMqtt5ServerClientSink _sink;
 
@@ -21,8 +21,9 @@ namespace CK.MQTT.P2P
 
         public P2PMqttConfiguration P2PConfig { get; }
 
-        public async Task<ConnectError> AcceptClientAsync( IMqttChannelListener channelFactory, CancellationToken cancellationToken )
+        public override async Task<ConnectError> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
+            if( lastWill != null ) throw new ArgumentException( "Last will is not supported by a P2P client." );
             if( Config.KeepAliveSeconds != 0 ) throw new NotSupportedException( "Server KeepAlive is not yet supported." );
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
             try

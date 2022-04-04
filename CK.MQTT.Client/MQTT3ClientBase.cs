@@ -14,7 +14,7 @@ namespace CK.MQTT.Client
 
         protected Mqtt3ClientBase( Mqtt3ClientConfiguration configuration )
         {
-            _client = new MqttClientImpl( this, configuration );
+            _client = new LowLevelMqttClientImpl( this, configuration );
         }
 
         protected Mqtt3ClientBase( string host, int port ) : this( new Mqtt3ClientConfiguration( $"{host}:{port}" ) )

@@ -57,6 +57,8 @@ namespace CK.MQTT
         /// </summary>
         public readonly ConnectReturnCode ConnectReturnCode;
 
+        public bool IsSuccess => ConnectReturnCode == ConnectReturnCode.Accepted;
+
         /// <summary>
         /// Instantiate a new <see cref="ConnectResult"/> where the result is an error.
         /// <see cref="SessionState"/> will be <see cref="SessionState.Unknown"/>.
