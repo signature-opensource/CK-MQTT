@@ -31,10 +31,10 @@ namespace CK.MQTT.Client
             _writer.TryWrite( new PoisonousPacket( packetId, packetType, poisonousTotalCount ) );
         }
 
-        public class Connected { };
+        public class Reconnect { };
         protected override void OnConnected()
         {
-            _writer.TryWrite( new Connected() );
+            _writer.TryWrite( new Reconnect() );
         }
 
         public record StoreFull( ushort FreeLeftSlot );

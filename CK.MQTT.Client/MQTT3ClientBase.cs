@@ -43,7 +43,7 @@ namespace CK.MQTT.Client
 
         protected virtual bool OnReconnectionFailed( int retryCount, int maxRetryCount ) => retryCount < maxRetryCount;
 
-        protected abstract void OnReconnect();
+        protected abstract void OnConnected();
 
         protected abstract void OnStoreFull( ushort freeLeftSlot );
 
@@ -88,22 +88,17 @@ namespace CK.MQTT.Client
             return _client.PublishAsync( message );
         }
 
-        // Helper (extension methods).
         public ValueTask<Task> PublishAsync( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
-        {
-            return _client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
-        }
+            => _client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
 
         ValueTask IMqtt3Sink.ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
-        {
-            return ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
-        }
+            => ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
 
         void IMqtt3Sink.OnUnattendedDisconnect( DisconnectReason reason ) => OnUnattendedDisconnect( reason );
 
         bool IMqtt3Sink.OnReconnectionFailed( int retryCount, int maxRetryCount ) => OnReconnectionFailed( retryCount, maxRetryCount );
 
-        void IMqtt3Sink.OnReconnect() => OnReconnect();
+        void IMqtt3Sink.Connected() => OnConnected();
 
         void IMqtt3Sink.OnStoreFull( ushort freeLeftSlot ) => OnStoreFull( freeLeftSlot );
 

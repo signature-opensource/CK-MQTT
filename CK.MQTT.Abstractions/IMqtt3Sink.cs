@@ -14,7 +14,7 @@ namespace CK.MQTT.Client
 
         bool OnReconnectionFailed( int retryCount, int maxRetryCount );
 
-        void OnReconnect();
+        void Connected();
 
         void OnStoreFull( ushort freeLeftSlot );
 

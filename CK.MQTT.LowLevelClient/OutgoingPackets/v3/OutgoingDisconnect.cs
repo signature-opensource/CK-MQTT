@@ -5,7 +5,7 @@ namespace CK.MQTT.Packets
     /// <summary>
     /// Represent a disconnect packet to be serialized.
     /// </summary>
-    public class OutgoingDisconnect : SimpleOutgoingPacket
+    class OutgoingDisconnect : SimpleOutgoingPacket
     {
         private OutgoingDisconnect() { }
 

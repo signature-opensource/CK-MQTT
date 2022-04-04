@@ -47,5 +47,6 @@ namespace CK.MQTT.Client.Tests
 
             connectedClean.GetHashCode().Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.Accepted ).GetHashCode() );
         }
+
     }
 }

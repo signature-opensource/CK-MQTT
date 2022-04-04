@@ -15,7 +15,8 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         public static TestMqttClient CreateMQTT3Client( this PacketReplayer replayer, Mqtt3ClientConfiguration config )
             => new( config, replayer.Events );
-
+        public static TestMqttClient CreateMQTT5Client( this PacketReplayer replayer, Mqtt5ClientConfiguration config )
+            => new( config, replayer.Events );
         public static async Task AssertClientSent( this PacketReplayer @this, IActivityMonitor m, string hexArray )
         {
             using( m.OpenInfo( "Outgoing packet..." ) )

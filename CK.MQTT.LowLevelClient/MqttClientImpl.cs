@@ -211,6 +211,7 @@ namespace CK.MQTT
                 {
                     throw new NotImplementedException();
                 }
+                _sink.Connected();
                 return res;
             }
             catch( Exception )

@@ -8,6 +8,7 @@ using System;
 using System.IO.Pipelines;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 #nullable enable
 
@@ -20,21 +21,15 @@ namespace SimpleClientTest
         {
             //test.mosquitto.org
 
-            //ActivityMonitor m = new();
-            //var client = new MqttClientImpl( new MqttClientConfiguration( "localhost:1883" )
+            ActivityMonitor m = new();
+            var client = new TestMqttClient( new Mqtt5ClientConfiguration( "localhost:1883" ), Channel.CreateUnbounded<object?>().Writer )
+            {
+            };
+            //client.DisconnectedHandler += ( reason, task ) =>
             //{
-            //    KeepAliveSeconds = 3,
-            //    WaitTimeoutMilliseconds = 1000
-            //},
-            //    MessageHandlerDelegate
-            //);
-            ////client.DisconnectedHandler += ( reason, task ) =>
-            ////{
-            ////    System.Console.WriteLine( reason );
-            ////};
-            //var res = await client.ConnectAsync( m );
-            //await Task.Delay( 3000000 );
-            //await client.DisconnectAsync( m, true, true, default );
+            //    System.Console.WriteLine( reason );
+            //};
+            var res = await client.ConnectAsync();
         }
     }
 }
