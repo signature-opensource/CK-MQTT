@@ -21,15 +21,14 @@ namespace CK.MQTT.P2P
 
         public P2PMqttConfiguration P2PConfig { get; }
 
-        public override async Task<ConnectError> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public override async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
             if( lastWill != null ) throw new ArgumentException( "Last will is not supported by a P2P client." );
             if( Config.KeepAliveSeconds != 0 ) throw new NotSupportedException( "Server KeepAlive is not yet supported." );
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
             try
             {
-                IMqttChannel channel;
-                (channel, _) = await channelFactory.AcceptIncomingConnection( cancellationToken );
+                IMqttChannel channel = await P2PConfig.ChannelFactory.CreateAsync( P2PConfig.ConnectionString );
 
                 ConnectReflex connectReflex = new( _sink, P2PConfig.ProtocolConfiguration, P2PConfig );
                 // Creating pumps. Need to be started.
@@ -71,19 +70,19 @@ namespace CK.MQTT.P2P
                 if( Pumps.IsClosed )
                 {
                     await Pumps!.DisposeAsync();
-                    return ConnectError.RemoteDisconnected;
+                    return new ConnectResult( ConnectError.RemoteDisconnected );
                 }
 
                 bool hasExistingSession = connectReflex.OutStore.IsRevivedSession || connectReflex.InStore.IsRevivedSession;
                 await output.QueueMessageAndWaitUntilSentAsync( new ConnectAckPacket( hasExistingSession, ConnectReturnCode.Accepted ) );
 
-                return ConnectError.None;
+                return new ConnectResult( hasExistingSession ? SessionState.SessionPresent : SessionState.CleanSession, ConnectReturnCode.Accepted );
             }
             catch( Exception )
             {
                 // We may throw before the creation of the duplex pump.
                 if( Pumps is not null ) await Pumps.DisposeAsync(); ;
-                return ConnectError.InternalException;
+                return new ConnectResult( ConnectError.InternalException );
             }
         }
     }

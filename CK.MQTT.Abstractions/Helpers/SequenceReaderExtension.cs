@@ -57,17 +57,15 @@ namespace CK.MQTT
         static bool TryReadMultisegmentUtf8String( ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
             Debug.Assert( reader.UnreadSpan.Length < length );
-
-            // Not enough data in the current segment, try to peek for the data we need.
-            // In my use case, these strings cannot be more than 65kb, so stack memory is fine.
-            Span<byte> buffer = stackalloc byte[length];
-            if( !reader.TryCopyTo( buffer ) )
+            var unreadSeq = reader.UnreadSequence;
+            if( unreadSeq.Length < length )
             {
                 value = null;
                 return false;
             }
-            value = Encoding.UTF8.GetString( buffer );
-            reader.Advance( length );
+            unreadSeq = reader.UnreadSequence.Slice( 0, length );
+
+            value = Encoding.UTF8.GetString( in unreadSeq );
             return true;
         }
     }
