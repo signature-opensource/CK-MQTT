@@ -2,155 +2,220 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-// "heavily inspired" from MQTTnet.
-// basically we stripped all the routing, because we don't need it,
-// and locking because we are not concurrent.
+// took from from MQTTnet.
+// basically I stripped all the routing and locking because we are not concurrent.
+// Also made the algorithm faster by removing allocations and returning asap.
 
 namespace CK.MQTT.P2P
 {
     public class TopicFilter : ITopicFilter
     {
-        readonly MqttServerEventContainer _eventContainer;
-        readonly MqttNetSourceLogger _logger;
-        readonly MqttServerOptions _options;
-        readonly MqttPacketFactories _packetFactories = new MqttPacketFactories();
-
-        readonly MqttRetainedMessagesManager _retainedMessagesManager;
-
-        readonly Dictionary<string, MqttSession> _sessions = new Dictionary<string, MqttSession>( 4096 );
-
-        readonly object _sessionsManagementLock = new object();
-        readonly HashSet<MqttSession> _subscriberSessions = new HashSet<MqttSession>();
-
-        public MqttClientSessionsManager(
-            MqttServerOptions options,
-            MqttRetainedMessagesManager retainedMessagesManager,
-            MqttServerEventContainer eventContainer )
+        readonly Dictionary<ulong, HashSet<string>> _noWildcardSubscriptionsByTopicHash = new();
+        readonly Dictionary<ulong, TopicHashMaskSubscriptions> _wildcardSubscriptionsByTopicHash = new();
+        readonly HashSet<string> _subscriptions = new();
+        public bool IsFiltered( string topic )
         {
-            if( logger == null )
+            CalculateTopicHash( topic, out ulong topicHash, out _, out _ );
+            _noWildcardSubscriptionsByTopicHash.TryGetValue( topicHash, out HashSet<string>? noWildcardSubscriptions );
+            if( noWildcardSubscriptions?.Contains( topic ) ?? false ) return true;
+
+            if( noWildcardSubscriptions != null )
             {
-                throw new ArgumentNullException( nameof( logger ) );
+                foreach( var subscription in noWildcardSubscriptions )
+                {
+                    if( MqttTopicFilterComparer.IsMatch( topic, subscription ) ) return false;
+                }
             }
 
-            _logger = logger.WithSource( nameof( MqttClientSessionsManager ) );
 
-            _options = options ?? throw new ArgumentNullException( nameof( options ) );
-            _retainedMessagesManager = retainedMessagesManager ?? throw new ArgumentNullException( nameof( retainedMessagesManager ) );
-            _eventContainer = eventContainer ?? throw new ArgumentNullException( nameof( eventContainer ) );
+            foreach( var wcs in _wildcardSubscriptionsByTopicHash )
+            {
+                var wildcardSubscriptions = wcs.Value;
+                var subscriptionHash = wcs.Key;
+                var subscriptionHashMask = wildcardSubscriptions.HashMask;
+
+                if( (topicHash & subscriptionHashMask) == subscriptionHash )
+                {
+                    foreach( var subscription in wildcardSubscriptions.Subscriptions )
+                    {
+                        if( MqttTopicFilterComparer.IsMatch( topic, subscription ) ) return false;
+                    }
+                }
+            }
+            return true;
         }
 
-        public CheckSubscriptionsResult CheckSubscriptions( string topic, ulong topicHash, MqttQualityOfServiceLevel applicationMessageQoSLevel, string senderClientId )
+        public void Subscribe( string topicFilter )
         {
-            var possibleSubscriptions = new List<MqttSubscription>();
+            bool isNewSubscription = !_subscriptions.Contains( topicFilter );
 
-            // Check for possible subscriptions. They might have collisions but this is fine.
-            _subscriptionsLock.Wait();
-            try
+            // Add to subscriptions and maintain topic hash dictionaries
+            CalculateTopicHash( topicFilter, out var topicHash, out var topicHashMask, out var hasWildcard );
+
+
+            if( !isNewSubscription )
             {
-                if( _noWildcardSubscriptionsByTopicHash.TryGetValue( topicHash, out var noWildcardSubscriptions ) )
+                // must remove object from topic hash dictionary first
+                if( hasWildcard )
                 {
-                    possibleSubscriptions.AddRange( noWildcardSubscriptions.ToList() );
-                }
-
-                foreach( var wcs in _wildcardSubscriptionsByTopicHash )
-                {
-                    var wildcardSubscriptions = wcs.Value;
-                    var subscriptionHash = wcs.Key;
-                    var subscriptionHashMask = wildcardSubscriptions.HashMask;
-
-                    if( (topicHash & subscriptionHashMask) == subscriptionHash )
+                    if( _wildcardSubscriptionsByTopicHash.TryGetValue( topicHash, out var subs ) )
                     {
-                        possibleSubscriptions.AddRange( wildcardSubscriptions.Subscriptions.ToList() );
+                        subs.Subscriptions.Remove( topicFilter );
+                        // no need to remove empty entry because we'll be adding subscription again below
+                    }
+                }
+                else
+                {
+                    if( _noWildcardSubscriptionsByTopicHash.TryGetValue( topicHash, out var subscriptions ) )
+                    {
+                        subscriptions.Remove( topicFilter );
+                        // no need to remove empty entry because we'll be adding subscription again below
                     }
                 }
             }
-            finally
+
+
+            _subscriptions.Add( topicFilter );
+
+            // Add or re-add to topic hash dictionary
+            if( hasWildcard )
             {
-                _subscriptionsLock.Release();
+                if( !_wildcardSubscriptionsByTopicHash.TryGetValue( topicHash, out var subscriptions ) )
+                {
+                    subscriptions = new TopicHashMaskSubscriptions( topicHashMask );
+                    _wildcardSubscriptionsByTopicHash.Add( topicHash, subscriptions );
+                }
+
+                subscriptions.Subscriptions.Add( topicFilter );
             }
-
-            // The pre check has evaluated that nothing is subscribed.
-            // If there were some possible candidates they get checked below
-            // again to avoid collisions.
-            if( possibleSubscriptions.Count == 0 )
+            else
             {
-                return CheckSubscriptionsResult.NotSubscribed;
+                if( !_noWildcardSubscriptionsByTopicHash.TryGetValue( topicHash, out var subscriptions ) )
+                {
+                    subscriptions = new HashSet<string>();
+                    _noWildcardSubscriptionsByTopicHash.Add( topicHash, subscriptions );
+                }
+
+                subscriptions.Add( topicFilter );
             }
+        }
 
-            var senderIsReceiver = string.Equals( senderClientId, _session.Id );
-            var maxQoSLevel = -1; // Not subscribed.
+        static void CalculateTopicHash( string topic, out ulong resultHash, out ulong resultHashMask, out bool resultHasWildcard )
+        {
+            // calculate topic hash
+            ulong hash = 0;
+            ulong hashMaskInverted = 0;
+            ulong levelBitMask = 0;
+            ulong fillLevelBitMask = 0;
+            var hasWildcard = false;
+            byte checkSum = 0;
+            var level = 0;
 
-            HashSet<uint> subscriptionIdentifiers = null;
-            var retainAsPublished = false;
-
-            foreach( var subscription in possibleSubscriptions )
+            var i = 0;
+            while( i < topic.Length )
             {
-                if( subscription.NoLocal && senderIsReceiver )
+                var c = topic[i];
+                if( c == MqttTopicFilterComparer.LevelSeparator )
                 {
-                    // This is a MQTTv5 feature!
-                    continue;
-                }
-
-                if( MqttTopicFilterComparer.Compare( topic, subscription.Topic ) != MqttTopicFilterCompareResult.IsMatch )
-                {
-                    continue;
-                }
-
-                if( subscription.RetainAsPublished )
-                {
-                    // This is a MQTTv5 feature!
-                    retainAsPublished = true;
-                }
-
-                if( (int)subscription.GrantedQualityOfServiceLevel > maxQoSLevel )
-                {
-                    maxQoSLevel = (int)subscription.GrantedQualityOfServiceLevel;
-                }
-
-                if( subscription.Identifier > 0 )
-                {
-                    if( subscriptionIdentifiers == null )
+                    // done with this level
+                    hash <<= 8;
+                    hash |= checkSum;
+                    hashMaskInverted <<= 8;
+                    hashMaskInverted |= levelBitMask;
+                    checkSum = 0;
+                    levelBitMask = 0;
+                    ++level;
+                    if( level >= 8 )
                     {
-                        subscriptionIdentifiers = new HashSet<uint>();
+                        break;
+                    }
+                }
+                else if( c == MqttTopicFilterComparer.SingleLevelWildcard )
+                {
+                    levelBitMask = 0xff;
+                    hasWildcard = true;
+                }
+                else if( c == MqttTopicFilterComparer.MultiLevelWildcard )
+                {
+                    // checksum is zero for a valid topic
+                    levelBitMask = 0xff;
+                    // fill rest with this fillLevelBitMask
+                    fillLevelBitMask = 0xff;
+                    hasWildcard = true;
+                    break;
+                }
+                else
+                {
+                    // The checksum should be designed to reduce the hash bucket depth for the expected
+                    // fairly regularly named MQTT topics that don't differ much,
+                    // i.e. "room1/sensor1"
+                    //      "room1/sensor2"
+                    //      "room1/sensor3"
+                    // etc.
+                    if( (c & 1) == 0 )
+                    {
+                        checkSum += (byte)c;
+                    }
+                    else
+                    {
+                        checkSum ^= (byte)(c >> 1);
+                    }
+                }
+
+                ++i;
+            }
+
+            // Shift hash left and leave zeroes to fill ulong
+            if( level < 8 )
+            {
+                hash <<= 8;
+                hash |= checkSum;
+                hashMaskInverted <<= 8;
+                hashMaskInverted |= levelBitMask;
+                ++level;
+                while( level < 8 )
+                {
+                    hash <<= 8;
+                    hashMaskInverted <<= 8;
+                    hashMaskInverted |= fillLevelBitMask;
+                    ++level;
+                }
+            }
+
+            if( !hasWildcard )
+            {
+                while( i < topic.Length )
+                {
+                    var c = topic[i];
+                    if( c == MqttTopicFilterComparer.SingleLevelWildcard || c == MqttTopicFilterComparer.MultiLevelWildcard )
+                    {
+                        hasWildcard = true;
+                        break;
                     }
 
-                    subscriptionIdentifiers.Add( subscription.Identifier );
+                    ++i;
                 }
             }
 
-            if( maxQoSLevel == -1 )
+            resultHash = hash;
+            resultHashMask = ~hashMaskInverted;
+            resultHasWildcard = hasWildcard;
+        }
+
+        sealed class TopicHashMaskSubscriptions
+        {
+            public TopicHashMaskSubscriptions( ulong hashMask )
             {
-                return CheckSubscriptionsResult.NotSubscribed;
+                HashMask = hashMask;
             }
 
-            var result = new CheckSubscriptionsResult
-            {
-                IsSubscribed = true,
-                RetainAsPublished = retainAsPublished,
-                SubscriptionIdentifiers = subscriptionIdentifiers?.ToList() ?? EmptySubscriptionIdentifiers,
+            public ulong HashMask { get; }
 
-                // Start with the same QoS as the publisher.
-                QualityOfServiceLevel = applicationMessageQoSLevel
-            };
-
-            // Now downgrade if required.
-            //
-            // If a subscribing Client has been granted maximum QoS 1 for a particular Topic Filter, then a QoS 0 Application Message matching the filter is delivered
-            // to the Client at QoS 0. This means that at most one copy of the message is received by the Client. On the other hand, a QoS 2 Message published to
-            // the same topic is downgraded by the Server to QoS 1 for delivery to the Client, so that Client might receive duplicate copies of the Message.
-
-            // Subscribing to a Topic Filter at QoS 2 is equivalent to saying "I would like to receive Messages matching this filter at the QoS with which they were published".
-            // This means a publisher is responsible for determining the maximum QoS a Message can be delivered at, but a subscriber is able to require that the Server
-            // downgrades the QoS to one more suitable for its usage.
-            if( maxQoSLevel < (int)applicationMessageQoSLevel )
-            {
-                result.QualityOfServiceLevel = (MqttQualityOfServiceLevel)maxQoSLevel;
-            }
-
-            return result;
+            public HashSet<string> Subscriptions { get; } = new HashSet<string>();
         }
     }
 }

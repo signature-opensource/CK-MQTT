@@ -38,6 +38,7 @@ namespace CK.MQTT.Client.Tests
 
             await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             await replayer.SendToClient( TestHelper.Monitor, "20020000" );
+            await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
 
             var result = await task;
             result.ConnectReturnCode.Should().Be( ConnectReturnCode.Accepted );
@@ -163,6 +164,7 @@ namespace CK.MQTT.Client.Tests
 
             await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             await replayer.SendToClient( TestHelper.Monitor, "20020000" );
+            await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
 
             await task;
             try
@@ -189,6 +191,7 @@ namespace CK.MQTT.Client.Tests
 
             await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             await replayer.SendToClient( TestHelper.Monitor, "20021000" );
+
             var res = await task;
             res.ConnectError.Should().NotBe( ConnectError.None );
             await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
@@ -198,6 +201,7 @@ namespace CK.MQTT.Client.Tests
 
             await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             await replayer.SendToClient( TestHelper.Monitor, "20020000" );
+            await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
             var res2 = await task2;
             res2.ConnectError.Should().Be( ConnectError.None );
             replayer.Events.Reader.Count.Should().Be( 0 );
@@ -220,7 +224,9 @@ namespace CK.MQTT.Client.Tests
             await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             await replayer.SendToClient( TestHelper.Monitor, connackBuffer );
             await replayer.ShouldContainEventAsync<TestMqttClient.UnparsedExtraData>();
-
+            await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
+            var res = await task;
+            res.IsSuccess.Should().BeTrue();
             await replayer.SendToClient( TestHelper.Monitor, "321a000a7465737420746f706963000174657374207061796c6f6164" );
             var msg = await replayer.ShouldContainEventAsync<ApplicationMessage>();
             msg.Should().NotBeNull();
@@ -245,6 +251,7 @@ namespace CK.MQTT.Client.Tests
             var result = await task;
             result.ConnectReturnCode.Should().Be( ConnectReturnCode.Accepted );
             await replayer.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();
+            await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
     }

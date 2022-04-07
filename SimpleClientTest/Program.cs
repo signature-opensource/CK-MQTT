@@ -18,7 +18,7 @@ namespace SimpleClientTest
 
         static async Task Main()
         {
-            var res = new MQTTClient( null!, null! );
+            //var res = new MQTTClient( null!, null! );
             //test.mosquitto.org
 
             //ActivityMonitor m = new();
