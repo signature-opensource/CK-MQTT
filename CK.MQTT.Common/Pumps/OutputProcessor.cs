@@ -35,9 +35,6 @@ namespace CK.MQTT.Pumps
             return newPacketSent || retriesSent;
         }
 
-        readonly SemaphoreSlim _semaphore = new( 0, 1 );
-        public void SignalWorkAvailable() => _semaphore.Release();
-
         public virtual async Task WaitPacketAvailableToSendAsync( CancellationToken stopWaitToken, CancellationToken stopToken )
         {
             // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
@@ -55,7 +52,7 @@ namespace CK.MQTT.Pumps
 
         protected ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason ) => OutputPump.SelfCloseAsync( disconnectedReason );
 
-        async ValueTask<bool> SendAMessageFromQueueAsync( CancellationToken cancellationToken )
+        protected virtual async ValueTask<bool> SendAMessageFromQueueAsync( CancellationToken cancellationToken )
         {
             IOutgoingPacket? packet;
             do

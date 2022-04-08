@@ -268,7 +268,7 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
+        public virtual ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
         {
             var subs = subscriptions.ToArray();
             foreach( Subscription sub in subs )
@@ -279,14 +279,14 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
+        public virtual ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
         {
             MqttBinaryWriter.ThrowIfInvalidMQTTString( subscriptions.TopicFilter );
             return SendPacketAsync<SubscribeReturnCode>( new OutgoingSubscribe( new[] { subscriptions } ) );
         }
 
         /// <inheritdoc/>
-        public async ValueTask<Task> UnsubscribeAsync( params string[] topics )
+        public virtual async ValueTask<Task> UnsubscribeAsync( params string[] topics )
         {
             foreach( string topic in topics )
             {

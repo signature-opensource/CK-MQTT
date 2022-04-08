@@ -17,7 +17,7 @@ namespace CK.MQTT.Packets
     {
         readonly List<(string, string)> _userProperties = new();
         readonly TaskCompletionSource _taskCompletionSource = new();
-        readonly IMqtt5ServerClientSink _sink;
+        readonly IMqtt5ServerSink _sink;
         readonly ProtocolConfiguration _pConfig;
         readonly P2PMqttConfiguration _config;
         ReadOnlyMemory<byte> _authData;
@@ -46,7 +46,7 @@ namespace CK.MQTT.Packets
         byte _flags;
         // Currently the parsed data is available when the packet is not parsed yet and can lead to errors.
         readonly SemaphoreSlim _exitWait = new( 0 );
-        public ConnectReflex( IMqtt5ServerClientSink sink, ProtocolConfiguration pConfig, P2PMqttConfiguration config )
+        public ConnectReflex( IMqtt5ServerSink sink, ProtocolConfiguration pConfig, P2PMqttConfiguration config )
         {
             _sink = sink;
             _pConfig = pConfig;

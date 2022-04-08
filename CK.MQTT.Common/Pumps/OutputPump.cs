@@ -93,6 +93,7 @@ namespace CK.MQTT.Pumps
 
             public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
         }
+        
         public void QueueReflexMessage( IOutgoingPacket item )
         {
             void QueuePacket( IOutgoingPacket packet )

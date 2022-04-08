@@ -2,7 +2,7 @@ using CK.MQTT.Client;
 
 namespace CK.MQTT.P2P
 {
-    public interface IMqtt5ServerClientSink : IMqtt3Sink
+    public interface IMqtt5ServerSink : IMqtt3Sink
     {
     }
 }

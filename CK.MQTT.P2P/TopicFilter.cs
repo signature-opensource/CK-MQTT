@@ -16,7 +16,7 @@ namespace CK.MQTT.P2P
     {
         readonly Dictionary<ulong, HashSet<string>> _noWildcardSubscriptionsByTopicHash = new();
         readonly Dictionary<ulong, TopicHashMaskSubscriptions> _wildcardSubscriptionsByTopicHash = new();
-        readonly HashSet<string> _subscriptions = new();
+        readonly Dictionary<string, MqttSubscription> _subscriptions = new();
         public bool IsFiltered( string topic )
         {
             CalculateTopicHash( topic, out ulong topicHash, out _, out _ );
@@ -51,7 +51,7 @@ namespace CK.MQTT.P2P
 
         public void Subscribe( string topicFilter )
         {
-            bool isNewSubscription = !_subscriptions.Contains( topicFilter );
+            bool isNewSubscription = !_subscriptions.ContainsKey( topicFilter );
 
             // Add to subscriptions and maintain topic hash dictionaries
             CalculateTopicHash( topicFilter, out var topicHash, out var topicHashMask, out var hasWildcard );
@@ -78,8 +78,7 @@ namespace CK.MQTT.P2P
                 }
             }
 
-
-            _subscriptions.Add( topicFilter );
+            _subscriptions.Add( topicFilter, new MqttSubscription( topicFilter ) );
 
             // Add or re-add to topic hash dictionary
             if( hasWildcard )
@@ -102,6 +101,43 @@ namespace CK.MQTT.P2P
 
                 subscriptions.Add( topicFilter );
             }
+        }
+
+        public void Unsubscribe( string topicFilter )
+        {
+            var removedSubscriptions = new List<string>();
+
+            _subscriptions.TryGetValue( topicFilter, out var existingSubscription );
+
+            if( existingSubscription == null ) return;
+            _subscriptions.Remove( topicFilter );
+
+            // must remove subscription object from topic hash dictionary also
+
+            if( existingSubscription.TopicHasWildcard )
+            {
+                if( _wildcardSubscriptionsByTopicHash.TryGetValue( existingSubscription.TopicHash, out var subs ) )
+                {
+                    subs.Subscriptions.Remove( topicFilter );
+                    if( subs.Subscriptions.Count == 0 )
+                    {
+                        _wildcardSubscriptionsByTopicHash.Remove( existingSubscription.TopicHash );
+                    }
+                }
+            }
+            else
+            {
+                if( _noWildcardSubscriptionsByTopicHash.TryGetValue( existingSubscription.TopicHash, out var subs ) )
+                {
+                    subs.Remove( topicFilter );
+                    if( subs.Count == 0 )
+                    {
+                        _noWildcardSubscriptionsByTopicHash.Remove( existingSubscription.TopicHash );
+                    }
+                }
+            }
+
+            removedSubscriptions.Add( topicFilter );
         }
 
         static void CalculateTopicHash( string topic, out ulong resultHash, out ulong resultHashMask, out bool resultHasWildcard )
@@ -206,6 +242,13 @@ namespace CK.MQTT.P2P
             resultHasWildcard = hasWildcard;
         }
 
+        public void Reset()
+        {
+            _noWildcardSubscriptionsByTopicHash.Clear();
+            _wildcardSubscriptionsByTopicHash.Clear();
+            _subscriptions.Clear();
+        }
+
         sealed class TopicHashMaskSubscriptions
         {
             public TopicHashMaskSubscriptions( ulong hashMask )
@@ -216,6 +259,28 @@ namespace CK.MQTT.P2P
             public ulong HashMask { get; }
 
             public HashSet<string> Subscriptions { get; } = new HashSet<string>();
+        }
+
+        sealed class MqttSubscription
+        {
+            public MqttSubscription( string topic )
+            {
+                Topic = topic;
+
+                CalculateTopicHash( Topic, out var hash, out var hashMask, out var hasWildcard );
+                TopicHash = hash;
+                TopicHashMask = hashMask;
+                TopicHasWildcard = hasWildcard;
+            }
+
+
+            public string Topic { get; }
+
+            public ulong TopicHash { get; }
+
+            public ulong TopicHashMask { get; }
+
+            public bool TopicHasWildcard { get; }
         }
     }
 }

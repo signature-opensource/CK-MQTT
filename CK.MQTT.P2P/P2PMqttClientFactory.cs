@@ -18,7 +18,7 @@ namespace CK.MQTT
     public static class MqttClientFactories
     {
 
-        public static P2PClient CreateMQTTClient( this P2PMqttClientFactory? factory, IMqtt5ServerClientSink sink, P2PMqttConfiguration config )
+        public static P2PClient CreateMQTTClient( this P2PMqttClientFactory? factory, IMqtt5ServerSink sink, P2PMqttConfiguration config )
             => new( sink, config );
     }
 

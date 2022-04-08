@@ -51,13 +51,16 @@ namespace CK.MQTT.Pumps
             return reader.TryReadMQTTRemainingLength( out length, out position );
         }
 
+        protected virtual async ValueTask<ReadResult> ReadAsync( CancellationToken cancellationToken )
+            => await _pipeReader.ReadAsync( cancellationToken );
+
         async Task ReadLoopAsync()
         {
             try
             {
                 while( !StopToken.IsCancellationRequested )
                 {
-                    ReadResult read = await _pipeReader.ReadAsync( CloseToken );
+                    var read = await ReadAsync( CloseToken );
                     if( CloseToken.IsCancellationRequested || read.IsCanceled )
                     {
                         break; // When we are notified to stop, we don't need to notify the external world of it.
