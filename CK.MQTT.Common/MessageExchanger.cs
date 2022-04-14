@@ -14,10 +14,7 @@ namespace CK.MQTT
 {
     public class MessageExchanger : IConnectedLowLevelMqttClient
     {
-        protected virtual IMqtt3Sink Sink { get; set; }
-        protected readonly IRemotePacketStore RemotePacketStore;
-        protected readonly ILocalPacketStore LocalPacketStore;
-        protected readonly IMqttChannel Channel;
+
 
         /// <summary>
         /// Instantiate the <see cref="MessageExchanger"/> with the given configuration.
@@ -34,9 +31,13 @@ namespace CK.MQTT
             LocalPacketStore = localPacketStore ?? new MemoryPacketStore( Config, ushort.MaxValue );
         }
 
-        public ProtocolConfiguration PConfig { get; }
-        protected Mqtt3ConfigurationBase Config { get; }
-        protected DuplexPump<OutputPump, InputPump>? Pumps { get; set; }
+        internal protected virtual IMqtt3Sink Sink { get; set; }
+        internal protected IRemotePacketStore RemotePacketStore { get; }
+        internal protected ILocalPacketStore LocalPacketStore { get; }
+        internal protected IMqttChannel Channel { get; }
+        internal protected ProtocolConfiguration PConfig { get; }
+        internal protected Mqtt3ConfigurationBase Config { get; }
+        internal protected DuplexPump<OutputPump, InputPump>? Pumps { get; set; }
         public bool IsConnected => Pumps?.IsRunning ?? false;
 
 
@@ -95,7 +96,7 @@ namespace CK.MQTT
 
         public async ValueTask<Task> PublishAsync( OutgoingMessage message ) => await SendPacketAsync<object?>( message );
 
-        protected async virtual ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
+        internal protected async virtual ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );
             Channel.Close();

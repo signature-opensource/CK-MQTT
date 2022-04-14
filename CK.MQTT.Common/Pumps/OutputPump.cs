@@ -17,25 +17,19 @@ namespace CK.MQTT.Pumps
     public class OutputPump : PumpBase
     {
         OutputProcessor? _outputProcessor;
-        readonly IMqtt3Sink _sink;
-        readonly ILocalPacketStore _outgoingPacketStore;
-
 
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( IMqtt3Sink sink, ILocalPacketStore localStore, Func<DisconnectReason, ValueTask> onDisconnect, Mqtt3ConfigurationBase config ) : base( onDisconnect )
+        public OutputPump( MessageExchanger messageExchanger ) : base( messageExchanger )
         {
-            _sink = sink;
-            _outgoingPacketStore = localStore;
-            Config = config;
-            MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
+            MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
-            ReflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
+            ReflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
@@ -43,7 +37,6 @@ namespace CK.MQTT.Pumps
 
         public Channel<IOutgoingPacket> MessagesChannel { get; }
         public Channel<IOutgoingPacket> ReflexesChannel { get; }
-        public Mqtt3ConfigurationBase Config { get; }
 
         public void StartPumping( OutputProcessor outputProcessor )
         {
@@ -93,18 +86,18 @@ namespace CK.MQTT.Pumps
 
             public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
         }
-        
+
         public void QueueReflexMessage( IOutgoingPacket item )
         {
             void QueuePacket( IOutgoingPacket packet )
             {
                 bool result = ReflexesChannel.Writer.TryWrite( item );
-                if( !result ) _sink.OnQueueFullPacketDropped( item.PacketId, PacketType.PublishAck );
+                if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( item.PacketId, PacketType.PublishAck );
             }
             if( !item.IsRemoteOwnedPacketId )
             {
 
-                _outgoingPacketStore.BeforeQueueReflexPacket( QueuePacket, item );
+                MessageExchanger.LocalPacketStore.BeforeQueueReflexPacket( QueuePacket, item );
             }
             else
             {

@@ -14,18 +14,17 @@ namespace CK.MQTT.Server
         Task? _acceptLoop;
         CancellationTokenSource? _cts;
         readonly IMqttChannelFactory _channelFactory;
-        readonly ISecurityManagerFactory _securityManagerFactory;
         readonly IStoreFactory _storeFactory;
 
         protected Mqtt3ConfigurationBase Config { get; }
 
-        public MqttListener( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, ISecurityManagerFactory securityManagerFactory, IStoreFactory storeFactory )
+        public MqttListener( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, IStoreFactory storeFactory )
         {
             Config = config;
             _channelFactory = channelFactory;
-            _securityManagerFactory = securityManagerFactory;
             _storeFactory = storeFactory;
         }
+        protected virtual ISecurityManagerFactory SecurityManagerFactory { get; }
 
         public void StartListening()
         {
@@ -73,7 +72,7 @@ namespace CK.MQTT.Server
 
                     if( cancellationToken.IsCancellationRequested ) return;
 
-                    securityManager = await _securityManagerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );
+                    securityManager = await SecurityManagerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );
                     if( securityManager is null )
                     {
                         CloseConnection();

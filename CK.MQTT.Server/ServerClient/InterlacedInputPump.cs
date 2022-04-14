@@ -17,10 +17,8 @@ namespace CK.MQTT.P2P
         readonly ChannelReader<(bool, string[])> _subscribes;
         public InterlacedInputPump
         (
-            IMqtt3Sink sink,
-            ITopicFilter filter,
-            Func<DisconnectReason, ValueTask> onDisconnect, Mqtt3ConfigurationBase config, PipeReader pipeReader, Reflex reflex, ChannelReader<(bool, string[])> subscribes
-        ) : base( sink, onDisconnect, config, pipeReader, reflex )
+            MessageExchanger messageExchanger, Reflex reflex, ITopicFilter filter, ChannelReader<(bool, string[])> subscribes
+        ) : base( messageExchanger, reflex )
         {
             _filter = filter;
             _subscribes = subscribes;
@@ -35,7 +33,6 @@ namespace CK.MQTT.P2P
             while( !read.IsCompleted )
             {
                 //SlowPath
-
                 Task readTask = read.AsTask();
                 Task messageReady = _subscribes.WaitToReadAsync( cancellationToken ).AsTask();
 
@@ -46,9 +43,8 @@ namespace CK.MQTT.P2P
                 }
             }
             return await read;
-
         }
-        
+
         void ProcessSubscribes()
         {
             while( _subscribes.TryRead( out (bool, string[]) item ) )

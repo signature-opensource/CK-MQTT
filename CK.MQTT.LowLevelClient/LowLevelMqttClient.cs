@@ -61,7 +61,7 @@ namespace CK.MQTT
                 }
 
                 // Creating pumps. Need to be started.
-                OutputPump output = new( Sink, LocalPacketStore, SelfDisconnectAsync, Config );
+                OutputPump output = new( this );
 
                 // Middleware that will processes the requests.
                 ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
@@ -76,7 +76,7 @@ namespace CK.MQTT
                 // Enable keepalive only if we need it.
                 if( _clientConfig.KeepAliveSeconds == 0 )
                 {
-                    outputProcessor = new OutputProcessor( PConfig, output, Channel.DuplexPipe.Output, LocalPacketStore );
+                    outputProcessor = new OutputProcessor( this );
                 }
                 else
                 {
@@ -99,7 +99,7 @@ namespace CK.MQTT
 
                 Pumps = new( // Require channel started.
                     output,
-                    new InputPump( Sink, SelfDisconnectAsync, Config, Channel.DuplexPipe.Input, connectAckReflex.HandleRequestAsync )
+                    new InputPump( this, connectAckReflex.HandleRequestAsync )
                 );
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.
 

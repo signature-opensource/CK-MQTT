@@ -1,111 +1,56 @@
+using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.Common.Pumps;
+using CK.MQTT.P2P;
 using CK.MQTT.Packets;
-using CK.MQTT.Pumps;
-using CK.MQTT.Server;
 using CK.MQTT.Stores;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.IO.Pipelines;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Server
 {
-    public class MqttServerClient : MessageExchanger, IMqtt3Client
+    public class MqttServerClient : MqttListener, IMqtt3Client, IDisposable
     {
-        readonly ITopicFilter _topicFilter = new TopicFilter();
-        readonly Channel<(bool, string[])> _subscriptionsCommand = System.Threading.Channels.Channel.CreateUnbounded<(bool, string[])>();
-        readonly ISecurityManager _securityManager;
-
-        internal MqttServerClient(
-            ProtocolConfiguration pConfig,
-            MqttServerClientConfiguration config,
-            IMqtt3Sink sink,
-            IMqttChannel channel,
-            ISecurityManager securityManager,
-            IRemotePacketStore? remotePacketStore = null,
-            ILocalPacketStore? localPacketStore = null
-        )
-            : base( pConfig, config, sink, channel, remotePacketStore, localPacketStore )
+        internal readonly ITopicFilter _inputTopicFilter = new TopicFilter();
+        internal readonly ITopicFilter _outputTopicFilter = new TopicFilter();
+        internal readonly Channel<(bool, string[])> _subscriptionsCommand = Channel.CreateUnbounded<(bool, string[])>();
+        readonly IMqtt3Sink _sink;
+        internal TaskCompletionSource<(IMqttChannel channel, ISecurityManager securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
+        ClientWrapper? _wrapper;
+        public MqttServerClient( Mqtt3ConfigurationBase config, IMqtt3Sink sink, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, ISecurityManagerFactory securityManagerFactory ) : base( config, channelFactory, storeFactory )
         {
-            P2PConfig = config;
-            _securityManager = securityManager;
-            Sink = new SinkWrapper( sink, _topicFilter );
+            SecurityManagerFactory = new SecurityManagerFactoryWrapper( this, securityManagerFactory );
+            _sink = sink;
         }
 
-        class SinkWrapper : IMqtt3Sink
+        protected override ISecurityManagerFactory SecurityManagerFactory { get; }
+
+        protected override ValueTask CreateClientAsync( IActivityMonitor m, IMqttChannel channel, ISecurityManager securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
         {
-            readonly IMqtt3Sink _sink;
-            readonly ITopicFilter _topicFilter;
-            public SinkWrapper( IMqtt3Sink sink, ITopicFilter topicFilter )
-            {
-                _sink = sink;
-                _topicFilter = topicFilter;
-            }
-
-            public void Connected() => _sink.Connected();
-
-            public void OnPacketResent( ushort packetId, int packetInTransitOrLost, bool isDropped ) => _sink.OnPacketResent( packetId, packetInTransitOrLost, isDropped );
-
-            public void OnPacketWithDupFlagReceived( PacketType packetType ) => _sink.OnPacketWithDupFlagReceived( packetType );
-
-            public void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount ) => _sink.OnPoisonousPacket( packetId, packetType, poisonousTotalCount );
-
-            public void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => _sink.OnQueueFullPacketDropped( packetId, packetType );
-
-            public bool OnReconnectionFailed( int retryCount, int maxRetryCount ) => _sink.OnReconnectionFailed( retryCount, maxRetryCount );
-
-            public void OnStoreFull( ushort freeLeftSlot ) => _sink.OnStoreFull( freeLeftSlot );
-
-            public void OnUnattendedDisconnect( DisconnectReason reason ) => _sink.OnUnattendedDisconnect( reason );
-
-            public void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData ) => _sink.OnUnparsedExtraData( packetId, unparsedData );
-
-            public async ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
-            {
-                if( _topicFilter.IsFiltered( topic ) )
-                {
-                    await reader.SkipBytesAsync( null, 0, size, cancellationToken );
-                }
-                else
-                {
-                    await _sink.ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
-                }
-            }
+            _needClientTCS!.SetResult( (channel, securityManager, localPacketStore, remotePacketStore, connectInfo) );
+            _needClientTCS = null;
+            return new ValueTask();
         }
-
-        class ClientWrapper: 
-        public MqttServerClientConfiguration P2PConfig { get; }
 
         public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
-
-
-                
-
-
-                
-                var outputProcessor = new FiltringOutputProcessor( _topicFilter, PConfig, output, Channel.DuplexPipe.Output, LocalPacketStore );
-                // Enable keepalive only if we need it.
-
-               
-                bool hasExistingSession = connectReflex.OutStore.IsRevivedSession || connectReflex.InStore.IsRevivedSession;
-            }
-            
+            if( lastWill != null ) throw new ArgumentException( "Last will is not supported by a P2P client." );
+            if( _wrapper?.IsConnected ?? false ) throw new InvalidOperationException( "This client is already connected." );
+            var tcs = new TaskCompletionSource<(IMqttChannel channel, ISecurityManager securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
+            _needClientTCS = tcs;
+            var (channel, securityManager, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
+            _wrapper = new ClientWrapper( this, ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ), Config, _sink, channel, remotePacketStore, localPacketStore );
+            return new ConnectResult( localPacketStore.IsRevivedSession ? SessionState.SessionPresent : SessionState.CleanSession, ConnectReturnCode.Accepted );
         }
 
-
-        public async ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
+        public async ValueTask<Task> UnsubscribeAsync( params string[] topics )
         {
-            await _subscriptionsCommand.Writer.WriteAsync( (true, new string[] { subscriptions.TopicFilter }) );
-            return Task.FromResult(
-                SubscribeReturnCode.MaximumQoS0
-            // We cannot ask the client a certain QoS as it's a fake subscribe, we return 0 because we canno't make the guarentee the QoS will be higher.
-            );
+            await _subscriptionsCommand.Writer.WriteAsync( (false, topics) );
+            return Task.CompletedTask;
         }
 
         public async ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
@@ -118,10 +63,24 @@ namespace CK.MQTT.P2P
             );
         }
 
-        public async ValueTask<Task> UnsubscribeAsync( params string[] topics )
+        public async ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
         {
-            await _subscriptionsCommand.Writer.WriteAsync( (false, topics) );
-            return Task.CompletedTask;
+            await _subscriptionsCommand.Writer.WriteAsync( (true, new string[] { subscriptions.TopicFilter }) );
+            return Task.FromResult(
+                SubscribeReturnCode.MaximumQoS0
+            // We cannot ask the client a certain QoS as it's a fake subscribe, we return 0 because we canno't make the guarentee the QoS will be higher.
+            );
+        }
+
+        public Task<bool> DisconnectAsync( bool deleteSession )
+            => _wrapper!.DisconnectAsync( deleteSession );
+
+        public ValueTask<Task> PublishAsync( OutgoingMessage message )
+            => _wrapper!.PublishAsync( message );
+
+        public void Dispose()
+        {
+            _wrapper?.Dispose();
         }
     }
 }

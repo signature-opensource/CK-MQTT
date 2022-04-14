@@ -19,13 +19,11 @@ namespace CK.MQTT.Server
 
         protected void Engage()
         {
-            var output = new OutputPump( Sink, LocalPacketStore, SelfDisconnectAsync, Config );
+            var output = new OutputPump( this );
             // Middleware that will processes the requests.
             ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( RemotePacketStore, OnMessageAsync, output ) )
-                .UseMiddleware( new PublishLifecycleReflex( RemotePacketStore, LocalPacketStore, output ) )
-                .UseMiddleware( new SubackReflex( LocalPacketStore ) )
-                .UseMiddleware( new UnsubackReflex( LocalPacketStore ) );
+                .UseMiddleware( new PublishLifecycleReflex( RemotePacketStore, LocalPacketStore, output ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
             Reflex reflex = builder.Build( async ( a, b, c, d, e, f ) =>
             {
@@ -37,10 +35,11 @@ namespace CK.MQTT.Server
                 output,
                 CreateInputPump( reflex )
             );
-            output.StartPumping( new OutputProcessor( PConfig, output, Channel.DuplexPipe!.Output, LocalPacketStore ) );
+            output.StartPumping( CreateOutputProcessor() );
         }
 
-        protected virtual InputPump CreateInputPump( Reflex reflex )
-            => new( Sink, SelfDisconnectAsync, Config, Channel.DuplexPipe!.Input, reflex );
+        protected virtual InputPump CreateInputPump( Reflex reflex ) => new( this, reflex );
+
+        protected virtual OutputProcessor CreateOutputProcessor() => new( this );
     }
 }

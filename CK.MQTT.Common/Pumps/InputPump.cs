@@ -18,20 +18,15 @@ namespace CK.MQTT.Pumps
     /// </summary>
     public class InputPump : PumpBase
     {
-        readonly Mqtt3ConfigurationBase _config;
-        readonly PipeReader _pipeReader;
-        readonly IMqtt3Sink _sink;
-
         /// <summary>
         /// Initializes an <see cref="InputPump"/> and immediatly starts to process incoming packets.
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read data from.</param>
         /// <param name="reflex">The <see cref="Reflex"/> that will process incoming packets.</param>
-        public InputPump( IMqtt3Sink sink, Func<DisconnectReason, ValueTask> onDisconnect, Mqtt3ConfigurationBase config, PipeReader pipeReader, Reflex reflex ) : base( onDisconnect )
+        public InputPump( MessageExchanger messageExchanger, Reflex reflex ) : base( messageExchanger )
         {
-            (_config, _pipeReader, CurrentReflex) = (config, pipeReader, reflex);
+            CurrentReflex = reflex;
             SetRunningLoop( ReadLoopAsync() );
-            _sink = sink;
         }
 
         /// <summary>
@@ -52,10 +47,11 @@ namespace CK.MQTT.Pumps
         }
 
         protected virtual async ValueTask<ReadResult> ReadAsync( CancellationToken cancellationToken )
-            => await _pipeReader.ReadAsync( cancellationToken );
+            => await MessageExchanger.Channel.DuplexPipe!.Input.ReadAsync( cancellationToken );
 
         async Task ReadLoopAsync()
         {
+            var pipeReader = MessageExchanger.Channel.DuplexPipe!.Input;
             try
             {
                 while( !StopToken.IsCancellationRequested )
@@ -74,8 +70,8 @@ namespace CK.MQTT.Pumps
                     }
                     if( res == OperationStatus.Done )
                     {
-                        _pipeReader.AdvanceTo( position );
-                        OperationStatus status = await CurrentReflex( _sink, this, header, length, _pipeReader, CloseToken );
+                        pipeReader.AdvanceTo( position );
+                        OperationStatus status = await CurrentReflex( MessageExchanger.Sink, this, header, length, pipeReader, CloseToken );
                         if( status == OperationStatus.InvalidData )
                         {
                             await SelfCloseAsync( DisconnectReason.ProtocolError );
@@ -100,7 +96,7 @@ namespace CK.MQTT.Pumps
                         await SelfCloseAsync( DisconnectReason.RemoteDisconnected );
                         break;
                     }
-                    _pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
+                    pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                 }
             }
             catch( OperationCanceledException )
@@ -116,10 +112,9 @@ namespace CK.MQTT.Pumps
             }
         }
 
-
         public override async Task CloseAsync()
         {
-            await _pipeReader.CompleteAsync();
+            await MessageExchanger.Channel.DuplexPipe!.Input.CompleteAsync();
             await base.CloseAsync();
         }
     }

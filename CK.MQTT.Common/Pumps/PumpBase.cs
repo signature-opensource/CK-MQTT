@@ -12,9 +12,12 @@ namespace CK.MQTT
     {
         readonly CancellationTokenSource _stopSource = new();
         readonly CancellationTokenSource _closeSource = new();
-        readonly Func<DisconnectReason, ValueTask> _onDisconnect;
+        protected readonly MessageExchanger MessageExchanger;
 
-        private protected PumpBase( Func<DisconnectReason, ValueTask> onDisconnect ) => _onDisconnect = onDisconnect;
+        private protected PumpBase( MessageExchanger messageExchanger )
+        {
+            MessageExchanger = messageExchanger;
+        }
 
         Task _workLoopTask = null!; //Always set in constructor
 
@@ -55,7 +58,7 @@ namespace CK.MQTT
         internal protected async ValueTask SelfCloseAsync( DisconnectReason disconnectedReason )
         {
             if( !CancelTokens() ) return;
-            await _onDisconnect( disconnectedReason );
+            await MessageExchanger.SelfDisconnectAsync( disconnectedReason );
         }
 
         /// <summary>
