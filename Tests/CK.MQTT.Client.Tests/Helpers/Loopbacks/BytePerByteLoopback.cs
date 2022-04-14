@@ -99,7 +99,7 @@ namespace CK.MQTT.Client.Tests
         }
     }
 
-    public class BytePerByteLoopback : LoopBack
+    public class BytePerByteLoopback : LoopBackBase
     {
         class SingleBytePool : MemoryPool<byte>
         {
@@ -131,23 +131,29 @@ namespace CK.MQTT.Client.Tests
         }
         public BytePerByteLoopback( ChannelWriter<object?> writer ) : base( writer )
         {
+        }
+
+        public override ValueTask StartAsync()
+        {
             const int size = 16;
             Pipe input = new( new PipeOptions( pauseWriterThreshold: long.MaxValue, minimumSegmentSize: size, pool: new SingleBytePool() ) );
             Pipe output = new( new PipeOptions( pauseWriterThreshold: long.MaxValue, minimumSegmentSize: size, pool: new SingleBytePool() ) );
 
             DuplexPipe = new DuplexPipe( new BytePerBytePipeReader( input.Reader ), output.Writer );
             TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
+            return new ValueTask();
         }
 
-        public override IDuplexPipe TestDuplexPipe { get; set; }
-        public override IDuplexPipe DuplexPipe { get; set; }
+        public override IDuplexPipe? TestDuplexPipe { get; protected set; }
+        public override IDuplexPipe? DuplexPipe { get; protected set; }
 
 
         public override void Close()
         {
-
-            TestDuplexPipe.Input.Complete();
-            TestDuplexPipe.Output.Complete();
+            if( TestDuplexPipe == null ) throw new InvalidOperationException( "Not started." );
+            TestDuplexPipe!.Input.Complete();
+            TestDuplexPipe!.Output.Complete();
+            TestDuplexPipe = null;
         }
     }
 }

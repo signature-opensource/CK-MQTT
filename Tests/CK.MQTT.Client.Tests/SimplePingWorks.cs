@@ -49,7 +49,7 @@ namespace CK.MQTT.Client.Tests
                 replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
                 await Task.Delay( 5 );
             }
-            await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+            await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
             var disconnect = await replayer.ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>();
             disconnect.Reason.Should().Be( DisconnectReason.PingReqTimeout );
         }

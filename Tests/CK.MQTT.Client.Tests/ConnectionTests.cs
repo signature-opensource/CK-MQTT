@@ -67,7 +67,7 @@ namespace CK.MQTT.Client.Tests
                 {
                     res.Should().Be( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
                 }
-                await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+                await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
             }
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
@@ -90,7 +90,7 @@ namespace CK.MQTT.Client.Tests
                 await replayer.SendToClient( TestHelper.Monitor, "200200" + BitConverter.ToString( new byte[] { i } ) );
                 var res = await task;
                 res.Should().Be( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
-                await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+                await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
             }
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
@@ -129,7 +129,7 @@ namespace CK.MQTT.Client.Tests
                         Assert.Fail();
                         return;
                 }
-                await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+                await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
             }
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
@@ -149,7 +149,7 @@ namespace CK.MQTT.Client.Tests
             connectTask.IsCompleted.Should().BeFalse();
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
             (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );
-            await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+            await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
 
@@ -194,7 +194,7 @@ namespace CK.MQTT.Client.Tests
 
             var res = await task;
             res.ConnectError.Should().NotBe( ConnectError.None );
-            await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+            await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
 
             var task2 = client.ConnectAsync();
             await replayer.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();

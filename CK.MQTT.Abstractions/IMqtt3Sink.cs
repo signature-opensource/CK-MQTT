@@ -7,7 +7,6 @@ namespace CK.MQTT.Client
 {
     public interface IMqtt3Sink
     {
-
         ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
 
         void OnUnattendedDisconnect( DisconnectReason reason );

@@ -1,3 +1,5 @@
+using System;
+
 namespace CK.MQTT
 {
     /// <summary>
@@ -17,8 +19,9 @@ namespace CK.MQTT
         string MultiLevelTopicWildcard,
         string ProtocolName,
         uint MaximumPacketSize = 268435455
-    ) {
-      
+    )
+    {
+
         /// <summary>
         /// Default for MQTT3.
         /// </summary>
@@ -28,5 +31,13 @@ namespace CK.MQTT
         /// Defaults for MQTT5
         /// </summary>
         public static ProtocolConfiguration Mqtt5 => new( 8883, 1883, ProtocolLevel.MQTT5, "+", "#", "MQTT" );
+
+        public static ProtocolConfiguration FromProtocolLevel( ProtocolLevel protocolLevel )
+            => protocolLevel switch
+            {
+                ProtocolLevel.MQTT3 => Mqtt3,
+                ProtocolLevel.MQTT5 => Mqtt5,
+                _ => throw new ArgumentOutOfRangeException( nameof( protocolLevel ), "Unknow protocol level" )
+            };
     }
 }

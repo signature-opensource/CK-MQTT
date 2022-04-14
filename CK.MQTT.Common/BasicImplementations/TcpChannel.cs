@@ -11,13 +11,12 @@ namespace CK.MQTT
     /// </summary>
     public class TcpChannel : IMqttChannel
     {
-
         readonly string _host;
         readonly int _port;
 
-        TcpClient _tcpClient = null!;
-        DuplexPipe _duplexPipe = null!;
-
+        TcpClient? _tcpClient;
+        DuplexPipe? _duplexPipe;
+        Stream? _stream;
         /// <summary>
         /// Instantiate a new <see cref="TcpChannel"/>.
         /// The <paramref name="tcpClient"/> must be connected.
@@ -31,31 +30,36 @@ namespace CK.MQTT
 
         public async ValueTask StartAsync()
         {
+            if( _tcpClient != null ) throw new InvalidOperationException( "Already started." );
             _tcpClient = new TcpClient
             {
                 NoDelay = true
             };
             await _tcpClient.ConnectAsync( _host, _port );
-            Stream stream = _tcpClient.GetStream();
-            _duplexPipe = new DuplexPipe( PipeReader.Create( stream ), PipeWriter.Create( stream ) );
+            _stream = _tcpClient.GetStream();
+            _duplexPipe = new DuplexPipe( PipeReader.Create( _stream ), PipeWriter.Create( _stream ) );
         }
 
         /// <inheritdoc/>
-        public bool IsConnected => _tcpClient.Connected;
+        public bool IsConnected => _tcpClient?.Connected ?? false;
 
         /// <inheritdoc/>
         public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException( "Start the channel before accessing the pipes." );
 
         /// <inheritdoc/>
-        public void Close() => _tcpClient.Close();
+        public void Close()
+        {
+            if( _tcpClient == null ) throw new InvalidOperationException( "Channel not started." );
+            _stream!.Dispose();
+            _tcpClient.Close();
+        }
 
         /// <inheritdoc/>
         public void Dispose()
         {
-            _duplexPipe.Dispose();
-            _tcpClient.Dispose();
+            _duplexPipe?.Dispose();
+            _stream?.Dispose();
+            _tcpClient?.Dispose();
         }
-
-
     }
 }

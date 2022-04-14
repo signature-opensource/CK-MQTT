@@ -13,14 +13,12 @@ namespace CK.MQTT
 {
     public class PublishReflex : IReflexMiddleware
     {
-        readonly Mqtt3ClientConfiguration _mqttConfiguration;
         readonly IRemotePacketStore _store;
         readonly Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
         readonly OutputPump _output;
 
-        public PublishReflex( Mqtt3ClientConfiguration mqttConfiguration, IRemotePacketStore store, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
+        public PublishReflex( IRemotePacketStore store, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
         {
-            _mqttConfiguration = mqttConfiguration;
             _store = store;
             _messageHandler = messageHandler;
             _output = output;

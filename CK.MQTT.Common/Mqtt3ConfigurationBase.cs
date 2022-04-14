@@ -10,7 +10,6 @@ namespace CK.MQTT
     public class Mqtt3ConfigurationBase
     {
         readonly int _waitTimeoutMilliseconds = 5_000;
-        public virtual ProtocolConfiguration ProtocolConfiguration => ProtocolConfiguration.Mqtt3;
 
         /// <summary>
         /// Time to wait before a non acknowledged packet is resent.
@@ -26,20 +25,6 @@ namespace CK.MQTT
                 if( value <= 20 ) throw new ArgumentException( "waitTimeoutMilliseconds must be greater than 20." );
                 _waitTimeoutMilliseconds = value;
             }
-        }
-
-        ILocalPacketStore? _localStore;
-        public ILocalPacketStore LocalPacketStore
-        {
-            get => _localStore ??= new MemoryPacketStore( ProtocolConfiguration, this, ushort.MaxValue );
-            init => _localStore = value;
-        }
-
-        IRemotePacketStore? _remoteStore;
-        public IRemotePacketStore RemotePacketStore
-        {
-            get => _remoteStore ??= new MemoryPacketIdStore();
-            init => _remoteStore = value;
         }
 
         /// <summary>

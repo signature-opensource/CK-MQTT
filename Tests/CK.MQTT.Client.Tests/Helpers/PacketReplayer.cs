@@ -11,7 +11,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     class PacketReplayer : IMqttChannelFactory
     {
         public Channel<object?> Events { get; } = System.Threading.Channels.Channel.CreateUnbounded<object?>();
-        public LoopBack? Channel { get; private set; }
+        public LoopBackBase? Channel { get; private set; }
         public TestMqttClient Client { get; set; } = null!;
         public PacketReplayer( string channelType )
         {

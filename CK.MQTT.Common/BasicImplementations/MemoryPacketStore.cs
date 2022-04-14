@@ -16,8 +16,6 @@ namespace CK.MQTT
     /// </summary>
     public class MemoryPacketStore : MqttIdStore<MemoryPacketStore.StoredPacket>
     {
-        readonly ProtocolConfiguration _protocolConfig;
-
         public struct StoredPacket : IDisposable
         {
             public readonly ReadOnlyMemory<byte> Payload;
@@ -36,10 +34,9 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The configuration of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
-        public MemoryPacketStore( ProtocolConfiguration protocolConfiguration, Mqtt3ConfigurationBase config, ushort packetIdMaxValue )
+        public MemoryPacketStore( Mqtt3ConfigurationBase config, ushort packetIdMaxValue )
             : base( packetIdMaxValue, config )
         {
-            _protocolConfig = protocolConfiguration;
         }
 
         /// <inheritdoc/>
@@ -52,10 +49,10 @@ namespace CK.MQTT
 
         protected override async ValueTask<IOutgoingPacket> DoStorePacketAsync( IOutgoingPacket packet )
         {
-            uint packetSize = packet.GetSize( _protocolConfig.ProtocolLevel );
+            uint packetSize = packet.GetSize( Config.ProtocolConfiguration.ProtocolLevel );
             IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( (int)packetSize );
             PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
-            if( await packet.WriteAsync( _protocolConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            if( await packet.WriteAsync( Config.ProtocolConfiguration.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
@@ -80,10 +77,10 @@ namespace CK.MQTT
         protected async override ValueTask<IOutgoingPacket> OverwriteMessageAsync( IOutgoingPacket packet )
         {
             base[packet.PacketId].Content.Storage.Dispose();
-            uint packetSize = packet.GetSize( _protocolConfig.ProtocolLevel );
+            uint packetSize = packet.GetSize( Config.ProtocolConfiguration.ProtocolLevel );
             IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( (int)packetSize );
             PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
-            if( await packet.WriteAsync( _protocolConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            if( await packet.WriteAsync( Config.ProtocolConfiguration.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );

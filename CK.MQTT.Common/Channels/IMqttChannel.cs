@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -9,7 +11,8 @@ namespace CK.MQTT
     /// </summary>
     public interface IMqttChannel : IDisposable
     {
-        ValueTask StartAsync();
+        [MemberNotNull( nameof( DuplexPipe ) )] //after task completion.
+        ValueTask StartAsync( CancellationToken cancellationToken );
 
         /// <summary>
         /// Disconnect the <see cref="IMqttChannel"/>.
@@ -25,6 +28,6 @@ namespace CK.MQTT
         /// <summary>
         /// Gets the stream.
         /// </summary>
-        public IDuplexPipe DuplexPipe { get; }
+        public IDuplexPipe? DuplexPipe { get; }
     }
 }

@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\Common\Mqtt.props" />
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <LangVersion>9</LangVersion>
-    <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
-    <Features>strict</Features>
-  </PropertyGroup>
+    <Import Project="..\Common\Mqtt.props" />
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <LangVersion>9</LangVersion>
+        <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
+        <Features>strict</Features>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
+    </ItemGroup>
 </Project>

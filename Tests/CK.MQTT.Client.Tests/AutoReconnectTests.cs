@@ -35,7 +35,7 @@ namespace CK.MQTT.Client.Tests
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
             await Task.Delay( 1000 );
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
-            await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+            await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
             await replayer.ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>();
             await replayer.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();
 

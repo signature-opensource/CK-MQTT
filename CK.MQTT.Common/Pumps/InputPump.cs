@@ -39,7 +39,7 @@ namespace CK.MQTT.Pumps
         /// </summary>
         public Reflex CurrentReflex { get; set; }
 
-        static OperationStatus TryParsePacketHeader( ReadOnlySequence<byte> sequence, out byte header, out uint length, out SequencePosition position )
+        public static OperationStatus TryParsePacketHeader( ReadOnlySequence<byte> sequence, out byte header, out uint length, out SequencePosition position )
         {
             SequenceReader<byte> reader = new( sequence );
             length = 0;

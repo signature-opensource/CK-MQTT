@@ -1,18 +1,17 @@
 using CK.MQTT.Packets;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    /// <summary>
-    /// Represent a MQTT3 Client.
-    /// </summary>
-    public interface ILowLevelMqtt3Client : IDisposable
+    public interface IMqtt3Client : IConnectedMessageExchanger
     {
         /// <summary>
-        /// Connect the <see cref="ILowLevelMqtt3Client"/> to a Broker.
+        /// Connect the <see cref="IConnectedMessageExchanger"/> to a Broker.
         /// </summary>
         /// <param name="m">The logger used to log activities about the connection.</param>
         /// <param name="credentials">
@@ -34,18 +33,6 @@ namespace CK.MQTT
         Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default );
 
         /// <summary>
-        /// Disconnect the client.
-        /// Once the client is successfully disconnected, the <see cref="Disconnected"/> event will be fired
-        /// with the <see cref="DisconnectReason.UserDisconnected"/>.
-        /// </summary>
-        /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
-        /// <remarks>
-        /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180903">MQTT Disconnect</a>
-        /// for more details about the protocol disconnection
-        /// </remarks>
-        Task<bool> DisconnectAsync( bool deleteSession );
-
-        /// <summary>
         /// Unsubscribe the client from topics.
         /// </summary>
         /// <param name="m">The logger used to log the activities about the unsubscribe process.</param>
@@ -63,7 +50,7 @@ namespace CK.MQTT
         ValueTask<Task> UnsubscribeAsync( params string[] topics );
 
         /// <summary>
-        /// Susbscribe the <see cref="ILowLevelMqtt3Client"/> to multiples <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
+        /// Susbscribe the <see cref="IConnectedLowLevelMqtt3Client"/> to multiples <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
         /// </summary>
         /// <param name="m">The logger used to log the activities about the subscription process.</param>
         /// <param name="subscriptions">The subscriptions to send to the broker.</param>
@@ -79,7 +66,7 @@ namespace CK.MQTT
         ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions );
 
         /// <summary>
-        /// Susbscribe the <see cref="ILowLevelMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
+        /// Susbscribe the <see cref="IConnectedLowLevelMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
         /// </summary>
         /// <param name="m">The logger used to log the activities about the subscription process.</param>
         /// <param name="subscriptions">The subscriptions to send to the broker.</param>
@@ -93,17 +80,5 @@ namespace CK.MQTT
         /// for more details about the protocol subscription.
         /// </remarks>
         ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions );
-
-        /// <summary>
-        /// Publish an <see cref="OutgoingMessage"/>.
-        /// </summary>
-        /// <param name="message">The message to publish.</param>
-        /// <returns>
-        ///A <see cref="ValueTask{TResult}"/> that complete when the publish is guaranteed to be sent.
-        ///The <see cref="Task{T}"/> complete when the client received an ack for this publish.
-        /// </returns>
-        ValueTask<Task> PublishAsync( OutgoingMessage message );
-
     }
-
 }

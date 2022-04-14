@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
@@ -8,7 +9,7 @@ namespace CK.MQTT.Stores
     /// <remarks>
     /// We don't use a <see cref="ILocalPacketStore"/> for incoming packet identified because they are not corellated to the locally generated packet identifier.
     /// </remarks>
-    public interface IRemotePacketStore
+    public interface IRemotePacketStore : IDisposable
     {
         bool IsRevivedSession { get; set; }
         ValueTask StoreIdAsync( int id );

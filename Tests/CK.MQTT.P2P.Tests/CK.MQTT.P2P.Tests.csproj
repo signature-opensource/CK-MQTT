@@ -10,7 +10,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\CK.MQTT.P2P\CK.MQTT.P2P.csproj" />
     <ProjectReference Include="..\CK.MQTT.Client.Tests\CK.MQTT.Client.Tests.csproj" />
   </ItemGroup>
 

@@ -1,6 +1,7 @@
 using CK.MQTT.Client;
 using CK.MQTT.P2P;
 using CK.MQTT.Pumps;
+using CK.MQTT.Server;
 using CK.MQTT.Stores;
 using System;
 using System.Buffers;
@@ -13,13 +14,9 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Packets
 {
-    class ConnectReflex
+    public class ConnectHandler: IConnectInfo
     {
         readonly List<(string, string)> _userProperties = new();
-        readonly TaskCompletionSource _taskCompletionSource = new();
-        readonly IMqtt5ServerSink _sink;
-        readonly ProtocolConfiguration _pConfig;
-        readonly P2PMqttConfiguration _config;
         ReadOnlyMemory<byte> _authData;
         string _protocolName = null!; // See TODO below.
         string _clientId = null!;
@@ -44,36 +41,36 @@ namespace CK.MQTT.Packets
         byte _protocolLevel;
         PropertyIdentifier _currentProp;
         byte _flags;
-        // Currently the parsed data is available when the packet is not parsed yet and can lead to errors.
-        readonly SemaphoreSlim _exitWait = new( 0 );
-        public ConnectReflex( IMqtt5ServerSink sink, ProtocolConfiguration pConfig, P2PMqttConfiguration config )
-        {
-            _sink = sink;
-            _pConfig = pConfig;
-            _config = config;
-        }
 
-        [MemberNotNull( nameof( InStore ), nameof( OutStore ), nameof( _sender ) )]
-#pragma warning disable CS8774 
-        public Task ConnectHandledTask => _taskCompletionSource.Task;
-#pragma warning restore CS8774 
-        InputPump? _sender;
-
-        public async ValueTask<OperationStatus> HandleRequestAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<(ConnectReturnCode, ProtocolLevel)> HandleAsync( PipeReader reader, ISecurityManager securityManager, CancellationToken cancellationToken )
         {
-            _sender = sender;
             OperationStatus status = OperationStatus.NeedMoreData;
             ReadResult res;
+            uint currentStep = 0;
+            byte header;
+            uint length;
+            while( true )
+            {
+                res = await reader.ReadAsync( cancellationToken );
+                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out length, out SequencePosition position );
+                if( status == OperationStatus.Done ) break;
+                if( status != OperationStatus.NeedMoreData )
+                {
+                    return (ConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
+                }
+            }
+            status = OperationStatus.NeedMoreData;
             while( status != OperationStatus.Done )
             {
                 res = await reader.ReadAsync( cancellationToken );
-                ParseFirstPartInternal();
-                void ParseFirstPartInternal() // Trick to use SequenceReader inside an async method.
+
+                if( !ParseFirstPartInternal() ) return ConnectReturnCode.Unknown;
+                bool ParseFirstPartInternal() // Trick to use SequenceReader inside an async method.
                 {
                     SequenceReader<byte> sequenceReader = new( res.Buffer );
                     // We need the ClientID to instantiate the store to the client.
                     status = ParseFirstPart( ref sequenceReader );
-                    if( status == OperationStatus.InvalidData ) throw new ProtocolViolationException( "Invalid data while parsing the Connect packet." );
+                    if( status == OperationStatus.InvalidData ) return false; // TODO: log this "Invalid data while parsing the Connect packet.";
                     if( status == OperationStatus.NeedMoreData )
                     {
                         reader.AdvanceTo( sequenceReader.Position, res.Buffer.End );
@@ -82,9 +79,27 @@ namespace CK.MQTT.Packets
                     {
                         reader.AdvanceTo( sequenceReader.Position );
                     }
+                    return true;
                 }
+                if( currentStep <= 6 && _fieldCount > 6 )
+                {
+                    if( !await securityManager.ChallengeClientIdAsync( _clientId ) ) return ConnectReturnCode.IdentifierRejected;
+                }
+
+                if( currentStep <= 2 && _fieldCount > 2 )
+                {
+                    if( !await securityManager.ChallengeShouldHaveCredsAsync( HasUserName, HasPassword ) ) return ConnectReturnCode.BadUserNameOrPassword;
+                }
+                if( UserName != null && currentStep <= 10 && _fieldCount > 10 )
+                {
+                    if( !await securityManager.ChallengeUserNameAsync( UserName ) ) return ConnectReturnCode.BadUserNameOrPassword;
+                }
+                if( Password != null && currentStep <= 11 && _fieldCount > 11 )
+                {
+                    if( !await securityManager.ChallengePasswordAsync( Password ) ) return ConnectReturnCode.BadUserNameOrPassword;
+                }
+                currentStep = _fieldCount;
             }
-            (OutStore, InStore) = await _config.StoreFactory.CreateAsync(  _pConfig, _config, ClientId, CleanSession );
             // TODO:
             // - Last Will
             //      We need to:
@@ -94,21 +109,9 @@ namespace CK.MQTT.Packets
             //      Store that doesn't exist.
             // - AUTHENTICATE Packet
             //      Set the next reflex to an Authenticate Handler and handle authentication.
-            _taskCompletionSource.SetResult();
-            await _exitWait.WaitAsync( cancellationToken );
 
-            return OperationStatus.Done;
+            return ConnectReturnCode.Accepted;
         }
-
-        public void EngageNextReflex( Reflex reflex )
-        {
-            _sender!.CurrentReflex = reflex;
-            _exitWait.Release();
-        }
-
-
-        public ILocalPacketStore? OutStore { get; set; }
-        public IRemotePacketStore? InStore { get; set; }
 
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
@@ -116,7 +119,7 @@ namespace CK.MQTT.Packets
         public QualityOfService QoS => (QualityOfService)((_flags << 3) >> 6); // 3 shift on the left to delete the 3 flags on the right. 
         public bool HasLastWill => (_flags & 0b0000_0100) != 0;
         public bool CleanSession => (_flags & 0b0000_0010) != 0;
-        public List<(string, string)> UserProperties => _userProperties;
+        public IReadOnlyList<(string, string)> UserProperties => _userProperties;
         public uint MaxPacketSize => _maxPacketSize;
         public uint SessionExpiryInterval => _sessionExpiryInterval;
         public ushort ReceiveMaximum => _receiveMaximum;
@@ -126,11 +129,11 @@ namespace CK.MQTT.Packets
         public string? AuthenticationMethod => _authentificationMethod;
         public ReadOnlyMemory<byte> AuthData => _authData;
         public string ClientId => _clientId;
+
         public ushort KeepAlive => _keepAlive;
         public string ProtocolName => _protocolName;
         public ProtocolLevel ProtocolLevel => (ProtocolLevel)_protocolLevel;
         public string? UserName => _userName;
-
         public string? Password => _password;
 
         OperationStatus ParseFirstPart( ref SequenceReader<byte> sequenceReader )

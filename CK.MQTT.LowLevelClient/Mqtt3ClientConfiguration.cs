@@ -3,19 +3,16 @@ using System;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Configuration of a <see cref="ILowLevelMqtt3Client"/>.
+    /// Configuration of a <see cref="IConnectedMessageExchanger"/>.
     /// </summary>
     public class Mqtt3ClientConfiguration : Mqtt3ConfigurationBase
     {
-        private DisconnectBehavior _disconnectBehavior = DisconnectBehavior.Nothing;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Mqtt3ClientConfiguration" /> class.
         /// </summary>
         /// <param name="connectionString">The connection string that will be used by the <see cref="IMqttChannelFactory"/>.</param>
-        public Mqtt3ClientConfiguration(string connectionString ) => ConnectionString = connectionString;
-
-        public string ConnectionString { get; }
+        public Mqtt3ClientConfiguration( string connectionString ) : base( connectionString ) { }
 
         /// <summary>
         /// Gets the KeepAlive Client/Server configuration that is sent to the server in the connect packet.
@@ -27,6 +24,7 @@ namespace CK.MQTT
         /// </summary>
         public ushort KeepAliveSeconds { get; init; } = 30;
 
+        private DisconnectBehavior _disconnectBehavior = DisconnectBehavior.Nothing;
         public DisconnectBehavior DisconnectBehavior
         {
             get => _disconnectBehavior;
@@ -36,8 +34,6 @@ namespace CK.MQTT
                 _disconnectBehavior = value;
             }
         }
-
-        public IMqttChannelFactory ChannelFactory { get; init; } = new TcpChannelFactory();
 
         public MqttClientCredentials? Credentials { get; set; }
 

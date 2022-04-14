@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    class TestMqttClient : Mqtt3ClientBase
+    class TestMqttClient : Mqtt3SinkWrapper
     {
         readonly ChannelWriter<object?> _writer;
 

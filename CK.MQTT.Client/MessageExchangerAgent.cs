@@ -1,13 +1,15 @@
 using CK.Core;
 using CK.MQTT.Packets;
 using CK.PerfectEvent;
+using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public class MQTTClient : MQTTClientChannel
+    public class MessageExchangerAgent<T> : MessageExchangerAgentBase<T> where T : IConnectedMessageExchanger
     {
         readonly PerfectEventSender<ApplicationMessage> _onMessageSender = new();
         readonly PerfectEventSender<DisconnectReason> _onConnectionChangeSender = new();
@@ -19,27 +21,16 @@ namespace CK.MQTT.Client
 
         public PerfectEvent<ushort> OnStoreQueueFilling => _onStoreQueueFilling.PerfectEvent;
 
-        public MQTTClient( Mqtt3ClientConfiguration configuration ) : base( configuration )
+        protected Task? WorkLoop { get; set; }
+        public MessageExchangerAgent( Func<IMqtt3Sink, T> clientFactory ) : base( clientFactory )
         {
         }
 
-        Task? _workLoop;
-        public override async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        [MemberNotNull( nameof( WorkLoop ) )]
+        public override void Start()
         {
-            var res = await base.ConnectAsync( lastWill, cancellationToken );
-            _workLoop = WorkLoopAsync( Messages );
-            return res;
-        }
-
-        public async Task<ConnectResult> ConnectAsync( bool waitForCompletion, OutgoingLastWill ? lastWill = null, CancellationToken cancellationToken = default )
-        {
-            var res = await base.ConnectAsync( lastWill, cancellationToken );
-            _workLoop = WorkLoopAsync( Messages );
-            if( !res.IsSuccess && waitForCompletion )
-            {
-                await _workLoop;
-            }
-            return res;
+            base.Start();
+            WorkLoop ??= WorkLoopAsync( Messages.Reader );
         }
 
         public override Task<bool> DisconnectAsync( bool deleteSession )
@@ -51,14 +42,26 @@ namespace CK.MQTT.Client
         /// <returns></returns>
         public async Task<bool> DisconnectAsync( bool deleteSession, bool waitForCompletion )
         {
+            // 2 scenario:
+            // 1. agent doesn't support reconnecting, it can be disconnected only once, and it called Start in base ctor.
+            // 2. agent support reconnecting, in this case it will call Start() at each connection.
+            // in these 2 scenario, Messages & WorkLoop is not null because set in base constructor.
             var res = await base.DisconnectAsync( deleteSession );
-            if( waitForCompletion )
-            {
-                await _workLoop!;
-            }
+            await StopAsync( waitForCompletion );
             return res;
         }
 
+
+        protected async Task StopAsync( bool waitForCompletion )
+        {
+            Messages!.Writer.Complete();
+            if( waitForCompletion )
+            {
+                await WorkLoop!;
+            }
+            Messages = null;
+            WorkLoop = null;
+        }
 
         async Task WorkLoopAsync( ChannelReader<object?> channel )
         {
@@ -92,6 +95,10 @@ namespace CK.MQTT.Client
                 else if( item is QueueFullPacketDestroyed queueFullPacketDestroyed )
                 {
                     m.Warn( $"Because the queue is full, {queueFullPacketDestroyed.PacketType} with id {queueFullPacketDestroyed.PacketId} has been dropped. " );
+                }
+                else if( item is TaskCompletionSource tcs )
+                {
+                    tcs.SetResult();
                 }
                 else
                 {

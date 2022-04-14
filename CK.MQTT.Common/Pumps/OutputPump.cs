@@ -26,10 +26,10 @@ namespace CK.MQTT.Pumps
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( IMqtt3Sink sink, ILocalPacketStore outgoingPacketStore, Func<DisconnectReason, ValueTask> onDisconnect, Mqtt3ConfigurationBase config ) : base( onDisconnect )
+        public OutputPump( IMqtt3Sink sink, ILocalPacketStore localStore, Func<DisconnectReason, ValueTask> onDisconnect, Mqtt3ConfigurationBase config ) : base( onDisconnect )
         {
             _sink = sink;
-            _outgoingPacketStore = outgoingPacketStore;
+            _outgoingPacketStore = localStore;
             Config = config;
             MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( Config.OutgoingPacketsChannelCapacity )
             {

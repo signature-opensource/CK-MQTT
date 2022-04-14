@@ -8,36 +8,18 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public abstract class Mqtt3ClientBase : IMqtt3Sink, ILowLevelMqtt3Client
+    public abstract class Mqtt3SinkWrapper<T> : IMqtt3Sink, IConnectedMessageExchanger where T : IConnectedMessageExchanger
     {
-        readonly ILowLevelMqtt3Client _client;
+        public T Client { get; }
 
-        protected Mqtt3ClientBase( Mqtt3ClientConfiguration configuration )
+        protected Mqtt3SinkWrapper( Func<IMqtt3Sink, T> clientFactory )
         {
-            _client = new LowLevelMqttClientImpl( this, configuration );
-        }
-
-        protected Mqtt3ClientBase( string host, int port ) : this( new Mqtt3ClientConfiguration( $"{host}:{port}" ) )
-        {
+            Client = clientFactory( this );
         }
 
         protected abstract ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
 
-        public virtual Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill = null, CancellationToken cancellationToken = default )
-        {
-            return _client.ConnectAsync( lastwill, cancellationToken );
-        }
-
-        public virtual Task<bool> DisconnectAsync( bool deleteSession )
-        {
-            return _client.DisconnectAsync( deleteSession );
-        }
-
-        public virtual ValueTask<Task> UnsubscribeAsync( IEnumerable<string> topics )
-        {
-            return _client.UnsubscribeAsync( topics.ToArray() );
-        }
-
+        public virtual Task<bool> DisconnectAsync( bool deleteSession ) => Client.DisconnectAsync( deleteSession );
 
         protected abstract void OnUnattendedDisconnect( DisconnectReason reason );
 
@@ -60,36 +42,13 @@ namespace CK.MQTT.Client
         {
         }
 
-        public virtual ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscription )
-            => _client.SubscribeAsync( subscription );
-
-        public virtual ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
-            => _client.SubscribeAsync( subscriptions );
-
-        // Helper (extension methods).
-        public ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( params Subscription[] subscriptions )
-            => SubscribeAsync( (IEnumerable<Subscription>)subscriptions );
-
-        //protected IPacketStore StoreInspector { get; }
-
-
-
-        // Helper (extension methods).
-        public ValueTask<Task> UnsubscribeAsync( params string[] topics ) => UnsubscribeAsync( (IEnumerable<string>)topics );
-
-        // Helper (extension methods).
-        public ValueTask<Task> UnsubscribeAsync( string topic )
+        public ValueTask<Task> PublishAsync( OutgoingMessage message )
         {
-            return _client.UnsubscribeAsync( topic );
-        }
-
-        public virtual ValueTask<Task> PublishAsync( OutgoingMessage message )
-        {
-            return _client.PublishAsync( message );
+            return Client.PublishAsync( message );
         }
 
         public ValueTask<Task> PublishAsync( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
-            => _client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
+            => Client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
 
         ValueTask IMqtt3Sink.ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
             => ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
@@ -113,9 +72,6 @@ namespace CK.MQTT.Client
             => OnPacketWithDupFlagReceived( packetType );
 
 
-        public void Dispose()
-        {
-            _client.Dispose();
-        }
+        public void Dispose() => Client.Dispose();
     }
 }

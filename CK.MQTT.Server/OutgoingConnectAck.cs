@@ -2,12 +2,12 @@ using System;
 
 namespace CK.MQTT.Packets
 {
-    public class ConnectAckPacket : SimpleOutgoingPacket
+    public class OutgoingConnectAck : SimpleOutgoingPacket
     {
         readonly bool _sessionPresent;
         readonly ConnectReturnCode _connectReturnCode;
 
-        public ConnectAckPacket( bool sessionPresent, ConnectReturnCode connectReturnCode )
+        public OutgoingConnectAck( bool sessionPresent, ConnectReturnCode connectReturnCode )
         {
             _sessionPresent = sessionPresent;
             _connectReturnCode = connectReturnCode;

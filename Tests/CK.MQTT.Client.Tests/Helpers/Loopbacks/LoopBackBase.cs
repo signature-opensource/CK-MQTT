@@ -5,18 +5,18 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
-    public abstract class LoopBack : IMqttChannel
+    public abstract class LoopBackBase : IMqttChannel
     {
         readonly ChannelWriter<object?> _writer;
 
-        public LoopBack( ChannelWriter<object?> writer ) => _writer = writer;
+        public LoopBackBase( ChannelWriter<object?> writer ) => _writer = writer;
 
-        public abstract IDuplexPipe TestDuplexPipe { get; set; }
-        public abstract IDuplexPipe DuplexPipe { get; set; }
+        public abstract IDuplexPipe? TestDuplexPipe { get; protected set; }
+        public abstract IDuplexPipe? DuplexPipe { get; protected set; }
 
         public bool IsConnected { get; private set; } = true;
 
-        public ValueTask StartAsync() => new();
+        public abstract ValueTask StartAsync();
         public abstract void Close();
 
         public record DisposedChannel();

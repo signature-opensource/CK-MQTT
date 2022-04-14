@@ -32,31 +32,8 @@ namespace CK.MQTT
             return status;
         }
 
-        /// <summary>
-        /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
-        /// </summary>
-        /// <param name="reader"></param>
-        /// <param name="length"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
         public static bool TryReadUtf8String( ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
-            ReadOnlySpan<byte> span = reader.UnreadSpan;
-            if( span.Length < length )
-                return TryReadMultisegmentUtf8String( ref reader, length, out value );
-
-            ReadOnlySpan<byte> slice = span.Slice( 0, length );
-            value = Encoding.UTF8.GetString( slice );
-            reader.Advance( length );
-            return true;
-        }
-
-        /// <summary>
-        /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
-        /// </summary>
-        static bool TryReadMultisegmentUtf8String( ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
-        {
-            Debug.Assert( reader.UnreadSpan.Length < length );
             var unreadSeq = reader.UnreadSequence;
             if( unreadSeq.Length < length )
             {
@@ -64,8 +41,8 @@ namespace CK.MQTT
                 return false;
             }
             unreadSeq = reader.UnreadSequence.Slice( 0, length );
-
             value = Encoding.UTF8.GetString( in unreadSeq );
+            reader.Advance( length );
             return true;
         }
     }

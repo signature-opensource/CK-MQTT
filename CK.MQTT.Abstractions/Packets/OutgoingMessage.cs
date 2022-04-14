@@ -30,6 +30,7 @@ namespace CK.MQTT.Packets
             string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null
         ) //properties 
         {
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( topic );
             //Compute properties size.
             if( responseTopic != null )
             {
