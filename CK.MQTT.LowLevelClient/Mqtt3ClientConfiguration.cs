@@ -7,13 +7,6 @@ namespace CK.MQTT
     /// </summary>
     public class Mqtt3ClientConfiguration : Mqtt3ConfigurationBase
     {
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Mqtt3ClientConfiguration" /> class.
-        /// </summary>
-        /// <param name="connectionString">The connection string that will be used by the <see cref="IMqttChannelFactory"/>.</param>
-        public Mqtt3ClientConfiguration( string connectionString ) : base( connectionString ) { }
-
         /// <summary>
         /// Gets the KeepAlive Client/Server configuration that is sent to the server in the connect packet.
         /// <para>

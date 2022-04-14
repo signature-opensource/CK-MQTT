@@ -14,8 +14,6 @@ namespace CK.MQTT
 {
     public class MessageExchanger : IConnectedLowLevelMqttClient
     {
-
-
         /// <summary>
         /// Instantiate the <see cref="MessageExchanger"/> with the given configuration.
         /// </summary>
@@ -28,26 +26,17 @@ namespace CK.MQTT
             Sink = sink;
             Channel = channel;
             RemotePacketStore = remotePacketStore ?? new MemoryPacketIdStore();
-            LocalPacketStore = localPacketStore ?? new MemoryPacketStore( Config, ushort.MaxValue );
+            LocalPacketStore = localPacketStore ?? new MemoryPacketStore( pConfig, Config, ushort.MaxValue );
         }
 
-        internal protected virtual IMqtt3Sink Sink { get; set; }
+        public Mqtt3ConfigurationBase Config { get; }
+        internal protected virtual IMqtt3Sink Sink { get; protected set; }
         internal protected IRemotePacketStore RemotePacketStore { get; }
         internal protected ILocalPacketStore LocalPacketStore { get; }
         internal protected IMqttChannel Channel { get; }
         internal protected ProtocolConfiguration PConfig { get; }
-        internal protected Mqtt3ConfigurationBase Config { get; }
-        internal protected DuplexPump<OutputPump, InputPump>? Pumps { get; set; }
+        internal protected DuplexPump<OutputPump, InputPump>? Pumps { get; protected set; }
         public bool IsConnected => Pumps?.IsRunning ?? false;
-
-
-        /// <summary>
-        /// This method is required so the delegate used in the Reflex doesn't change.
-        /// </summary>
-        /// <param name="msg"></param>
-        /// <returns></returns>
-        protected ValueTask OnMessageAsync( string topic, PipeReader pipeReader, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
-            => Sink.ReceiveAsync( topic, pipeReader, payloadLength, qos, retain, cancellationToken );
 
         protected async ValueTask<Task<T?>> SendPacketAsync<T>( IOutgoingPacket outgoingPacket )
         {

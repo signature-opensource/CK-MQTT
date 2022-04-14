@@ -21,7 +21,7 @@ namespace CK.MQTT
         /// <param name="length">The Remaining Length, -1 if there is no enough bytes to read, -2 if the stream is corrupted.</param>
         /// <param name="position">The position after the remaining length.</param>
         /// <returns>An <see cref="OperationStatus"/>.</returns>
-        public static OperationStatus TryReadMQTTRemainingLength( this ref SequenceReader<byte> reader, out uint length, out SequencePosition position )
+        public static OperationStatus TryReadVariableByteInteger( this ref SequenceReader<byte> reader, out uint length )
         {
             length = 0;
             // Read out an Int32 7 bits at a time.  The high bit
@@ -32,18 +32,15 @@ namespace CK.MQTT
             {
                 if( shift == 5 * 7 )// Check for a corrupted stream.  Read a max of 5 bytes.
                 {
-                    position = reader.Position;
                     return OperationStatus.InvalidData; // 5 bytes max per Int32, shift += 7
                 }
                 if( !reader.TryRead( out b ) ) // ReadByte handles end of stream cases for us.
                 {
-                    position = reader.Position;
                     return OperationStatus.NeedMoreData;
                 }
                 length |= (b & 0x7Fu) << shift;
                 shift += 7;
             } while( (b & 0x80) != 0 );
-            position = reader.Position;
             return OperationStatus.Done;
         }
 
@@ -89,8 +86,8 @@ namespace CK.MQTT
         public static async ValueTask SkipBytesAsync( this PipeReader reader, IMqtt3Sink? sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
         {
             ReadResult read = await reader.ReadAtLeastAsync( (int)skipCount, cancellationToken );
-            if( read.Buffer.Length < skipCount ) throw new EndOfStreamException("Unexpected end of stream.");
-            sink?.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, skipCount) );
+            if( read.Buffer.Length < skipCount ) throw new EndOfStreamException( "Unexpected end of stream." );
+            sink?.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, skipCount ) );
             reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
         }
     }

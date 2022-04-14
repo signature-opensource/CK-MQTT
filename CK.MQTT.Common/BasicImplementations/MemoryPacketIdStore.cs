@@ -34,7 +34,13 @@ namespace CK.MQTT
             return new ValueTask();
         }
 
+
         /// <inheritdoc/>
         public bool Empty => _ids.Count == 0;
+
+        public void Dispose()
+        {
+        }
+
     }
 }

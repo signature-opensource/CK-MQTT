@@ -14,13 +14,19 @@ namespace CK.MQTT.Packets
             _returnCodes = returnCodes;
         }
 
+        public override ushort PacketId { get => 0; set => throw new NotSupportedException(); }
+
+        public override QualityOfService Qos => QualityOfService.AtMostOnce;
+
+        public override bool IsRemoteOwnedPacketId => true;
+
         /// <inheritdoc/>
         protected override byte Header => (byte)PacketType.SubscribeAck;
 
         /// <inheritdoc/>
-        protected override int GetRemainingSize( ProtocolLevel protocolLevel )
+        protected override uint GetRemainingSize( ProtocolLevel protocolLevel )
         {
-            return 2 + _returnCodes.Length;
+            return 2 + (uint)_returnCodes.Length;
         }
 
         /// <inheritdoc/>

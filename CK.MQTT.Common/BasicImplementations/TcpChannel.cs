@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Pipelines;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -28,14 +29,14 @@ namespace CK.MQTT
             _port = port;
         }
 
-        public async ValueTask StartAsync()
+        public async ValueTask StartAsync(CancellationToken cancellationToken)
         {
             if( _tcpClient != null ) throw new InvalidOperationException( "Already started." );
             _tcpClient = new TcpClient
             {
                 NoDelay = true
             };
-            await _tcpClient.ConnectAsync( _host, _port );
+            await _tcpClient.ConnectAsync( _host, _port, cancellationToken );
             _stream = _tcpClient.GetStream();
             _duplexPipe = new DuplexPipe( PipeReader.Create( _stream ), PipeWriter.Create( _stream ) );
         }

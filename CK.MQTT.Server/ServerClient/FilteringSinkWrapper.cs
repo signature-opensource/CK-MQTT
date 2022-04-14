@@ -1,4 +1,4 @@
-﻿using CK.MQTT.Client;
+using CK.MQTT.Client;
 using CK.MQTT.P2P;
 using System.Buffers;
 using System.IO.Pipelines;
@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    class SinkWrapper : IMqtt3Sink
+    class FilteringSinkWrapper : IMqtt3Sink
     {
         readonly IMqtt3Sink _sink;
         readonly ITopicFilter _topicFilter;
-        public SinkWrapper( IMqtt3Sink sink, ITopicFilter topicFilter )
+        public FilteringSinkWrapper( IMqtt3Sink sink, ITopicFilter topicFilter )
         {
             _sink = sink;
             _topicFilter = topicFilter;

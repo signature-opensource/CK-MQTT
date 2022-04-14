@@ -8,13 +8,14 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    class TestMqttClient : Mqtt3SinkWrapper
+    class TestMqttClient : Mqtt3SinkWrapper<LowLevelMqttClient>
     {
         readonly ChannelWriter<object?> _writer;
 
         public Mqtt3ClientConfiguration Config { get; }
 
-        public TestMqttClient( Mqtt3ClientConfiguration config, ChannelWriter<object?> writer ) : base(config)
+        public TestMqttClient( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, ChannelWriter<object?> writer, IMqttChannel channel )
+            : base( ( sink ) => new LowLevelMqttClient( pConfig, config, sink, channel ) )
         {
             Config = config;
             _writer = writer;

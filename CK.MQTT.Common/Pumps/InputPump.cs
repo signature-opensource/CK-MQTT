@@ -43,7 +43,9 @@ namespace CK.MQTT.Pumps
                 position = reader.Position;
                 return OperationStatus.NeedMoreData;
             }
-            return reader.TryReadMQTTRemainingLength( out length, out position );
+            var res = reader.TryReadVariableByteInteger( out length );
+            position = reader.Position;
+            return res;
         }
 
         protected virtual async ValueTask<ReadResult> ReadAsync( CancellationToken cancellationToken )

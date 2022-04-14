@@ -24,7 +24,8 @@ namespace CK.MQTT.Server
             _channelFactory = channelFactory;
             _storeFactory = storeFactory;
         }
-        protected virtual ISecurityManagerFactory SecurityManagerFactory { get; }
+
+        protected abstract ISecurityManagerFactory SecurityManagerFactory { get; }
 
         public void StartListening()
         {
@@ -94,7 +95,7 @@ namespace CK.MQTT.Server
                         continue;
                     }
 
-                    (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync( Config, connectHandler.ClientId, connectHandler.CleanSession, cancellationToken );
+                    (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync( ProtocolConfiguration.FromProtocolLevel( protocolLevel ), Config, connectHandler.ClientId, connectHandler.CleanSession, cancellationToken );
                     if( cancellationToken.IsCancellationRequested )
                     {
                         localStore.Dispose();

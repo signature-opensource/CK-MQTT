@@ -15,8 +15,8 @@ namespace CK.MQTT.Server
 {
     public class MqttServerClient : MqttListener, IMqtt3Client, IDisposable
     {
-        internal readonly ITopicFilter _inputTopicFilter = new TopicFilter();
-        internal readonly ITopicFilter _outputTopicFilter = new TopicFilter();
+        internal readonly ITopicManager _inputTopicFilter = new SimpleTopicManager();
+        internal readonly ITopicManager _outputTopicFilter = new SimpleTopicManager();
         internal readonly Channel<(bool, string[])> _subscriptionsCommand = Channel.CreateUnbounded<(bool, string[])>();
         readonly IMqtt3Sink _sink;
         internal TaskCompletionSource<(IMqttChannel channel, ISecurityManager securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;

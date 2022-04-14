@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.P2P
 {
-    public class TopicFilter : ITopicFilter
+    public class SimpleTopicManager : ITopicManager
     {
         readonly Dictionary<ulong, HashSet<string>> _noWildcardSubscriptionsByTopicHash = new();
         readonly Dictionary<ulong, TopicHashMaskSubscriptions> _wildcardSubscriptionsByTopicHash = new();
@@ -49,7 +49,8 @@ namespace CK.MQTT.P2P
             return true;
         }
 
-        public void Subscribe( string topicFilter )
+
+        void Subscribe( string topicFilter )
         {
             bool isNewSubscription = !_subscriptions.ContainsKey( topicFilter );
 
@@ -103,7 +104,7 @@ namespace CK.MQTT.P2P
             }
         }
 
-        public void Unsubscribe( string topicFilter )
+        void Unsubscribe( string topicFilter )
         {
             var removedSubscriptions = new List<string>();
 
@@ -236,7 +237,6 @@ namespace CK.MQTT.P2P
                     ++i;
                 }
             }
-
             resultHash = hash;
             resultHashMask = ~hashMaskInverted;
             resultHasWildcard = hasWildcard;
@@ -247,6 +247,32 @@ namespace CK.MQTT.P2P
             _noWildcardSubscriptionsByTopicHash.Clear();
             _wildcardSubscriptionsByTopicHash.Clear();
             _subscriptions.Clear();
+        }
+
+        public ValueTask<SubscribeReturnCode[]> SubscribeAsync( params Subscription[] subscriptions )
+        {
+            foreach( var subscription in subscriptions )
+            {
+                Subscribe( subscription.TopicFilter );
+            }
+            return new ValueTask<SubscribeReturnCode[]>( new SubscribeReturnCode[subscriptions.Length] );
+        }
+
+        public ValueTask UnsubscribeAsync( params string[] topicFilter )
+        {
+            foreach( var subscription in topicFilter )
+            {
+                Unsubscribe( subscription );
+            }
+            return new ValueTask();
+        }
+
+        public ValueTask ResetAsync()
+        {
+            _noWildcardSubscriptionsByTopicHash.Clear();
+            _subscriptions.Clear();
+            _wildcardSubscriptionsByTopicHash.Clear();
+            return new ValueTask();
         }
 
         sealed class TopicHashMaskSubscriptions

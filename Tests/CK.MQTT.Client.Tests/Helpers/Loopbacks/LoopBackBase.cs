@@ -1,5 +1,6 @@
 using System;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -16,7 +17,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public bool IsConnected { get; private set; } = true;
 
-        public abstract ValueTask StartAsync();
+        public abstract ValueTask StartAsync( CancellationToken cancellationToken );
         public abstract void Close();
 
         public record DisposedChannel();

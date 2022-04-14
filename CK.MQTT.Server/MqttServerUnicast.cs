@@ -12,9 +12,10 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public abstract class MqttServerUnicast : MqttListener<MessageExchanger>
+    public abstract class MqttServerUnicast : MqttListener
     {
-        public MqttServerUnicast( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, ISecurityManagerFactory securityManagerFactory, IStoreFactory storeFactory ) : base( config, channelFactory, securityManagerFactory, storeFactory )
+        public MqttServerUnicast( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, IStoreFactory storeFactory )
+            : base( config, channelFactory, storeFactory )
         {
             _config = config;
         }

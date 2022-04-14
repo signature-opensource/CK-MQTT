@@ -8,9 +8,6 @@ namespace CK.MQTT.P2P
 {
     public interface ITopicFilter
     {
-        public void Subscribe( string topicFilter );
-        public void Unsubscribe( string topicFilter );
-        public void Reset();
         public bool IsFiltered( string topic );
     }
 }

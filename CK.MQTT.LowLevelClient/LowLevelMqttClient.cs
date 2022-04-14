@@ -15,7 +15,7 @@ namespace CK.MQTT
 {
     public sealed class LowLevelMqttClient : MessageExchanger
     {
-        readonly Mqtt3ClientConfiguration _clientConfig;
+        public Mqtt3ClientConfiguration ClientConfig { get; }
 
         public LowLevelMqttClient(
             ProtocolConfiguration pConfig,
@@ -30,7 +30,7 @@ namespace CK.MQTT
             {
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
             }
-            _clientConfig = config;
+            ClientConfig = config;
         }
 
 
@@ -45,7 +45,7 @@ namespace CK.MQTT
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
 
             var res = await DoConnectAsync( lastWill, cancellationToken );
-            if( res.ConnectReturnCode == ConnectReturnCode.Accepted && _clientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
+            if( res.ConnectReturnCode == ConnectReturnCode.Accepted && ClientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
             {
                 _autoReconnectTask = ReconnectBackgroundAsync();
             }
@@ -55,7 +55,7 @@ namespace CK.MQTT
         {
             try
             {
-                if( _clientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
+                if( ClientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
                 {
                     _disconnectTCS = new TaskCompletionSource();
                 }
@@ -65,7 +65,7 @@ namespace CK.MQTT
 
                 // Middleware that will processes the requests.
                 ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
-                    .UseMiddleware( new PublishReflex( RemotePacketStore, OnMessageAsync, output ) )
+                    .UseMiddleware( new PublishReflex( RemotePacketStore, Sink.ReceiveAsync, output ) )
                     .UseMiddleware( new PublishLifecycleReflex( RemotePacketStore, LocalPacketStore, output ) )
                     .UseMiddleware( new SubackReflex( LocalPacketStore ) )
                     .UseMiddleware( new UnsubackReflex( LocalPacketStore ) );
@@ -74,14 +74,14 @@ namespace CK.MQTT
 
                 OutputProcessor outputProcessor;
                 // Enable keepalive only if we need it.
-                if( _clientConfig.KeepAliveSeconds == 0 )
+                if( ClientConfig.KeepAliveSeconds == 0 )
                 {
                     outputProcessor = new OutputProcessor( this );
                 }
                 else
                 {
                     // If keepalive is enabled, we add it's handler to the middlewares.
-                    OutputProcessorWithKeepAlive withKeepAlive = new( _clientConfig, output, Channel.DuplexPipe.Output, LocalPacketStore, RemotePacketStore ); // Require channel started.
+                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
                     outputProcessor = withKeepAlive;
                     builder.UseMiddleware( withKeepAlive );
                 }
@@ -103,7 +103,7 @@ namespace CK.MQTT
                 );
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
-                OutgoingConnect outgoingConnect = new( _clientConfig, lastWill );
+                OutgoingConnect outgoingConnect = new( PConfig, ClientConfig, lastWill );
 
                 WriteResult writeConnectResult;
                 using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
@@ -157,7 +157,7 @@ namespace CK.MQTT
                     return res;
                 }
 
-                bool askedCleanSession = _clientConfig.Credentials?.CleanSession ?? true;
+                bool askedCleanSession = ClientConfig.Credentials?.CleanSession ?? true;
                 if( askedCleanSession && res.SessionState != SessionState.CleanSession )
                     return await Exit( ConnectError.ProtocolError_SessionNotFlushed );
                 if( res.SessionState == SessionState.CleanSession )

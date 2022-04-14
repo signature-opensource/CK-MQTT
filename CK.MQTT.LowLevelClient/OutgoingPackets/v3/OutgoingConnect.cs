@@ -11,6 +11,7 @@ namespace CK.MQTT.Packets
 {
     class OutgoingConnect : ComplexOutgoingPacket
     {
+        readonly ProtocolConfiguration _pConfig;
         readonly Mqtt3ClientConfiguration _config;
         readonly OutgoingLastWill? _lastWill;
         readonly uint _sessionExpiryInterval;
@@ -35,12 +36,13 @@ namespace CK.MQTT.Packets
             return flags;
         }
 
-        public OutgoingConnect( Mqtt3ClientConfiguration config, OutgoingLastWill? lastWill = null,
+        public OutgoingConnect( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, OutgoingLastWill? lastWill = null,
             uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, ushort topicAliasMaximum = 0,
             bool requestResponseInfo = false, bool requestProblemInfo = false, IReadOnlyList<UserProperty>? userProperties = null,
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )
         {
-            Debug.Assert( config.ProtocolConfiguration.MaximumPacketSize <= 268435455 );
+            Debug.Assert( pConfig.MaximumPacketSize <= 268435455 );
+            _pConfig = pConfig;
             _config = config;
             _lastWill = lastWill;
             _sessionExpiryInterval = sessionExpiryInterval;
@@ -53,11 +55,11 @@ namespace CK.MQTT.Packets
             _flags = ByteFlag( config.Credentials, lastWill );
             _sizePostPayload = config.Credentials?.UserName?.MQTTSize() ?? 0 + config.Credentials?.Password?.MQTTSize() ?? 0;
 
-            if( _config.ProtocolConfiguration.ProtocolLevel > ProtocolLevel.MQTT3 ) // To compute the size of 
+            if( _pConfig.ProtocolLevel > ProtocolLevel.MQTT3 ) // To compute the size of 
             {
                 if( sessionExpiryInterval != 0 ) _propertiesSize += 5;              //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Ref1477159
                 if( receiveMaximum != ushort.MaxValue ) _propertiesSize += 3;       //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Receive_Maximum
-                if( _config.ProtocolConfiguration.MaximumPacketSize != 268435455 ) _propertiesSize += 5;   //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc471483569
+                if( _pConfig.MaximumPacketSize != 268435455 ) _propertiesSize += 5;   //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc471483569
                 if( topicAliasMaximum != 0 ) _propertiesSize += 3;                  //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547825
                 if( requestResponseInfo ) _propertiesSize += 2;                     //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Request_Response_Information
                 if( requestProblemInfo ) _propertiesSize += 2;                      //https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc464547827
@@ -80,9 +82,9 @@ namespace CK.MQTT.Packets
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 
         public override bool IsRemoteOwnedPacketId => throw new NotSupportedException();
-        
+
         protected override uint GetHeaderSize( ProtocolLevel protocolLevel )
-            => _config.ProtocolConfiguration.ProtocolName.MQTTSize()
+            => _pConfig.ProtocolName.MQTTSize()
                 + 1 //_protocolLevel
                 + 1 //_flag
                 + 2 //_keepAlive
@@ -92,10 +94,10 @@ namespace CK.MQTT.Packets
 
         protected override void WriteHeaderContent( ProtocolLevel protocolLevel, Span<byte> span )
         {
-            Debug.Assert( protocolLevel == _config.ProtocolConfiguration.ProtocolLevel );
-            span = span.WriteMQTTString( _config.ProtocolConfiguration.ProtocolName ); //protocol name: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349225
+            Debug.Assert( protocolLevel == _pConfig.ProtocolLevel );
+            span = span.WriteMQTTString( _pConfig.ProtocolName ); //protocol name: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349225
             // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349228
-            span[0] = (byte)_config.ProtocolConfiguration.ProtocolLevel; //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
+            span[0] = (byte)_pConfig.ProtocolLevel; //http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349230
 
             span[1] = _flags;
             span = span[2..];
@@ -119,11 +121,11 @@ namespace CK.MQTT.Packets
                     BinaryPrimitives.WriteUInt16BigEndian( span, _receiveMaximum );
                     span = span[2..];
                 }
-                if( _config.ProtocolConfiguration.MaximumPacketSize != 268435455 )
+                if( _pConfig.MaximumPacketSize != 268435455 )
                 {
                     span[0] = (byte)PropertyIdentifier.MaximumPacketSize;
                     span = span[1..];
-                    BinaryPrimitives.WriteUInt32BigEndian( span, _config.ProtocolConfiguration.MaximumPacketSize );
+                    BinaryPrimitives.WriteUInt32BigEndian( span, _pConfig.MaximumPacketSize );
                     span = span[4..];
                 }
                 if( _topicAliasMaximum != 0 )

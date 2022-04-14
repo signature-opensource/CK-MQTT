@@ -1,5 +1,6 @@
 using CK.MQTT.Stores;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -7,7 +8,7 @@ namespace CK.MQTT
     class MemoryStoreFactory : IStoreFactory
     {
         readonly Dictionary<string, (ILocalPacketStore, IRemotePacketStore)> _stores = new();
-        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, string storeId, bool resetStore )
+        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken )
         {
             bool newSession = resetStore || !_stores.ContainsKey( storeId );
             if( newSession )
