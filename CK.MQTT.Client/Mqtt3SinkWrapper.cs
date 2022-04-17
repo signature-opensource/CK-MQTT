@@ -33,19 +33,12 @@ namespace CK.MQTT.Client
 
         protected abstract void OnPacketResent( ushort packetId, int resentCount, bool isDropped );
 
-        protected virtual void OnQueueFullPacketDropped( ushort packetId, PacketType packetType )
-        {
-        }
+        protected virtual void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) { }
         protected abstract void OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData );
 
-        protected virtual void OnPacketWithDupFlagReceived( PacketType packetType )
-        {
-        }
+        protected virtual void OnPacketWithDupFlagReceived( PacketType packetType ) { }
 
-        public ValueTask<Task> PublishAsync( OutgoingMessage message )
-        {
-            return Client.PublishAsync( message );
-        }
+        public ValueTask<Task> PublishAsync( OutgoingMessage message ) => Client.PublishAsync( message );
 
         public ValueTask<Task> PublishAsync( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
             => Client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );

@@ -35,13 +35,13 @@ namespace CK.MQTT.Client.Tests
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
             await Task.Delay( 1000 );
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
-            await replayer.ShouldContainEventAsync<LoopBackBase.DisposedChannel>();
             await replayer.ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>();
-            await replayer.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();
 
             await replayer.AssertClientSent( TestHelper.Monitor, "101600044d51545404020005000a434b4d71747454657374" );
             await replayer.SendToClient( TestHelper.Monitor, "20020000" );
             await Task.Delay( 1000 );
+            await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
+            replayer.Events.Reader.Count.Should().Be( 0 );
         }
     }
 }

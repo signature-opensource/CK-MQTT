@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,6 +40,7 @@ namespace CK.MQTT
         /// <returns></returns>
         public Task StopWorkAsync()
         {
+            if( _stopSource.IsCancellationRequested ) return Task.CompletedTask;
             _stopSource.Cancel();
             return _workLoopTask;
         }
@@ -51,13 +53,13 @@ namespace CK.MQTT
 
         public virtual async Task CloseAsync()
         {
-            if( !CancelTokens() ) return;
+            CancelTokens();
             await _workLoopTask;
         }
 
         internal protected async ValueTask SelfCloseAsync( DisconnectReason disconnectedReason )
         {
-            if( !CancelTokens() ) return;
+            CancelTokens();
             await MessageExchanger.SelfDisconnectAsync( disconnectedReason );
         }
 
@@ -66,16 +68,15 @@ namespace CK.MQTT
         /// Return false when the shutdown is already in progress. It also mean this <see cref="PumpBase"/> is making the call to close.
         /// </summary>
         /// <returns></returns>
-        internal bool CancelTokens()
+        internal void CancelTokens()
         {
-            if( _stopSource.IsCancellationRequested ) return false;
-            _stopSource.Cancel();
+            _stopSource!.Cancel();
             _closeSource.Cancel();
-            return true;
         }
 
         public void Dispose()
         {
+            Debug.Assert( _workLoopTask.IsCompleted );
             _closeSource.Dispose();
             _stopSource.Dispose();
         }

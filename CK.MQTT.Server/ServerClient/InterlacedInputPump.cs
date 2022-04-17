@@ -13,14 +13,14 @@ namespace CK.MQTT.P2P
 {
     class InterlacedInputPump : InputPump
     {
-        readonly ITopicFilter _filter;
-        readonly ChannelReader<(bool, string[])> _subscribes;
+        readonly ITopicManager _topicManager;
+        readonly ChannelReader<(Subscription[]?, string[]?)> _subscribes;
         public InterlacedInputPump
         (
-            MessageExchanger messageExchanger, Reflex reflex, ITopicFilter filter, ChannelReader<(bool, string[])> subscribes
+            MessageExchanger messageExchanger, Reflex reflex, ITopicManager topicManager, ChannelReader<(Subscription[]?, string[]?)> subscribes
         ) : base( messageExchanger, reflex )
         {
-            _filter = filter;
+            _topicManager = topicManager;
             _subscribes = subscribes;
         }
 
@@ -28,7 +28,7 @@ namespace CK.MQTT.P2P
         {
             //Fast path
             var read = base.ReadAsync( cancellationToken );
-            ProcessSubscribes();
+            await ProcessSubscribesAsync();
 
             while( !read.IsCompleted )
             {
@@ -39,28 +39,28 @@ namespace CK.MQTT.P2P
                 await Task.WhenAny( readTask, messageReady );
                 if( messageReady.IsCompleted )
                 {
-                    ProcessSubscribes();
+                    await ProcessSubscribesAsync();
                 }
             }
             return await read;
         }
 
-        void ProcessSubscribes()
+        async ValueTask ProcessSubscribesAsync()
         {
-            while( _subscribes.TryRead( out (bool, string[]) item ) )
+            while( _subscribes.TryRead( out (Subscription[]?, string[]?) item ) )
             {
-                if( item.Item1 )
+                if( item.Item1 is not null )
                 {
-                    foreach( var topic in item.Item2 )
+                    foreach( var subscription in item.Item1 )
                     {
-                        _filter.Subscribe( topic );
+                        await _topicManager.SubscribeAsync( subscription );
                     }
                 }
                 else
                 {
-                    foreach( var topic in item.Item2 )
+                    foreach( var topic in item.Item2! )
                     {
-                        _filter.Unsubscribe( topic );
+                        await _topicManager.UnsubscribeAsync( topic );
                     }
                 }
             }

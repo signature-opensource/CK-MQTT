@@ -58,6 +58,7 @@ namespace CK.MQTT
             return Task.FromResult<T?>( default );
         }
 
+        [ThreadColor( ThreadColor.Rainbow )]
         async ValueTask QueueMessageIfConnectedAsync( IOutgoingPacket packet )
         {
             var pumps = Pumps;
@@ -67,12 +68,14 @@ namespace CK.MQTT
             }
         }
 
+        [ThreadColor( ThreadColor.Rainbow )]
         async ValueTask<Task<T?>> StoreAndSendAsync<T>( IOutgoingPacket msg )
         {
             (Task<object?> ackReceived, IOutgoingPacket newPacket) = await LocalPacketStore.StoreMessageAsync( msg, msg.Qos );
             return SendAsync<T>( newPacket, ackReceived );
         }
 
+        [ThreadColor( ThreadColor.Rainbow )]
         async Task<T?> SendAsync<T>( IOutgoingPacket packet, Task<object?> ackReceived )
         {
             await QueueMessageIfConnectedAsync( packet );
@@ -89,7 +92,7 @@ namespace CK.MQTT
         {
             Debug.Assert( Pumps != null );
             Channel.Close();
-            await Pumps.DisposeAsync();
+            await Pumps.StopWorkAsync();
             Sink.OnUnattendedDisconnect( disconnectedReason );
         }
 
@@ -114,7 +117,7 @@ namespace CK.MQTT
             await LocalPacketStore.ResetAsync();
             await RemotePacketStore.ResetAsync();
 
-            await pumps.DisposeAsync();
+            pumps.Dispose();
             Pumps = null;
             return true;
         }

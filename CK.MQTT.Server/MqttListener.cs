@@ -25,7 +25,7 @@ namespace CK.MQTT.Server
             _storeFactory = storeFactory;
         }
 
-        protected abstract ISecurityManagerFactory SecurityManagerFactory { get; }
+        protected abstract IAuthenticationProtocolHandlerFactory SecurityManagerFactory { get; }
 
         public void StartListening()
         {
@@ -46,7 +46,7 @@ namespace CK.MQTT.Server
         protected abstract ValueTask CreateClientAsync(
             IActivityMonitor m,
             IMqttChannel channel,
-            ISecurityManager securityManager,
+            IAuthenticationProtocolHandler securityManager,
             ILocalPacketStore localPacketStore,
             IRemotePacketStore remotePacketStore,
             IConnectInfo connectInfo,
@@ -57,7 +57,7 @@ namespace CK.MQTT.Server
             var m = new ActivityMonitor();
             while( !cancellationToken.IsCancellationRequested )
             {
-                ISecurityManager? securityManager = null;
+                IAuthenticationProtocolHandler? securityManager = null;
                 (IMqttChannel? channel, var connectionInfo) = await _channelFactory.CreateAsync( cancellationToken );
                 try
                 {

@@ -68,25 +68,6 @@ namespace CK.MQTT.Pumps
             }
         }
 
-        /// <summary>
-        /// Packet used to wake up the wait
-        /// This packet will never be published.
-        /// </summary>
-        public class FlushPacket : IOutgoingPacket
-        {
-            public static IOutgoingPacket Instance { get; } = new FlushPacket();
-            private FlushPacket() { }
-            public ushort PacketId { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-
-            public QualityOfService Qos => throw new NotSupportedException();
-
-            public bool IsRemoteOwnedPacketId => throw new NotSupportedException();
-
-            public uint GetSize( ProtocolLevel protocolLevel ) => throw new NotSupportedException();
-
-            public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
-        }
-
         public void QueueReflexMessage( IOutgoingPacket item )
         {
             void QueuePacket( IOutgoingPacket packet )
@@ -107,6 +88,7 @@ namespace CK.MQTT.Pumps
         }
 
         /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
+        [ThreadColor( ThreadColor.Rainbow )]
         public async Task QueueMessageAndWaitUntilSentAsync( IOutgoingPacket packet )
         {
             var wrapper = new AwaitableOutgoingPacketWrapper( packet );
@@ -118,11 +100,11 @@ namespace CK.MQTT.Pumps
             await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
         }
 
-        public override Task CloseAsync()
+        public override async Task CloseAsync()
         {
-            if( _outputProcessor == null ) throw new NullReferenceException( $"{nameof( _outputProcessor )} is null." );
-            _outputProcessor.Stopping();
-            return base.CloseAsync();
+            var task = MessageExchanger.Channel.DuplexPipe?.Output!.CompleteAsync();
+            if( task.HasValue ) await task.Value;
+            await base.CloseAsync();
         }
     }
 }

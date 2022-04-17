@@ -12,19 +12,43 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public LoopBackBase( ChannelWriter<object?> writer ) => _writer = writer;
 
-        public abstract IDuplexPipe? TestDuplexPipe { get; protected set; }
+        TaskCompletionSource<IDuplexPipe> _tcs = new();
+        public Task<IDuplexPipe> GetTestDuplexPipe() => _tcs.Task;
         public abstract IDuplexPipe? DuplexPipe { get; protected set; }
 
         public bool IsConnected { get; private set; } = true;
 
-        public abstract ValueTask StartAsync( CancellationToken cancellationToken );
-        public abstract void Close();
+        public async ValueTask StartAsync( CancellationToken cancellationToken )
+        {
+            _tcs.SetResult( await DoStartAsync( cancellationToken ) );
+        }
 
+        protected abstract ValueTask<IDuplexPipe> DoStartAsync( CancellationToken cancellationToken );
+        public void Close()
+        {
+            if( !IsConnected ) throw new InvalidOperationException( "Closing when not connected." );
+            if( DuplexPipe == null ) throw new InvalidOperationException( "Not started." );
+            var pipe = _tcs.Task.Result;
+            pipe!.Input.Complete();
+            pipe!.Output.Complete();
+            pipe!.Input.CancelPendingRead();
+            pipe!.Output.CancelPendingFlush();
+            DuplexPipe.Output.Complete();
+            DuplexPipe.Output.CancelPendingFlush();
+            DuplexPipe.Input.CancelPendingRead();
+            DuplexPipe.Input.Complete();
+            DuplexPipe = null;
+            IsConnected = false;
+            _tcs = new();
+            DoClose();
+        }
+        protected abstract void DoClose();
         public record DisposedChannel();
+        bool _disposed;
         public void Dispose()
         {
-            if( !IsConnected ) throw new InvalidOperationException( "Double dispose" );
-            IsConnected = false;
+            if( _disposed ) throw new InvalidOperationException( "Double dispose" );
+            _disposed = true;
             _writer.TryWrite( new DisposedChannel() );
         }
     }

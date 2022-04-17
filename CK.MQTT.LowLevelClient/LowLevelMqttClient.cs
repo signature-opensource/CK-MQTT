@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public sealed class LowLevelMqttClient : MessageExchanger
+    public sealed class LowLevelMqttClient : MessageExchanger, IMqtt3Client
     {
         public Mqtt3ClientConfiguration ClientConfig { get; }
 
@@ -55,6 +55,7 @@ namespace CK.MQTT
         {
             try
             {
+                Pumps?.Dispose();
                 if( ClientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
                 {
                     _disconnectTCS = new TaskCompletionSource();
@@ -112,15 +113,15 @@ namespace CK.MQTT
                     writeConnectResult = await outgoingConnect.WriteAsync( PConfig.ProtocolLevel, Channel.DuplexPipe.Output, cts.Token );
                 }
 
-                async ValueTask<ConnectResult> Exit( ConnectError connectError )
+                ConnectResult Exit( ConnectError connectError )
                 {
                     Channel.Close();
-                    await Pumps.DisposeAsync();
+                    Pumps.Dispose();
                     return new ConnectResult( connectError );
                 }
 
                 if( writeConnectResult != WriteResult.Written )
-                    return await Exit( ConnectError.Timeout );
+                    return Exit( ConnectError.Timeout );
                 ConnectResult res;
                 using( CancellationTokenSource cts2 = Config.CancellationTokenSourceFactory.Create( cancellationToken, Config.WaitTimeoutMilliseconds ) )
                 using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
@@ -134,32 +135,32 @@ namespace CK.MQTT
                         // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                         if( cancellationToken.IsCancellationRequested )
                         {
-                            return await Exit( ConnectError.Connection_Cancelled );
+                            return Exit( ConnectError.Connection_Cancelled );
                         }
                         else
                         {
-                            return await Exit( ConnectError.Timeout );
+                            return Exit( ConnectError.Timeout );
                         }
                     }
                 }
 
                 // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )
-                    return await Exit( ConnectError.Connection_Cancelled );
+                    return Exit( ConnectError.Connection_Cancelled );
                 if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
-                    return await Exit( ConnectError.InternalException );
+                    return Exit( ConnectError.InternalException );
                 if( Pumps.IsClosed )
-                    return await Exit( ConnectError.RemoteDisconnected );
+                    return Exit( ConnectError.RemoteDisconnected );
 
                 if( res.ConnectError != ConnectError.None )
                 {
-                    await Pumps.DisposeAsync();
+                    Pumps.Dispose();
                     return res;
                 }
 
                 bool askedCleanSession = ClientConfig.Credentials?.CleanSession ?? true;
                 if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-                    return await Exit( ConnectError.ProtocolError_SessionNotFlushed );
+                    return Exit( ConnectError.ProtocolError_SessionNotFlushed );
                 if( res.SessionState == SessionState.CleanSession )
                 {
                     ValueTask task = RemotePacketStore.ResetAsync();
@@ -179,14 +180,14 @@ namespace CK.MQTT
                 if( Pumps is not null )
                 {
                     Channel.Close();
-                    await Pumps.DisposeAsync();
+                    Pumps.Dispose();
                 }
                 return new ConnectResult( ConnectError.InternalException );
             }
         }
 
 
-        protected override async ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
+        internal protected override async ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             await base.SelfDisconnectAsync( disconnectedReason );
             _disconnectTCS?.TrySetResult(); //TrySet because we can have the user ask concurrently to Disconnect.
@@ -229,12 +230,14 @@ namespace CK.MQTT
         public async Task ReconnectBackgroundAsync()
         {
             await _disconnectTCS!.Task;
+            await Pumps!.CloseAsync();
             _running = new();
             while( !_running.IsCancellationRequested )
             {
                 ConnectResult result = await DoConnectAsync( null, _running.Token );
                 if( result.ConnectError != ConnectError.None ) continue;
                 await _disconnectTCS.Task;
+                await Pumps!.CloseAsync();
             }
         }
 

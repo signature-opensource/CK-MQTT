@@ -15,21 +15,21 @@ namespace CK.MQTT.Server
 {
     public class MqttServerClient : MqttListener, IMqtt3Client, IDisposable
     {
-        internal readonly ITopicManager _inputTopicFilter = new SimpleTopicManager();
+        internal readonly ITopicManager _inputTopicFilter = new SimpleTopicManager(); //TODO: 
         internal readonly ITopicManager _outputTopicFilter = new SimpleTopicManager();
-        internal readonly Channel<(bool, string[])> _subscriptionsCommand = Channel.CreateUnbounded<(bool, string[])>();
+        internal readonly Channel<(Subscription[]?, string[]?)> _subscriptionsCommand = Channel.CreateUnbounded<(Subscription[]?, string[]?)>();
         readonly IMqtt3Sink _sink;
-        internal TaskCompletionSource<(IMqttChannel channel, ISecurityManager securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
+        internal TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
         ClientWrapper? _wrapper;
-        public MqttServerClient( Mqtt3ConfigurationBase config, IMqtt3Sink sink, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, ISecurityManagerFactory securityManagerFactory ) : base( config, channelFactory, storeFactory )
+        public MqttServerClient( Mqtt3ConfigurationBase config, IMqtt3Sink sink, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory securityManagerFactory ) : base( config, channelFactory, storeFactory )
         {
             SecurityManagerFactory = new SecurityManagerFactoryWrapper( this, securityManagerFactory );
             _sink = sink;
         }
 
-        protected override ISecurityManagerFactory SecurityManagerFactory { get; }
+        protected override IAuthenticationProtocolHandlerFactory SecurityManagerFactory { get; }
 
-        protected override ValueTask CreateClientAsync( IActivityMonitor m, IMqttChannel channel, ISecurityManager securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
+        protected override ValueTask CreateClientAsync( IActivityMonitor m, IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
         {
             _needClientTCS!.SetResult( (channel, securityManager, localPacketStore, remotePacketStore, connectInfo) );
             _needClientTCS = null;
@@ -40,7 +40,7 @@ namespace CK.MQTT.Server
         {
             if( lastWill != null ) throw new ArgumentException( "Last will is not supported by a P2P client." );
             if( _wrapper?.IsConnected ?? false ) throw new InvalidOperationException( "This client is already connected." );
-            var tcs = new TaskCompletionSource<(IMqttChannel channel, ISecurityManager securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
+            var tcs = new TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
             _needClientTCS = tcs;
             var (channel, securityManager, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
             _wrapper = new ClientWrapper( this, ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ), Config, _sink, channel, remotePacketStore, localPacketStore );
@@ -49,14 +49,14 @@ namespace CK.MQTT.Server
 
         public async ValueTask<Task> UnsubscribeAsync( params string[] topics )
         {
-            await _subscriptionsCommand.Writer.WriteAsync( (false, topics) );
+            await _subscriptionsCommand.Writer.WriteAsync( (null, topics) );
             return Task.CompletedTask;
         }
 
         public async ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
         {
-            var subs = subscriptions.Select( s => s.TopicFilter ).ToArray();
-            await _subscriptionsCommand.Writer.WriteAsync( (true, subs) );
+            var subs = subscriptions.ToArray();
+            await _subscriptionsCommand.Writer.WriteAsync( (subs, null) );
             return Task.FromResult(
                 new SubscribeReturnCode[subs.Length]
             // We cannot ask the client a certain QoS as it's a fake subscribe, we return 0 because we canno't make the guarentee the QoS will be higher.
@@ -65,7 +65,7 @@ namespace CK.MQTT.Server
 
         public async ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
         {
-            await _subscriptionsCommand.Writer.WriteAsync( (true, new string[] { subscriptions.TopicFilter }) );
+            await _subscriptionsCommand.Writer.WriteAsync( (new Subscription[] { subscriptions }, null) );
             return Task.FromResult(
                 SubscribeReturnCode.MaximumQoS0
             // We cannot ask the client a certain QoS as it's a fake subscribe, we return 0 because we canno't make the guarentee the QoS will be higher.
@@ -79,8 +79,6 @@ namespace CK.MQTT.Server
             => _wrapper!.PublishAsync( message );
 
         public void Dispose()
-        {
-            _wrapper?.Dispose();
-        }
+            => _wrapper?.Dispose();
     }
 }

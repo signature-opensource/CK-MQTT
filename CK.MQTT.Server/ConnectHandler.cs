@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Packets
 {
-    public class ConnectHandler: IConnectInfo
+    public class ConnectHandler : IConnectInfo
     {
         readonly List<(string, string)> _userProperties = new();
         ReadOnlyMemory<byte> _authData;
@@ -38,17 +38,17 @@ namespace CK.MQTT.Packets
         bool _requestResponseInformationRead;
         bool _topicAliasMaxiumRead;
         bool _sessionExpiryIntervalRead;
-        byte _protocolLevel;
+        byte _protocolLevel; //if the connection cannot be made, we default to MQTT3.
         PropertyIdentifier _currentProp;
         byte _flags;
 
-        public async ValueTask<(ConnectReturnCode, ProtocolLevel)> HandleAsync( PipeReader reader, ISecurityManager securityManager, CancellationToken cancellationToken )
+        public async ValueTask<(ConnectReturnCode, ProtocolLevel)> HandleAsync( PipeReader reader, IAuthenticationProtocolHandler securityManager, CancellationToken cancellationToken )
         {
-            OperationStatus status = OperationStatus.NeedMoreData;
             ReadResult res;
             uint currentStep = 0;
             byte header;
             uint length;
+            OperationStatus status;
             while( true )
             {
                 res = await reader.ReadAsync( cancellationToken );
@@ -58,19 +58,20 @@ namespace CK.MQTT.Packets
                 {
                     return (ConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
                 }
+                reader.AdvanceTo( res.Buffer.Start, position );
             }
+            if( header != 0x10 ) return (ConnectReturnCode.Unknown, 0);
+
             status = OperationStatus.NeedMoreData;
             while( status != OperationStatus.Done )
             {
                 res = await reader.ReadAsync( cancellationToken );
 
-                if( !ParseFirstPartInternal() ) return ConnectReturnCode.Unknown;
-                bool ParseFirstPartInternal() // Trick to use SequenceReader inside an async method.
+                void ParseAndAdvance() // Trick to use SequenceReader inside an async method.
                 {
                     SequenceReader<byte> sequenceReader = new( res.Buffer );
                     // We need the ClientID to instantiate the store to the client.
                     status = ParseFirstPart( ref sequenceReader );
-                    if( status == OperationStatus.InvalidData ) return false; // TODO: log this "Invalid data while parsing the Connect packet.";
                     if( status == OperationStatus.NeedMoreData )
                     {
                         reader.AdvanceTo( sequenceReader.Position, res.Buffer.End );
@@ -79,24 +80,26 @@ namespace CK.MQTT.Packets
                     {
                         reader.AdvanceTo( sequenceReader.Position );
                     }
-                    return true;
                 }
+                ParseAndAdvance();
+                if( status == OperationStatus.InvalidData ) return (ConnectReturnCode.Unknown, 0); // TODO: log this "Invalid data while parsing the Connect packet.";
+
                 if( currentStep <= 6 && _fieldCount > 6 )
                 {
-                    if( !await securityManager.ChallengeClientIdAsync( _clientId ) ) return ConnectReturnCode.IdentifierRejected;
+                    if( !await securityManager.ChallengeClientIdAsync( _clientId ) ) return (ConnectReturnCode.IdentifierRejected, ProtocolLevel);
                 }
 
                 if( currentStep <= 2 && _fieldCount > 2 )
                 {
-                    if( !await securityManager.ChallengeShouldHaveCredsAsync( HasUserName, HasPassword ) ) return ConnectReturnCode.BadUserNameOrPassword;
+                    if( !await securityManager.ChallengeShouldHaveCredsAsync( HasUserName, HasPassword ) ) return (ConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 if( UserName != null && currentStep <= 10 && _fieldCount > 10 )
                 {
-                    if( !await securityManager.ChallengeUserNameAsync( UserName ) ) return ConnectReturnCode.BadUserNameOrPassword;
+                    if( !await securityManager.ChallengeUserNameAsync( UserName ) ) return (ConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 if( Password != null && currentStep <= 11 && _fieldCount > 11 )
                 {
-                    if( !await securityManager.ChallengePasswordAsync( Password ) ) return ConnectReturnCode.BadUserNameOrPassword;
+                    if( !await securityManager.ChallengePasswordAsync( Password ) ) return (ConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 currentStep = _fieldCount;
             }
@@ -110,7 +113,7 @@ namespace CK.MQTT.Packets
             // - AUTHENTICATE Packet
             //      Set the next reflex to an Authenticate Handler and handle authentication.
 
-            return ConnectReturnCode.Accepted;
+            return (ConnectReturnCode.Accepted, ProtocolLevel);
         }
 
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
@@ -293,7 +296,7 @@ namespace CK.MQTT.Packets
                             if( !sequenceReader.TryReadMQTTString( out _currentUserPropKey ) ) return OperationStatus.NeedMoreData;
                         }
                         if( !sequenceReader.TryReadMQTTString( out string? propValue ) ) return OperationStatus.NeedMoreData;
-                        UserProperties.Add( (_currentUserPropKey, propValue) );
+                        _userProperties.Add( (_currentUserPropKey, propValue) );
                         _currentUserPropKey = null;
                         break;
                     case PropertyIdentifier.MaximumPacketSize:

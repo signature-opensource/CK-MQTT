@@ -3,6 +3,7 @@ using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,42 +12,37 @@ namespace CK.MQTT.P2P
 {
     class FilteringOutputProcessor : OutputProcessor
     {
-        readonly ITopicFilter _filter;
+        readonly ITopicManager _topicManager;
 
-        public FilteringOutputProcessor( ITopicFilter filter, MessageExchanger messageExchanger ) : base( messageExchanger )
+        public FilteringOutputProcessor( ITopicManager topicManager, MessageExchanger messageExchanger ) : base( messageExchanger )
         {
-            _filter = filter;
+            _topicManager = topicManager;
         }
 
         protected override async ValueTask<bool> SendAMessageFromQueueAsync( CancellationToken cancellationToken )
         {
-            FilterUpdatePacket? filterUpdatePacket;
-            do
+            while( true )
             {
-                if( !ReflexesChannel.Reader.TryRead( out IOutgoingPacket? packet ) && !MessagesChannel.Reader.TryRead( out packet ) )
+                if( !ReflexesChannel.Reader.TryPeek( out IOutgoingPacket? packet ) && !MessagesChannel.Reader.TryPeek( out packet ) )
                 {
                     return false;
                 }
-                filterUpdatePacket = packet as FilterUpdatePacket;
-                if( filterUpdatePacket != null )
+                var subPacket = packet as InternalSubscribePacket;
+                if( subPacket != null )
                 {
-                    if( filterUpdatePacket.Subscribe )
-                    {
-                        foreach( var topic in filterUpdatePacket.Topics )
-                        {
-                            _filter.Subscribe( topic );
-                        }
-                    }
-                    else
-                    {
-                        foreach( var topic in filterUpdatePacket.Topics )
-                        {
-                            _filter.Unsubscribe( topic );
-                        }
-                    }
+                    await _topicManager.SubscribeAsync( subPacket.Topics );
+                    await ReflexesChannel.Reader.ReadAsync( CancellationToken.None ); // there is a packet available so we consume it.
+                    continue;
                 }
+                var unsubPacket = packet as InternalUnsubscribePacket;
+                if( unsubPacket != null )
+                {
+                    await _topicManager.UnsubscribeAsync( unsubPacket.Topics );
+                    await ReflexesChannel.Reader.ReadAsync( CancellationToken.None ); // there is a packet available so we consume it.
+                    continue;
+                }
+                break;
             }
-            while( filterUpdatePacket != null );
             return await base.SendAMessageFromQueueAsync( cancellationToken );
         }
     }

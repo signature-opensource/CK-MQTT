@@ -22,6 +22,7 @@ namespace CK.MQTT.Pumps
 
         TimeSpan _timeUntilNextRetry = TimeSpan.MaxValue;
 
+        [ThreadColor( "WriteLoop" )]
         public virtual async ValueTask<bool> SendPacketsAsync( CancellationToken cancellationToken )
         {
             bool newPacketSent = await SendAMessageFromQueueAsync( cancellationToken ); // We want to send a fresh new packet...
@@ -36,16 +37,15 @@ namespace CK.MQTT.Pumps
             var outputPump = MessageExchanger.Pumps!.Left;
             using( var ctsRetry = MessageExchanger.Config.CancellationTokenSourceFactory.Create( _timeUntilNextRetry ) )
             using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, stopWaitToken ) )
-            using( linkedCts.Token.Register( () => outputPump.ReflexesChannel.Writer.TryWrite( OutputPump.FlushPacket.Instance ) ) )
+            using( linkedCts.Token.Register( () => outputPump.ReflexesChannel.Writer.TryWrite( FlushPacket.Instance ) ) )
             {
                 await outputPump.ReflexesChannel.Reader.WaitToReadAsync( stopToken );
             }
         }
 
-        internal void Stopping() => MessageExchanger.Channel.DuplexPipe!.Output.Complete();
-
         protected ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason ) => MessageExchanger.Pumps!.Left.SelfCloseAsync( disconnectedReason );
 
+        [ThreadColor( "WriteLoop" )]
         protected virtual async ValueTask<bool> SendAMessageFromQueueAsync( CancellationToken cancellationToken )
         {
             IOutgoingPacket? packet;
@@ -57,11 +57,12 @@ namespace CK.MQTT.Pumps
                     return false;
                 }
             }
-            while( packet == OutputPump.FlushPacket.Instance );
+            while( packet == FlushPacket.Instance );
             await ProcessOutgoingPacketAsync( packet, cancellationToken );
             return true;
         }
 
+        [ThreadColor( "WriteLoop" )]
         async ValueTask<bool> ResendAllUnackPacketAsync( CancellationToken cancellationToken )
         {
             if( MessageExchanger.Config.WaitTimeoutMilliseconds == int.MaxValue ) return false; // Resend is disabled.
@@ -85,6 +86,7 @@ namespace CK.MQTT.Pumps
             }
         }
 
+        [ThreadColor( "WriteLoop" )]
         protected async ValueTask ProcessOutgoingPacketAsync( IOutgoingPacket outgoingPacket, CancellationToken cancellationToken )
         {
             if( cancellationToken.IsCancellationRequested ) return;

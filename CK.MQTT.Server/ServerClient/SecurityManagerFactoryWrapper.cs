@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    class SecurityManagerFactoryWrapper : ISecurityManagerFactory
+    class SecurityManagerFactoryWrapper : IAuthenticationProtocolHandlerFactory
     {
         readonly MqttServerClient _client;
-        readonly ISecurityManagerFactory _securityManagerFactory;
+        readonly IAuthenticationProtocolHandlerFactory _securityManagerFactory;
 
-        public SecurityManagerFactoryWrapper( MqttServerClient client, ISecurityManagerFactory securityManagerFactory )
+        public SecurityManagerFactoryWrapper( MqttServerClient client, IAuthenticationProtocolHandlerFactory securityManagerFactory )
         {
             _client = client;
             _securityManagerFactory = securityManagerFactory;
         }
 
-        public async ValueTask<ISecurityManager?> ChallengeIncomingConnectionAsync( string connectionInfo, CancellationToken cancellationToken )
+        public async ValueTask<IAuthenticationProtocolHandler?> ChallengeIncomingConnectionAsync( string connectionInfo, CancellationToken cancellationToken )
         {
             if( _client._needClientTCS == null ) return null; //Deny all connection when we dont need a client.
             return await _securityManagerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );

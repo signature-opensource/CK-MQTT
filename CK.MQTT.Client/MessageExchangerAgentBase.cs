@@ -37,18 +37,18 @@ namespace CK.MQTT.Client
         protected override void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount )
             => Messages!.Writer.TryWrite( new PoisonousPacket( packetId, packetType, poisonousTotalCount ) );
 
-        protected class Connected { };
+        public record Connected;
         protected override void OnConnected() => Messages!.Writer.TryWrite( new Connected() );
 
-        protected record StoreFilling( ushort FreeLeftSlot );
+        public record StoreFilling( ushort FreeLeftSlot );
         protected override void OnStoreFull( ushort freeLeftSlot )
             => Messages!.Writer.TryWrite( new StoreFilling( freeLeftSlot ) );
 
-        protected record UnattendedDisconnect( DisconnectReason Reason );
+        public record UnattendedDisconnect( DisconnectReason Reason );
         protected override void OnUnattendedDisconnect( DisconnectReason reason )
             => Messages!.Writer.TryWrite( new UnattendedDisconnect( reason ) );
 
-        protected record UnparsedExtraData( ushort PacketId, ReadOnlySequence<byte> UnparsedData );
+        public record UnparsedExtraData( ushort PacketId, ReadOnlySequence<byte> UnparsedData );
         protected override void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData )
             => Messages!.Writer.TryWrite( new UnparsedExtraData( packetId, unparsedData ) );
 
@@ -64,14 +64,14 @@ namespace CK.MQTT.Client
             await Messages!.Writer.WriteAsync( new ApplicationMessage( topic, buffer, qos, retain ), cancellationToken ); //Todo: DisposableApplicationMessage
         }
 
-        protected record ReconnectionFailed( int RetryCount, int MaxRetryCount );
+        public record ReconnectionFailed( int RetryCount, int MaxRetryCount );
         protected override bool OnReconnectionFailed( int retryCount, int maxRetryCount )
         {
             Messages!.Writer.TryWrite( new ReconnectionFailed( retryCount, maxRetryCount ) );
             return true;
         }
 
-        protected record QueueFullPacketDestroyed( ushort PacketId, PacketType PacketType );
+        public record QueueFullPacketDestroyed( ushort PacketId, PacketType PacketType );
         protected override void OnQueueFullPacketDropped( ushort packetId, PacketType packetType )
             => Messages!.Writer.TryWrite( new QueueFullPacketDestroyed( packetId, packetType ) );
     }

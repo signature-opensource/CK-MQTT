@@ -14,10 +14,10 @@ namespace CK.MQTT.Client.Tests.Helpers
     static class PacketReplayerAssertsExtensions
     {
         public static TestMqttClient CreateMQTT3Client( this PacketReplayer replayer, Mqtt3ClientConfiguration config )
-            => new( config, replayer.Events );
+            => new( ProtocolConfiguration.Mqtt3, config, replayer.CreateChannel(), replayer.Events );
 
-        public static TestMqttClient CreateMQTT5Client( this PacketReplayer replayer, Mqtt5ClientConfiguration config )
-            => new( config, replayer.Events );
+        public static TestMqttClient CreateMQTT5Client( this PacketReplayer replayer, ProtocolConfiguration pConfig, Mqtt5ClientConfiguration config )
+            => new( ProtocolConfiguration.Mqtt5, config, replayer.CreateChannel(), replayer.Events );
 
         public static async Task AssertClientSent( this PacketReplayer @this, IActivityMonitor m, string hexArray )
         {
@@ -28,25 +28,27 @@ namespace CK.MQTT.Client.Tests.Helpers
 
                 using( CancellationTokenSource cts = Debugger.IsAttached ? new() : new( 500 ) )
                 {
-                    ReadResult readResult = await @this.Channel!.TestDuplexPipe.Input.ReadAtLeastAsync( buffer.Length, cts.Token );
+                    var testPipe = await @this.Channel!.GetTestDuplexPipe();
+                    ReadResult readResult = await testPipe.Input.ReadAtLeastAsync( buffer.Length, cts.Token );
 
                     if( cts.IsCancellationRequested || readResult.IsCanceled ) Assert.Fail( "Timeout." );
                     if( readResult.IsCompleted && readResult.Buffer.Length < buffer.Length ) Assert.Fail( "Partial data." );
 
                     ReadOnlySequence<byte> sliced = readResult.Buffer.Slice( 0, buffer.Length );
                     sliced.CopyTo( buffer.Span );
-                    @this.Channel!.TestDuplexPipe.Input.AdvanceTo( sliced.End );
+                    testPipe.Input.AdvanceTo( sliced.End );
 
                     if( !buffer.Span.SequenceEqual( truthBuffer.Span ) ) Assert.Fail( "Buffer not equals." );
                 }
             }
         }
-        public static async Task SendToClient( this PacketReplayer replayer, IActivityMonitor m, ReadOnlyMemory<byte> data )
+        public static async Task SendToClient( this PacketReplayer @this, IActivityMonitor m, ReadOnlyMemory<byte> data )
         {
             using( m.OpenInfo( "Sending to client..." ) )
             {
-                await replayer.Channel!.TestDuplexPipe.Output.WriteAsync( data );
-                await replayer.Channel!.TestDuplexPipe.Output.FlushAsync();
+                var testPipe = await @this.Channel!.GetTestDuplexPipe();
+                await testPipe.Output.WriteAsync( data );
+                await testPipe.Output.FlushAsync();
             }
         }
 
@@ -61,7 +63,6 @@ namespace CK.MQTT.Client.Tests.Helpers
             );
             await @this.SendToClient( TestHelper.Monitor, "20020000" );
             await task;
-            await @this.ShouldContainEventAsync<PacketReplayer.CreatedChannel>();
             await @this.ShouldContainEventAsync<TestMqttClient.Connected>();
         }
 

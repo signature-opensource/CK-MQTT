@@ -133,27 +133,21 @@ namespace CK.MQTT.Client.Tests
         {
         }
 
-        public override ValueTask StartAsync()
+        protected override ValueTask<IDuplexPipe> DoStartAsync( CancellationToken cancellationToken )
         {
             const int size = 16;
             Pipe input = new( new PipeOptions( pauseWriterThreshold: long.MaxValue, minimumSegmentSize: size, pool: new SingleBytePool() ) );
             Pipe output = new( new PipeOptions( pauseWriterThreshold: long.MaxValue, minimumSegmentSize: size, pool: new SingleBytePool() ) );
 
             DuplexPipe = new DuplexPipe( new BytePerBytePipeReader( input.Reader ), output.Writer );
-            TestDuplexPipe = new DuplexPipe( output.Reader, input.Writer );
-            return new ValueTask();
+            return new ValueTask<IDuplexPipe>( new DuplexPipe( output.Reader, input.Writer ) );
         }
 
-        public override IDuplexPipe? TestDuplexPipe { get; protected set; }
         public override IDuplexPipe? DuplexPipe { get; protected set; }
 
 
-        public override void Close()
+        protected override void DoClose()
         {
-            if( TestDuplexPipe == null ) throw new InvalidOperationException( "Not started." );
-            TestDuplexPipe!.Input.Complete();
-            TestDuplexPipe!.Output.Complete();
-            TestDuplexPipe = null;
         }
     }
 }

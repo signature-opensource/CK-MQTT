@@ -1,10 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Common.Pumps
 {
-    public class DuplexPump<TLeft, TRight> : IAsyncDisposable
+    public class DuplexPump<TLeft, TRight> : IDisposable
         where TLeft : PumpBase
         where TRight : PumpBase
     {
@@ -34,22 +35,15 @@ namespace CK.MQTT.Common.Pumps
         /// <returns></returns>
         public Task StopWorkAsync() => Task.WhenAll( Left.StopWorkAsync(), Right.StopWorkAsync() );
 
+        public Task CloseAsync() => Task.WhenAll( Left.CloseAsync(), Right.CloseAsync() );
+
         bool _isDispose;
-
-
-
-        /// <summary>
-        /// Called by the client itself.
-        /// </summary>
-        /// <returns></returns>
-        public async ValueTask DisposeAsync()
-        {
-            await Task.WhenAll( Left.CloseAsync(), Right.CloseAsync() );
-            Dispose();
-        }
 
         public void Dispose()
         {
+            Debug.Assert(!_isDispose);
+            Debug.Assert(Left.CloseToken.IsCancellationRequested);
+            Debug.Assert(Right.CloseToken.IsCancellationRequested);
             _isDispose = true;
             Left.Dispose();
             Right.Dispose();

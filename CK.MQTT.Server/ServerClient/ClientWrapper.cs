@@ -9,8 +9,15 @@ namespace CK.MQTT.Server
     {
         readonly MqttServerClient _serverClient;
 
-        public ClientWrapper( MqttServerClient serverClient, ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, IMqtt3Sink sink, IMqttChannel channel, IRemotePacketStore? remotePacketStore = null, ILocalPacketStore? localPacketStore = null )
-            : base( pConfig, config, sink, channel, serverClient._outputTopicFilter, remotePacketStore, localPacketStore )
+        public ClientWrapper(
+            MqttServerClient serverClient,
+            ProtocolConfiguration pConfig,
+            Mqtt3ConfigurationBase config,
+            IMqtt3Sink sink,
+            IMqttChannel channel,
+            IRemotePacketStore? remotePacketStore = null,
+            ILocalPacketStore? localPacketStore = null
+        ) : base( pConfig, config, sink, channel, serverClient._outputTopicFilter, remotePacketStore, localPacketStore )
         {
             _serverClient = serverClient;
             Sink = new FilteringSinkWrapper( sink, _serverClient._inputTopicFilter );

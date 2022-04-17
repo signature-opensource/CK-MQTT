@@ -27,7 +27,7 @@ namespace CK.MQTT.Server
         protected override async ValueTask CreateClientAsync(
             IActivityMonitor m,
             IMqttChannel channel,
-            ISecurityManager securityManager,
+            IAuthenticationProtocolHandler securityManager,
             ILocalPacketStore localPacketStore,
             IRemotePacketStore remotePacketStore,
             IConnectInfo connectInfo,

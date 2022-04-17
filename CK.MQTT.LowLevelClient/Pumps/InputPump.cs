@@ -116,7 +116,8 @@ namespace CK.MQTT.Pumps
 
         public override async Task CloseAsync()
         {
-            await MessageExchanger.Channel.DuplexPipe!.Input.CompleteAsync();
+            var task = MessageExchanger.Channel.DuplexPipe?.Input.CompleteAsync();
+            if( task.HasValue ) await task.Value;
             await base.CloseAsync();
         }
     }

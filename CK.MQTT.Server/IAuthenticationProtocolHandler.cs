@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public interface ISecurityManager : IAsyncDisposable
+    public interface IAuthenticationProtocolHandler : IAsyncDisposable
     {
         ValueTask<bool> ChallengeClientIdAsync( string clientId );
         ValueTask<bool> ChallengeShouldHaveCredsAsync( bool hasUserName, bool hasPassword );
