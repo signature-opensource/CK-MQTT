@@ -254,5 +254,22 @@ namespace CK.MQTT.Client.Tests
             await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
+
+        [Test]
+        public async Task invalid_length_connack_lead_to_end_of_stream()
+        {
+            var replayer = new PacketReplayer( ClassCase );
+            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer, credentials: new MqttClientCredentials() ) );
+
+            var task = client.ConnectAsync();
+
+            await replayer.AssertClientSent( TestHelper.Monitor, "100C00044D515454040200000000" );
+            await replayer.SendToClient( TestHelper.Monitor, "20030000" );
+            replayer.Channel!.CloseConnectionBackdoor();
+
+            var result = await task;
+            result.Should().Be( new ConnectResult( ConnectError.ProtocolError_IncompleteResponse ) );
+            
+        }
     }
 }
