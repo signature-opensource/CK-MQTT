@@ -255,6 +255,14 @@ namespace CK.MQTT
                 }
             }
         }
+
+        public override void Dispose()
+        {
+            Channel.Dispose();
+            base.Dispose();
+            LocalPacketStore.Dispose();
+            RemotePacketStore.Dispose();
+        }
     }
 }
 

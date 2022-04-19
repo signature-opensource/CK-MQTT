@@ -17,10 +17,16 @@ namespace CK.MQTT.Server
             IMqttChannel channel,
             IRemotePacketStore? remotePacketStore = null,
             ILocalPacketStore? localPacketStore = null
-        ) : base( pConfig, config, sink, channel, serverClient._outputTopicFilter, remotePacketStore, localPacketStore )
+        ) : base( pConfig,
+                  config,
+                  new FilteringSinkWrapper( sink, serverClient._inputTopicFilter ),
+                  channel,
+                  serverClient._outputTopicFilter,
+                  remotePacketStore,
+                  localPacketStore
+        )
         {
             _serverClient = serverClient;
-            Sink = new FilteringSinkWrapper( sink, _serverClient._inputTopicFilter );
         }
 
         protected override InputPump CreateInputPump( Reflex reflex )

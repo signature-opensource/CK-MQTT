@@ -30,12 +30,12 @@ namespace CK.MQTT
         }
 
         public Mqtt3ConfigurationBase Config { get; }
-        internal protected virtual IMqtt3Sink Sink { get; protected set; }
-        internal protected IRemotePacketStore RemotePacketStore { get; }
-        internal protected ILocalPacketStore LocalPacketStore { get; }
-        internal protected IMqttChannel Channel { get; }
-        internal protected ProtocolConfiguration PConfig { get; }
-        internal protected DuplexPump<OutputPump, InputPump>? Pumps { get; protected set; }
+        public virtual IMqtt3Sink Sink { get; }
+        public IRemotePacketStore RemotePacketStore { get; }
+        public ILocalPacketStore LocalPacketStore { get; }
+        public IMqttChannel Channel { get; }
+        public ProtocolConfiguration PConfig { get; }
+        public DuplexPump<OutputPump, InputPump>? Pumps { get; protected set; }
         public bool IsConnected => Pumps?.IsRunning ?? false;
 
         protected async ValueTask<Task<T?>> SendPacketAsync<T>( IOutgoingPacket outgoingPacket )
@@ -122,15 +122,9 @@ namespace CK.MQTT
             return true;
         }
 
-        protected virtual ValueTask BeforeFullDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession )
-        {
-            return new ValueTask();
-        }
+        protected virtual ValueTask BeforeFullDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new ValueTask();
 
-        public void Dispose()
-        {
-            Pumps?.Dispose();
-        }
+        public virtual void Dispose() => Pumps?.Dispose();
     }
 }
 
