@@ -8,9 +8,24 @@ namespace CK.MQTT.Client.Tests.Helpers
             MqttClientCredentials? credentials = null )
         {
             _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
-            return new Mqtt3ClientConfiguration( "" )
+            return new Mqtt3ClientConfiguration()
             {
-                ChannelFactory = packetReplayer,
+                StopwatchFactory = packetReplayer.TestTimeHandler,
+                CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
+                WaitTimeoutMilliseconds = timeoutMs,
+                KeepAliveSeconds = 0,
+                Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true )
+            };
+        }
+
+        public static Mqtt5ClientConfiguration MQTT5Config(
+            PacketReplayer packetReplayer,
+            int timeoutMs = 5_000,
+            MqttClientCredentials? credentials = null )
+        {
+            _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
+            return new Mqtt5ClientConfiguration()
+            {
                 StopwatchFactory = packetReplayer.TestTimeHandler,
                 CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
@@ -25,9 +40,8 @@ namespace CK.MQTT.Client.Tests.Helpers
                                                                               DisconnectBehavior disconnectBehavior = DisconnectBehavior.Nothing )
         {
             _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
-            return new Mqtt3ClientConfiguration( "" )
+            return new Mqtt3ClientConfiguration()
             {
-                ChannelFactory = packetReplayer,
                 StopwatchFactory = packetReplayer.TestTimeHandler,
                 CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,

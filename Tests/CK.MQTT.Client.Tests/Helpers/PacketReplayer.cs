@@ -1,5 +1,7 @@
 using CK.Core;
 using System;
+using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -8,10 +10,10 @@ namespace CK.MQTT.Client.Tests.Helpers
     /// <summary>
     /// Allow to test the client with weird packet without hacking the server code.
     /// </summary>
-    class PacketReplayer : IMqttChannelFactory
+    class PacketReplayer
     {
         public Channel<object?> Events { get; } = System.Threading.Channels.Channel.CreateUnbounded<object?>();
-        public LoopBack? Channel { get; private set; }
+        public LoopBackBase? Channel { get; private set; }
         public TestMqttClient Client { get; set; } = null!;
         public PacketReplayer( string channelType )
         {
@@ -22,8 +24,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public delegate ValueTask<bool> ScenarioStep( IActivityMonitor m, PacketReplayer packetReplayer );
 
-        public record CreatedChannel();
-        public async ValueTask<IMqttChannel> CreateAsync( string connectionString )
+        public IMqttChannel CreateChannel()
         {
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch
@@ -33,8 +34,11 @@ namespace CK.MQTT.Client.Tests.Helpers
                 "PipeReaderCop" => new PipeReaderCopLoopback( Events.Writer ),
                 _ => throw new InvalidOperationException( "Unknown channel type." )
             };
-            await Events.Writer.WriteAsync( new CreatedChannel() );
             return Channel;
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

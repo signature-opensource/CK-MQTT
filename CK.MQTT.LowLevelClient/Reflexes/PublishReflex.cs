@@ -13,14 +13,12 @@ namespace CK.MQTT
 {
     public class PublishReflex : IReflexMiddleware
     {
-        readonly Mqtt3ClientConfiguration _mqttConfiguration;
         readonly IRemotePacketStore _store;
         readonly Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
         readonly OutputPump _output;
 
-        public PublishReflex( Mqtt3ClientConfiguration mqttConfiguration, IRemotePacketStore store, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
+        public PublishReflex( IRemotePacketStore store, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
         {
-            _mqttConfiguration = mqttConfiguration;
             _store = store;
             _messageHandler = messageHandler;
             _output = output;
@@ -71,7 +69,7 @@ namespace CK.MQTT
                     await _messageHandler( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                     return OperationStatus.Done;
                 }
-                if( Publish.ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
+                if( ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
                 {
                     reader.AdvanceTo( position );
                     break;
@@ -89,6 +87,33 @@ namespace CK.MQTT
             await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
             _output.QueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) );
             return OperationStatus.Done;
+        }
+
+        /// <summary>
+        /// Parse a publish packet with a packet id.
+        /// Simply read the topic, packet id, and give their results by out parameters.
+        /// </summary>
+        /// <param name="buffer">The buffer to read the data from.</param>
+        /// <param name="topic">The topic of the publish packet.</param>
+        /// <param name="packetId">The packet id of the publish packet.</param>
+        /// <param name="position">The position after the read data.</param>
+        /// <returns>true if there was enough data, false if more data is required.</returns>
+        static bool ParsePublishWithPacketId( ReadOnlySequence<byte> buffer, [NotNullWhen( true )] out string? topic, out ushort packetId, out SequencePosition position )
+        {
+            SequenceReader<byte> reader = new( buffer );
+            if( !reader.TryReadMQTTString( out topic ) )
+            {
+                packetId = 0;
+                position = reader.Position;
+                return false;
+            }
+            if( !reader.TryReadBigEndian( out packetId ) )
+            {
+                position = reader.Position;
+                return false;
+            }
+            position = reader.Position;
+            return true;
         }
     }
 }

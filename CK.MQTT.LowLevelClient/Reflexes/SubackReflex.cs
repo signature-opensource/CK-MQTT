@@ -25,7 +25,7 @@ namespace CK.MQTT
                 return await next();
             }
             ReadResult read = await pipeReader.ReadAtLeastAsync( (int)packetLength, cancellationToken );
-            if( read.Buffer.Length < packetLength ) return OperationStatus.NeedMoreData;
+            if( read.Buffer.Length < packetLength ) return OperationStatus.NeedMoreData; // Will happen when the reader is completed/cancelled.
             Parse( read.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
             pipeReader.AdvanceTo( position );
             await _store.OnQos1AckAsync( sink, packetId, qos );

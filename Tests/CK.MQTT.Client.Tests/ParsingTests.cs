@@ -49,7 +49,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.ConnectClient( TestHelper.Monitor, client );
 
             await replayer.SendToClient( TestHelper.Monitor, "308080808080000a7465737420746f70696374657374207061796c" );
-            await replayer.ShouldContainEventAsync<LoopBack.DisposedChannel>();
+            await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
             (await replayer
                 .ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>())
                 .Reason.Should().Be( DisconnectReason.ProtocolError );

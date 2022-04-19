@@ -29,6 +29,7 @@ namespace CK.MQTT
         ProtocolError_UnexpectedConnectResponse,
         ProtocolError_UnknownReturnCode,
         ProtocolError_SessionNotFlushed,
+        ProtocolError_IncompleteResponse,
         /// <summary>
         /// Other reasons...
         /// </summary>
@@ -56,6 +57,8 @@ namespace CK.MQTT
         /// The connect return code.
         /// </summary>
         public readonly ConnectReturnCode ConnectReturnCode;
+
+        public bool IsSuccess => ConnectReturnCode == ConnectReturnCode.Accepted;
 
         /// <summary>
         /// Instantiate a new <see cref="ConnectResult"/> where the result is an error.
