@@ -27,7 +27,7 @@ namespace CK.MQTT.Client
         }
 
         [MemberNotNull( nameof( WorkLoop ) )]
-        public override void Start()
+        public override void Start( )
         {
             base.Start();
             WorkLoop ??= WorkLoopAsync( Messages.Reader );
@@ -63,7 +63,7 @@ namespace CK.MQTT.Client
             WorkLoop = null;
         }
 
-        async Task WorkLoopAsync( ChannelReader<object?> channel )
+        virtual protected async Task WorkLoopAsync( ChannelReader<object?> channel )
         {
             ActivityMonitor m = new();
             await foreach( var item in channel.ReadAllAsync() )

@@ -16,10 +16,12 @@ namespace CK.MQTT.Client.Tests.Helpers
         public Task<IDuplexPipe> GetTestDuplexPipe() => _tcs.Task;
         public abstract IDuplexPipe? DuplexPipe { get; protected set; }
 
-        public bool IsConnected { get; private set; } = true;
+        public bool IsConnected { get; private set; } = false;
 
         public async ValueTask StartAsync( CancellationToken cancellationToken )
         {
+            IsConnected = true;
+            _writer.TryWrite( new StartedChannel() );
             _tcs.SetResult( await DoStartAsync( cancellationToken ) );
         }
 
@@ -39,17 +41,19 @@ namespace CK.MQTT.Client.Tests.Helpers
             DuplexPipe.Input.Complete();
             DuplexPipe = null;
             IsConnected = false;
+            _writer.TryWrite( new ClosedChannel() );
+
             _tcs = new();
             DoClose();
         }
         protected abstract void DoClose();
-        public record DisposedChannel();
+        public record StartedChannel();
+        public record ClosedChannel();
         bool _disposed;
         public void Dispose()
         {
             if( _disposed ) throw new InvalidOperationException( "Double dispose" );
             _disposed = true;
-            _writer.TryWrite( new DisposedChannel() );
         }
     }
 }

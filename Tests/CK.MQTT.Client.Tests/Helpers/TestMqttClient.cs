@@ -10,13 +10,23 @@ namespace CK.MQTT.Client
 {
     class TestMqttClient : MqttClientAgent
     {
+        readonly ChannelWriter<object?> _eventWriter;
+
         public Mqtt3ClientConfiguration Config { get; }
 
-        public TestMqttClient( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, IMqttChannel channel, Channel<object?> eventChannel )
+        public TestMqttClient( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, IMqttChannel channel, ChannelWriter<object?> eventWriter )
             : base( ( sink ) => new LowLevelMqttClient( pConfig, config, sink, channel ) )
         {
             Config = config;
-            Messages = eventChannel;
+            _eventWriter = eventWriter;
+        }
+
+        protected override async Task WorkLoopAsync( ChannelReader<object?> channel )
+        {
+            await foreach( var item in channel.ReadAllAsync() )
+            {
+                await _eventWriter.WriteAsync( item );
+            }
         }
 
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
@@ -16,6 +17,8 @@ namespace CK.MQTT.Client
 
         public Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill = null, CancellationToken cancellationToken = default )
             => ConnectAsync( true, lastwill, cancellationToken );
+
+
 
         public async Task<ConnectResult> ConnectAsync( bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {

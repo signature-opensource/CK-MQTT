@@ -41,9 +41,9 @@ namespace CK.MQTT.Common.Pumps
 
         public void Dispose()
         {
-            Debug.Assert(!_isDispose);
-            Debug.Assert(Left.CloseToken.IsCancellationRequested);
-            Debug.Assert(Right.CloseToken.IsCancellationRequested);
+            if( _isDispose ) return;
+            Debug.Assert( Left.CloseToken.IsCancellationRequested );
+            Debug.Assert( Right.CloseToken.IsCancellationRequested );
             _isDispose = true;
             Left.Dispose();
             Right.Dispose();

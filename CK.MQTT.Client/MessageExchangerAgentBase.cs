@@ -17,7 +17,6 @@ namespace CK.MQTT.Client
     {
         protected MessageExchangerAgentBase( Func<IMqtt3Sink, T> clientFactory ) : base( clientFactory )
         {
-            Start();
         }
 
         protected Channel<object?>? Messages { get; set; }
@@ -25,7 +24,11 @@ namespace CK.MQTT.Client
         [MemberNotNull( nameof( Messages ) )]
         public virtual void Start()
         {
-            Messages ??= Channel.CreateUnbounded<object?>( new UnboundedChannelOptions() { SingleReader = true, SingleWriter = false } );
+            Messages = Channel.CreateUnbounded<object?>(new UnboundedChannelOptions()
+            {
+                SingleReader = true,
+                SingleWriter = false
+            } );
         }
 
         record PacketResent( ushort PacketId, int ResentCount, bool IsDropped );

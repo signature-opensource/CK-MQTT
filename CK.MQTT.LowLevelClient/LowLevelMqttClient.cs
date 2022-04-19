@@ -97,7 +97,6 @@ namespace CK.MQTT
                     } )
                 );
                 // When receiving the ConnAck, this reflex will replace the reflex with this property.
-
                 Pumps = new( // Require channel started.
                     output,
                     new InputPump( this, connectAckReflex.HandleRequestAsync )
@@ -113,15 +112,16 @@ namespace CK.MQTT
                     writeConnectResult = await outgoingConnect.WriteAsync( PConfig.ProtocolLevel, Channel.DuplexPipe.Output, cts.Token );
                 }
 
-                ConnectResult Exit( ConnectError connectError )
+                async ValueTask<ConnectResult> Exit( ConnectError connectError )
                 {
                     Channel.Close();
+                    await Pumps.StopWorkAsync();
                     Pumps.Dispose();
                     return new ConnectResult( connectError );
                 }
 
                 if( writeConnectResult != WriteResult.Written )
-                    return Exit( ConnectError.Timeout );
+                    return await Exit( ConnectError.Timeout );
                 ConnectResult res;
                 using( CancellationTokenSource cts2 = Config.CancellationTokenSourceFactory.Create( cancellationToken, Config.WaitTimeoutMilliseconds ) )
                 using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
@@ -132,35 +132,33 @@ namespace CK.MQTT
                     }
                     catch( OperationCanceledException )
                     {
-                        // This following code wouldn't be better with a sort of ... switch/pattern matching ?
-                        if( cancellationToken.IsCancellationRequested )
+                        return cancellationToken.IsCancellationRequested switch
                         {
-                            return Exit( ConnectError.Connection_Cancelled );
-                        }
-                        else
-                        {
-                            return Exit( ConnectError.Timeout );
-                        }
+                            true => await Exit( ConnectError.Connection_Cancelled ),
+                            false => await Exit( ConnectError.Timeout )
+                        };
                     }
                 }
 
                 // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )
-                    return Exit( ConnectError.Connection_Cancelled );
+                    return await Exit( ConnectError.Connection_Cancelled );
                 if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
-                    return Exit( ConnectError.InternalException );
+                    return await Exit( ConnectError.InternalException );
                 if( Pumps.IsClosed )
-                    return Exit( ConnectError.RemoteDisconnected );
+                    return await Exit( ConnectError.RemoteDisconnected );
 
                 if( res.ConnectError != ConnectError.None )
                 {
+                    await Pumps.StopWorkAsync();
                     Pumps.Dispose();
+                    Channel.Close();
                     return res;
                 }
 
                 bool askedCleanSession = ClientConfig.Credentials?.CleanSession ?? true;
                 if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-                    return Exit( ConnectError.ProtocolError_SessionNotFlushed );
+                    return await Exit( ConnectError.ProtocolError_SessionNotFlushed );
                 if( res.SessionState == SessionState.CleanSession )
                 {
                     ValueTask task = RemotePacketStore.ResetAsync();
@@ -180,6 +178,7 @@ namespace CK.MQTT
                 if( Pumps is not null )
                 {
                     Channel.Close();
+                    await Pumps.CloseAsync();
                     Pumps.Dispose();
                 }
                 return new ConnectResult( ConnectError.InternalException );

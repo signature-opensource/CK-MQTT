@@ -38,11 +38,12 @@ namespace CK.MQTT
         /// Order to stop initiated from the user.
         /// </summary>
         /// <returns></returns>
-        public Task StopWorkAsync()
+        public async Task StopWorkAsync()
         {
-            if( _stopSource.IsCancellationRequested ) return Task.CompletedTask;
+            if( _stopSource.IsCancellationRequested ) return;
             _stopSource.Cancel();
-            return _workLoopTask;
+            await _workLoopTask;
+            _closeSource.Cancel();
         }
 
         /// <summary>
