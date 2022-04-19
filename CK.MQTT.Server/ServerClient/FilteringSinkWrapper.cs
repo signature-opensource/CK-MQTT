@@ -39,7 +39,7 @@ namespace CK.MQTT.Server
         {
             if( _topicFilter.IsFiltered( topic ) )
             {
-                await reader.SkipBytesAsync( null, 0, size, cancellationToken );
+                await reader.SkipBytesAsync( _sink, 0, size, cancellationToken );
             }
             else
             {

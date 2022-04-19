@@ -46,6 +46,14 @@ namespace CK.MQTT.Client.Tests.Helpers
             _tcs = new();
             DoClose();
         }
+
+        public void CloseConnectionBackdoor()
+        {
+            var pipe = _tcs.Task.Result;
+            pipe!.Input.Complete();
+            pipe!.Output.Complete();
+            DuplexPipe!.Output.CancelPendingFlush();
+        }
         protected abstract void DoClose();
         public record StartedChannel();
         public record ClosedChannel();

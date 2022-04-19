@@ -83,11 +83,11 @@ namespace CK.MQTT
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask SkipBytesAsync( this PipeReader reader, IMqtt3Sink? sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
+        public static async ValueTask SkipBytesAsync( this PipeReader reader, IMqtt3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
         {
             ReadResult read = await reader.ReadAtLeastAsync( (int)skipCount, cancellationToken );
             if( read.Buffer.Length < skipCount ) throw new EndOfStreamException( "Unexpected end of stream." );
-            sink?.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, skipCount ) );
+            sink.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, skipCount ) );
             reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
         }
     }

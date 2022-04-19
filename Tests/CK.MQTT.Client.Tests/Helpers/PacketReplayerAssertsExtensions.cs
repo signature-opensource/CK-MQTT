@@ -82,5 +82,36 @@ namespace CK.MQTT.Client.Tests.Helpers
             Assert.Fail( $"Expected event of type {typeof( T )} got {res?.GetType()?.ToString() ?? "null"} instead" );
             throw new InvalidOperationException();
         }
+
+        public static async Task<(T1, T2)> ShouldContainEventsAsync<T1, T2>( this PacketReplayer @this )
+        {
+            var task1 = @this.Events.Reader.ReadAsync().AsTask();
+            if( !await task1.WaitAsync( 60000 ) )
+            {
+                Assert.Fail( "The replayer didn't had any event." );
+            }
+
+            var task2 = @this.Events.Reader.ReadAsync().AsTask();
+            if( !await task2.WaitAsync( 60000 ) )
+            {
+                Assert.Fail( "The replayer didn't had any event." );
+            }
+
+            var res1 = await task1;
+            var res2 = await task2;
+            T1 left;
+            T2 right;
+            if( res1 is T1 casted )
+            {
+                left = casted;
+                right = (T2)res2!;
+            }
+            else
+            {
+                left = (T1)res2!;
+                right = (T2)res1!;
+            }
+            return (left, right);
+        }
     }
 }

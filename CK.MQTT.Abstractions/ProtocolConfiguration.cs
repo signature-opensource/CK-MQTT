@@ -15,8 +15,6 @@ namespace CK.MQTT
         int SecurePort,
         int NonSecurePort,
         ProtocolLevel ProtocolLevel,
-        string SingleLevelTopicWildcard,
-        string MultiLevelTopicWildcard,
         string ProtocolName,
         uint MaximumPacketSize = 268435455
     )
@@ -25,12 +23,12 @@ namespace CK.MQTT
         /// <summary>
         /// Default for MQTT3.
         /// </summary>
-        public static ProtocolConfiguration Mqtt3 => new( 8883, 1883, ProtocolLevel.MQTT3, "+", "#", "MQTT" );
+        public static ProtocolConfiguration Mqtt3 => new( 8883, 1883, ProtocolLevel.MQTT3, "MQTT" );
 
         /// <summary>
         /// Defaults for MQTT5
         /// </summary>
-        public static ProtocolConfiguration Mqtt5 => new( 8883, 1883, ProtocolLevel.MQTT5, "+", "#", "MQTT" );
+        public static ProtocolConfiguration Mqtt5 => new( 8883, 1883, ProtocolLevel.MQTT5, "MQTT" );
 
         public static ProtocolConfiguration FromProtocolLevel( ProtocolLevel protocolLevel )
             => protocolLevel switch

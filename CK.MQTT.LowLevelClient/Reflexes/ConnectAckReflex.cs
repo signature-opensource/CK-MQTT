@@ -3,6 +3,7 @@ using CK.MQTT.Pumps;
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,6 +63,11 @@ namespace CK.MQTT
                 }
                 sender.CurrentReflex = _reflex;
                 _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                return OperationStatus.Done;
+            }
+            catch(EndOfStreamException)
+            {
+                _tcs.SetResult(new ConnectResult(ConnectError.ProtocolError_IncompleteResponse));
                 return OperationStatus.Done;
             }
             catch( Exception )

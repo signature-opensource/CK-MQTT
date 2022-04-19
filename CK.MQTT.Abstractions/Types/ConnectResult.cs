@@ -29,6 +29,7 @@ namespace CK.MQTT
         ProtocolError_UnexpectedConnectResponse,
         ProtocolError_UnknownReturnCode,
         ProtocolError_SessionNotFlushed,
+        ProtocolError_IncompleteResponse,
         /// <summary>
         /// Other reasons...
         /// </summary>
