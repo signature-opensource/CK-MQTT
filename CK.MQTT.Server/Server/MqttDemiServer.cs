@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public abstract class MqttServerUnicast : MqttListener
+    public abstract class MqttDemiServer : MqttListener
     {
-        public MqttServerUnicast( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, IStoreFactory storeFactory )
+        public MqttDemiServer( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, IStoreFactory storeFactory )
             : base( config, channelFactory, storeFactory )
         {
             _config = config;
@@ -48,7 +48,5 @@ namespace CK.MQTT.Server
                 }
             ) );
         }
-
-
     }
 }

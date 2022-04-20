@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <Import Project="..\Common\Mqtt.props" />
 
     <PropertyGroup>
@@ -6,7 +6,6 @@
         <Description>MQTT server implementation (not yet available).</Description>
         <Nullable>enable</Nullable>
         <Features>strict</Features>
-        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
 
