@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -38,35 +39,16 @@ namespace CK.MQTT
         public DuplexPump<OutputPump, InputPump>? Pumps { get; protected set; }
         public bool IsConnected => Pumps?.IsRunning ?? false;
 
-        protected async ValueTask<Task<T?>> SendPacketAsync<T>( IOutgoingPacket outgoingPacket )
-        {
-            if( !IsConnected ) throw new InvalidOperationException( "Client is Disconnected." );
-            var duplex = Pumps;
-            if( duplex is null ) throw new NullReferenceException();
-            return outgoingPacket.Qos switch
+        protected ValueTask<Task<T?>> SendPacketWithQoSAsync<T>( IOutgoingPacket outgoingPacket )
+            => outgoingPacket.Qos switch
             {
-                QualityOfService.AtMostOnce => await PublishQoS0Async<T>( outgoingPacket ),
-                QualityOfService.AtLeastOnce => await StoreAndSendAsync<T>( outgoingPacket ),
-                QualityOfService.ExactlyOnce => await StoreAndSendAsync<T>( outgoingPacket ),
+                QualityOfService.AtLeastOnce => StoreAndSendAsync<T>( outgoingPacket ),
+                QualityOfService.ExactlyOnce => StoreAndSendAsync<T>( outgoingPacket ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
-        }
 
-        async ValueTask<Task<T?>> PublishQoS0Async<T>( IOutgoingPacket packet )
-        {
-            await QueueMessageIfConnectedAsync( packet );
-            return Task.FromResult<T?>( default );
-        }
 
-        [ThreadColor( ThreadColor.Rainbow )]
-        async ValueTask QueueMessageIfConnectedAsync( IOutgoingPacket packet )
-        {
-            var pumps = Pumps;
-            if( pumps != null )
-            {
-                await pumps.Left.QueueMessageAndWaitUntilSentAsync( packet );
-            }
-        }
+
 
         [ThreadColor( ThreadColor.Rainbow )]
         async ValueTask<Task<T?>> StoreAndSendAsync<T>( IOutgoingPacket msg )
@@ -86,7 +68,49 @@ namespace CK.MQTT
             throw new ProtocolViolationException( "We received a packet id ack of an unexpected packet type." );
         }
 
-        public async ValueTask<Task> PublishAsync( OutgoingMessage message ) => await SendPacketAsync<object?>( message );
+        public ValueTask<Task> PublishAsync( OutgoingMessage message )
+        {
+            if( message.Qos == QualityOfService.AtMostOnce ) return PublishQoS0Async( message );
+            var vtask = SendPacketWithQoSAsync<object?>( message );
+            if( vtask.IsCompleted )
+            {
+#pragma warning disable VSTHRD103 // The ValueTask is already completed.
+                return new ValueTask<Task>( vtask.Result );
+#pragma warning restore VSTHRD103
+            }
+            return UnwrapCastAsync( vtask );
+        }
+
+        static async ValueTask<Task> UnwrapCastAsync<T>( ValueTask<Task<T>> vtask ) => await vtask;
+
+        ValueTask<Task> PublishQoS0Async( OutgoingMessage packet )
+        {
+            var pumps = Pumps;
+            if( pumps != null )
+            {
+                var writer = pumps.Left.MessagesChannel.Writer;
+                if( !writer.TryWrite( packet ) ) return QueueMessageAsync( writer, packet );
+            }
+            return new ValueTask<Task>( Task.CompletedTask );
+        }
+
+        async static ValueTask<Task> QueueMessageAsync( ChannelWriter<IOutgoingPacket> writer, IOutgoingPacket packet )
+        {
+            await writer.WriteAsync( packet );
+            return Task.CompletedTask;
+        }
+
+        [ThreadColor( ThreadColor.Rainbow )]
+        ValueTask QueueMessageIfConnectedAsync( IOutgoingPacket packet )
+        {
+            var pumps = Pumps;
+            if( pumps != null )
+            {
+                return pumps.Left.MessagesChannel.Writer.WriteAsync( packet );
+            }
+            return new ValueTask();
+        }
+
 
         internal protected async virtual ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
@@ -117,14 +141,22 @@ namespace CK.MQTT
             await LocalPacketStore.ResetAsync();
             await RemotePacketStore.ResetAsync();
 
-            pumps.Dispose();
+            await pumps.DisposeAsync();
             Pumps = null;
             return true;
         }
 
         protected virtual ValueTask BeforeFullDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new ValueTask();
 
-        public virtual void Dispose() => Pumps?.Dispose();
+        [ThreadColor( ThreadColor.None )]
+        public virtual async ValueTask DisposeAsync()
+        {
+            var pumps = Pumps;
+            if( pumps is not null )
+            {
+                await pumps.DisposeAsync();
+            }
+        }
     }
 }
 

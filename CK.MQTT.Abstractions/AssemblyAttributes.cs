@@ -13,6 +13,7 @@ public class ThreadColorAttribute : Attribute
 
     public ThreadColorAttribute( ThreadColor color )
     {
+        if( color == ThreadColor.Special ) throw new ArgumentException( $"Color should not be set to special manually, set your own color for that." );
         Color = color;
     }
 

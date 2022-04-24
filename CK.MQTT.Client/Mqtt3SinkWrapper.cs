@@ -65,6 +65,6 @@ namespace CK.MQTT.Client
             => OnPacketWithDupFlagReceived( packetType );
 
 
-        public void Dispose() => Client.Dispose();
+        public ValueTask DisposeAsync() => Client.DisposeAsync();
     }
 }

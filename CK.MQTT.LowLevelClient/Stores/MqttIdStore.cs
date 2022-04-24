@@ -70,26 +70,13 @@ namespace CK.MQTT.Stores
         readonly IStopwatch _stopwatch;
         protected readonly Mqtt3ConfigurationBase Config;
         TaskCompletionSource? _idFullTCS = null;
-        CancellationTokenSource _packetDroppedCTS = new();
-        uint _droppedCount = 0;
+        int _droppedCount;
         protected MqttIdStore( ushort packetIdMaxValue, Mqtt3ConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
-            _stopwatch = config.StopwatchFactory.Create();
+            _stopwatch = config.TimeUtilities.CreateStopwatch();
             _stopwatch.Start();
             Config = config;
-        }
-
-        // Called on output.
-        public CancellationToken DroppedPacketCancelToken
-        {
-            get
-            {
-                lock( _idStore )
-                {
-                    return _packetDroppedCTS.Token;
-                }
-            }
         }
 
         /// <summary>
@@ -132,11 +119,12 @@ namespace CK.MQTT.Stores
         /// <param name="m"></param>
         /// <param name="entry"></param>
         /// <param name="packetId"></param>
-        void DropPreviousUnackedPacket( IMqtt3Sink sink, ref IdStoreEntry<EntryContent> entry, ushort packetId )
+        bool DropPreviousUnackedPacket( IMqtt3Sink sink, ref IdStoreEntry<EntryContent> entry, ushort packetId )
         {
+            bool dropped = false;
+            var currId = packetId;
             lock( _idStore )
             {
-                var currId = packetId;
                 ref var curr = ref _idStore._entries[currId];
                 while( currId != _idStore._head ) // We loop over all older packets.
                 {
@@ -157,7 +145,7 @@ namespace CK.MQTT.Stores
                             sink.OnPacketResent( packetId, curr.Content._attemptInTransitOrLost, true );
                             curr.Content._state |= QoSState.Dropped; // We mark the packet as dropped so it can be resent immediately.
                             _droppedCount++;
-                            _packetDroppedCTS.Cancel();
+                            dropped = true;
                         }
                     }
 
@@ -165,7 +153,7 @@ namespace CK.MQTT.Stores
                     curr = ref _idStore._entries[currId];
                 }
             }
-
+            return dropped;
         }
 
         protected abstract ValueTask DoResetAsync( ArrayStartingAt1<IdStoreEntry<EntryContent>> entries );
@@ -253,11 +241,6 @@ namespace CK.MQTT.Stores
                 if( _idStore._entries[packetId].Content._state.HasFlag( QoSState.Dropped ) )
                 {
                     _droppedCount--;
-                    if( _droppedCount == 0 )
-                    {
-                        _packetDroppedCTS.Dispose();
-                        _packetDroppedCTS = new CancellationTokenSource();
-                    }
                 }
                 _idStore._entries[packetId].Content._state &= QoSState.QoSStateMask;
                 _idStore._entries[packetId].Content._lastEmissionTime = _stopwatch.Elapsed;
@@ -266,7 +249,7 @@ namespace CK.MQTT.Stores
 
         protected abstract ValueTask RemovePacketDataAsync( ref T storage );
 
-        public async ValueTask OnQos1AckAsync( IMqtt3Sink sink, ushort packetId, object? result )
+        public async ValueTask<bool> OnQos1AckAsync( IMqtt3Sink sink, ushort packetId, object? result )
         {
             MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
             Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
@@ -283,11 +266,11 @@ namespace CK.MQTT.Stores
                     return RemovePacketDataAsync( ref content.Storage );
                 }
             }
-            End();
-            void End()
+            return End();
+            bool End()
             {
                 ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
-                DropPreviousUnackedPacket( sink, ref entry, packetId );
+                bool res = DropPreviousUnackedPacket( sink, ref entry, packetId );
                 if( entry.Content._attemptInTransitOrLost > 1 )
                 {
                     entry.Content._attemptInTransitOrLost--;
@@ -297,6 +280,7 @@ namespace CK.MQTT.Stores
                 {
                     FreeId( packetId );
                 }
+                return res;
             }
         }
 
@@ -400,9 +384,6 @@ namespace CK.MQTT.Stores
             }
         }
 
-        public void Dispose()
-        {
-            _packetDroppedCTS.Dispose();
-        }
+        public abstract void Dispose();
     }
 }

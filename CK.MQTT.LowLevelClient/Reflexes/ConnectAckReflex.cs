@@ -10,16 +10,24 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    class ConnectAckReflex
+    class ConnectAckReflex : IReflexMiddleware
     {
         readonly TaskCompletionSource<ConnectResult> _tcs = new();
-        readonly Reflex? _reflex;
+        readonly Reflex _reflex;
 
         /// <summary>
         /// Upon receiving the CONNACK packet, will set <see cref="InputPump.CurrentReflex"/> to this value.
         /// </summary>
         /// <param name="reflex"></param>
-        public ConnectAckReflex( Reflex? reflex ) => _reflex = reflex;
+        public ConnectAckReflex( MessageExchanger messageExchanger, Reflex reflex )
+        {
+            _reflex = reflex;
+            var builder = new ReflexMiddlewareBuilder();
+            builder.UseMiddleware( this );
+            AsReflex = builder.Build( messageExchanger );
+        }
+
+        public Reflex AsReflex { get; }
 
         /// <summary>
         /// <see cref="Task{TResult}"/> that complete when receiving the CONNACK packet.
@@ -33,7 +41,7 @@ namespace CK.MQTT
         /// </remarks>
         public Task<ConnectResult> Task => _tcs.Task;
 
-        public async ValueTask<OperationStatus> HandleRequestAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken )
         {
             try
             {
@@ -41,21 +49,21 @@ namespace CK.MQTT
                 if( header != (byte)PacketType.ConnectAck )
                 {
                     _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_UnexpectedConnectResponse ) );
-                    return OperationStatus.Done;
+                    return (OperationStatus.Done, true);
                 }
                 ReadResult read = await reader.ReadAtLeastAsync( 2, cancellationToken );
-                if( read.Buffer.Length < 2 ) return OperationStatus.NeedMoreData;
+                if( read.Buffer.Length < 2 ) return (OperationStatus.NeedMoreData, true);
                 Deserialize( read.Buffer, out byte state, out byte code, out SequencePosition position );
                 reader.AdvanceTo( position );
                 if( state > 1 )
                 {
                     _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_InvalidConnackState ) );
-                    return OperationStatus.Done;
+                    return (OperationStatus.Done, true);
                 }
                 if( code > 5 )
                 {
                     _tcs.TrySetResult( new ConnectResult( ConnectError.ProtocolError_UnknownReturnCode ) );
-                    return OperationStatus.Done;
+                    return (OperationStatus.Done, true);
                 }
                 if( packetSize > 2 )
                 {
@@ -63,17 +71,17 @@ namespace CK.MQTT
                 }
                 sender.CurrentReflex = _reflex;
                 _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
-                return OperationStatus.Done;
+                return (OperationStatus.Done, true);
             }
-            catch(EndOfStreamException)
+            catch( EndOfStreamException )
             {
-                _tcs.SetResult(new ConnectResult(ConnectError.ProtocolError_IncompleteResponse));
-                return OperationStatus.Done;
+                _tcs.SetResult( new ConnectResult( ConnectError.ProtocolError_IncompleteResponse ) );
+                return (OperationStatus.Done, true);
             }
             catch( Exception )
             {
                 _tcs.SetResult( new ConnectResult( ConnectError.InternalException ) );
-                return OperationStatus.Done;
+                return (OperationStatus.Done, true);
             }
         }
 

@@ -19,12 +19,12 @@ namespace CK.MQTT.Client
         {
         }
 
-        protected Channel<object?>? Messages { get; set; }
+        protected Channel<object?>? Events { get; set; }
 
-        [MemberNotNull( nameof( Messages ) )]
+        [MemberNotNull( nameof( Events ) )]
         public virtual void Start()
         {
-            Messages = Channel.CreateUnbounded<object?>(new UnboundedChannelOptions()
+            Events = Channel.CreateUnbounded<object?>(new UnboundedChannelOptions()
             {
                 SingleReader = true,
                 SingleWriter = false
@@ -35,25 +35,25 @@ namespace CK.MQTT.Client
         record PoisonousPacket( ushort PacketId, PacketType PacketType, int PoisnousTotalCount );
 
         protected override void OnPacketResent( ushort packetId, int resentCount, bool isDropped )
-            => Messages!.Writer.TryWrite( new PacketResent( packetId, resentCount, isDropped ) );
+            => Events!.Writer.TryWrite( new PacketResent( packetId, resentCount, isDropped ) );
 
         protected override void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount )
-            => Messages!.Writer.TryWrite( new PoisonousPacket( packetId, packetType, poisonousTotalCount ) );
+            => Events!.Writer.TryWrite( new PoisonousPacket( packetId, packetType, poisonousTotalCount ) );
 
         public record Connected;
-        protected override void OnConnected() => Messages!.Writer.TryWrite( new Connected() );
+        protected override void OnConnected() => Events!.Writer.TryWrite( new Connected() );
 
         public record StoreFilling( ushort FreeLeftSlot );
         protected override void OnStoreFull( ushort freeLeftSlot )
-            => Messages!.Writer.TryWrite( new StoreFilling( freeLeftSlot ) );
+            => Events!.Writer.TryWrite( new StoreFilling( freeLeftSlot ) );
 
         public record UnattendedDisconnect( DisconnectReason Reason );
         protected override void OnUnattendedDisconnect( DisconnectReason reason )
-            => Messages!.Writer.TryWrite( new UnattendedDisconnect( reason ) );
+            => Events!.Writer.TryWrite( new UnattendedDisconnect( reason ) );
 
         public record UnparsedExtraData( ushort PacketId, ReadOnlySequence<byte> UnparsedData );
         protected override void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData )
-            => Messages!.Writer.TryWrite( new UnparsedExtraData( packetId, unparsedData ) );
+            => Events!.Writer.TryWrite( new UnparsedExtraData( packetId, unparsedData ) );
 
         protected override async ValueTask ReceiveAsync( string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
@@ -64,18 +64,18 @@ namespace CK.MQTT.Client
                 readResult.Buffer.Slice( 0, (int)payloadLength ).CopyTo( buffer.Span );
                 pipe.AdvanceTo( readResult.Buffer.Slice( Math.Min( payloadLength, readResult.Buffer.Length ) ).Start );
             }
-            await Messages!.Writer.WriteAsync( new ApplicationMessage( topic, buffer, qos, retain ), cancellationToken ); //Todo: DisposableApplicationMessage
+            await Events!.Writer.WriteAsync( new ApplicationMessage( topic, buffer, qos, retain ), cancellationToken ); //Todo: DisposableApplicationMessage
         }
 
         public record ReconnectionFailed( int RetryCount, int MaxRetryCount );
         protected override bool OnReconnectionFailed( int retryCount, int maxRetryCount )
         {
-            Messages!.Writer.TryWrite( new ReconnectionFailed( retryCount, maxRetryCount ) );
+            Events!.Writer.TryWrite( new ReconnectionFailed( retryCount, maxRetryCount ) );
             return true;
         }
 
         public record QueueFullPacketDestroyed( ushort PacketId, PacketType PacketType );
         protected override void OnQueueFullPacketDropped( ushort packetId, PacketType packetType )
-            => Messages!.Writer.TryWrite( new QueueFullPacketDestroyed( packetId, packetType ) );
+            => Events!.Writer.TryWrite( new QueueFullPacketDestroyed( packetId, packetType ) );
     }
 }

@@ -9,7 +9,7 @@ namespace CK.MQTT
     /// <summary>
     /// Generalizes <see cref="InputPump"/> and <see cref="OutputPump"/>.
     /// </summary>
-    public abstract class PumpBase : IDisposable
+    public abstract class PumpBase : IAsyncDisposable
     {
         readonly CancellationTokenSource _stopSource = new();
         readonly CancellationTokenSource _closeSource = new();
@@ -75,11 +75,12 @@ namespace CK.MQTT
             _closeSource.Cancel();
         }
 
-        public void Dispose()
+        public virtual ValueTask DisposeAsync()
         {
             Debug.Assert( _workLoopTask.IsCompleted );
             _closeSource.Dispose();
             _stopSource.Dispose();
+            return new ValueTask();
         }
     }
 }

@@ -17,7 +17,6 @@ namespace CK.MQTT.Pumps
     public class OutputPump : PumpBase
     {
         OutputProcessor? _outputProcessor;
-
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
@@ -29,11 +28,14 @@ namespace CK.MQTT.Pumps
             {
                 SingleReader = true
             } );
+
             ReflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
         }
+
+
 
         public Channel<IOutgoingPacket> MessagesChannel { get; }
         public Channel<IOutgoingPacket> ReflexesChannel { get; }
@@ -51,12 +53,14 @@ namespace CK.MQTT.Pumps
             {
                 while( !StopToken.IsCancellationRequested )
                 {
-                    bool packetSent = await _outputProcessor.SendPacketsAsync( CloseToken );
-                    if( !packetSent )
+                    bool packetSent = true;
+                    while( packetSent )
                     {
                         if( StopToken.IsCancellationRequested ) return;
-                        await _outputProcessor.WaitPacketAvailableToSendAsync( CancellationToken.None, StopToken );
+                        packetSent = await _outputProcessor.SendPacketsAsync( CloseToken );
                     }
+                    var res = await MessagesChannel.Reader.WaitToReadAsync( StopToken );
+                    if( !res || StopToken.IsCancellationRequested ) return;
                 }
             }
             catch( OperationCanceledException )
@@ -68,37 +72,25 @@ namespace CK.MQTT.Pumps
             }
         }
 
-        public void QueueReflexMessage( IOutgoingPacket item )
+        public void TryQueueReflexMessage( IOutgoingPacket item )
         {
             void QueuePacket( IOutgoingPacket packet )
             {
-                bool result = ReflexesChannel.Writer.TryWrite( item );
-                if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( item.PacketId, PacketType.PublishAck );
+                bool result = MessagesChannel.Writer.TryWrite( packet );
+                if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( packet.PacketId, PacketType.PublishAck );
             }
-            if( !item.IsRemoteOwnedPacketId )
+            if( !item.IsRemoteOwnedPacketId && item.Qos > QualityOfService.AtMostOnce )
             {
-
                 MessageExchanger.LocalPacketStore.BeforeQueueReflexPacket( QueuePacket, item );
             }
             else
             {
                 QueuePacket( item );
             }
-
+            UnblockWriteLoop();
         }
 
-        /// <returns>A <see cref="Task"/> that complete when the packet is sent.</returns>
-        [ThreadColor( ThreadColor.Rainbow )]
-        public async Task QueueMessageAndWaitUntilSentAsync( IOutgoingPacket packet )
-        {
-            var wrapper = new AwaitableOutgoingPacketWrapper( packet );
-            await MessagesChannel.Writer.WriteAsync( wrapper );//ValueTask: most of the time return synchronously
-            if( ReflexesChannel.Reader.Count == 0 )
-            {
-                ReflexesChannel.Writer.TryWrite( FlushPacket.Instance );
-            }
-            await wrapper.Sent;//TaskCompletionSource.Task, on some setup will often return synchronously, most of the time, asynchronously.
-        }
+        public void UnblockWriteLoop() => MessagesChannel.Writer.TryWrite( FlushPacket.Instance );
 
         public override async Task CloseAsync()
         {

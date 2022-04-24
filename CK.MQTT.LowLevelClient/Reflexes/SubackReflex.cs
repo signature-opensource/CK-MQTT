@@ -12,24 +12,28 @@ namespace CK.MQTT
 {
     public class SubackReflex : IReflexMiddleware
     {
-        readonly ILocalPacketStore _store;
+        readonly MessageExchanger _exchanger;
 
-        public SubackReflex( ILocalPacketStore store )
+        public SubackReflex( MessageExchanger exchanger )
         {
-            _store = store;
+            _exchanger = exchanger;
         }
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
         {
             if( PacketType.SubscribeAck != (PacketType)header )
             {
-                return await next();
+                return (OperationStatus.Done, false);
             }
             ReadResult read = await pipeReader.ReadAtLeastAsync( (int)packetLength, cancellationToken );
-            if( read.Buffer.Length < packetLength ) return OperationStatus.NeedMoreData; // Will happen when the reader is completed/cancelled.
+            if( read.Buffer.Length < packetLength ) return (OperationStatus.NeedMoreData, true); // Will happen when the reader is completed/cancelled.
             Parse( read.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
             pipeReader.AdvanceTo( position );
-            await _store.OnQos1AckAsync( sink, packetId, qos );
-            return OperationStatus.Done;
+            bool detectedDrop = await _exchanger.LocalPacketStore.OnQos1AckAsync( sink, packetId, qos );
+            if( detectedDrop )
+            {
+                _exchanger.Pumps!.Left.UnblockWriteLoop();
+            }
+            return (OperationStatus.Done, true);
         }
 
         static void Parse( ReadOnlySequence<byte> buffer,

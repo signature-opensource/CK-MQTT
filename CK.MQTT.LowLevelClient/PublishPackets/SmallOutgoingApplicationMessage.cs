@@ -21,7 +21,10 @@ namespace CK.MQTT.Packets
 
         protected async override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
-            await pw.WriteAsync( _memory, cancellationToken );
+            if(_memory.Length > 0 )
+            {
+                await pw.WriteAsync( _memory, cancellationToken );
+            }
             return WriteResult.Written;
         }
     }

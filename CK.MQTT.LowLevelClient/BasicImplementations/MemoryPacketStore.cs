@@ -88,5 +88,9 @@ namespace CK.MQTT
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
         }
+
+        public override void Dispose()
+        {
+        }
     }
 }

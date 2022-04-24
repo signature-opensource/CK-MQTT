@@ -35,16 +35,12 @@ namespace CK.MQTT.Server
             var output = new OutputPump( this );
             // Middleware that will processes the requests.
             ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
-                .UseMiddleware( new PublishReflex( RemotePacketStore, Sink.ReceiveAsync, output ) )
-                .UseMiddleware( new PublishLifecycleReflex( RemotePacketStore, LocalPacketStore, output ) )
+                .UseMiddleware( new PublishReflex( this ) )
+                .UseMiddleware( new PublishLifecycleReflex( this ) )
                 .UseMiddleware( new SubscribeReflex( _topicManager, PConfig.ProtocolLevel, output ) )
                 .UseMiddleware( new UnsubscribeReflex( _topicManager, output, PConfig.ProtocolLevel ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
-            Reflex reflex = builder.Build( async ( a, b, c, d, e, f ) =>
-            {
-                await SelfDisconnectAsync( DisconnectReason.ProtocolError );
-                return OperationStatus.Done;
-            } );
+            Reflex reflex = builder.Build( this );
             // Creating pumps. Need to be started.
             Pumps = new DuplexPump<OutputPump, InputPump>(
                 output,

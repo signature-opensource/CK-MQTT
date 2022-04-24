@@ -1,4 +1,4 @@
-using CK.MQTT.Common.Time;
+using CK.MQTT.LowLevelClient.Time;
 using CK.MQTT.Stores;
 using System;
 
@@ -58,9 +58,8 @@ namespace CK.MQTT
         /// </summary>
         public ushort AttemptCountBeforeGivingUpPacket { get; set; } = 50;
 
-        public IStopwatchFactory StopwatchFactory { get; init; } = new StopwatchFactory();
+        public ITimeUtilities TimeUtilities { get; init; } = new DefaultTimeUtilities();
 
-        public ICancellationTokenSourceFactory CancellationTokenSourceFactory { get; init; } = new CancellationTokenSourceFactory();
         public int StoreFullWaitTimeoutMs { get; set; } = 500;
 
     }

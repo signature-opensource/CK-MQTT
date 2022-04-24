@@ -13,24 +13,20 @@ namespace CK.MQTT
 {
     public class PublishReflex : IReflexMiddleware
     {
-        readonly IRemotePacketStore _store;
-        readonly Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> _messageHandler;
-        readonly OutputPump _output;
+        readonly MessageExchanger _exchanger;
 
-        public PublishReflex( IRemotePacketStore store, Func<string, PipeReader, uint, QualityOfService, bool, CancellationToken, ValueTask> messageHandler, OutputPump output )
+        public PublishReflex( MessageExchanger exchanger )
         {
-            _store = store;
-            _messageHandler = messageHandler;
-            _output = output;
+            _exchanger = exchanger;
         }
         const byte _dupFlag = 1 << 4;
         const byte _retainFlag = 1;
 
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader reader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader reader, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Publish )
             {
-                return await next();
+                return (OperationStatus.Done, false);
             }
             QualityOfService qos = (QualityOfService)((header >> 1) & 3);
             bool dup = (header & _dupFlag) > 0;
@@ -45,7 +41,7 @@ namespace CK.MQTT
             while( true )
             {
                 ReadResult read = await reader.ReadAsync( cancellationToken );
-                if( read.IsCanceled ) return OperationStatus.NeedMoreData;
+                if( read.IsCanceled ) return (OperationStatus.NeedMoreData, true);
                 if( qos == QualityOfService.AtMostOnce )
                 {
                     bool ReadString( [NotNullWhen( true )] out string? theTopic )
@@ -66,8 +62,8 @@ namespace CK.MQTT
                     {
                         continue;
                     }
-                    await _messageHandler( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
-                    return OperationStatus.Done;
+                    await _exchanger.Sink.ReceiveAsync( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
+                    return (OperationStatus.Done, true);
                 }
                 if( ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
                 {
@@ -78,15 +74,15 @@ namespace CK.MQTT
             }
             if( qos == QualityOfService.AtLeastOnce )
             {
-                await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
-                _output.QueueReflexMessage( LifecyclePacketV3.Puback( packetId ) );
-                return OperationStatus.Done;
+                await _exchanger.Sink.ReceiveAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+                _exchanger.Pumps!.Left.TryQueueReflexMessage( LifecyclePacketV3.Puback( packetId ) );
+                return (OperationStatus.Done, true);
             }
             if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
-            await _store.StoreIdAsync( packetId );
-            await _messageHandler( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
-            _output.QueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) );
-            return OperationStatus.Done;
+            await _exchanger.RemotePacketStore.StoreIdAsync( packetId );
+            await _exchanger.Sink.ReceiveAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+            _exchanger.Pumps!.Left.TryQueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) );
+            return (OperationStatus.Done, true);
         }
 
         /// <summary>

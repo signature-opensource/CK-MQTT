@@ -9,7 +9,7 @@ namespace CK.MQTT
     /// <summary>
     /// Represent a MQTT3 Client.
     /// </summary>
-    public interface IConnectedMessageExchanger : IDisposable
+    public interface IConnectedMessageExchanger : IAsyncDisposable
     {
         /// <summary>
         /// Disconnect the client.

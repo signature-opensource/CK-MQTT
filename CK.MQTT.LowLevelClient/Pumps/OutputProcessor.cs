@@ -1,6 +1,7 @@
 using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
@@ -8,40 +9,35 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Pumps
 {
-    public class OutputProcessor
+    public class OutputProcessor : IAsyncDisposable
     {
+        readonly Timer _timer;
         protected readonly MessageExchanger MessageExchanger;
-
         public OutputProcessor( MessageExchanger messageExchanger )
         {
             MessageExchanger = messageExchanger;
+            _timer = new( TimerTimeoutWrapper );
         }
+
+        void TimerTimeoutWrapper( object? obj ) => OnTimeout();
 
         protected Channel<IOutgoingPacket> ReflexesChannel => MessageExchanger.Pumps!.Left.ReflexesChannel;
         protected Channel<IOutgoingPacket> MessagesChannel => MessageExchanger.Pumps!.Left.MessagesChannel;
 
-        TimeSpan _timeUntilNextRetry = TimeSpan.MaxValue;
 
         [ThreadColor( "WriteLoop" )]
         public virtual async ValueTask<bool> SendPacketsAsync( CancellationToken cancellationToken )
         {
             bool newPacketSent = await SendAMessageFromQueueAsync( cancellationToken ); // We want to send a fresh new packet...
-            bool retriesSent = await ResendAllUnackPacketAsync( cancellationToken ); // Then sending all packets that waited for too long.
+            (bool retriesSent, TimeSpan timeUntilNewAction) = await ResendAllUnackPacketAsync( cancellationToken ); // Then sending all packets that waited for too long.
+            var timeout = GetTimeoutTime( (long)timeUntilNewAction.TotalMilliseconds );
+            _timer.Change( timeout, Timeout.Infinite );
             return newPacketSent || retriesSent;
         }
 
-        public virtual async Task WaitPacketAvailableToSendAsync( CancellationToken stopWaitToken, CancellationToken stopToken )
-        {
-            // If we wait for too long, we may miss things like sending a keepalive, so we need to compute the minimal amount of time we have to wait.
-            CancellationToken cancelOnPacketDropped = MessageExchanger.LocalPacketStore.DroppedPacketCancelToken;
-            var outputPump = MessageExchanger.Pumps!.Left;
-            using( var ctsRetry = MessageExchanger.Config.CancellationTokenSourceFactory.Create( _timeUntilNextRetry ) )
-            using( var linkedCts = CancellationTokenSource.CreateLinkedTokenSource( ctsRetry.Token, cancelOnPacketDropped, stopWaitToken ) )
-            using( linkedCts.Token.Register( () => outputPump.ReflexesChannel.Writer.TryWrite( FlushPacket.Instance ) ) )
-            {
-                await outputPump.ReflexesChannel.Reader.WaitToReadAsync( stopToken );
-            }
-        }
+        protected virtual long GetTimeoutTime( long current ) => current;
+
+        public virtual void OnTimeout() => MessageExchanger.Pumps!.Left.UnblockWriteLoop();
 
         protected ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason ) => MessageExchanger.Pumps!.Left.SelfCloseAsync( disconnectedReason );
 
@@ -63,25 +59,18 @@ namespace CK.MQTT.Pumps
         }
 
         [ThreadColor( "WriteLoop" )]
-        async ValueTask<bool> ResendAllUnackPacketAsync( CancellationToken cancellationToken )
+        async ValueTask<(bool, TimeSpan)> ResendAllUnackPacketAsync( CancellationToken cancellationToken )
         {
-            if( MessageExchanger.Config.WaitTimeoutMilliseconds == int.MaxValue ) return false; // Resend is disabled.
-
-            (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry) = await MessageExchanger.LocalPacketStore.GetPacketToResendAsync();
-            if( outgoingPacket is null )
-            {
-                _timeUntilNextRetry = timeUntilAnotherRetry;
-                return false;
-            }
-            await ProcessOutgoingPacketAsync( outgoingPacket, cancellationToken );
+            Debug.Assert( MessageExchanger.Config.WaitTimeoutMilliseconds != int.MaxValue );
+            bool sentPacket = false;
             while( true )
             {
-                (outgoingPacket, timeUntilAnotherRetry) = await MessageExchanger.LocalPacketStore.GetPacketToResendAsync();
+                (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilNextRetry) = await MessageExchanger.LocalPacketStore.GetPacketToResendAsync();
                 if( outgoingPacket is null )
                 {
-                    _timeUntilNextRetry = timeUntilAnotherRetry;
-                    return true;
+                    return (sentPacket, timeUntilNextRetry);
                 }
+                sentPacket = true;
                 await ProcessOutgoingPacketAsync( outgoingPacket, cancellationToken );
             }
         }
@@ -101,6 +90,11 @@ namespace CK.MQTT.Pumps
                 // The receiver and input loop can run before the next line is executed.
             }
             await outgoingPacket.WriteAsync( MessageExchanger.PConfig.ProtocolLevel, MessageExchanger.Channel.DuplexPipe!.Output, cancellationToken );
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return _timer.DisposeAsync();
         }
     }
 }
