@@ -29,7 +29,6 @@ namespace CK.MQTT.Packets
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             Write( protocolLevel, pw );
-            await pw.FlushAsync( cancellationToken );
             return WriteResult.Written;
         }
 

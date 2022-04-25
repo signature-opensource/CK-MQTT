@@ -66,7 +66,6 @@ namespace CK.MQTT.Packets
             writer.GetSpan( stringSize ).WriteMQTTString( Topic );
             writer.Advance( stringSize );
             var res = await WritePayloadAsync( writer, cancellationToken );
-            await writer.FlushAsync( cancellationToken );
             return res;
         }
     }

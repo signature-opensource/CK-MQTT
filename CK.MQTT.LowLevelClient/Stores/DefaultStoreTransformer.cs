@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
+    //TODO: this doesn't work, wtf do PacketWrapper ???
     public class DefaultStoreTransformer : IStoreTransformer
     {
         class PipeWriterWrapper : PipeWriter
@@ -60,7 +61,7 @@ namespace CK.MQTT
             return header |= 0b100;
         }
 
-        protected static IOutgoingPacket SetDup( IOutgoingPacket arg ) => new PacketWrapper( arg );
+        protected static IOutgoingPacket SetDup( IOutgoingPacket arg ) => arg;
 
         public Func<IOutgoingPacket, IOutgoingPacket> PacketTransformerOnRestore => SetDup;
 

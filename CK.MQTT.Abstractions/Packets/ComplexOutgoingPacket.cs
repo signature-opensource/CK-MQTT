@@ -80,14 +80,7 @@ namespace CK.MQTT.Packets
         {
             WriteHeader( protocolLevel, pw );
             WriteResult result = await WritePayloadAsync( protocolLevel, pw, cancellationToken );
-            // WritePayloadAsync can be user code, and users may forget to flush the payload.
-            // I was this user.
-            if( pw.CanGetUnflushedBytes && pw.UnflushedBytes > 0 )
-            {
-                await pw.FlushAsync( cancellationToken );
-            }
-          
-
+            // Flush happen in the write loop.
             return result;
         }
     }

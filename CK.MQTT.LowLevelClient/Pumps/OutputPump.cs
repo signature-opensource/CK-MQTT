@@ -53,12 +53,18 @@ namespace CK.MQTT.Pumps
             {
                 while( !StopToken.IsCancellationRequested )
                 {
+                    var pw = MessageExchanger.Channel.DuplexPipe!.Output;
                     bool packetSent = true;
                     while( packetSent )
                     {
                         if( StopToken.IsCancellationRequested ) return;
                         packetSent = await _outputProcessor.SendPacketsAsync( CloseToken );
+                        if( pw.CanGetUnflushedBytes && pw.UnflushedBytes > 50_000 )
+                        {
+                            await pw.FlushAsync( CloseToken );
+                        }
                     }
+                    await pw.FlushAsync( CloseToken );
                     var res = await MessagesChannel.Reader.WaitToReadAsync( StopToken );
                     if( !res || StopToken.IsCancellationRequested ) return;
                 }

@@ -175,7 +175,6 @@ namespace CK.MQTT.Packets
                 if( res != WriteResult.Written ) throw new InvalidOperationException( "Last will was not written." );
             }
             WriteEndOfPayload( pw );
-            await pw.FlushAsync( cancellationToken );
             return WriteResult.Written;
         }
 

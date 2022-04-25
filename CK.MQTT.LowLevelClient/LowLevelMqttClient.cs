@@ -108,6 +108,7 @@ namespace CK.MQTT
                 {
                     // Send the packet.
                     writeConnectResult = await outgoingConnect.WriteAsync( PConfig.ProtocolLevel, Channel.DuplexPipe.Output, cts.Token );
+                    await Channel.DuplexPipe.Output.FlushAsync( );
                 }
 
                 async ValueTask<ConnectResult> Exit( ConnectError connectError )

@@ -23,7 +23,8 @@ namespace CK.MQTT.Packets
         {
             if(_memory.Length > 0 )
             {
-                await pw.WriteAsync( _memory, cancellationToken );
+                _memory.Span.CopyTo( pw.GetSpan( _memory.Length ) );
+                pw.Advance( _memory.Length );
             }
             return WriteResult.Written;
         }
