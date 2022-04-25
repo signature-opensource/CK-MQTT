@@ -57,7 +57,7 @@ namespace CK.MQTT.Pumps
                     bool packetSent = true;
                     while( packetSent )
                     {
-                        if( StopToken.IsCancellationRequested ) return;
+                        if( StopToken.IsCancellationRequested ) break;
                         packetSent = await _outputProcessor.SendPacketsAsync( CloseToken );
                         if( pw.CanGetUnflushedBytes && pw.UnflushedBytes > 50_000 )
                         {
@@ -65,6 +65,7 @@ namespace CK.MQTT.Pumps
                         }
                     }
                     await pw.FlushAsync( CloseToken );
+                    if( StopToken.IsCancellationRequested ) return;
                     var res = await MessagesChannel.Reader.WaitToReadAsync( StopToken );
                     if( !res || StopToken.IsCancellationRequested ) return;
                 }
