@@ -74,19 +74,6 @@ namespace CK.MQTT
 
                 await Channel.StartAsync( cancellationToken ); // Will create the connection to server.
 
-                OutputProcessor outputProcessor;
-                // Enable keepalive only if we need it.
-                if( ClientConfig.KeepAliveSeconds == 0 )
-                {
-                    outputProcessor = new OutputProcessor( this );
-                }
-                else
-                {
-                    // If keepalive is enabled, we add it's handler to the middlewares.
-                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
-                    outputProcessor = withKeepAlive;
-                    builder.UseMiddleware( withKeepAlive );
-                }
                 // This reflex handle the connection packet.
                 // It will replace itself with the regular packet processing.
                 ConnectAckReflex connectAckReflex = new
@@ -94,12 +81,6 @@ namespace CK.MQTT
                     this,
                     builder.Build( this )
                 );
-                // When receiving the ConnAck, this reflex will replace the reflex with this property.
-                Pumps = new( // Require channel started.
-                    output,
-                    new InputPump( this, connectAckReflex.AsReflex )
-                );
-                output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
                 OutgoingConnect outgoingConnect = new( PConfig, ClientConfig, lastWill );
 
@@ -108,19 +89,24 @@ namespace CK.MQTT
                 {
                     // Send the packet.
                     writeConnectResult = await outgoingConnect.WriteAsync( PConfig.ProtocolLevel, Channel.DuplexPipe.Output, cts.Token );
-                    await Channel.DuplexPipe.Output.FlushAsync( );
+                    await Channel.DuplexPipe.Output.FlushAsync( cts.Token );
                 }
 
                 async ValueTask<ConnectResult> Exit( ConnectError connectError )
                 {
                     Channel.Close();
-                    await Pumps.StopWorkAsync();
-                    await Pumps.DisposeAsync();
+                    var pumps = Pumps;
+                    if( pumps != null )
+                    {
+                        await pumps.StopWorkAsync();
+                        await pumps.DisposeAsync();
+                    }
                     return new ConnectResult( connectError );
                 }
 
                 if( writeConnectResult != WriteResult.Written )
                     return await Exit( ConnectError.Timeout );
+                var input = new InputPump( this, connectAckReflex.AsReflex );
                 ConnectResult res;
                 using( CancellationTokenSource cts2 = Config.TimeUtilities.CreateCTS( cancellationToken, Config.WaitTimeoutMilliseconds ) )
                 using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
@@ -138,6 +124,27 @@ namespace CK.MQTT
                         };
                     }
                 }
+
+                OutputProcessor outputProcessor;
+                // Enable keepalive only if we need it.
+                if( ClientConfig.KeepAliveSeconds == 0 )
+                {
+                    outputProcessor = new OutputProcessor( this );
+                }
+                else
+                {
+                    // If keepalive is enabled, we add it's handler to the middlewares.
+                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
+                    outputProcessor = withKeepAlive;
+                    builder.UseMiddleware( withKeepAlive );
+                }
+
+                // When receiving the ConnAck, this reflex will replace the reflex with this property.
+                Pumps = new( // Require channel started.
+                    output,
+                    input
+                );
+                output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
                 // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )

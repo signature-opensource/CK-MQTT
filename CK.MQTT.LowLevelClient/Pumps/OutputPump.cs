@@ -28,14 +28,11 @@ namespace CK.MQTT.Pumps
             {
                 SingleReader = true
             } );
-
             ReflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
         }
-
-
 
         public Channel<IOutgoingPacket> MessagesChannel { get; }
         public Channel<IOutgoingPacket> ReflexesChannel { get; }
@@ -44,6 +41,7 @@ namespace CK.MQTT.Pumps
         {
             _outputProcessor = outputProcessor;
             SetRunningLoop( WriteLoopAsync() );
+            _outputProcessor.Starting();
         }
 
         async Task WriteLoopAsync()
@@ -51,9 +49,9 @@ namespace CK.MQTT.Pumps
             Debug.Assert( _outputProcessor != null ); // TODO: Put non nullable init on output processor when it will be available.
             try
             {
+                var pw = MessageExchanger.Channel.DuplexPipe!.Output;
                 while( !StopToken.IsCancellationRequested )
                 {
-                    var pw = MessageExchanger.Channel.DuplexPipe!.Output;
                     bool packetSent = true;
                     while( packetSent )
                     {

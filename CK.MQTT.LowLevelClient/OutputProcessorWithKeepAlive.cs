@@ -37,7 +37,7 @@ namespace CK.MQTT.Client
                 }
             }
             var res = await base.SendPacketsAsync( cancellationToken );
-            if(res)
+            if( res )
             {
                 _lastPacketSent = _client.Config.TimeUtilities.UtcNow;
             }
@@ -55,7 +55,7 @@ namespace CK.MQTT.Client
             return Math.Min( baseVal, inMsFloored );
         }
 
-        public override void OnTimeout()
+        public override void OnTimeout( int msUntilNextTrigger )
         {
             // These 2 lines must be set before ProcessOutgoingPacketAsync to avoid a race condition.
             // ProcessIncomingPacketAsync can be processed before any other line is executed, therefore, these 2 lines modifying the state must be ran before.
@@ -65,10 +65,15 @@ namespace CK.MQTT.Client
             // 1. WaitingPingResp = true is getting erased with false, in this case we can consider that this unexpected PingResp is our response.
             // 2. WaitingPingResp = false is getting erased with true, in this case, we consider the unexpected PingResp is, unexpected,
             //                      and we expect the server to send another one.
-
+            if(WaitingPingResp)
+            {
+                base.OnTimeout(Timeout.Infinite);
+                return;
+            }
             WaitingPingResp = true;
+            _lastPacketSent = MessageExchanger.Config.TimeUtilities.UtcNow;
             ReflexesChannel.Writer.TryWrite( OutgoingPingReq.Instance );
-            base.OnTimeout();
+            base.OnTimeout( MessageExchanger.Config.WaitTimeoutMilliseconds );
         }
 
         public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync(

@@ -30,10 +30,7 @@ namespace CK.MQTT
         }
         public DateTime UtcNow => DateTime.UtcNow;
 
-        public ITimer CreateTimer( TimerCallback timerCallback )
-        {
-            return new CK.MQTT.Timer( timerCallback );
-        }
+        public ITimer CreateTimer( TimerCallback timerCallback ) => new Timer( timerCallback );
 #pragma warning restore RS0030 // Do not used banned APIs
     }
 }

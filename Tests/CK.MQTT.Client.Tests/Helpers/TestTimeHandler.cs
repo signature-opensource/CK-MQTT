@@ -31,7 +31,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                     }
                 } );
 
-                _timers.ForEach( s => s.IncrementTime( timeSpan ));
+                _timers.ForEach( s => s.IncrementTime( timeSpan ) );
 
                 _stopwatches.RemoveAll( s => !s.TryGetTarget( out _ ) );
 
@@ -122,8 +122,8 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
         class TestTimer : ITimer
         {
-            TimeSpan _timeSpan;
-            TimeSpan _dueTime;
+            TimeSpan _timeSpan = Timeout.InfiniteTimeSpan;
+            TimeSpan _dueTime = Timeout.InfiniteTimeSpan;
 
             public TestTimer( TimerCallback timerCallback )
             {
@@ -136,7 +136,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 if( period != Timeout.Infinite ) throw new NotImplementedException();
                 _dueTime = TimeSpan.FromMilliseconds( dueTime );
-                IncrementTime( TimeSpan.Zero );
+                _timeSpan = TimeSpan.Zero;
                 return true;
             }
 
@@ -144,7 +144,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 if( period != Timeout.InfiniteTimeSpan ) throw new NotImplementedException();
                 _dueTime = dueTime;
-                IncrementTime( TimeSpan.Zero );
+                _timeSpan = TimeSpan.Zero;
                 return true;
             }
 
@@ -170,7 +170,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             {
                 _timeSpan += time;
                 if( _dueTime == Timeout.InfiniteTimeSpan ) return;
-                if( _timeSpan > _dueTime )
+                if( _timeSpan >= _dueTime )
                 {
                     _timerCallback( null );
                     _dueTime = Timeout.InfiniteTimeSpan;
