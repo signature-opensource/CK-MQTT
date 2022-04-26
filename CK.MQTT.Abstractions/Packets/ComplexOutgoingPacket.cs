@@ -79,11 +79,8 @@ namespace CK.MQTT.Packets
         public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( protocolLevel, pw );
-            await pw.FlushAsync( cancellationToken );
             WriteResult result = await WritePayloadAsync( protocolLevel, pw, cancellationToken );
-            //WritePayloadAsync can be user code, and users forget to flush the payload. I was this user.
-            await pw.FlushAsync( cancellationToken );
-
+            // Flush happen in the write loop.
             return result;
         }
     }

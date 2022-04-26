@@ -1,4 +1,4 @@
-﻿using CK.MQTT.Packets;
+using CK.MQTT.Packets;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
@@ -12,8 +12,8 @@ namespace CK.MQTT.Pumps
     /// </summary>
     class FlushPacket : IOutgoingPacket
     {
-        public static IOutgoingPacket Instance { get; } = new FlushPacket();
-        private FlushPacket() { }
+        public static FlushPacket Instance { get; } = new FlushPacket();
+        FlushPacket() { }
         public ushort PacketId { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
         public QualityOfService Qos => throw new NotSupportedException();

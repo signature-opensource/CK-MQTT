@@ -10,8 +10,6 @@ using System.Threading.Tasks;
 namespace CK.MQTT.Pumps
 {
 
-    public delegate ValueTask<OperationStatus> Reflex( IMqtt3Sink sink, InputPump sender, byte header, uint packetSize, PipeReader reader, CancellationToken cancellationToken );
-
     /// <summary>
     /// Message pump that does basic processing on the incoming data
     /// and delegates the message processing job to the <see cref="Reflex"/>.
@@ -73,7 +71,7 @@ namespace CK.MQTT.Pumps
                     if( res == OperationStatus.Done )
                     {
                         pipeReader.AdvanceTo( position );
-                        OperationStatus status = await CurrentReflex( MessageExchanger.Sink, this, header, length, pipeReader, CloseToken );
+                        OperationStatus status = await CurrentReflex.ProcessIncomingPacketAsync( MessageExchanger.Sink, this, header, length, pipeReader, CloseToken );
                         if( status == OperationStatus.InvalidData )
                         {
                             await SelfCloseAsync( DisconnectReason.ProtocolError );

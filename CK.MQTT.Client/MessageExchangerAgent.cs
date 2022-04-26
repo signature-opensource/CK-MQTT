@@ -30,7 +30,7 @@ namespace CK.MQTT.Client
         public override void Start( )
         {
             base.Start();
-            WorkLoop ??= WorkLoopAsync( Messages.Reader );
+            WorkLoop ??= WorkLoopAsync( Events.Reader );
         }
 
         public override Task<bool> DisconnectAsync( bool deleteSession )
@@ -54,12 +54,12 @@ namespace CK.MQTT.Client
 
         protected async Task StopAsync( bool waitForCompletion )
         {
-            Messages!.Writer.Complete();
+            Events!.Writer.Complete();
             if( waitForCompletion )
             {
                 await WorkLoop!;
             }
-            Messages = null;
+            Events = null;
             WorkLoop = null;
         }
 

@@ -17,8 +17,9 @@ namespace CK.MQTT.Stores
         [ThreadColor( "WriteLoop" )]
         void OnPacketSent( ushort PacketId );
 
+        /// <returns><see langword="true"/> if a packet has been dropped.</returns>
         [ThreadColor( "ReadLoop" )]
-        ValueTask OnQos1AckAsync( IMqtt3Sink sink, ushort PacketId, object? result );
+        ValueTask<bool> OnQos1AckAsync( IMqtt3Sink sink, ushort PacketId, object? result );
 
         /// <returns>The lifecycle packet to send.</returns>
         [ThreadColor( "ReadLoop" )]
@@ -29,7 +30,6 @@ namespace CK.MQTT.Stores
 
         [ThreadColor( "WriteLoop" )]
         ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync();
-        CancellationToken DroppedPacketCancelToken { get; }
         ValueTask ResetAsync();
 
         [ThreadColor( "ReadLoop" )]

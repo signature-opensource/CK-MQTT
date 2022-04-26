@@ -34,6 +34,6 @@ namespace CK.MQTT.Client
             => await new NewApplicationMessageClosure( ReceivedMessageAsync ).HandleMessageAsync( topic, reader, size, q, retain, cancellationToken );
 
         async ValueTask ReceivedMessageAsync( IActivityMonitor? m, ApplicationMessage message, CancellationToken cancellationToken )
-            => await Messages!.Writer.WriteAsync( message, cancellationToken );
+            => await Events!.Writer.WriteAsync( message, cancellationToken );
     }
 }

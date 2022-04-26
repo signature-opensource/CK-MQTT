@@ -8,3 +8,5 @@ M:System.Threading.CancellationTokenSource.#ctor(System.Int32); Use the time han
 M:System.Threading.CancellationTokenSource.#ctor(System.TimeSpan); Use the time handling interfaces instead.
 M:System.Threading.CancellationTokenSource.CancelAfter(System.Int32); Use the time handling interfaces instead.
 M:System.Threading.CancellationTokenSource.CancelAfter(System.TimeSpan); Use the time handling interfaces instead.
+T:System.Threading.Timer; Use the time handling interfaces instead.
+P:System.DateTime.UtcNow; Use the time handling interfaces instead.

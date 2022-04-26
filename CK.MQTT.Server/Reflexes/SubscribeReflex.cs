@@ -27,20 +27,20 @@ namespace CK.MQTT.Server.Reflexes
             _output = output;
         }
 
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Subscribe )
             {
-                return await next();
+                return (OperationStatus.Done, false);
             }
             ReadResult read = await pipeReader.ReadAtLeastAsync( (int)packetLength, cancellationToken );
-            if( read.Buffer.Length < packetLength ) return OperationStatus.NeedMoreData; // Will happen when the reader is completed/cancelled.
+            if( read.Buffer.Length < packetLength ) return (OperationStatus.NeedMoreData, true); // Will happen when the reader is completed/cancelled.
             var buffer = read.Buffer.Slice( 0, packetLength );
             Parse( buffer, out ushort packetId, out List<Subscription> filters );
             var subscribeReturnCodes = await _topicManager.SubscribeAsync( filters.ToArray() );
-            _output.QueueReflexMessage( new OutgoingSubscribeAck( packetId, subscribeReturnCodes ) );
+            _output.TryQueueReflexMessage( new OutgoingSubscribeAck( packetId, subscribeReturnCodes ) );
             pipeReader.AdvanceTo( buffer.End );
-            return OperationStatus.Done;
+            return (OperationStatus.Done, true);
         }
 
         void Parse( ReadOnlySequence<byte> buffer, out ushort packetId, out List<Subscription> filters )

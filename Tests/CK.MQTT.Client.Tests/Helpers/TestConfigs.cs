@@ -10,8 +10,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
             return new Mqtt3ClientConfiguration()
             {
-                StopwatchFactory = packetReplayer.TestTimeHandler,
-                CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
+                TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 0,
                 Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true )
@@ -26,8 +25,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
             return new Mqtt5ClientConfiguration()
             {
-                StopwatchFactory = packetReplayer.TestTimeHandler,
-                CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
+                TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 0,
                 Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true )
@@ -42,8 +40,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
             return new Mqtt3ClientConfiguration()
             {
-                StopwatchFactory = packetReplayer.TestTimeHandler,
-                CancellationTokenSourceFactory = packetReplayer.TestTimeHandler,
+                TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 5,
                 Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true ),

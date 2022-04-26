@@ -10,56 +10,53 @@ namespace CK.MQTT.Client
 {
     class OutputProcessorWithKeepAlive : OutputProcessor, IReflexMiddleware
     {
-        readonly IStopwatch _stopwatch;
         readonly LowLevelMqttClient _client;
+
+        DateTime _lastPacketSent;
 
         public OutputProcessorWithKeepAlive( LowLevelMqttClient client )
             : base( client )
         {
-            _stopwatch = client.Config.StopwatchFactory.Create();
             _client = client;
+            _lastPacketSent = _client.Config.TimeUtilities.UtcNow;
         }
-
-        bool IsPingReqTimeout =>
-            WaitingPingResp
-            && MessageExchanger.Config.WaitTimeoutMilliseconds != int.MaxValue //We never timeout if it's configured to int.MaxValue.
-            && _stopwatch.Elapsed.TotalMilliseconds > MessageExchanger.Config.WaitTimeoutMilliseconds;
-
-        int TimeToWaitKeepAlive =>
-            !WaitingPingResp ? _client.ClientConfig.KeepAliveSeconds * 1000
-                : MessageExchanger.Config.WaitTimeoutMilliseconds - (int)_stopwatch.Elapsed.TotalMilliseconds;
 
         public bool WaitingPingResp { get; set; }
 
         public override async ValueTask<bool> SendPacketsAsync( CancellationToken cancellationToken )
         {
-            if( IsPingReqTimeout )
-            {
-                await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
-                return true;
-            }
-            return await base.SendPacketsAsync( cancellationToken );
-        }
-
-        public override async Task WaitPacketAvailableToSendAsync( CancellationToken stopWaitToken, CancellationToken stopToken )
-        {
-            if( IsPingReqTimeout )
-            {
-                await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
-                return;
-            }
-            using( CancellationTokenSource cts = MessageExchanger.Config.CancellationTokenSourceFactory.Create( stopWaitToken, TimeToWaitKeepAlive ) )
-            {
-                await base.WaitPacketAvailableToSendAsync( cts.Token, stopToken );
-                // We didn't get cancelled, or the cancellation is due to the processor being cancelled.
-                if( stopWaitToken.IsCancellationRequested || stopToken.IsCancellationRequested ) return;
-            }
             if( WaitingPingResp )
             {
-                await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
-                return;
-            }
+                var now = _client.Config.TimeUtilities.UtcNow;
+                var elapsed = now - _lastPacketSent;
 
+                if( elapsed.TotalMilliseconds > _client.Config.WaitTimeoutMilliseconds )
+                {
+                    await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
+                    return true;
+                }
+            }
+            var res = await base.SendPacketsAsync( cancellationToken );
+            if( res )
+            {
+                _lastPacketSent = _client.Config.TimeUtilities.UtcNow;
+            }
+            return res;
+        }
+
+
+        protected override long GetTimeoutTime( long current )
+        {
+            var sendTime = _lastPacketSent.AddSeconds( _client.ClientConfig.KeepAliveSeconds );
+            var timeUntilTimeout = sendTime - _client.Config.TimeUtilities.UtcNow;
+            var inMsFloored = Math.Max( (int)timeUntilTimeout.TotalMilliseconds, 0 );
+            var baseVal = base.GetTimeoutTime( current );
+            if( baseVal == Timeout.Infinite ) return inMsFloored;
+            return Math.Min( baseVal, inMsFloored );
+        }
+
+        public override void OnTimeout( int msUntilNextTrigger )
+        {
             // These 2 lines must be set before ProcessOutgoingPacketAsync to avoid a race condition.
             // ProcessIncomingPacketAsync can be processed before any other line is executed, therefore, these 2 lines modifying the state must be ran before.
 
@@ -68,28 +65,29 @@ namespace CK.MQTT.Client
             // 1. WaitingPingResp = true is getting erased with false, in this case we can consider that this unexpected PingResp is our response.
             // 2. WaitingPingResp = false is getting erased with true, in this case, we consider the unexpected PingResp is, unexpected,
             //                      and we expect the server to send another one.
-
+            if(WaitingPingResp)
+            {
+                base.OnTimeout(Timeout.Infinite);
+                return;
+            }
             WaitingPingResp = true;
-            _stopwatch.Restart();
-            await ProcessOutgoingPacketAsync( OutgoingPingReq.Instance, stopToken );
+            _lastPacketSent = MessageExchanger.Config.TimeUtilities.UtcNow;
+            ReflexesChannel.Writer.TryWrite( OutgoingPingReq.Instance );
+            base.OnTimeout( MessageExchanger.Config.WaitTimeoutMilliseconds );
         }
 
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync(
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync(
             IMqtt3Sink sink,
             InputPump sender,
             byte header,
             uint packetLength,
             PipeReader pipeReader,
-            Func<ValueTask<OperationStatus>> next,
             CancellationToken cancellationToken )
         {
-            if( PacketType.PingResponse != (PacketType)header )
-            {
-                return await next();
-            }
+            if( PacketType.PingResponse != (PacketType)header ) return (OperationStatus.Done, false);
             WaitingPingResp = false;
             await pipeReader.SkipBytesAsync( sink, 0, packetLength, cancellationToken );
-            return OperationStatus.Done;
+            return (OperationStatus.Done, true);
         }
     }
 }

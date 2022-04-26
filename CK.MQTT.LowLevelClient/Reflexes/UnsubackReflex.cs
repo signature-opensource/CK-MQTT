@@ -11,20 +11,27 @@ namespace CK.MQTT
 {
     public class UnsubackReflex : IReflexMiddleware
     {
-        readonly ILocalPacketStore _store;
+        readonly MessageExchanger _exchanger;
 
-        public UnsubackReflex( ILocalPacketStore store ) => _store = store;
+        public UnsubackReflex( MessageExchanger exchanger )
+        {
+            _exchanger = exchanger;
+        }
 
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, Func<ValueTask<OperationStatus>> next, CancellationToken cancellationToken )
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
         {
             if( PacketType.UnsubscribeAck != (PacketType)header )
             {
-                return await next();
+                return (OperationStatus.Done, false);
             }
             ushort? packetId = await pipeReader.ReadPacketIdPacketAsync( sink, packetLength, cancellationToken );
-            if( !packetId.HasValue ) return OperationStatus.NeedMoreData;
-            await _store.OnQos1AckAsync( sink, packetId.Value, null );
-            return OperationStatus.Done;
+            if( !packetId.HasValue ) return (OperationStatus.NeedMoreData, true);
+            bool detectedDrop = await _exchanger.LocalPacketStore.OnQos1AckAsync( sink, packetId.Value, null );
+            if( detectedDrop )
+            {
+                _exchanger.Pumps!.Left.UnblockWriteLoop();
+            }
+            return (OperationStatus.Done, true);
         }
     }
 }

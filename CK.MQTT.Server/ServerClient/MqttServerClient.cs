@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class MqttServerClient : MqttListener, IMqtt3Client, IDisposable
+    public class MqttServerClient : MqttListener, IMqtt3Client, IAsyncDisposable
     {
         internal readonly ITopicManager _inputTopicFilter = new SimpleTopicManager(); //TODO: 
         internal readonly ITopicManager _outputTopicFilter = new SimpleTopicManager();
@@ -78,7 +78,12 @@ namespace CK.MQTT.Server
         public ValueTask<Task> PublishAsync( OutgoingMessage message )
             => _wrapper!.PublishAsync( message );
 
-        public void Dispose()
-            => _wrapper?.Dispose();
+        public async ValueTask DisposeAsync()
+        {
+            if( _wrapper != null )
+            {
+                await _wrapper.DisposeAsync();
+            }
+        }
     }
 }

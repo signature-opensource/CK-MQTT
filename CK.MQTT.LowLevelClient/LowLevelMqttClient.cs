@@ -55,7 +55,8 @@ namespace CK.MQTT
         {
             try
             {
-                Pumps?.Dispose();
+                var pumps = Pumps;
+                if( pumps != null ) await pumps.DisposeAsync();
                 if( ClientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
                 {
                     _disconnectTCS = new TaskCompletionSource();
@@ -66,64 +67,48 @@ namespace CK.MQTT
 
                 // Middleware that will processes the requests.
                 ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
-                    .UseMiddleware( new PublishReflex( RemotePacketStore, Sink.ReceiveAsync, output ) )
-                    .UseMiddleware( new PublishLifecycleReflex( RemotePacketStore, LocalPacketStore, output ) )
-                    .UseMiddleware( new SubackReflex( LocalPacketStore ) )
-                    .UseMiddleware( new UnsubackReflex( LocalPacketStore ) );
+                    .UseMiddleware( new PublishReflex( this ) )
+                    .UseMiddleware( new PublishLifecycleReflex( this ) )
+                    .UseMiddleware( new SubackReflex( this ) )
+                    .UseMiddleware( new UnsubackReflex( this ) );
 
                 await Channel.StartAsync( cancellationToken ); // Will create the connection to server.
 
-                OutputProcessor outputProcessor;
-                // Enable keepalive only if we need it.
-                if( ClientConfig.KeepAliveSeconds == 0 )
-                {
-                    outputProcessor = new OutputProcessor( this );
-                }
-                else
-                {
-                    // If keepalive is enabled, we add it's handler to the middlewares.
-                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
-                    outputProcessor = withKeepAlive;
-                    builder.UseMiddleware( withKeepAlive );
-                }
                 // This reflex handle the connection packet.
                 // It will replace itself with the regular packet processing.
                 ConnectAckReflex connectAckReflex = new
                 (
-                    builder.Build( async ( _, _, _, _, _, _ ) =>
-                    {
-                        await SelfDisconnectAsync( DisconnectReason.ProtocolError );
-                        return OperationStatus.Done;
-                    } )
+                    this,
+                    builder.Build( this )
                 );
-                // When receiving the ConnAck, this reflex will replace the reflex with this property.
-                Pumps = new( // Require channel started.
-                    output,
-                    new InputPump( this, connectAckReflex.HandleRequestAsync )
-                );
-                output.StartPumping( outputProcessor ); // Start processing incoming messages.
 
                 OutgoingConnect outgoingConnect = new( PConfig, ClientConfig, lastWill );
 
                 WriteResult writeConnectResult;
-                using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
+                using( CancellationTokenSource cts = Config.TimeUtilities.CreateCTS( Config.WaitTimeoutMilliseconds ) )
                 {
                     // Send the packet.
                     writeConnectResult = await outgoingConnect.WriteAsync( PConfig.ProtocolLevel, Channel.DuplexPipe.Output, cts.Token );
+                    await Channel.DuplexPipe.Output.FlushAsync( cts.Token );
                 }
 
                 async ValueTask<ConnectResult> Exit( ConnectError connectError )
                 {
                     Channel.Close();
-                    await Pumps.StopWorkAsync();
-                    Pumps.Dispose();
+                    var pumps = Pumps;
+                    if( pumps != null )
+                    {
+                        await pumps.StopWorkAsync();
+                        await pumps.DisposeAsync();
+                    }
                     return new ConnectResult( connectError );
                 }
 
                 if( writeConnectResult != WriteResult.Written )
                     return await Exit( ConnectError.Timeout );
+                var input = new InputPump( this, connectAckReflex.AsReflex );
                 ConnectResult res;
-                using( CancellationTokenSource cts2 = Config.CancellationTokenSourceFactory.Create( cancellationToken, Config.WaitTimeoutMilliseconds ) )
+                using( CancellationTokenSource cts2 = Config.TimeUtilities.CreateCTS( cancellationToken, Config.WaitTimeoutMilliseconds ) )
                 using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
                 {
                     try
@@ -140,6 +125,27 @@ namespace CK.MQTT
                     }
                 }
 
+                OutputProcessor outputProcessor;
+                // Enable keepalive only if we need it.
+                if( ClientConfig.KeepAliveSeconds == 0 )
+                {
+                    outputProcessor = new OutputProcessor( this );
+                }
+                else
+                {
+                    // If keepalive is enabled, we add it's handler to the middlewares.
+                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
+                    outputProcessor = withKeepAlive;
+                    builder.UseMiddleware( withKeepAlive );
+                }
+
+                // When receiving the ConnAck, this reflex will replace the reflex with this property.
+                Pumps = new( // Require channel started.
+                    output,
+                    input
+                );
+                output.StartPumping( outputProcessor ); // Start processing incoming messages.
+
                 // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )
                     return await Exit( ConnectError.Connection_Cancelled );
@@ -151,7 +157,7 @@ namespace CK.MQTT
                 if( res.ConnectError != ConnectError.None )
                 {
                     await Pumps.StopWorkAsync();
-                    Pumps.Dispose();
+                    await Pumps.DisposeAsync();
                     Channel.Close();
                     return res;
                 }
@@ -179,7 +185,7 @@ namespace CK.MQTT
                 {
                     Channel.Close();
                     await Pumps.CloseAsync();
-                    Pumps.Dispose();
+                    await Pumps.DisposeAsync();
                 }
                 return new ConnectResult( ConnectError.InternalException );
             }
@@ -196,7 +202,7 @@ namespace CK.MQTT
         public ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
         {
             MqttBinaryWriter.ThrowIfInvalidMQTTString( subscriptions.TopicFilter );
-            return SendPacketAsync<SubscribeReturnCode>( new OutgoingSubscribe( new[] { subscriptions } ) );
+            return SendPacketWithQoSAsync<SubscribeReturnCode>( new OutgoingSubscribe( new[] { subscriptions } ) );
         }
 
         /// <inheritdoc/>
@@ -206,7 +212,7 @@ namespace CK.MQTT
             {
                 MqttBinaryWriter.ThrowIfInvalidMQTTString( topic );
             }
-            return await SendPacketAsync<object>( new OutgoingUnsubscribe( topics ) );
+            return await SendPacketWithQoSAsync<object>( new OutgoingUnsubscribe( topics ) );
         }
 
 
@@ -218,7 +224,7 @@ namespace CK.MQTT
             {
                 MqttBinaryWriter.ThrowIfInvalidMQTTString( sub.TopicFilter );
             }
-            return SendPacketAsync<SubscribeReturnCode[]>( new OutgoingSubscribe( subs ) )!;
+            return SendPacketWithQoSAsync<SubscribeReturnCode[]>( new OutgoingSubscribe( subs ) )!;
         }
 
 
@@ -249,17 +255,17 @@ namespace CK.MQTT
 
             if( clearSession )
             {
-                using( CancellationTokenSource cts = Config.CancellationTokenSourceFactory.Create( Config.WaitTimeoutMilliseconds ) )
+                using( CancellationTokenSource cts = Config.TimeUtilities.CreateCTS( Config.WaitTimeoutMilliseconds ) )
                 {
                     await OutgoingDisconnect.Instance.WriteAsync( PConfig.ProtocolLevel, duplexPipe.Output, cts.Token );
                 }
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             Channel.Dispose();
-            base.Dispose();
+            await base.DisposeAsync();
             LocalPacketStore.Dispose();
             RemotePacketStore.Dispose();
         }

@@ -56,6 +56,7 @@ namespace CK.MQTT
             IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( (int)packetSize );
             PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
             if( await packet.WriteAsync( _pConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            await pipe.FlushAsync();
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
@@ -84,9 +85,14 @@ namespace CK.MQTT
             IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent( (int)packetSize );
             PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
             if( await packet.WriteAsync( _pConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
+            await pipe.FlushAsync();
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
+        }
+
+        public override void Dispose()
+        {
         }
     }
 }

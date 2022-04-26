@@ -3,7 +3,6 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <LangVersion>9</LangVersion>
         <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
         <Features>strict</Features>
     </PropertyGroup>

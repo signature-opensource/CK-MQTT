@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\Common\Mqtt.props" />
 
     <PropertyGroup>
-        <TargetFramework>net6</TargetFramework>
-        <Description>MQTT server implementation (not yet available).</Description>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Features>strict</Features>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\CK.MQTT.Client\CK.MQTT.Client.csproj" />
     </ItemGroup>
+
 </Project>
