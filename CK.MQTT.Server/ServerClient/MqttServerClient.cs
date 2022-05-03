@@ -42,7 +42,7 @@ namespace CK.MQTT.Server
             if( _wrapper?.IsConnected ?? false ) throw new InvalidOperationException( "This client is already connected." );
             var tcs = new TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
             _needClientTCS = tcs;
-            var (channel, securityManager, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
+            var (channel, _, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
             _wrapper = new ClientWrapper( this, ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ), Config, _sink, channel, remotePacketStore, localPacketStore );
             return new ConnectResult( localPacketStore.IsRevivedSession ? SessionState.SessionPresent : SessionState.CleanSession, ConnectReturnCode.Accepted );
         }

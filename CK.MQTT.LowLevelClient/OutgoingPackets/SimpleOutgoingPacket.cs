@@ -26,10 +26,10 @@ namespace CK.MQTT.Packets
         }
 
         /// <inheritdoc/>
-        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
+        public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             Write( protocolLevel, pw );
-            return WriteResult.Written;
+            return new ValueTask<WriteResult>( WriteResult.Written );
         }
 
         /// <inheritdoc/>

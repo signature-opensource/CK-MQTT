@@ -146,7 +146,7 @@ namespace CK.MQTT
             return true;
         }
 
-        protected virtual ValueTask BeforeFullDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new ValueTask();
+        protected virtual ValueTask BeforeFullDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new();
 
         [ThreadColor( ThreadColor.None )]
         public virtual async ValueTask DisposeAsync()

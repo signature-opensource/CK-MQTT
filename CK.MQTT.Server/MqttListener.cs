@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public abstract class MqttListener
+    public abstract class MqttListener : IDisposable
     {
         Task? _acceptLoop;
         CancellationTokenSource? _cts;
@@ -119,6 +119,12 @@ namespace CK.MQTT.Server
                     channel?.Dispose();
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            _channelFactory.Dispose();
+            _cts?.Cancel();
         }
     }
 }

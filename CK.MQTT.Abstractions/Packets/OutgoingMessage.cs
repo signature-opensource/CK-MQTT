@@ -133,7 +133,7 @@ namespace CK.MQTT.Packets
                 if( _responseTopic != null )
                 {
                     span[0] = (byte)PropertyIdentifier.ResponseTopic;
-                    span = span[1..].WriteMQTTString( _responseTopic );
+                    span[1..].WriteMQTTString( _responseTopic );
                 }
             }
         }
