@@ -1,8 +1,9 @@
 using CK.MQTT.Server;
+using System.Threading.Tasks;
 
-namespace CK.LogHub
+namespace CK.MQTT.Server.Tests
 {
-    class TodoAuthHandler : IAuthenticationProtocolHandler
+    class TestAuthHandler : IAuthenticationProtocolHandler
     {
         public ValueTask<bool> ChallengeClientIdAsync( string clientId ) => new ValueTask<bool>( true );
 

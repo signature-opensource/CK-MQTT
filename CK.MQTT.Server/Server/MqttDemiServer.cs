@@ -11,10 +11,13 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.Server
 {
-    public abstract class MqttDemiServer : MqttListener
+    public class MqttDemiServer : MqttListener
     {
-        public MqttDemiServer( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, IStoreFactory storeFactory )
-            : base( config, channelFactory, storeFactory )
+        public MqttDemiServer( Mqtt3ConfigurationBase config,
+                              IMqttChannelFactory channelFactory,
+                              IStoreFactory storeFactory,
+                              IAuthenticationProtocolHandlerFactory authenticationProtocolHandler )
+            : base( config, channelFactory, storeFactory, authenticationProtocolHandler )
         {
             _config = config;
         }

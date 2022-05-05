@@ -1,8 +1,10 @@
-using CK.MQTT;
+using System;
 using System.IO.Pipelines;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace CK.LogHub
+namespace CK.MQTT.Server
 {
     class ServerTcpChannel : IMqttChannel
     {
@@ -18,11 +20,20 @@ namespace CK.LogHub
 
         public IDuplexPipe? DuplexPipe => _duplexPipe;
 
-        public void Close() => _tcpClient.Close();
+        bool _closed;
+        public void Close()
+        {
+            _closed = true;
+            _tcpClient.Close();
+        }
 
         public void Dispose() => _tcpClient.Dispose();
 
+
         public ValueTask StartAsync( CancellationToken cancellationToken )
-            => new ValueTask();
+        {
+            if( _closed ) throw new InvalidOperationException( "This channel cannot be restarted." );
+            return new();
+        }
     }
 }

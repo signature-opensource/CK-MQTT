@@ -17,14 +17,20 @@ namespace CK.MQTT.Server
 
         protected Mqtt3ConfigurationBase Config { get; }
 
-        public MqttListener( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, IStoreFactory storeFactory )
+        public MqttListener(
+            Mqtt3ConfigurationBase config,
+            IMqttChannelFactory channelFactory,
+            IStoreFactory storeFactory,
+            IAuthenticationProtocolHandlerFactory authenticationProtocolHandler
+        )
         {
             Config = config;
             _channelFactory = channelFactory;
             _storeFactory = storeFactory;
+            AuthProtocolHandlerFactory = authenticationProtocolHandler;
         }
 
-        protected abstract IAuthenticationProtocolHandlerFactory SecurityManagerFactory { get; }
+        protected IAuthenticationProtocolHandlerFactory AuthProtocolHandlerFactory { get; set; }
 
         public void StartListening()
         {
@@ -72,7 +78,7 @@ namespace CK.MQTT.Server
 
                     if( cancellationToken.IsCancellationRequested ) return;
 
-                    securityManager = await SecurityManagerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );
+                    securityManager = await AuthProtocolHandlerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );
                     if( securityManager is null )
                     {
                         CloseConnection();

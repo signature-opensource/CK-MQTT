@@ -8,14 +8,14 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.ServerClient
 {
-    public class TcpChannelFactory : IMqttChannel
+    public class TcpListenerSingleChannel : IMqttChannel
     {
         // I feel this object is badly designed, as long as it's alive it block a port.
         readonly CancellationTokenSource _cts = new();
         readonly IPAddress _address;
         readonly int _port;
         readonly Task _backgroundTask;
-        public TcpChannelFactory( IPAddress address, int port )
+        public TcpListenerSingleChannel( IPAddress address, int port )
         {
             _address = address;
             _port = port;

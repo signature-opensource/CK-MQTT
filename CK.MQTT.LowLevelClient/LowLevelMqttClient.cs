@@ -107,6 +107,7 @@ namespace CK.MQTT
                 if( writeConnectResult != WriteResult.Written )
                     return await Exit( ConnectError.Timeout );
                 var input = new InputPump( this, connectAckReflex.AsReflex );
+                input.StartPumping();
                 ConnectResult res;
                 using( CancellationTokenSource cts2 = Config.TimeUtilities.CreateCTS( cancellationToken, Config.WaitTimeoutMilliseconds ) )
                 using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cancellationToken ) ) )
@@ -145,7 +146,6 @@ namespace CK.MQTT
                     input
                 );
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.
-                input.StartPumping();
                 // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )
                     return await Exit( ConnectError.Connection_Cancelled );

@@ -1,10 +1,12 @@
 using CK.MQTT.Server;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace CK.LogHub
+namespace CK.MQTT.Server.Tests
 {
-    class TodoAuthHandlerFactory : IAuthenticationProtocolHandlerFactory
+    class TestAuthHandlerFactory : IAuthenticationProtocolHandlerFactory
     {
         public ValueTask<IAuthenticationProtocolHandler?> ChallengeIncomingConnectionAsync( string connectionInfo, CancellationToken cancellationToken )
-            => new ValueTask<IAuthenticationProtocolHandler?>( new TestAuthHandler() );
+            => new( new TestAuthHandler() );
     }
 }
