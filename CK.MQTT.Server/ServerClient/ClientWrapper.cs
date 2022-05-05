@@ -1,9 +1,8 @@
 using CK.MQTT.Client;
-using CK.MQTT.P2P;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT.Server.ServerClient
 {
     class ClientWrapper : ServerMessageExchanger
     {

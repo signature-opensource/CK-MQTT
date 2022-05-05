@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT.Server.ServerClient
 {
     public class TcpChannelFactory : IMqttChannel
     {

@@ -145,7 +145,7 @@ namespace CK.MQTT
                     input
                 );
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.
-
+                input.StartPumping();
                 // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )
                     return await Exit( ConnectError.Connection_Cancelled );

@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT.Server.ServerClient
 {
     class SecurityManagerFactoryWrapper : IAuthenticationProtocolHandlerFactory
     {

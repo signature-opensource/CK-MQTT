@@ -1,5 +1,7 @@
 using CK.MQTT.Packets;
 using CK.MQTT.Pumps;
+using CK.MQTT.Server;
+using CK.MQTT.Server.OutgoingPackets;
 using CK.MQTT.Stores;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Server.ServerClient
 {
     class FilteringOutputProcessor : OutputProcessor
     {

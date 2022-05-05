@@ -1,7 +1,6 @@
 using CK.MQTT.Client;
-using CK.MQTT.P2P;
-using CK.MQTT.Packets;
 using CK.MQTT.Pumps;
+using CK.MQTT.Server.OutgoingPackets;
 using CK.MQTT.Stores;
 using System;
 using System.Buffers;

@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.P2P;
 using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
@@ -96,6 +95,8 @@ namespace CK.MQTT.Server
                     }
 
                     (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync( ProtocolConfiguration.FromProtocolLevel( protocolLevel ), Config, connectHandler.ClientId, connectHandler.CleanSession, cancellationToken );
+                    await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output, cancellationToken );
+                    await channel.DuplexPipe.Output.FlushAsync(cancellationToken);
                     if( cancellationToken.IsCancellationRequested )
                     {
                         localStore.Dispose();

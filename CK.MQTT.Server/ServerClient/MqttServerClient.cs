@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.P2P;
 using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
@@ -11,7 +10,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT.Server.ServerClient
 {
     public class MqttServerClient : MqttListener, IMqtt3Client, IAsyncDisposable
     {

@@ -5,7 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Server
 {
     public static class MqttTopicFilterComparer
     {

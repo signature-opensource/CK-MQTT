@@ -1,6 +1,7 @@
+using CK.MQTT.Packets;
 using System;
 
-namespace CK.MQTT.Packets
+namespace CK.MQTT.Server
 {
     public class OutgoingConnectAck : SimpleOutgoingPacket
     {

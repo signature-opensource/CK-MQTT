@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT.Server
 {
     /// <summary>
     /// A factory that produces <see cref="IMqttChannel"/>.

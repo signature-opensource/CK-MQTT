@@ -4,7 +4,7 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Server.OutgoingPackets
 {
     class InternalSubscribePacket : IOutgoingPacket
     {

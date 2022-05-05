@@ -24,6 +24,10 @@ namespace CK.MQTT.Pumps
         public InputPump( MessageExchanger messageExchanger, Reflex reflex ) : base( messageExchanger )
         {
             CurrentReflex = reflex;
+        }
+
+        public void StartPumping()
+        {
             SetRunningLoop( ReadLoopAsync() );
         }
 

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 // basically I stripped all the routing and locking because we are not concurrent.
 // Also made the algorithm faster by removing allocations and returning asap.
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Server
 {
     public class SimpleTopicManager : ITopicManager
     {

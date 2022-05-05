@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CK.MQTT.Packets
+namespace CK.MQTT.Server
 {
     public interface IConnectInfo
     {

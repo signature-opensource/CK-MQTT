@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using CK.PerfectEvent;
 using System;
@@ -10,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT.Server.Server
 {
     public abstract class MqttDemiServer : MqttListener
     {
@@ -34,19 +33,23 @@ namespace CK.MQTT.Server
             CancellationToken cancellationToken
         )
         {
-            await _onNewClientSender.SafeRaiseAsync( m, new MessageExchangerAgent<IConnectedMessageExchanger>(
+            var exchanger = new MessageExchangerAgent<IConnectedMessageExchanger>(
                 ( sink ) =>
                 {
-                    return new MessageExchanger(
+                    ((MessageExchangerAgent<IConnectedMessageExchanger>)sink).Start();
+                    return new ServerMessageExchanger(
                         ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
                         _config,
                         sink,
                         channel,
+                        new SimpleTopicManager(),
                         remotePacketStore,
                         localPacketStore
                     );
                 }
-            ) );
+            );
+            exchanger.Start();
+            await _onNewClientSender.SafeRaiseAsync( m, exchanger );
         }
     }
 }

@@ -1,7 +1,5 @@
 using CK.MQTT.Client;
-using CK.MQTT.P2P;
 using CK.MQTT.Pumps;
-using CK.MQTT.Server;
 using CK.MQTT.Stores;
 using System;
 using System.Buffers;
@@ -12,7 +10,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Packets
+namespace CK.MQTT.Server
 {
     public class ConnectHandler : IConnectInfo
     {
@@ -53,7 +51,11 @@ namespace CK.MQTT.Packets
             {
                 res = await reader.ReadAsync( cancellationToken );
                 status = InputPump.TryParsePacketHeader( res.Buffer, out header, out length, out SequencePosition position );
-                if( status == OperationStatus.Done ) break;
+                if( status == OperationStatus.Done )
+                {
+                    reader.AdvanceTo( position );
+                    break;
+                }
                 if( status != OperationStatus.NeedMoreData )
                 {
                     return (ConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
@@ -119,7 +121,7 @@ namespace CK.MQTT.Packets
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
         public bool Retain => (_flags & 0b0010_0000) != 0;
-        public QualityOfService QoS => (QualityOfService)((_flags << 3) >> 6); // 3 shift on the left to delete the 3 flags on the right. 
+        public QualityOfService QoS => (QualityOfService)(_flags << 3 >> 6); // 3 shift on the left to delete the 3 flags on the right. 
         public bool HasLastWill => (_flags & 0b0000_0100) != 0;
         public bool CleanSession => (_flags & 0b0000_0010) != 0;
         public IReadOnlyList<(string, string)> UserProperties => _userProperties;
@@ -143,7 +145,12 @@ namespace CK.MQTT.Packets
         {
             if( _fieldCount == 0 )
             {
-                if( !sequenceReader.TryReadMQTTString( out _protocolName! ) ) return OperationStatus.NeedMoreData;
+                var pos = sequenceReader.Position;
+                if( !sequenceReader.TryReadMQTTString( out _protocolName! ) )
+                {
+                    sequenceReader.Rewind( sequenceReader.Sequence.Slice( pos, sequenceReader.Position ).Length );
+                    return OperationStatus.NeedMoreData;
+                }
                 _fieldCount++;
             }
             if( _fieldCount == 1 )

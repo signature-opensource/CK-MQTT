@@ -1,6 +1,5 @@
 using CK.MQTT.Client;
 using CK.MQTT.Common.Pumps;
-using CK.MQTT.P2P;
 using CK.MQTT.Pumps;
 using CK.MQTT.Server.Reflexes;
 using CK.MQTT.Stores;
@@ -28,6 +27,7 @@ namespace CK.MQTT.Server
         ) : base( pConfig, config, sink, channel, remotePacketStore, localPacketStore )
         {
             _topicManager = outgoingTopicManager;
+            Engage();
         }
 
         protected void Engage()
@@ -41,12 +41,14 @@ namespace CK.MQTT.Server
                 .UseMiddleware( new UnsubscribeReflex( _topicManager, output, PConfig.ProtocolLevel ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
             Reflex reflex = builder.Build( this );
+            var input = CreateInputPump( reflex );
             // Creating pumps. Need to be started.
             Pumps = new DuplexPump<OutputPump, InputPump>(
                 output,
-                CreateInputPump( reflex )
+                input
             );
             output.StartPumping( CreateOutputProcessor() );
+            input.StartPumping();
         }
 
         protected virtual InputPump CreateInputPump( Reflex reflex ) => new( this, reflex );

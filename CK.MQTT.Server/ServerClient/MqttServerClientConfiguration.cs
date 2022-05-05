@@ -1,6 +1,6 @@
 using System;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Server.ServerClient
 {
     public class MqttServerClientConfiguration : Mqtt3ConfigurationBase
     {

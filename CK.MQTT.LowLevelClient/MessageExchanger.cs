@@ -110,8 +110,6 @@ namespace CK.MQTT
             }
             return new ValueTask();
         }
-
-
         internal protected async virtual ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );

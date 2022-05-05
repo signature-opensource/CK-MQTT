@@ -1,5 +1,6 @@
 using CK.MQTT.Client;
 using CK.MQTT.Pumps;
+using CK.MQTT.Server;
 using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
@@ -9,7 +10,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.P2P
+namespace CK.MQTT.Server.ServerClient
 {
     class InterlacedInputPump : InputPump
     {

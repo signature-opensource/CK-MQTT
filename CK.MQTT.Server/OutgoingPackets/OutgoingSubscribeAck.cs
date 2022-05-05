@@ -1,7 +1,8 @@
+using CK.MQTT.Packets;
 using System;
 using System.Buffers.Binary;
 
-namespace CK.MQTT.Packets
+namespace CK.MQTT.Server.OutgoingPackets
 {
     class OutgoingSubscribeAck : VariableOutgointPacket
     {
