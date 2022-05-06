@@ -1,15 +1,14 @@
-using CK.MQTT;
 using CK.MQTT.Stores;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server.Tests
+namespace CK.MQTT.Server.Tests.Helpers
 {
     public class TestStoreFactory : IStoreFactory
     {
         readonly Mqtt3ConfigurationBase _config;
 
-        public TestStoreFactory(Mqtt3ConfigurationBase _config)
+        public TestStoreFactory( Mqtt3ConfigurationBase _config )
         {
             this._config = _config;
         }

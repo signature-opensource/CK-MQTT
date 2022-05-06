@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    class TestMqttClient : MqttClientAgent
+    public class TestMqttClient : MqttClientAgent
     {
         readonly ChannelWriter<object?> _eventWriter;
 

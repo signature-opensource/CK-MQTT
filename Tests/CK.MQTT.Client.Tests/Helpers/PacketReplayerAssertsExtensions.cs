@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 namespace CK.MQTT.Client.Tests.Helpers
@@ -67,21 +68,22 @@ namespace CK.MQTT.Client.Tests.Helpers
             await @this.ShouldContainEventAsync<TestMqttClient.Connected>();
         }
 
-        public static async Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this )
+        public static Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this )
+            => @this.Events.Reader!.ShouldContainEventAsync<T>();
+
+        public static async Task<T> ShouldContainEventAsync<T>( this ChannelReader<object> @this )
         {
-            var task = @this.Events.Reader.ReadAsync().AsTask();
-            if( !await task.WaitAsync( 60000 ) )
-            {
-                Assert.Fail( "The replayer didn't had any event." );
-            }
+            var task = @this.ReadAsync().AsTask();
+            if( !await task.WaitAsync( 60000 ) ) Assert.Fail( "The replayer didn't had any event." );
             var res = await task;
-            if( res is T casted )
+            if( res is not T casted )
             {
-                return casted;
+                Assert.Fail( $"Expected event of type {typeof( T )} got {res?.GetType()?.ToString() ?? "null"} instead" );
+                throw new InvalidOperationException();
             }
-            Assert.Fail( $"Expected event of type {typeof( T )} got {res?.GetType()?.ToString() ?? "null"} instead" );
-            throw new InvalidOperationException();
+            return casted;
         }
+
 
         public static async Task<(T1, T2)> ShouldContainEventsAsync<T1, T2>( this PacketReplayer @this )
         {

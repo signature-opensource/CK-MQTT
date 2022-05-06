@@ -1,3 +1,4 @@
+using CK.MQTT.Server;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
@@ -6,9 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.P2P.Tests
+namespace CK.MQTT.Server.Tests
 {
-    public class TopicFilterMatch
+    public class TopicFilterMatchTests
     {
         [TestCase("foo/", "foo", false)]
         [TestCase("foo", "foo/", false)]

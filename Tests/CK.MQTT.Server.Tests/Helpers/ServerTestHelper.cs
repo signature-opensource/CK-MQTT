@@ -4,11 +4,12 @@ using CK.MQTT.Server.Server;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server.Tests
+namespace CK.MQTT.Server.Tests.Helpers
 {
     class ServerTestHelper : IAsyncDisposable
     {
@@ -16,7 +17,9 @@ namespace CK.MQTT.Server.Tests
         readonly MqttDemiServer _server;
         public ServerTestHelper()
         {
-            var channelFactory = new TcpChannelFactory(1883);
+            // When the debugger is attached, we use the default port.
+            // Wireshark only detect mqtt on it's default port.
+            var channelFactory = Debugger.IsAttached ? new TcpChannelFactory( 1883 ) : new TcpChannelFactory();
             _port = channelFactory.Port;
             var cfg = new Mqtt3ConfigurationBase();
             _server = new MqttDemiServer( cfg, channelFactory, new TestStoreFactory( cfg ), new TestAuthHandlerFactory() );
@@ -24,14 +27,14 @@ namespace CK.MQTT.Server.Tests
             _server.StartListening();
         }
 
-        TaskCompletionSource<IConnectedMessageExchanger>? _tcs;
-        void OnNewClient( IActivityMonitor m, IConnectedMessageExchanger client )
+        TaskCompletionSource<MessageExchangerAgent<IConnectedMessageExchanger>>? _tcs;
+        void OnNewClient( IActivityMonitor m, MessageExchangerAgent<IConnectedMessageExchanger> client )
         {
             _tcs?.SetResult( client );
             _tcs = null;
         }
 
-        public async Task<(IConnectedMessageExchanger client, IConnectedMessageExchanger serverClient)> CreateClient()
+        public async Task<(IConnectedMessageExchanger client, MessageExchangerAgent<IConnectedMessageExchanger> serverClient)> CreateClient()
         {
             var client = new MqttClientAgent(
                 ( sink ) => new LowLevelMqttClient(
@@ -51,7 +54,6 @@ namespace CK.MQTT.Server.Tests
             var serverClient = await tcs.Task;
             return (client, serverClient);
         }
-
 
         public async ValueTask DisposeAsync() => await _server.StopListeningAsync();
     }

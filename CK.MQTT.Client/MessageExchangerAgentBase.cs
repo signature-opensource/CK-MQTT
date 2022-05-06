@@ -19,12 +19,13 @@ namespace CK.MQTT.Client
         {
         }
 
-        protected Channel<object?>? Events { get; set; }
+        protected Channel<object?>? Events { get; private set; }
 
         [MemberNotNull( nameof( Events ) )]
         public virtual void Start()
         {
-            Events = Channel.CreateUnbounded<object?>(new UnboundedChannelOptions()
+            if( Events != null ) throw new InvalidOperationException( "Already started." );
+            Events = Channel.CreateUnbounded<object?>( new UnboundedChannelOptions()
             {
                 SingleReader = true,
                 SingleWriter = false

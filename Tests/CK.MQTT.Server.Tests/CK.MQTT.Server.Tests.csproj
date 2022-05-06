@@ -16,6 +16,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\CK.MQTT.Server\CK.MQTT.Server.csproj" />
+        <ProjectReference Include="..\CK.MQTT.Client.Tests\CK.MQTT.Client.Tests.csproj" />
     </ItemGroup>
 
 </Project>

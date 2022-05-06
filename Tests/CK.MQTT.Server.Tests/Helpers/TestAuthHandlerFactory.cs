@@ -1,8 +1,7 @@
-using CK.MQTT.Server;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server.Tests
+namespace CK.MQTT.Server.Tests.Helpers
 {
     class TestAuthHandlerFactory : IAuthenticationProtocolHandlerFactory
     {
