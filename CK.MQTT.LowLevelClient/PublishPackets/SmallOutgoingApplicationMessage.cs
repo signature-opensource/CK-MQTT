@@ -19,14 +19,14 @@ namespace CK.MQTT.Packets
 
         protected override uint PayloadSize => (uint)_memory.Length;
 
-        protected async override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        protected override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
-            if(_memory.Length > 0 )
+            if( _memory.Length > 0 )
             {
                 _memory.Span.CopyTo( pw.GetSpan( _memory.Length ) );
                 pw.Advance( _memory.Length );
             }
-            return WriteResult.Written;
+            return new ValueTask<WriteResult>( WriteResult.Written );
         }
     }
 }

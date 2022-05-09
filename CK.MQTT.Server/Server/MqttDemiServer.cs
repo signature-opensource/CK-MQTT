@@ -51,7 +51,6 @@ namespace CK.MQTT.Server.Server
                     );
                 }
             );
-            exchanger.Start();
             await _onNewClientSender.SafeRaiseAsync( m, exchanger );
         }
     }

@@ -27,7 +27,7 @@ namespace CK.MQTT.Client
         }
 
         [MemberNotNull( nameof( WorkLoop ) )]
-        public override void Start( )
+        public override void Start()
         {
             base.Start();
             WorkLoop ??= WorkLoopAsync( Events.Reader );
@@ -52,14 +52,13 @@ namespace CK.MQTT.Client
         }
 
 
-        protected async Task StopAsync( bool waitForCompletion )
+        protected override async ValueTask StopAsync( bool waitForCompletion )
         {
-            Events!.Writer.Complete();
+            await base.StopAsync( waitForCompletion );
             if( waitForCompletion )
             {
                 await WorkLoop!;
             }
-            Events = null;
             WorkLoop = null;
         }
 

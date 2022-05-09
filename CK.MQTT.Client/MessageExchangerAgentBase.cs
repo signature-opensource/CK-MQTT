@@ -32,6 +32,13 @@ namespace CK.MQTT.Client
             } );
         }
 
+        protected virtual ValueTask StopAsync( bool waitForCompletion )
+        {
+            Events!.Writer.Complete();
+            Events = null;
+            return new ValueTask();
+        }
+
         record PacketResent( ushort PacketId, int ResentCount, bool IsDropped );
         record PoisonousPacket( ushort PacketId, PacketType PacketType, int PoisnousTotalCount );
 

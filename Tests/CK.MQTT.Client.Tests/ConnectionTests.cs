@@ -175,7 +175,6 @@ namespace CK.MQTT.Client.Tests
             catch( Exception e )
             {
                 e.Should().BeOfType<InvalidOperationException>();
-                e.Message.Should().Be( "This client is already connected." );
             }
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
