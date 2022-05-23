@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="15.0.0-r08-00-0001-develop" />
-    <PackageReference Include="CK.PerfectEvent" Version="15.0.0-r08-00-0001-develop" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="15.0.0-r08" />
+    <PackageReference Include="CK.PerfectEvent" Version="15.0.0-r08" />
   </ItemGroup>
 
   <ItemGroup>
