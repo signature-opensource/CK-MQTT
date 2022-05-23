@@ -1,39 +1,42 @@
 using CK.MQTT.Client.Tests.Helpers;
+using FluentAssertions;
 using NUnit.Framework;
-using System;
+using System.Text;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
-    public class SerializingTests_PipeReaderCop : SerializingTests
+    public class SubscribeTests_PipeReaderCop : SubscribeTests
     {
         public override string ClassCase => "PipeReaderCop";
     }
 
-    public class SerializingTests_Default : SerializingTests
+    public class SubscribeTests_Default : SubscribeTests
     {
         public override string ClassCase => "Default";
     }
 
-    public class SerializingTests_BytePerByteChannel : SerializingTests
+    public class SubscribeTests_BytePerByteChannel : SubscribeTests
     {
         public override string ClassCase => "BytePerByte";
     }
 
-    public abstract class SerializingTests
+    public abstract class SubscribeTests
     {
         public abstract string ClassCase { get; }
 
         [Test]
-        public async Task packet_of_128_bytes_payload_serialized_correctly()
+        public async Task simple_subscribe_works()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
             await replayer.ConnectClient( TestHelper.Monitor, client );
-            await await client.PublishAsync( new string( 'a', 128 - 2/*packet id size*/ ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
 
-            //TODO: add assert ?
+            var task = await client.SubscribeAsync( new Subscription( "test", QualityOfService.ExactlyOnce ) );
+            await replayer.AssertClientSent( TestHelper.Monitor, "8209000100047465737402" );
+            await replayer.SendToClient( TestHelper.Monitor, "9003000102" );
+            (await task).Should().Be( SubscribeReturnCode.MaximumQoS2 );
         }
     }
 }

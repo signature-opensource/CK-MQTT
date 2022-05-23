@@ -8,7 +8,7 @@ using static CK.Testing.MonitorTestHelper;
 
 namespace CK.MQTT.Client.Tests
 {
-    public class PublishTests_PipeReaderCop : ConnectionTests
+    public class PublishTests_PipeReaderCop : PublishTests
     {
         public override string ClassCase => "PipeReaderCop";
     }

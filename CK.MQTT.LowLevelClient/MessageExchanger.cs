@@ -65,8 +65,9 @@ namespace CK.MQTT
             object? res = await ackReceived;
             if( res is null ) return default;
             if( res is T a ) return a;
-            //For example: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
-            throw new ProtocolViolationException( "We received a packet id ack of an unexpected packet type." );
+            
+            // For example: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
+            throw new ProtocolViolationException( $"Expected to find a {typeof( T )} in the store for packet ID {packet.PacketId}, but got {res.GetType()}. This is an implementation bug from the server, or client, or the network didn't respected it's guarantees." );
         }
 
         public ValueTask<Task> PublishAsync( OutgoingMessage message )

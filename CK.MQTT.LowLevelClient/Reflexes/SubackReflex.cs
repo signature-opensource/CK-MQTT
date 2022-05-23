@@ -26,7 +26,7 @@ namespace CK.MQTT
             }
             ReadResult read = await pipeReader.ReadAtLeastAsync( (int)packetLength, cancellationToken );
             if( read.Buffer.Length < packetLength ) return (OperationStatus.NeedMoreData, true); // Will happen when the reader is completed/cancelled.
-            Parse( read.Buffer, packetLength, out ushort packetId, out QualityOfService[]? qos, out SequencePosition position );
+            Parse( read.Buffer, packetLength, out ushort packetId, out SubscribeReturnCode[]? qos, out SequencePosition position );
             pipeReader.AdvanceTo( position );
             bool detectedDrop = await _exchanger.LocalPacketStore.OnQos1AckAsync( sink, packetId, qos );
             if( detectedDrop )
@@ -39,13 +39,13 @@ namespace CK.MQTT
         static void Parse( ReadOnlySequence<byte> buffer,
             uint payloadLength,
             out ushort packetId,
-            [NotNullWhen( true )] out QualityOfService[]? qos,
+            [NotNullWhen( true )] out SubscribeReturnCode[]? qos,
             out SequencePosition position )
         {
             SequenceReader<byte> reader = new( buffer );
             if( !reader.TryReadBigEndian( out packetId ) ) throw new InvalidOperationException();
             buffer = buffer.Slice( 2, payloadLength - 2 );
-            qos = (QualityOfService[])(object)buffer.ToArray();
+            qos = (SubscribeReturnCode[])(object)buffer.ToArray();
             position = buffer.End;
         }
     }

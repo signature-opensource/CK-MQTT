@@ -197,10 +197,17 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        public ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
+        public async ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
         {
             MqttBinaryWriter.ThrowIfInvalidMQTTString( subscriptions.TopicFilter );
-            return SendPacketWithQoSAsync<SubscribeReturnCode>( new OutgoingSubscribe( new[] { subscriptions } ) );
+            var sendTask = await SendPacketWithQoSAsync<SubscribeReturnCode[]>( new OutgoingSubscribe( new[] { subscriptions } ) );
+            return Send( sendTask! );
+
+            static async Task<SubscribeReturnCode> Send( Task<SubscribeReturnCode[]> task )
+            {
+                var res = await task;
+                return res?[0] ?? SubscribeReturnCode.Failure;
+            }
         }
 
         /// <inheritdoc/>
