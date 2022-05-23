@@ -2,6 +2,7 @@ using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
 using System.Buffers;
 using System.IO.Pipelines;
+using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -23,10 +24,23 @@ namespace CK.MQTT.Client
 
         protected override async Task WorkLoopAsync( ChannelReader<object?> channel )
         {
-            await foreach( var item in channel.ReadAllAsync() )
+            var copyChannel = Channel.CreateUnbounded<object?>();
+            Task task;
+            try
             {
-                await _eventWriter.WriteAsync( item );
+
+                task = base.WorkLoopAsync( copyChannel.Reader );
+                await foreach( var item in channel.ReadAllAsync() )
+                {
+                    await copyChannel.Writer.WriteAsync( item );
+                    await _eventWriter.WriteAsync( item );
+                }
             }
+            finally
+            {
+                copyChannel.Writer.Complete();
+            }
+            await task;
         }
 
 

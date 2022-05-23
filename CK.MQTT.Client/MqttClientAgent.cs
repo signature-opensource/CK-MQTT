@@ -1,3 +1,4 @@
+using CK.Core;
 using CK.MQTT.Packets;
 using System;
 using System.Collections.Generic;
@@ -9,11 +10,15 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public class MqttClientAgent : MessageExchangerAgent<IMqtt3Client>
+    public class MqttClientAgent : MessageExchangerAgent<IMqtt3Client>, IMqtt3Client
     {
         public MqttClientAgent( Func<IMqtt3Sink, IMqtt3Client> clientFactory ) : base( clientFactory )
         {
+            OnConnectionChange.Sync += OnConnectionChangeSync;
         }
+
+        void OnConnectionChangeSync( IActivityMonitor monitor, DisconnectReason e )
+            => IsConnected = e == DisconnectReason.None;
 
         public Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill = null, CancellationToken cancellationToken = default )
             => ConnectAsync( true, lastwill, cancellationToken );

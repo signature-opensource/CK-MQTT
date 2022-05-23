@@ -1,4 +1,4 @@
-﻿using CK.MQTT.Client;
+using CK.MQTT.Client;
 using CK.MQTT.Pumps;
 using System;
 using System.Buffers;
@@ -27,7 +27,7 @@ namespace CK.MQTT
                 if( processed ) return status;
             }
             // No reflex matched the packet.
-            await _messageExchanger.SelfDisconnectAsync( DisconnectReason.ProtocolError );
+            await sender.SelfCloseAsync( DisconnectReason.ProtocolError );
             return OperationStatus.Done;
         }
 

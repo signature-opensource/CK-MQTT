@@ -13,6 +13,7 @@ namespace CK.MQTT.Packets
     /// </summary>
     public abstract class ComplexOutgoingPacket : IOutgoingPacket
     {
+        public abstract PacketType Type { get; }
         /// <summary>
         /// The first byte of the packet. This contain the <see cref="PacketType"/> and possibly other data.
         /// </summary>

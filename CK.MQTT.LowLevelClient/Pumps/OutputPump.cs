@@ -16,6 +16,8 @@ namespace CK.MQTT.Pumps
     /// </summary>
     public class OutputPump : PumpBase
     {
+        readonly Channel<IOutgoingPacket> _messagesChannel;
+        readonly Channel<IOutgoingPacket> _reflexesChannel;
         OutputProcessor? _outputProcessor;
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
@@ -24,18 +26,19 @@ namespace CK.MQTT.Pumps
         /// <param name="store">The packet store to use to retrieve packets.</param>
         public OutputPump( MessageExchanger messageExchanger ) : base( messageExchanger )
         {
-            MessagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
+            _messagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
-            ReflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
+            _reflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
             {
                 SingleReader = true
             } );
         }
 
-        public Channel<IOutgoingPacket> MessagesChannel { get; }
-        public Channel<IOutgoingPacket> ReflexesChannel { get; }
+
+        public ChannelReader<IOutgoingPacket> MessagesChannel => _messagesChannel.Reader;
+        public ChannelReader<IOutgoingPacket> ReflexesChannel => _reflexesChannel.Reader;
 
         public void StartPumping( OutputProcessor outputProcessor )
         {
@@ -64,7 +67,7 @@ namespace CK.MQTT.Pumps
                     }
                     await pw.FlushAsync( CloseToken );
                     if( StopToken.IsCancellationRequested ) return;
-                    var res = await MessagesChannel.Reader.WaitToReadAsync( StopToken );
+                    var res = await MessagesChannel.WaitToReadAsync( StopToken );
                     if( !res || StopToken.IsCancellationRequested ) return;
                 }
             }
@@ -79,23 +82,18 @@ namespace CK.MQTT.Pumps
 
         public void TryQueueReflexMessage( IOutgoingPacket item )
         {
-            void QueuePacket( IOutgoingPacket packet )
-            {
-                bool result = MessagesChannel.Writer.TryWrite( packet );
-                if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( packet.PacketId, PacketType.PublishAck );
-            }
-            if( !item.IsRemoteOwnedPacketId && item.Qos > QualityOfService.AtMostOnce )
-            {
-                MessageExchanger.LocalPacketStore.BeforeQueueReflexPacket( QueuePacket, item );
-            }
-            else
-            {
-                QueuePacket( item );
-            }
+            bool result = _reflexesChannel.Writer.TryWrite( item );
+            if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( item.PacketId );
             UnblockWriteLoop();
         }
 
-        public void UnblockWriteLoop() => MessagesChannel.Writer.TryWrite( FlushPacket.Instance );
+        public void TryQueueMessage( IOutgoingPacket item )
+        {
+            bool result = _messagesChannel.Writer.TryWrite( item );
+            if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( item.Qos == QualityOfService.AtMostOnce ? (ushort)0 : item.PacketId, item.Type );
+        }
+
+        public void UnblockWriteLoop() => _messagesChannel.Writer.TryWrite( FlushPacket.Instance );
 
         public override async Task CloseAsync()
         {

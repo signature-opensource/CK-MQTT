@@ -19,6 +19,8 @@ namespace CK.MQTT.Server
         public override uint GetSize( ProtocolLevel protocolLevel ) => 4;
         public override bool IsRemoteOwnedPacketId => false;
 
+        public override PacketType Type => PacketType.ConnectAck;
+
         protected override void Write( ProtocolLevel protocolLevel, Span<byte> buffer )
         {
             buffer[0] = (byte)PacketType.ConnectAck;

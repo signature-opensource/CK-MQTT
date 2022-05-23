@@ -26,6 +26,11 @@ namespace CK.MQTT.Server.ServerClient
 
         public void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => _sink.OnQueueFullPacketDropped( packetId, packetType );
 
+        public void OnQueueFullPacketDropped( ushort packetId )
+        {
+            _sink.OnQueueFullPacketDropped( packetId );
+        }
+
         public bool OnReconnectionFailed( int retryCount, int maxRetryCount ) => _sink.OnReconnectionFailed( retryCount, maxRetryCount );
 
         public void OnStoreFull( ushort freeLeftSlot ) => _sink.OnStoreFull( freeLeftSlot );

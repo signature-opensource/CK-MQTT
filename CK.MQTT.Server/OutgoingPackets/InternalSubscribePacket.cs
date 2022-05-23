@@ -21,6 +21,8 @@ namespace CK.MQTT.Server.OutgoingPackets
 
         public Subscription[] Topics { get; }
 
+        public PacketType Type => PacketType.Subscribe;
+
         public uint GetSize( ProtocolLevel protocolLevel ) => throw new NotSupportedException();
 
         public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotImplementedException();

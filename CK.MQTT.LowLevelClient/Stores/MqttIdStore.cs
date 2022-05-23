@@ -4,6 +4,7 @@ using CK.MQTT.Packets;
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -219,21 +220,6 @@ namespace CK.MQTT.Stores
             return (entry._taskCompletionSource.Task, packetToReturn);
         }
 
-        /// <summary>
-        /// Perform operation that must be done when we take the decision to send a packet.
-        /// </summary>
-        /// <param name="m"></param>
-        /// <param name="queuePacket">Operation run on a lock on the store, allow to atomically queue a packet and mutate the store at the same time.</param>
-        /// <param name="outgoingPacket"></param>
-        public void BeforeQueueReflexPacket( Action<IOutgoingPacket> queuePacket, IOutgoingPacket outgoingPacket )
-        {
-            lock( _idStore )
-            {
-                _idStore._entries[outgoingPacket.PacketId].Content._attemptInTransitOrLost++;
-                queuePacket( outgoingPacket );
-            }
-        }
-
         public void OnPacketSent( ushort packetId )
         {
             lock( _idStore )
@@ -242,6 +228,7 @@ namespace CK.MQTT.Stores
                 {
                     _droppedCount--;
                 }
+                _idStore._entries[packetId].Content._attemptInTransitOrLost++;
                 _idStore._entries[packetId].Content._state &= QoSState.QoSStateMask;
                 _idStore._entries[packetId].Content._lastEmissionTime = _stopwatch.Elapsed;
             }
@@ -333,11 +320,11 @@ namespace CK.MQTT.Stores
         async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( ushort packetId )
             => (await RestorePacketAsync( packetId ), TimeSpan.Zero);
 
+        [ThreadColor("WriteLoop")]
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync()
         {
             TimeSpan currentTime = _stopwatch.Elapsed;
             TimeSpan timeOut = TimeSpan.FromMilliseconds( Config.WaitTimeoutMilliseconds );
-            TimeSpan peremptionTime = currentTime.Subtract( timeOut );
             TimeSpan oldest;
             lock( _idStore )
             {
@@ -345,7 +332,7 @@ namespace CK.MQTT.Stores
                 if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
                 var currId = _idStore._head;
                 ref var curr = ref _idStore._entries[currId];
-                if( (curr.Content._lastEmissionTime < peremptionTime || curr.Content._state.HasFlag( QoSState.Dropped )) )
+                if( (curr.Content._lastEmissionTime + timeOut <= currentTime || curr.Content._state.HasFlag( QoSState.Dropped )) )
                 {
                     return RestorePacketInternalAsync( currId );
                 }
@@ -355,17 +342,17 @@ namespace CK.MQTT.Stores
                     currId = curr.NextId;
                     curr = ref _idStore._entries[currId];
                     // If there is a packet that reached the peremption time, or is marked as dropped.
-                    if( curr.Content._state != QoSState.UncertainDead && (curr.Content._lastEmissionTime < peremptionTime
+                    if( curr.Content._state != QoSState.UncertainDead && (curr.Content._lastEmissionTime + timeOut >= currentTime
                         || curr.Content._state.HasFlag( QoSState.Dropped )) )
                     {
                         return RestorePacketInternalAsync( currId );
                     }
                     if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
                 }
+                TimeSpan timeUntilAnotherRetry = oldest + timeOut - currentTime;
+                Debug.Assert( timeUntilAnotherRetry.TotalMilliseconds > 0 );
+                return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeUntilAnotherRetry) );
             }
-            TimeSpan timeUntilAnotherRetry = timeOut - (currentTime - oldest);
-            Debug.Assert( timeUntilAnotherRetry.TotalMilliseconds > 0 );
-            return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeUntilAnotherRetry) );
         }
 
         public void CancelAllAckTask()

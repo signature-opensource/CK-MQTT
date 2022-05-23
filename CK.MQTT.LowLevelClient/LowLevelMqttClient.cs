@@ -55,8 +55,6 @@ namespace CK.MQTT
         {
             try
             {
-                var pumps = Pumps;
-                if( pumps != null ) await pumps.DisposeAsync();
                 if( ClientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
                 {
                     _disconnectTCS = new TaskCompletionSource();
@@ -178,7 +176,7 @@ namespace CK.MQTT
                 Sink.Connected();
                 return res;
             }
-            catch( Exception )
+            catch( Exception e)
             {
                 // We may throw before the creation of the duplex pump.
                 if( Pumps is not null )

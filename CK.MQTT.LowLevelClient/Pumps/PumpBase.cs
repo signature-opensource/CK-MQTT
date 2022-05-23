@@ -40,7 +40,7 @@ namespace CK.MQTT
         /// <returns></returns>
         public async Task StopWorkAsync()
         {
-            if( _stopSource.IsCancellationRequested ) return;
+            if( _initiatedClose ) return;
             _stopSource.Cancel();
             await _workLoopTask;
             _closeSource.Cancel();
@@ -57,9 +57,10 @@ namespace CK.MQTT
             CancelTokens();
             await _workLoopTask;
         }
-
+        bool _initiatedClose;
         internal protected async ValueTask SelfCloseAsync( DisconnectReason disconnectedReason )
         {
+            _initiatedClose = true;
             CancelTokens();
             await MessageExchanger.SelfDisconnectAsync( disconnectedReason );
         }
@@ -74,7 +75,6 @@ namespace CK.MQTT
             _stopSource!.Cancel();
             _closeSource.Cancel();
         }
-
         public virtual ValueTask DisposeAsync()
         {
             Debug.Assert( _workLoopTask.IsCompleted );

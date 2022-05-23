@@ -22,11 +22,12 @@ namespace CK.MQTT
         {
             public readonly ReadOnlyMemory<byte> Payload;
             readonly IDisposable _disposable;
-
-            public StoredPacket( ReadOnlyMemory<byte> payload, IDisposable disposable )
+            public PacketType Type;
+            public StoredPacket( PacketType packetType, ReadOnlyMemory<byte> payload, IDisposable disposable )
             {
                 Payload = payload;
                 _disposable = disposable;
+                Type = packetType;
             }
             public void Dispose() => _disposable?.Dispose(); // _disposable may be null when the struct is default.
         }
@@ -58,8 +59,8 @@ namespace CK.MQTT
             if( await packet.WriteAsync( _pConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             await pipe.FlushAsync();
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
-            base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
-            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
+            base[packet.PacketId].Content.Storage = new StoredPacket( packet.Type, slicedMem, memOwner );
+            return new FromMemoryOutgoingPacket( packet.Type, slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
         }
 
         protected override ValueTask DoResetAsync( ArrayStartingAt1<IdStoreEntry<EntryContent>> entries )
@@ -75,7 +76,7 @@ namespace CK.MQTT
         {
             EntryContent content = base[packetId].Content;
             Debug.Assert( content.Storage.Payload.Length > 0 );
-            return new( new FromMemoryOutgoingPacket( content.Storage.Payload, (QualityOfService)(content._state & QoSState.QosMask), packetId, false ) );
+            return new( new FromMemoryOutgoingPacket( content.Storage.Type, content.Storage.Payload, (QualityOfService)(content._state & QoSState.QosMask), packetId, false ) );
         }
 
         protected async override ValueTask<IOutgoingPacket> OverwriteMessageAsync( IOutgoingPacket packet )
@@ -87,8 +88,8 @@ namespace CK.MQTT
             if( await packet.WriteAsync( _pConfig.ProtocolLevel, pipe, default ) != WriteResult.Written ) throw new InvalidOperationException( "Didn't wrote packet correctly." );
             await pipe.FlushAsync();
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
-            base[packet.PacketId].Content.Storage = new StoredPacket( slicedMem, memOwner );
-            return new FromMemoryOutgoingPacket( slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
+            base[packet.PacketId].Content.Storage = new StoredPacket( packet.Type, slicedMem, memOwner );
+            return new FromMemoryOutgoingPacket( packet.Type, slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );
         }
 
         public override void Dispose()

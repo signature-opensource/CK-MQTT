@@ -83,6 +83,8 @@ namespace CK.MQTT.Packets
 
         public override bool IsRemoteOwnedPacketId => throw new NotSupportedException();
 
+        public override PacketType Type => PacketType.Connect;
+
         protected override uint GetHeaderSize( ProtocolLevel protocolLevel )
             => _pConfig.ProtocolName.MQTTSize()
                 + 1 //_protocolLevel

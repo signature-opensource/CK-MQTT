@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -60,7 +61,7 @@ namespace CK.MQTT
         [ThreadColor( ThreadColor.Rainbow )]
         async Task<T?> SendAsync<T>( IOutgoingPacket packet, Task<object?> ackReceived )
         {
-            await QueueMessageIfConnectedAsync( packet );
+            QueueMessageIfConnected( packet );
             object? res = await ackReceived;
             if( res is null ) return default;
             if( res is T a ) return a;
@@ -88,27 +89,19 @@ namespace CK.MQTT
             var pumps = Pumps;
             if( pumps != null )
             {
-                var writer = pumps.Left.MessagesChannel.Writer;
-                if( !writer.TryWrite( packet ) ) return QueueMessageAsync( writer, packet );
+                pumps.Left.TryQueueMessage( packet );
             }
             return new ValueTask<Task>( Task.CompletedTask );
         }
 
-        async static ValueTask<Task> QueueMessageAsync( ChannelWriter<IOutgoingPacket> writer, IOutgoingPacket packet )
-        {
-            await writer.WriteAsync( packet );
-            return Task.CompletedTask;
-        }
-
         [ThreadColor( ThreadColor.Rainbow )]
-        ValueTask QueueMessageIfConnectedAsync( IOutgoingPacket packet )
+        void QueueMessageIfConnected( IOutgoingPacket packet )
         {
             var pumps = Pumps;
             if( pumps != null )
             {
-                return pumps.Left.MessagesChannel.Writer.WriteAsync( packet );
+                pumps.Left.TryQueueMessage( packet );
             }
-            return new ValueTask();
         }
         internal protected async virtual ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {

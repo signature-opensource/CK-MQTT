@@ -21,6 +21,7 @@ namespace CK.MQTT.Client
 
         void OnPacketResent( ushort packetId, int packetInTransitOrLost, bool isDropped );
 
+        void OnQueueFullPacketDropped( ushort packetId );
         void OnQueueFullPacketDropped( ushort packetId, PacketType packetType );
 
         void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData );

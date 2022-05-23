@@ -47,6 +47,8 @@ namespace CK.MQTT
 
             public QualityOfService Qos => _packet.Qos;
 
+            public PacketType Type => _packet.Type;
+
             public uint GetSize( ProtocolLevel protocolLevel ) => _packet.GetSize( protocolLevel );
 
             public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )

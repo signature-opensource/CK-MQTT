@@ -12,6 +12,7 @@ namespace CK.MQTT
         public static OutgoingPingReq Instance { get; } = new OutgoingPingReq();
         public override ushort PacketId { get => 0; set => throw new NotSupportedException(); }
         public override bool IsRemoteOwnedPacketId => throw new NotSupportedException();
+        public override PacketType Type => PacketType.PingRequest;
 
         public override QualityOfService Qos => QualityOfService.AtMostOnce;
 

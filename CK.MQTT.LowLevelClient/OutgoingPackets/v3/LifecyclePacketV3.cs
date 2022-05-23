@@ -14,11 +14,14 @@ namespace CK.MQTT
 
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
-        public LifecyclePacketV3( byte header, ushort packetId, bool isRemoteOwnedPacketId )
+        public override PacketType Type { get; }
+
+        public LifecyclePacketV3( PacketType packetType, byte header, ushort packetId, bool isRemoteOwnedPacketId )
         {
             _header = header;
             PacketId = packetId;
             IsRemoteOwnedPacketId = isRemoteOwnedPacketId;
+            Type = packetType;
         }
 
         /// <inheritdoc/>
@@ -33,10 +36,10 @@ namespace CK.MQTT
             BinaryPrimitives.WriteUInt16BigEndian( span, (ushort)PacketId );
         }
 
-        public static IOutgoingPacket Pubrel( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishRelease | 0b0010, packetId, false );
-        public static IOutgoingPacket Pubrec( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishReceived, packetId, true );
-        public static IOutgoingPacket Pubcomp( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishComplete, packetId, true );
-        public static IOutgoingPacket Puback( ushort packetId ) => new LifecyclePacketV3( (byte)PacketType.PublishAck, packetId, true );
+        public static IOutgoingPacket Pubrel( ushort packetId ) => new LifecyclePacketV3( PacketType.PublishRelease, (byte)PacketType.PublishRelease | 0b0010, packetId, false );
+        public static IOutgoingPacket Pubrec( ushort packetId ) => new LifecyclePacketV3( PacketType.PublishReceived, (byte)PacketType.PublishReceived, packetId, true );
+        public static IOutgoingPacket Pubcomp( ushort packetId ) => new LifecyclePacketV3( PacketType.PublishComplete, (byte)PacketType.PublishComplete, packetId, true );
+        public static IOutgoingPacket Puback( ushort packetId ) => new LifecyclePacketV3( PacketType.PublishAck, (byte)PacketType.PublishAck, packetId, true );
 
         public override string ToString() => ((PacketType)(_header ^ 0b0010)).ToString();
     }

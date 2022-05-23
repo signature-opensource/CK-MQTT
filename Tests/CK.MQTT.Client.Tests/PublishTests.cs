@@ -1,4 +1,5 @@
 using CK.MQTT.Client.Tests.Helpers;
+using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Text;
@@ -69,6 +70,44 @@ namespace CK.MQTT.Client.Tests
             await replayer.AssertClientSent( TestHelper.Monitor, "62020001" );
             await replayer.SendToClient( TestHelper.Monitor, "70020001" );
             await task;
+        }
+
+        [Test]
+        public async Task simple_qos2_receive_works()
+        {
+            var replayer = new PacketReplayer( ClassCase );
+            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
+            await replayer.ConnectClient( TestHelper.Monitor, client );
+
+
+            await replayer.SendToClient( TestHelper.Monitor, "341a000a7465737420746f706963000174657374207061796c6f6164" );
+            await replayer.AssertClientSent( TestHelper.Monitor, "50020001" );
+            await replayer.SendToClient( TestHelper.Monitor, "62020001" );
+            await replayer.AssertClientSent( TestHelper.Monitor, "70020001" );
+        }
+
+        [Test]
+        public async Task send_qos2_double_pubrel_works()
+        {
+            var replayer = new PacketReplayer( ClassCase );
+            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
+            await replayer.ConnectClient( TestHelper.Monitor, client );
+            var task = await client.PublishAsync( new ApplicationMessage(
+               "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.ExactlyOnce, false )
+            );
+            await replayer.AssertClientSent( TestHelper.Monitor, "341a000a7465737420746f706963000174657374207061796c6f6164" );
+            await replayer.SendToClient( TestHelper.Monitor, "50020001" );
+            await replayer.AssertClientSent( TestHelper.Monitor, "62020001" );
+            replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) ); // some lag
+            await replayer.AssertClientSent( TestHelper.Monitor, "62020001" );  // client will resend the packet
+
+            await replayer.SendToClient( TestHelper.Monitor, "70020001" ); // 1st packet response
+            await task; // task should be resolved here.
+            // client should be able to ingest this response.
+            await replayer.SendToClient( TestHelper.Monitor, "70020001" ); // 2nd packet response
+            await Task.Delay( 50 ); // to avoid concurrency issues.
+            client.IsConnected.Should().BeTrue();
+
         }
 
         [Test]

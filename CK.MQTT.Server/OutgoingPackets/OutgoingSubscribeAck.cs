@@ -21,6 +21,8 @@ namespace CK.MQTT.Server.OutgoingPackets
 
         public override bool IsRemoteOwnedPacketId => true;
 
+        public override PacketType Type => PacketType.Subscribe;
+
         /// <inheritdoc/>
         protected override byte Header => (byte)PacketType.SubscribeAck;
 

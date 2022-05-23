@@ -34,6 +34,7 @@ namespace CK.MQTT.Client
         protected abstract void OnPacketResent( ushort packetId, int resentCount, bool isDropped );
 
         protected virtual void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) { }
+        protected virtual void OnQueueFullPacketDropped( ushort packetId ) { }
         protected abstract void OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData );
 
         protected virtual void OnPacketWithDupFlagReceived( PacketType packetType ) { }
@@ -59,6 +60,7 @@ namespace CK.MQTT.Client
         void IMqtt3Sink.OnPacketResent( ushort packetId, int resentCount, bool isDropped ) => OnPacketResent( packetId, resentCount, isDropped );
 
         void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => OnQueueFullPacketDropped( packetId, packetType );
+        void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId ) => OnQueueFullPacketDropped( packetId );
         void IMqtt3Sink.OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData )
             => OnUnparsedExtraData( packetId, unparsedData );
         void IMqtt3Sink.OnPacketWithDupFlagReceived( PacketType packetType )

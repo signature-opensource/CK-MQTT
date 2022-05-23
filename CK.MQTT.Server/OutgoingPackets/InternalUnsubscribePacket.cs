@@ -21,6 +21,8 @@ namespace CK.MQTT.Server.OutgoingPackets
 
         public string[] Topics { get; }
 
+        public PacketType Type => PacketType.Unsubscribe;
+
         public uint GetSize( ProtocolLevel protocolLevel ) => throw new NotSupportedException();
 
         public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();

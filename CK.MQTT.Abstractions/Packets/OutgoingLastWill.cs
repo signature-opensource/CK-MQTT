@@ -43,6 +43,8 @@ namespace CK.MQTT.Packets
         public QualityOfService Qos { get; }
         public ushort PacketId { get; set; }
 
+        public PacketType Type => PacketType.Publish;
+
         /// <inheritdoc/>
         public abstract uint GetSize( ProtocolLevel protocolLevel );
 

@@ -21,8 +21,8 @@ namespace CK.MQTT.Pumps
 
         void TimerTimeoutWrapper( object? obj ) => OnTimeout(Timeout.Infinite);
 
-        protected Channel<IOutgoingPacket> ReflexesChannel => MessageExchanger.Pumps!.Left.ReflexesChannel;
-        protected Channel<IOutgoingPacket> MessagesChannel => MessageExchanger.Pumps!.Left.MessagesChannel;
+        protected ChannelReader<IOutgoingPacket> ReflexesChannel => MessageExchanger.Pumps!.Left.ReflexesChannel;
+        protected ChannelReader<IOutgoingPacket> MessagesChannel => MessageExchanger.Pumps!.Left.MessagesChannel;
 
         public void Starting()
         {
@@ -59,7 +59,7 @@ namespace CK.MQTT.Pumps
             do
             {
                 var outputPump = MessageExchanger.Pumps!.Left;
-                if( !outputPump.ReflexesChannel.Reader.TryRead( out packet ) && !outputPump.MessagesChannel.Reader.TryRead( out packet ) )
+                if( !outputPump.ReflexesChannel.TryRead( out packet ) && !outputPump.MessagesChannel.TryRead( out packet ) )
                 {
                     return false;
                 }

@@ -30,6 +30,7 @@ namespace CK.MQTT.Packets
 
         public override ushort PacketId { get; set; }
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
+        public override PacketType Type => PacketType.Subscribe;
 
         public override bool IsRemoteOwnedPacketId => false;
 

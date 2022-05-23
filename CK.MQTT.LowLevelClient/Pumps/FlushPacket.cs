@@ -20,6 +20,8 @@ namespace CK.MQTT.Pumps
 
         public bool IsRemoteOwnedPacketId => throw new NotSupportedException();
 
+        public PacketType Type => throw new NotSupportedException();
+
         public uint GetSize( ProtocolLevel protocolLevel ) => throw new NotSupportedException();
 
         public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();

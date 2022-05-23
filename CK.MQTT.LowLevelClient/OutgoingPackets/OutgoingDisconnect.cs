@@ -19,6 +19,8 @@ namespace CK.MQTT.Packets
 
         public override bool IsRemoteOwnedPacketId => throw new NotSupportedException();
 
+        public override PacketType Type => PacketType.Disconnect;
+
         /// <inheritdoc/>
         public override uint GetSize( ProtocolLevel protocolLevel ) => 2;
 

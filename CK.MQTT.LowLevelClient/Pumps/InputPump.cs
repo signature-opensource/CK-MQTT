@@ -2,6 +2,7 @@ using CK.MQTT.Client;
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
@@ -102,6 +103,10 @@ namespace CK.MQTT.Pumps
                     }
                     pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                 }
+            }
+            catch( IOException exception )
+            {
+                await SelfCloseAsync( DisconnectReason.RemoteDisconnected );
             }
             catch( OperationCanceledException )
             {

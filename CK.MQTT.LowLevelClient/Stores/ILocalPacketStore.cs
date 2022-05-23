@@ -32,7 +32,5 @@ namespace CK.MQTT.Stores
         ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync();
         ValueTask ResetAsync();
 
-        [ThreadColor( "ReadLoop" )]
-        void BeforeQueueReflexPacket( Action<IOutgoingPacket> queuePacket, IOutgoingPacket outgoingPacket );
     }
 }

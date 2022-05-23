@@ -17,6 +17,8 @@ namespace CK.MQTT.Packets
             _memory = payload;
         }
 
+        public override PacketType Type => PacketType.Publish;
+
         protected override uint PayloadSize => (uint)_memory.Length;
 
         protected override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )

@@ -85,5 +85,9 @@ namespace CK.MQTT.Client
         public record QueueFullPacketDestroyed( ushort PacketId, PacketType PacketType );
         protected override void OnQueueFullPacketDropped( ushort packetId, PacketType packetType )
             => Events!.Writer.TryWrite( new QueueFullPacketDestroyed( packetId, packetType ) );
+
+        public record QueueFullPacketDestroyed2( ushort PacketId );
+        protected override void OnQueueFullPacketDropped( ushort packetId )
+            => Events!.Writer.TryWrite( new QueueFullPacketDestroyed2( packetId ) );
     }
 }

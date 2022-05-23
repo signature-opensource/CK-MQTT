@@ -268,7 +268,7 @@ namespace CK.MQTT.Client.Tests
 
             var result = await task;
             result.Should().Be( new ConnectResult( ConnectError.ProtocolError_IncompleteResponse ) );
-            
+
         }
     }
 }

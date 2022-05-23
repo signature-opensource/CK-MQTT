@@ -25,22 +25,20 @@ namespace CK.MQTT.Server.ServerClient
         {
             while( true )
             {
-                if( !ReflexesChannel.Reader.TryPeek( out IOutgoingPacket? packet ) && !MessagesChannel.Reader.TryPeek( out packet ) )
+                if( !ReflexesChannel.TryPeek( out IOutgoingPacket? packet ) && !MessagesChannel.TryPeek( out packet ) )
                 {
                     return false;
                 }
-                var subPacket = packet as InternalSubscribePacket;
-                if( subPacket != null )
+                if( packet is InternalSubscribePacket subPacket )
                 {
                     await _topicManager.SubscribeAsync( subPacket.Topics );
-                    await ReflexesChannel.Reader.ReadAsync( CancellationToken.None ); // there is a packet available so we consume it.
+                    await ReflexesChannel.ReadAsync( CancellationToken.None ); // there is a packet available so we consume it.
                     continue;
                 }
-                var unsubPacket = packet as InternalUnsubscribePacket;
-                if( unsubPacket != null )
+                if( packet is InternalUnsubscribePacket unsubPacket )
                 {
                     await _topicManager.UnsubscribeAsync( unsubPacket.Topics );
-                    await ReflexesChannel.Reader.ReadAsync( CancellationToken.None ); // there is a packet available so we consume it.
+                    await ReflexesChannel.ReadAsync( CancellationToken.None ); // there is a packet available so we consume it.
                     continue;
                 }
                 break;

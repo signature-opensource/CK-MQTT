@@ -13,6 +13,7 @@ namespace CK.MQTT.Packets
         public override ushort PacketId { get; set; }
         public override bool IsRemoteOwnedPacketId => false;
 
+        public override PacketType Type => PacketType.Unsubscribe;
         public override QualityOfService Qos => QualityOfService.AtLeastOnce;
 
         //The bit set is caused by MQTT-3.8.1-1: http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180829

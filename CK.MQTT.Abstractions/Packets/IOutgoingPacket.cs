@@ -9,6 +9,7 @@ namespace CK.MQTT.Packets
     /// </summary>
     public interface IOutgoingPacket
     {
+        PacketType Type { get; }
         /// <summary>
         /// The packet id of the <see cref="IOutgoingPacket"/>. 0 when <see cref="Qos"/> is <see cref="QualityOfService.AtMostOnce"/>.
         /// <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349268">
