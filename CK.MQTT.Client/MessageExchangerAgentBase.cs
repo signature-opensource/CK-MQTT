@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Channels;
@@ -56,8 +57,11 @@ namespace CK.MQTT.Client
             => Events!.Writer.TryWrite( new StoreFilling( freeLeftSlot ) );
 
         public record UnattendedDisconnect( DisconnectReason Reason );
-        protected override void OnUnattendedDisconnect( DisconnectReason reason )
-            => Events!.Writer.TryWrite( new UnattendedDisconnect( reason ) );
+        protected override bool OnUnattendedDisconnect( DisconnectReason reason )
+        {
+            Events!.Writer.TryWrite( new UnattendedDisconnect( reason ) );
+            return true;
+        }
 
         public record UnparsedExtraData( ushort PacketId, ReadOnlySequence<byte> UnparsedData );
         protected override void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData )
@@ -65,21 +69,21 @@ namespace CK.MQTT.Client
 
         protected override async ValueTask ReceiveAsync( string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
-            Memory<byte> buffer = new byte[payloadLength];
+            var memoryOwner = MemoryPool<byte>.Shared.Rent( (int)payloadLength );
             if( payloadLength != 0 )
             {
                 ReadResult readResult = await pipe.ReadAtLeastAsync( (int)payloadLength, cancellationToken );
-                readResult.Buffer.Slice( 0, (int)payloadLength ).CopyTo( buffer.Span );
+                readResult.Buffer.Slice( 0, (int)payloadLength ).CopyTo( memoryOwner.Memory.Span );
                 pipe.AdvanceTo( readResult.Buffer.Slice( Math.Min( payloadLength, readResult.Buffer.Length ) ).Start );
             }
-            await Events!.Writer.WriteAsync( new ApplicationMessage( topic, buffer, qos, retain ), cancellationToken ); //Todo: DisposableApplicationMessage
+            await Events!.Writer.WriteAsync( new VolatileApplicationMessage( new ApplicationMessage( topic, memoryOwner.Memory.Slice( 0, (int)payloadLength ), qos, retain ), memoryOwner ), cancellationToken );
         }
 
-        public record ReconnectionFailed( int RetryCount, int MaxRetryCount );
-        protected override bool OnReconnectionFailed( int retryCount, int maxRetryCount )
+        public record ReconnectionFailed( ConnectResult ConnectResult );
+        protected override ValueTask<bool> OnReconnectionFailedAsync( ConnectResult result )
         {
-            Events!.Writer.TryWrite( new ReconnectionFailed( retryCount, maxRetryCount ) );
-            return true;
+            Events!.Writer.TryWrite( new ReconnectionFailed( result ) );
+            return new ValueTask<bool>( true );
         }
 
         public record QueueFullPacketDestroyed( ushort PacketId, PacketType PacketType );

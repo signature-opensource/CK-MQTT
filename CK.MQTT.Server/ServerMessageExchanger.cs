@@ -40,7 +40,7 @@ namespace CK.MQTT.Server
                 .UseMiddleware( new SubscribeReflex( _topicManager, PConfig.ProtocolLevel, output ) )
                 .UseMiddleware( new UnsubscribeReflex( _topicManager, output, PConfig.ProtocolLevel ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
-            Reflex reflex = builder.Build( this );
+            Reflex reflex = builder.Build();
             var input = CreateInputPump( reflex );
             // Creating pumps. Need to be started.
             Pumps = new DuplexPump<OutputPump, InputPump>(

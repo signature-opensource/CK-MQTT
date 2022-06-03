@@ -24,7 +24,7 @@ namespace CK.MQTT
             _reflex = reflex;
             var builder = new ReflexMiddlewareBuilder();
             builder.UseMiddleware( this );
-            AsReflex = builder.Build( messageExchanger );
+            AsReflex = builder.Build();
         }
 
         public Reflex AsReflex { get; }
@@ -70,7 +70,7 @@ namespace CK.MQTT
                     await reader.SkipBytesAsync( sink, 0, (ushort)(packetSize - 2), cancellationToken );
                 }
                 sender.CurrentReflex = _reflex;
-                _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ConnectReturnCode)code ) );
+                _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ProtocolConnectReturnCode)code ) );
                 return (OperationStatus.Done, true);
             }
             catch( EndOfStreamException )

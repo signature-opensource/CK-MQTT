@@ -30,5 +30,7 @@ namespace CK.MQTT
 
         public MqttClientCredentials? Credentials { get; set; }
 
+        public ManualConnectBehavior ManualConnectBehavior { get; set; }
+
     }
 }

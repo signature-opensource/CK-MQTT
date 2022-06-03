@@ -28,13 +28,13 @@ namespace CK.MQTT.Packets
 
         public uint GetSize( ProtocolLevel protocolLevel ) => (uint)_readOnlyMemory.Length;
 
-        public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
+        public ValueTask WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
             _readOnlyMemory.Span.CopyTo( writer.GetSpan( _readOnlyMemory.Length ) );
             writer.Advance( _readOnlyMemory.Length );
             //FlushResult res = await writer.WriteAsync( _readOnlyMemory, cancellationToken );
             //if( res.IsCanceled ) return WriteResult.Cancelled;
-            return new ValueTask<WriteResult>( WriteResult.Written );
+            return new ValueTask();
         }
     }
 }

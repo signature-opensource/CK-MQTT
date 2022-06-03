@@ -24,6 +24,6 @@ namespace CK.MQTT.Pumps
 
         public uint GetSize( ProtocolLevel protocolLevel ) => throw new NotSupportedException();
 
-        public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
+        public ValueTask WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken ) => throw new NotSupportedException();
     }
 }

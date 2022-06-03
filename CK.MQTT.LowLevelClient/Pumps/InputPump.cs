@@ -104,7 +104,7 @@ namespace CK.MQTT.Pumps
                     pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                 }
             }
-            catch( IOException exception )
+            catch( IOException )
             {
                 await SelfCloseAsync( DisconnectReason.RemoteDisconnected );
             }

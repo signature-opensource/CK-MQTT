@@ -148,16 +148,17 @@ namespace CK.MQTT.Client.Tests
                "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false )
                 ).AsTask().GetAwaiter().GetResult();
             }
-            Check( replayer ).GetAwaiter().GetResult();
-        }
-
-        async Task Check( PacketReplayer replayer )
-        {
-            for( int i = 0; i < 1000; i++ )
+            Check().GetAwaiter().GetResult();
+            async Task Check()
             {
-                await replayer.AssertClientSent( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+                for( int i = 0; i < 1000; i++ )
+                {
+                    await replayer.AssertClientSent( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+                }
             }
         }
+
+        
 
         async Task<(PacketReplayer, TestMqttClient)> Connect()
         {

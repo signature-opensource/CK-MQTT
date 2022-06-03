@@ -51,7 +51,7 @@ namespace CK.MQTT
 
             public uint GetSize( ProtocolLevel protocolLevel ) => _packet.GetSize( protocolLevel );
 
-            public ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
+            public ValueTask WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
                 => _packet.WriteAsync( protocolLevel, new PipeWriterWrapper( writer ), cancellationToken );
 
             public override string ToString() => $"DefaultStoreTransformer({_packet})"; //Helps debugging.

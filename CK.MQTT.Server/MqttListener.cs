@@ -88,11 +88,11 @@ namespace CK.MQTT.Server
                     await channel.StartAsync( cancellationToken );
                     if( cancellationToken.IsCancellationRequested ) return;
                     var connectHandler = new ConnectHandler();
-                    (ConnectReturnCode returnCode, ProtocolLevel protocolLevel) = await connectHandler.HandleAsync( channel.DuplexPipe.Input, securityManager, cancellationToken );
+                    (ProtocolConnectReturnCode returnCode, ProtocolLevel protocolLevel) = await connectHandler.HandleAsync( channel.DuplexPipe.Input, securityManager, cancellationToken );
                     if( cancellationToken.IsCancellationRequested ) return;
-                    if( returnCode != ConnectReturnCode.Accepted )
+                    if( returnCode != ProtocolConnectReturnCode.Accepted )
                     {
-                        if( returnCode != ConnectReturnCode.Unknown ) // Unknown malformed data or internal error. In this case we don't answer and close the connection.
+                        if( returnCode != ProtocolConnectReturnCode.Unknown ) // Unknown malformed data or internal error. In this case we don't answer and close the connection.
                         {
                             await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output, cancellationToken );
                         }

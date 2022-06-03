@@ -6,9 +6,9 @@ namespace CK.MQTT.Server
     public class OutgoingConnectAck : SimpleOutgoingPacket
     {
         readonly bool _sessionPresent;
-        readonly ConnectReturnCode _connectReturnCode;
+        readonly ProtocolConnectReturnCode _connectReturnCode;
 
-        public OutgoingConnectAck( bool sessionPresent, ConnectReturnCode connectReturnCode )
+        public OutgoingConnectAck( bool sessionPresent, ProtocolConnectReturnCode connectReturnCode )
         {
             _sessionPresent = sessionPresent;
             _connectReturnCode = connectReturnCode;

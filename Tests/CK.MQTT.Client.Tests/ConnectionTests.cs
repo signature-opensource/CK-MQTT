@@ -41,7 +41,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
 
             var result = await task;
-            result.ConnectReturnCode.Should().Be( ConnectReturnCode.Accepted );
+            result.ProtocolReturnCode.Should().Be( ProtocolConnectReturnCode.Accepted );
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
 
@@ -110,19 +110,19 @@ namespace CK.MQTT.Client.Tests
                 switch( i )
                 {
                     case 1:
-                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.UnacceptableProtocolVersion ) );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ProtocolConnectReturnCode.UnacceptableProtocolVersion ) );
                         break;
                     case 2:
-                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.IdentifierRejected ) );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ProtocolConnectReturnCode.IdentifierRejected ) );
                         break;
                     case 3:
-                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.ServerUnavailable ) );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ProtocolConnectReturnCode.ServerUnavailable ) );
                         break;
                     case 4:
-                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.BadUserNameOrPassword ) );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ProtocolConnectReturnCode.BadUserNameOrPassword ) );
                         break;
                     case 5:
-                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.NotAuthorized ) );
+                        res.Should().Be( new ConnectResult( SessionState.CleanSession, ProtocolConnectReturnCode.NotAuthorized ) );
                         break;
                     default:
                         Assert.Fail();
@@ -147,7 +147,7 @@ namespace CK.MQTT.Client.Tests
             await Task.Delay( 1 );
             connectTask.IsCompleted.Should().BeFalse();
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromMilliseconds( 2 ) );
-            (await connectTask).ConnectError.Should().Be( ConnectError.Timeout );
+            (await connectTask).Error.Should().Be( ConnectError.Timeout );
             await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
             replayer.Events.Reader.Count.Should().Be( 0 );
@@ -192,7 +192,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
 
             var res = await task;
-            res.ConnectError.Should().NotBe( ConnectError.None );
+            res.Error.Should().NotBe( ConnectError.None );
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
 
             var task2 = client.ConnectAsync();
@@ -202,7 +202,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
             await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
             var res2 = await task2;
-            res2.ConnectError.Should().Be( ConnectError.None );
+            res2.Error.Should().Be( ConnectError.None );
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
 
@@ -225,7 +225,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.ShouldContainEventAsync<TestMqttClient.UnparsedExtraData>();
             await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
             var res = await task;
-            res.IsSuccess.Should().BeTrue();
+            res.Status.Should().Be(ConnectStatus.Successful);
             await replayer.SendToClient( TestHelper.Monitor, "321a000a7465737420746f706963000174657374207061796c6f6164" );
             var msg = await replayer.ShouldContainEventAsync<ApplicationMessage>();
             msg.Should().NotBeNull();
@@ -248,7 +248,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.SendToClient( TestHelper.Monitor, "20020000" );
 
             var result = await task;
-            result.ConnectReturnCode.Should().Be( ConnectReturnCode.Accepted );
+            result.ProtocolReturnCode.Should().Be( ProtocolConnectReturnCode.Accepted );
             await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
             await replayer.ShouldContainEventAsync<TestMqttClient.Connected>();
             replayer.Events.Reader.Count.Should().Be( 0 );

@@ -1,7 +1,9 @@
 using CK.Core;
+using CK.MQTT.Client.ExtensionMethods;
 using CK.MQTT.Packets;
 using CK.PerfectEvent;
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Channels;
@@ -12,10 +14,34 @@ namespace CK.MQTT.Client
     public class MessageExchangerAgent<T> : MessageExchangerAgentBase<T> where T : IConnectedMessageExchanger
     {
         readonly PerfectEventSender<ApplicationMessage> _onMessageSender = new();
+        readonly PerfectEventSender<VolatileApplicationMessage> _onVolatileMessageSender = new();
+        readonly PerfectEventSender<RefCountingApplicationMessage> _refcountingMessageSender = new();
         readonly PerfectEventSender<DisconnectReason> _onConnectionChangeSender = new();
         readonly PerfectEventSender<ushort> _onStoreQueueFilling = new();
 
-        public PerfectEvent<ApplicationMessage> OnMessage => _onMessageSender.PerfectEvent;
+        public ref struct EventTypeChoice
+        {
+            public PerfectEvent<ApplicationMessage> Simple { get; }
+            public PerfectEvent<VolatileApplicationMessage> Rented { get; }
+            public PerfectEvent<RefCountingApplicationMessage> RefCounted { get; }
+
+            public EventTypeChoice(
+                PerfectEvent<ApplicationMessage> simple,
+                PerfectEvent<VolatileApplicationMessage> rented,
+                PerfectEvent<RefCountingApplicationMessage> refcounted
+                )
+            {
+                Simple = simple;
+                Rented = rented;
+                RefCounted = refcounted;
+            }
+        }
+
+        public EventTypeChoice OnMessage => new(
+            _onMessageSender.PerfectEvent,
+            _onVolatileMessageSender.PerfectEvent,
+            _refcountingMessageSender.PerfectEvent
+        );
 
         public PerfectEvent<DisconnectReason> OnConnectionChange => _onConnectionChangeSender.PerfectEvent;
 
@@ -29,9 +55,16 @@ namespace CK.MQTT.Client
         [MemberNotNull( nameof( WorkLoop ) )]
         public override void Start()
         {
-            base.Start();
-            WorkLoop ??= WorkLoopAsync( Events.Reader );
+            if( WorkLoop == null )
+            {
+                base.Start();
+                WorkLoop = WorkLoopAsync( Events.Reader );
+            }
+            Debug.Assert( Events != null );
         }
+
+        protected override IMqtt3Sink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult )
+            => throw new NotSupportedException( "https://github.com/signature-opensource/CK-MQTT/issues/35" );
 
         public override Task<bool> DisconnectAsync( bool deleteSession )
             => DisconnectAsync( deleteSession, true );
@@ -62,14 +95,69 @@ namespace CK.MQTT.Client
             WorkLoop = null;
         }
 
+        class RefCountingWrapper : IDisposable
+        {
+            readonly RefCountingApplicationMessage _msg;
+
+            public RefCountingWrapper( RefCountingApplicationMessage msg )
+            {
+                _msg = msg;
+            }
+
+            public void Dispose()
+            {
+                _msg.DecrementRef();
+            }
+        }
+
         virtual protected async Task WorkLoopAsync( ChannelReader<object?> channel )
         {
             ActivityMonitor m = new();
             await foreach( var item in channel.ReadAllAsync() )
             {
-                if( item is ApplicationMessage msg )
+                if( item is VolatileApplicationMessage msg )
                 {
-                    await _onMessageSender.RaiseAsync( m, msg );
+                    using( m.OpenTrace( $"Incoming MQTT Application Message '{msg.Message}'..." ) )
+                    {
+                        // all this part may be subject to various race condition.
+                        // this is not very important, there is 
+                        var mustAllocate = _onMessageSender.HasHandlers;
+                        if( mustAllocate )
+                        {
+                            var buffer = msg.Message.Payload.ToArray();
+                            var appMessage = new ApplicationMessage( msg.Message.Topic, buffer, msg.Message.QoS, msg.Message.Retain );
+                            msg.Dispose();
+                            var taskA = _onMessageSender.SafeRaiseAsync( m, appMessage );
+                            var taskB = _onVolatileMessageSender.HasHandlers ? _onVolatileMessageSender.RaiseAsync( m, new VolatileApplicationMessage( appMessage, new DisposableComposite() ) ) : Task.CompletedTask;
+                            var taskC = _refcountingMessageSender.HasHandlers ? _refcountingMessageSender.RaiseAsync( m, new RefCountingApplicationMessage( appMessage, new DisposableComposite() ) ) : Task.CompletedTask;
+                            await Task.WhenAll( taskA, taskB, taskC );
+                            return;
+                        }
+                        // here there is no "_onMessageSender"
+                        // no allocation is needed then.
+                        bool hasRefCount = _refcountingMessageSender.HasHandlers;
+                        bool hasVolatile = _onVolatileMessageSender.HasHandlers;
+
+                        if( hasRefCount && hasVolatile )
+                        {
+                            // this make the volatile handler an user of the refcounting, avoid the allocation
+                            var appMessage = new RefCountingApplicationMessage( msg.Message, msg );
+                            appMessage.IncrementRef();
+                            var taskC = _refcountingMessageSender.RaiseAsync( m, appMessage );
+                            var taskB = _onVolatileMessageSender.RaiseAsync( m, new VolatileApplicationMessage( appMessage.ApplicationMessage, new RefCountingWrapper( appMessage ) ) );
+                            await Task.WhenAll( taskB, taskC );
+                        }
+                        if( hasRefCount )
+                        {
+                            var appMessage = new RefCountingApplicationMessage( msg.Message, msg );
+                            await _refcountingMessageSender.RaiseAsync( m, appMessage );
+                        }
+                        if( hasVolatile )
+                        {
+                            await _onVolatileMessageSender.RaiseAsync( m, msg );
+                        }
+                    }
+
                 }
                 else if( item is UnattendedDisconnect disconnect )
                 {
@@ -87,9 +175,9 @@ namespace CK.MQTT.Client
                 {
                     m.Warn( $"There was {extraData.UnparsedData.Length} bytes unparsed in Packet {extraData.PacketId}." );
                 }
-                else if( item is ReconnectionFailed reconnectionFailed )
+                else if( item is ReconnectionFailed )
                 {
-                    m.Warn( $"Reconnection attempt {reconnectionFailed.RetryCount}/{reconnectionFailed.MaxRetryCount} failed." );
+                    m.Warn( $"Reconnection failed." );
                 }
                 else if( item is QueueFullPacketDestroyed queueFullPacketDestroyed )
                 {

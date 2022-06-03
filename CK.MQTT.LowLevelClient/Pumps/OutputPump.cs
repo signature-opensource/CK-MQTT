@@ -93,6 +93,11 @@ namespace CK.MQTT.Pumps
             if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( item.Qos == QualityOfService.AtMostOnce ? (ushort)0 : item.PacketId, item.Type );
         }
 
+        public ValueTask QueueMessageAsync( IOutgoingPacket item )
+        {
+            return _messagesChannel.Writer.WriteAsync( item );
+        }
+
         public void UnblockWriteLoop() => _messagesChannel.Writer.TryWrite( FlushPacket.Instance );
 
         public override async Task CloseAsync()

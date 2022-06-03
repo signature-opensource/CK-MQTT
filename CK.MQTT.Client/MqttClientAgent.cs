@@ -23,13 +23,20 @@ namespace CK.MQTT.Client
         public Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill = null, CancellationToken cancellationToken = default )
             => ConnectAsync( true, lastwill, cancellationToken );
 
-
+        int _manualCountRetry;
+        protected override IMqtt3Sink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult )
+        {
+            if( connectResult.Status == ConnectStatus.ErrorUnrecoverable ) return IMqtt3Sink.ManualConnectRetryBehavior.GiveUp;
+            if( _manualCountRetry++ >= 3 ) return IMqtt3Sink.ManualConnectRetryBehavior.GiveUp;
+            return IMqtt3Sink.ManualConnectRetryBehavior.Retry;
+        }
 
         public async Task<ConnectResult> ConnectAsync( bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
+            _manualCountRetry = 0;
             Start();
             var res = await Client.ConnectAsync( lastWill, cancellationToken );
-            if( !res.IsSuccess )
+            if( res.Status != ConnectStatus.Successful && res.Status == ConnectStatus.Deffered )
             {
                 await StopAsync( waitForCompletion );
             }

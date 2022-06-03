@@ -42,7 +42,7 @@ namespace CK.MQTT.Server.ServerClient
             _needClientTCS = tcs;
             var (channel, _, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
             _wrapper = new ClientWrapper( this, ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ), Config, _sink, channel, remotePacketStore, localPacketStore );
-            return new ConnectResult( localPacketStore.IsRevivedSession ? SessionState.SessionPresent : SessionState.CleanSession, ConnectReturnCode.Accepted );
+            return new ConnectResult( localPacketStore.IsRevivedSession ? SessionState.SessionPresent : SessionState.CleanSession, ProtocolConnectReturnCode.Accepted );
         }
 
         public async ValueTask<Task> UnsubscribeAsync( params string[] topics )

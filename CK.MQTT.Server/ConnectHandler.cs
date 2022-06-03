@@ -40,17 +40,17 @@ namespace CK.MQTT.Server
         PropertyIdentifier _currentProp;
         byte _flags;
 
-        public async ValueTask<(ConnectReturnCode, ProtocolLevel)> HandleAsync( PipeReader reader, IAuthenticationProtocolHandler securityManager, CancellationToken cancellationToken )
+        public async ValueTask<(ProtocolConnectReturnCode, ProtocolLevel)> HandleAsync( PipeReader reader, IAuthenticationProtocolHandler securityManager, CancellationToken cancellationToken )
         {
             ReadResult res;
             uint currentStep = 0;
             byte header;
-            uint length;
             OperationStatus status;
             while( true )
             {
                 res = await reader.ReadAsync( cancellationToken );
-                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out length, out SequencePosition position );
+                //FIXME: it's not normal that the length is not accessed here.
+                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out uint length, out SequencePosition position );
                 if( status == OperationStatus.Done )
                 {
                     reader.AdvanceTo( position );
@@ -58,11 +58,11 @@ namespace CK.MQTT.Server
                 }
                 if( status != OperationStatus.NeedMoreData )
                 {
-                    return (ConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
+                    return (ProtocolConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
                 }
                 reader.AdvanceTo( res.Buffer.Start, position );
             }
-            if( header != 0x10 ) return (ConnectReturnCode.Unknown, 0);
+            if( header != 0x10 ) return (ProtocolConnectReturnCode.Unknown, 0);
 
             status = OperationStatus.NeedMoreData;
             while( status != OperationStatus.Done )
@@ -84,24 +84,24 @@ namespace CK.MQTT.Server
                     }
                 }
                 ParseAndAdvance();
-                if( status == OperationStatus.InvalidData ) return (ConnectReturnCode.Unknown, 0); // TODO: log this "Invalid data while parsing the Connect packet.";
+                if( status == OperationStatus.InvalidData ) return (ProtocolConnectReturnCode.Unknown, 0); // TODO: log this "Invalid data while parsing the Connect packet.";
 
                 if( currentStep <= 6 && _fieldCount > 6 )
                 {
-                    if( !await securityManager.ChallengeClientIdAsync( _clientId ) ) return (ConnectReturnCode.IdentifierRejected, ProtocolLevel);
+                    if( !await securityManager.ChallengeClientIdAsync( _clientId ) ) return (ProtocolConnectReturnCode.IdentifierRejected, ProtocolLevel);
                 }
 
                 if( currentStep <= 2 && _fieldCount > 2 )
                 {
-                    if( !await securityManager.ChallengeShouldHaveCredsAsync( HasUserName, HasPassword ) ) return (ConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
+                    if( !await securityManager.ChallengeShouldHaveCredsAsync( HasUserName, HasPassword ) ) return (ProtocolConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 if( UserName != null && currentStep <= 10 && _fieldCount > 10 )
                 {
-                    if( !await securityManager.ChallengeUserNameAsync( UserName ) ) return (ConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
+                    if( !await securityManager.ChallengeUserNameAsync( UserName ) ) return (ProtocolConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 if( Password != null && currentStep <= 11 && _fieldCount > 11 )
                 {
-                    if( !await securityManager.ChallengePasswordAsync( Password ) ) return (ConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
+                    if( !await securityManager.ChallengePasswordAsync( Password ) ) return (ProtocolConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 currentStep = _fieldCount;
             }
@@ -115,7 +115,7 @@ namespace CK.MQTT.Server
             // - AUTHENTICATE Packet
             //      Set the next reflex to an Authenticate Handler and handle authentication.
 
-            return (ConnectReturnCode.Accepted, ProtocolLevel);
+            return (ProtocolConnectReturnCode.Accepted, ProtocolLevel);
         }
 
         public bool HasUserName => (_flags & 0b1000_0000) != 0;

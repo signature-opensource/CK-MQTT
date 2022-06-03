@@ -21,9 +21,9 @@ namespace CK.MQTT.Client
 
         public virtual Task<bool> DisconnectAsync( bool deleteSession ) => Client.DisconnectAsync( deleteSession );
 
-        protected abstract void OnUnattendedDisconnect( DisconnectReason reason );
-
-        protected virtual bool OnReconnectionFailed( int retryCount, int maxRetryCount ) => retryCount < maxRetryCount;
+        protected abstract IMqtt3Sink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult );
+        protected abstract bool OnUnattendedDisconnect( DisconnectReason reason );
+        protected abstract ValueTask<bool> OnReconnectionFailedAsync( ConnectResult result );
 
         protected abstract void OnConnected();
 
@@ -47,13 +47,11 @@ namespace CK.MQTT.Client
         ValueTask IMqtt3Sink.ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
             => ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
 
-        void IMqtt3Sink.OnUnattendedDisconnect( DisconnectReason reason ) => OnUnattendedDisconnect( reason );
+        bool IMqtt3Sink.OnUnattendedDisconnect( DisconnectReason reason ) => OnUnattendedDisconnect( reason );
 
-        bool IMqtt3Sink.OnReconnectionFailed( int retryCount, int maxRetryCount ) => OnReconnectionFailed( retryCount, maxRetryCount );
+        ValueTask<bool> IMqtt3Sink.OnReconnectionFailedAsync( ConnectResult result ) => OnReconnectionFailedAsync(result);
 
         void IMqtt3Sink.Connected() => OnConnected();
-
-        void IMqtt3Sink.OnStoreFull( ushort freeLeftSlot ) => OnStoreFull( freeLeftSlot );
 
         void IMqtt3Sink.OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount ) => OnPoisonousPacket( packetId, packetType, poisonousTotalCount );
 
@@ -65,6 +63,8 @@ namespace CK.MQTT.Client
             => OnUnparsedExtraData( packetId, unparsedData );
         void IMqtt3Sink.OnPacketWithDupFlagReceived( PacketType packetType )
             => OnPacketWithDupFlagReceived( packetType );
+
+        IMqtt3Sink.ManualConnectRetryBehavior IMqtt3Sink.OnFailedManualConnect( ConnectResult connectResult ) => OnFailedManualConnect( connectResult );
 
 
         public ValueTask DisposeAsync() => Client.DisposeAsync();

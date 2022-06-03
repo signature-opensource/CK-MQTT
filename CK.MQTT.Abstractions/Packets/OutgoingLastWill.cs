@@ -54,7 +54,7 @@ namespace CK.MQTT.Packets
         /// <param name="writer">The <see cref="PipeWriter"/> to use.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to cancel the writing.</param>
         /// <returns></returns>
-        protected abstract ValueTask<WriteResult> WritePayloadAsync( PipeWriter writer, CancellationToken cancellationToken );
+        protected abstract ValueTask WritePayloadAsync( PipeWriter writer, CancellationToken cancellationToken );
 
         /// <summary>
         /// Write only the topic, then call <see cref="WritePayloadAsync(PipeWriter, CancellationToken)"/>.
@@ -62,13 +62,12 @@ namespace CK.MQTT.Packets
         /// <param name="writer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
             int stringSize = (int)Topic.MQTTSize();
             writer.GetSpan( stringSize ).WriteMQTTString( Topic );
             writer.Advance( stringSize );
-            var res = await WritePayloadAsync( writer, cancellationToken );
-            return res;
+            await WritePayloadAsync( writer, cancellationToken );
         }
     }
 }

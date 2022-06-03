@@ -74,15 +74,14 @@ namespace CK.MQTT.Packets
         /// <param name="cancellationToken">The cancellation token, to cancel the write.</param>
         /// <returns>A <see cref="ValueTask{TResult}"/> that complete with a <see cref="WriteResult"/> result.
         /// I recommend to watch it's documentation.</returns>
-        protected abstract ValueTask<WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken );
+        protected abstract ValueTask WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken );
 
         ///<inheritdoc/>
-        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
+        public async ValueTask WriteAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             WriteHeader( protocolLevel, pw );
-            WriteResult result = await WritePayloadAsync( protocolLevel, pw, cancellationToken );
+            await WritePayloadAsync( protocolLevel, pw, cancellationToken );
             // Flush happen in the write loop.
-            return result;
         }
     }
 }

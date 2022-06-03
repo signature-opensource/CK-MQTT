@@ -13,7 +13,8 @@ namespace CK.MQTT.Client.Tests.Helpers
                 TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 0,
-                Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true )
+                Credentials = credentials ?? new MqttClientCredentials( "CKMqttTest", true ),
+                ManualConnectBehavior = ManualConnectBehavior.TryOnce
             };
         }
 

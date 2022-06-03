@@ -30,6 +30,6 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="lastReflex">The 'next' of the last <see cref="ReflexMiddleware"/> will be this delegate.</param>
         /// <returns>The middleware chain built as a <see cref="Reflex"/>.</returns>
-        public Reflex Build( MessageExchanger messageExchanger ) => new Reflex( messageExchanger, _reflexes.ToArray() );
+        public Reflex Build() => new( _reflexes.ToArray() );
     }
 }

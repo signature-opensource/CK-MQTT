@@ -8,27 +8,32 @@ namespace CK.MQTT.Packets
 {
     public class SmallOutgoingApplicationMessage : OutgoingMessage
     {
-        private readonly ReadOnlyMemory<byte> _memory;
+        private readonly ReadOnlySequence<byte> _payload;
 
-        public SmallOutgoingApplicationMessage( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload,
+        public SmallOutgoingApplicationMessage( string topic, QualityOfService qos, bool retain, ReadOnlySequence<byte> payload,
             string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null )//properties
             : base( topic, qos, retain, responseTopic, correlationDataSize, correlationDataWriter )
         {
-            _memory = payload;
+            if( payload.Length > 268_435_455 ) throw new ArgumentException( "The buffer exceeed the max allowed size.", nameof( payload ) );
+            _payload = payload;
         }
 
-        public override PacketType Type => PacketType.Publish;
-
-        protected override uint PayloadSize => (uint)_memory.Length;
-
-        protected override ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        public SmallOutgoingApplicationMessage( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload,
+            string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null )
+            : this( topic, qos, retain, new ReadOnlySequence<byte>( payload ), responseTopic, correlationDataSize, correlationDataWriter )
         {
-            if( _memory.Length > 0 )
+        }
+
+        protected override uint PayloadSize => (uint)_payload.Length;
+
+        protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+        {
+            if( _payload.Length > 0 )
             {
-                _memory.Span.CopyTo( pw.GetSpan( _memory.Length ) );
-                pw.Advance( _memory.Length );
+                _payload.CopyTo( pw.GetSpan( (int)_payload.Length ) );
+                pw.Advance( (int)_payload.Length );
             }
-            return new ValueTask<WriteResult>( WriteResult.Written );
+            return new ValueTask();
         }
     }
 }

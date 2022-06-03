@@ -12,7 +12,7 @@ namespace CK.MQTT.Packets
     /// Represent an outgoing mqtt message that will be sent.
     /// The dup flag is handled by the store transformer.
     /// </summary>
-    public abstract class OutgoingMessage : ComplexOutgoingPacket, IOutgoingPacket
+    public abstract class OutgoingMessage : ComplexOutgoingPacket
     {
         readonly bool _retain;
         readonly string? _responseTopic;
@@ -70,6 +70,8 @@ namespace CK.MQTT.Packets
             }
         }
 
+        public sealed override PacketType Type => PacketType.Publish;
+
         /// <inheritdoc/>
         public override QualityOfService Qos { get; }
 
@@ -97,6 +99,8 @@ namespace CK.MQTT.Packets
                 (byte)Qos << 1 |
                 (byte)(_retain ? _retainFlag : 0)
             );
+
+        
 
         protected abstract uint PayloadSize { get; }
         protected sealed override uint GetPayloadSize( ProtocolLevel protocolLevel ) => PayloadSize;
@@ -138,9 +142,9 @@ namespace CK.MQTT.Packets
             }
         }
 
-        protected abstract ValueTask<WriteResult> WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
+        protected abstract ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken );
 
-        protected sealed override ValueTask<WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
+        protected sealed override ValueTask WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
             => WritePayloadAsync( pw, cancellationToken );
     }
 }

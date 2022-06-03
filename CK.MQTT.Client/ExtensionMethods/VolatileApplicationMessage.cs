@@ -2,14 +2,22 @@ using System;
 
 namespace CK.MQTT.Client
 {
-    public class VolatileApplicationMessage : ApplicationMessage, IDisposable
+    public struct VolatileApplicationMessage : IDisposable
     {
         readonly IDisposable _disposable;
 
-        public VolatileApplicationMessage( string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain, IDisposable disposable )
-            : base( topic, payload, qos, retain )
-            => _disposable = disposable;
+        public VolatileApplicationMessage( ApplicationMessage applicationMessage, IDisposable disposable )
+        {
+            _disposable = disposable;
+            Message = applicationMessage;
+        }
 
-        public void Dispose() => _disposable.Dispose();
+        public ApplicationMessage Message { get; }
+
+        public void Dispose()
+        {
+            Message.SetDisposed( typeof( VolatileApplicationMessage ) );
+            _disposable.Dispose();
+        }
     }
 }

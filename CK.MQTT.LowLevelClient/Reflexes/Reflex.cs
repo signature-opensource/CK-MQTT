@@ -10,12 +10,10 @@ namespace CK.MQTT
 {
     public class Reflex
     {
-        readonly MessageExchanger _messageExchanger;
         readonly ReadOnlyMemory<IReflexMiddleware> _middlewares;
 
-        public Reflex( MessageExchanger messageExchanger, ReadOnlyMemory<IReflexMiddleware> middlewares )
+        public Reflex( ReadOnlyMemory<IReflexMiddleware> middlewares )
         {
-            _messageExchanger = messageExchanger;
             _middlewares = middlewares;
         }
 

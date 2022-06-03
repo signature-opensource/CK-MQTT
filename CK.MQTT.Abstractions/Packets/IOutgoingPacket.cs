@@ -32,7 +32,7 @@ namespace CK.MQTT.Packets
         /// <returns>A <see cref="ValueTask{TResult}"/> that complete when the packet is written.
         /// It's Result is a <see cref="WriteResult"/> that is <see cref="WriteResult.Written"/> if packet was written,
         /// or <see cref="WriteResult.Expired"/> if the packed was expired and could not be written.</returns>
-        ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken );
+        ValueTask WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken );
 
         /// <summary>
         /// The Size of the packet. May be used by stores to allocate the required space to store the packet.

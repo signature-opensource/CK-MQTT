@@ -7,7 +7,7 @@ namespace CK.MQTT
     /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc385349256">Connect Return code</a>
     /// section for more details on the connection status values.
     /// </remarks>
-	public enum ConnectReturnCode : byte
+	public enum ProtocolConnectReturnCode : byte
     {
         /// <summary>
         /// Connection accepted.

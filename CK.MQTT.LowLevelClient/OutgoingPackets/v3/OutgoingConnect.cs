@@ -169,15 +169,13 @@ namespace CK.MQTT.Packets
             Debug.Assert( span.Length == 0 );
         }
 
-        protected override async ValueTask<WriteResult> WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
+        protected override async ValueTask WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
         {
             if( _lastWill != null )
             {
-                WriteResult res = await _lastWill.WriteAsync( protocolLevel, pw, cancellationToken );
-                if( res != WriteResult.Written ) throw new InvalidOperationException( "Last will was not written." );
+                await _lastWill.WriteAsync( protocolLevel, pw, cancellationToken );
             }
             WriteEndOfPayload( pw );
-            return WriteResult.Written;
         }
 
         void WriteEndOfPayload( PipeWriter pw )

@@ -11,10 +11,10 @@ namespace CK.MQTT.Client.Tests
             ConnectResult exception = new( ConnectError.InternalException );
             ConnectResult timeout = new( ConnectError.Timeout );
 
-            ConnectResult connectedClean = new( SessionState.CleanSession, ConnectReturnCode.Accepted );
-            ConnectResult serverRefused = new( SessionState.Unknown, ConnectReturnCode.ServerUnavailable );
-            ConnectResult badPassword = new( SessionState.Unknown, ConnectReturnCode.BadUserNameOrPassword );
-            ConnectResult sesionNotClean = new( SessionState.SessionPresent, ConnectReturnCode.Accepted );
+            ConnectResult connectedClean = new( SessionState.CleanSession, ProtocolConnectReturnCode.Accepted );
+            ConnectResult serverRefused = new( SessionState.Unknown, ProtocolConnectReturnCode.ServerUnavailable );
+            ConnectResult badPassword = new( SessionState.Unknown, ProtocolConnectReturnCode.BadUserNameOrPassword );
+            ConnectResult sesionNotClean = new( SessionState.SessionPresent, ProtocolConnectReturnCode.Accepted );
 
             exception.Should().NotBe( new object() );
             Assert.That( exception != timeout );
@@ -24,7 +24,7 @@ namespace CK.MQTT.Client.Tests
             exception.Should().NotBe( serverRefused );
             connectedClean.Should().NotBe( sesionNotClean );
 
-            Assert.That( connectedClean == new ConnectResult( SessionState.CleanSession, ConnectReturnCode.Accepted ) );
+            Assert.That( connectedClean == new ConnectResult( SessionState.CleanSession, ProtocolConnectReturnCode.Accepted ) );
         }
 
         [Test]
@@ -33,10 +33,10 @@ namespace CK.MQTT.Client.Tests
             ConnectResult exception = new( ConnectError.InternalException );
             ConnectResult timeout = new( ConnectError.Timeout );
 
-            ConnectResult connectedClean = new( SessionState.CleanSession, ConnectReturnCode.Accepted );
-            ConnectResult serverRefused = new( SessionState.Unknown, ConnectReturnCode.ServerUnavailable );
-            ConnectResult badPassword = new( SessionState.Unknown, ConnectReturnCode.BadUserNameOrPassword );
-            ConnectResult sesionNotClean = new( SessionState.SessionPresent, ConnectReturnCode.Accepted );
+            ConnectResult connectedClean = new( SessionState.CleanSession, ProtocolConnectReturnCode.Accepted );
+            ConnectResult serverRefused = new( SessionState.Unknown, ProtocolConnectReturnCode.ServerUnavailable );
+            ConnectResult badPassword = new( SessionState.Unknown, ProtocolConnectReturnCode.BadUserNameOrPassword );
+            ConnectResult sesionNotClean = new( SessionState.SessionPresent, ProtocolConnectReturnCode.Accepted );
 
             exception.GetHashCode().Should().NotBe( timeout.GetHashCode() );
             exception.GetHashCode().Should().NotBe( connectedClean.GetHashCode() );
@@ -45,7 +45,7 @@ namespace CK.MQTT.Client.Tests
             exception.GetHashCode().Should().NotBe( serverRefused.GetHashCode() );
             connectedClean.GetHashCode().Should().NotBe( sesionNotClean.GetHashCode() );
 
-            connectedClean.GetHashCode().Should().Be( new ConnectResult( SessionState.CleanSession, ConnectReturnCode.Accepted ).GetHashCode() );
+            connectedClean.GetHashCode().Should().Be( new ConnectResult( SessionState.CleanSession, ProtocolConnectReturnCode.Accepted ).GetHashCode() );
         }
 
     }

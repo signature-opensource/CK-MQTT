@@ -65,7 +65,7 @@ namespace CK.MQTT
             object? res = await ackReceived;
             if( res is null ) return default;
             if( res is T a ) return a;
-            
+
             // For example: it will throw if the client send a Publish, and the server answer a SubscribeAck with the same packet id as the publish.
             throw new ProtocolViolationException( $"Expected to find a {typeof( T )} in the store for packet ID {packet.PacketId}, but got {res.GetType()}. This is an implementation bug from the server, or client, or the network didn't respected it's guarantees." );
         }
@@ -85,14 +85,14 @@ namespace CK.MQTT
 
         static async ValueTask<Task> UnwrapCastAsync<T>( ValueTask<Task<T>> vtask ) => await vtask;
 
-        ValueTask<Task> PublishQoS0Async( OutgoingMessage packet )
+        async ValueTask<Task> PublishQoS0Async( OutgoingMessage packet )
         {
             var pumps = Pumps;
             if( pumps != null )
             {
-                pumps.Left.TryQueueMessage( packet );
+                await pumps.Left.QueueMessageAsync( packet );
             }
-            return new ValueTask<Task>( Task.CompletedTask );
+            return Task.CompletedTask;
         }
 
         [ThreadColor( ThreadColor.Rainbow )]
@@ -104,12 +104,13 @@ namespace CK.MQTT
                 pumps.Left.TryQueueMessage( packet );
             }
         }
-        internal protected async virtual ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
+        /// <returns><see langword="true"/> if the sink asked to reconnect.</returns>
+        internal protected async virtual ValueTask<bool> SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );
             Channel.Close();
             await Pumps.StopWorkAsync();
-            Sink.OnUnattendedDisconnect( disconnectedReason );
+            return Sink.OnUnattendedDisconnect( disconnectedReason );
         }
 
         /// <summary>
@@ -129,7 +130,7 @@ namespace CK.MQTT
             if( !(channel?.IsConnected ?? false) ) return false;
             var duplexPipe = channel.DuplexPipe;
             if( duplexPipe == null ) return false;
-            await BeforeFullDisconnectAsync( duplexPipe, clearSession );
+            await BeforeUserDisconnectAsync( duplexPipe, clearSession );
             await LocalPacketStore.ResetAsync();
             await RemotePacketStore.ResetAsync();
 
@@ -138,7 +139,7 @@ namespace CK.MQTT
             return true;
         }
 
-        protected virtual ValueTask BeforeFullDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new();
+        protected virtual ValueTask BeforeUserDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new();
 
         [ThreadColor( ThreadColor.None )]
         public virtual async ValueTask DisposeAsync()
