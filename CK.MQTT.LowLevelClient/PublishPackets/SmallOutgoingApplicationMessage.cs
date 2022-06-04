@@ -26,6 +26,8 @@ namespace CK.MQTT.Packets
 
         protected override uint PayloadSize => (uint)_payload.Length;
 
+        public override ValueTask DisposeAsync() => new();
+
         protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             if( _payload.Length > 0 )

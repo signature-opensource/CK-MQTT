@@ -30,10 +30,14 @@ namespace CK.MQTT.LowLevelClient.PublishPackets
 
         protected override uint PayloadSize => _length;
 
+        public override async ValueTask DisposeAsync()
+        {
+            if( !_leaveOpen ) await _stream.DisposeAsync();
+        }
+
         protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
         {
             await _stream.CopyToAsync( pw, cancellationToken );
-            if( !_leaveOpen ) await _stream.DisposeAsync();
         }
     }
 }

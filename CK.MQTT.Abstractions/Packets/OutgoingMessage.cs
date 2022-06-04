@@ -12,7 +12,7 @@ namespace CK.MQTT.Packets
     /// Represent an outgoing mqtt message that will be sent.
     /// The dup flag is handled by the store transformer.
     /// </summary>
-    public abstract class OutgoingMessage : ComplexOutgoingPacket
+    public abstract class OutgoingMessage : ComplexOutgoingPacket, IAsyncDisposable
     {
         readonly bool _retain;
         readonly string? _responseTopic;
@@ -146,5 +146,6 @@ namespace CK.MQTT.Packets
 
         protected sealed override ValueTask WritePayloadAsync( ProtocolLevel protocolLevel, PipeWriter pw, CancellationToken cancellationToken )
             => WritePayloadAsync( pw, cancellationToken );
+        public abstract ValueTask DisposeAsync();
     }
 }

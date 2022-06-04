@@ -74,16 +74,15 @@ namespace CK.MQTT
         {
             if( message.Qos == QualityOfService.AtMostOnce ) return PublishQoS0Async( message );
             var vtask = SendPacketWithQoSAsync<object?>( message );
-            if( vtask.IsCompleted )
-            {
-#pragma warning disable VSTHRD103 // The ValueTask is already completed.
-                return new ValueTask<Task>( vtask.Result );
-#pragma warning restore VSTHRD103
-            }
-            return UnwrapCastAsync( vtask );
+            return UnwrapCastAsync( message, vtask );
         }
 
-        static async ValueTask<Task> UnwrapCastAsync<T>( ValueTask<Task<T>> vtask ) => await vtask;
+        static async ValueTask<Task> UnwrapCastAsync<T>( OutgoingMessage message, ValueTask<Task<T>> vtask )
+        {
+            var task = await vtask;
+            await message.DisposeAsync();
+            return task;
+        }
 
         async ValueTask<Task> PublishQoS0Async( OutgoingMessage packet )
         {
@@ -91,6 +90,10 @@ namespace CK.MQTT
             if( pumps != null )
             {
                 await pumps.Left.QueueMessageAsync( packet );
+            }
+            else
+            {
+                await packet.DisposeAsync();
             }
             return Task.CompletedTask;
         }
