@@ -129,8 +129,11 @@ namespace CK.MQTT.Client
                             msg.Dispose();
                             var taskA = _onMessageSender.SafeRaiseAsync( m, appMessage );
                             var taskB = _onVolatileMessageSender.HasHandlers ? _onVolatileMessageSender.RaiseAsync( m, new VolatileApplicationMessage( appMessage, new DisposableComposite() ) ) : Task.CompletedTask;
-                            var taskC = _refcountingMessageSender.HasHandlers ? _refcountingMessageSender.RaiseAsync( m, new RefCountingApplicationMessage( appMessage, new DisposableComposite() ) ) : Task.CompletedTask;
+                            var refCounting = new RefCountingApplicationMessage( appMessage, new DisposableComposite() );
+                            refCounting.IncrementRef();
+                            var taskC = _refcountingMessageSender.HasHandlers ? _refcountingMessageSender.RaiseAsync( m, refCounting ) : Task.CompletedTask;
                             await Task.WhenAll( taskA, taskB, taskC );
+                            refCounting.DecrementRef();
                             return;
                         }
                         // here there is no "_onMessageSender"
@@ -146,11 +149,14 @@ namespace CK.MQTT.Client
                             var taskC = _refcountingMessageSender.RaiseAsync( m, appMessage );
                             var taskB = _onVolatileMessageSender.RaiseAsync( m, new VolatileApplicationMessage( appMessage.ApplicationMessage, new RefCountingWrapper( appMessage ) ) );
                             await Task.WhenAll( taskB, taskC );
+                            appMessage.DecrementRef();
                         }
                         if( hasRefCount )
                         {
                             var appMessage = new RefCountingApplicationMessage( msg.Message, msg );
+                            appMessage.IncrementRef();
                             await _refcountingMessageSender.RaiseAsync( m, appMessage );
+                            appMessage.DecrementRef();
                         }
                         if( hasVolatile )
                         {
