@@ -5,23 +5,23 @@ namespace CK.MQTT
         /// <summary>
         /// Connection was succesful.
         /// </summary>
-        Successful,
+        Successful = 0,
         /// <summary>
         /// Connection has been deffered to the AutoReconnect logic.
         /// This will happen only if you configured as is.
         /// </summary>
-        Deffered,
+        Deffered = 1,
         /// <summary>
         /// There was an error while trying to connect, the error may be transient (ie: connectivity issue).
         /// </summary>
-        ErrorMaybeRecoverable,
+        ErrorMaybeRecoverable = 16,
         /// <summary>
         /// There was an unknown error.
         /// </summary>
-        ErrorUnknown,
+        ErrorUnknown = 17,
         /// <summary>
         /// There was an error that is known to not be recoverable. A configuration change from the client, or server is required.
         /// </summary>
-        ErrorUnrecoverable
+        ErrorUnrecoverable = 18
     }
 }
