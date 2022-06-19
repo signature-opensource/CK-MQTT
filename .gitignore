@@ -13,8 +13,6 @@
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
 x64/
 x86/
 bld/
@@ -256,3 +254,11 @@ Tests/**/TestResult*.xml
 /Tests/**/Logs/
 /Tests/CK.Env.Tests/UniverseZips/
 /CodeCakeBuilder/MemoryKey.*.txt
+
+CodeCakeBuilder/[Rr]elease/
+CodeCakeBuilder/[Rr]eleases/
+CodeCakeBuilder/UnitTestsDone.*.txt
+$StObjGen/
+CodeCakeBuilder/MemoryKey.*.txt
+Tests/**/Logs/
+Tests/**/CKSetup-WorkingDir/

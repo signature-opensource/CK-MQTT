@@ -1,4 +1,5 @@
 using Cake.Common.Diagnostics;
+using Cake.Core.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,9 +15,9 @@ namespace CodeCake.Abstractions
     {
         readonly StandardGlobalInfo _globalInfo;
         readonly string _typeName;
-        List<ArtifactFeed> _feeds;
-        List<ILocalArtifact> _artifacts;
-        List<ArtifactPush> _pushes;
+        List<ArtifactFeed>? _feeds;
+        List<ILocalArtifact>? _artifacts;
+        List<ArtifactPush>? _pushes;
 
         /// <summary>
         /// Initializes a new artifact type and adds it into
@@ -51,7 +52,7 @@ namespace CodeCake.Abstractions
                 _feeds = new List<ArtifactFeed>();
                 if( GlobalInfo.LocalFeedPath != null )
                 {
-                    foreach( ArtifactFeed f in GetLocalFeeds() )
+                    foreach( var f in GetLocalFeeds() )
                     {
                         GlobalInfo.Cake.Information( $"Adding local feed {f.Name}." );
                         if( f.ArtifactType != this )
@@ -87,7 +88,7 @@ namespace CodeCake.Abstractions
             if( _artifacts == null || reset )
             {
                 _artifacts = new List<ILocalArtifact>();
-                foreach( ILocalArtifact a in GetLocalArtifacts() )
+                foreach( var a in GetLocalArtifacts() )
                 {
                     if( a.ArtifactInstance.Artifact.Type != _typeName )
                     {
@@ -108,9 +109,9 @@ namespace CodeCake.Abstractions
             if( _pushes == null || reset )
             {
                 _pushes = new List<ArtifactPush>();
-                IList<ILocalArtifact> locals = GetArtifacts();
-                Task<IEnumerable<ArtifactPush>>[] tasks = GetTargetFeeds().Select( f => f.CreatePushListAsync( locals ) ).ToArray();
-                foreach( IEnumerable<ArtifactPush> p in await Task.WhenAll( tasks ) )
+                var locals = GetArtifacts();
+                var tasks = GetTargetFeeds().Select( f => f.CreatePushListAsync( locals ) ).ToArray();
+                foreach( var p in await Task.WhenAll( tasks ) )
                 {
                     _pushes.AddRange( p );
                 }
@@ -123,10 +124,10 @@ namespace CodeCake.Abstractions
         /// This uses the <see cref="GetPushListAsync(bool)"/> by default.
         /// </summary>
         /// <param name="pushes">Push details: defaults to the result of <see cref="GetPushListAsync"/>.</param>
-        public async Task PushAsync( IEnumerable<ArtifactPush> pushes = null )
+        public async Task PushAsync( IEnumerable<ArtifactPush>? pushes = null )
         {
             if( pushes == null ) pushes = await GetPushListAsync();
-            Task[] tasks = pushes.GroupBy( p => p.Feed ).Select( g => g.Key.PushAsync( g ) ).ToArray();
+            var tasks = pushes.GroupBy( p => p.Feed ).Select( g => g.Key.PushAsync( g ) ).ToArray();
             await Task.WhenAll( tasks );
         }
 
