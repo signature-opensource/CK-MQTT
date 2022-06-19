@@ -1,9 +1,9 @@
+using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.IOutgoingPacket;
 
-namespace CK.MQTT
+namespace CK.MQTT.Packets
 {
     /// <summary>
     /// This represent the <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Will_Flag">last will</a>
@@ -12,7 +12,9 @@ namespace CK.MQTT
     /// </summary>
     public abstract class OutgoingLastWill : IOutgoingPacket
     {
-        readonly string _topic;
+        public string Topic { get; }
+
+        public bool IsRemoteOwnedPacketId => throw new NotSupportedException();
 
         /// <summary>
         /// Instantiate a new <see cref="OutgoingLastWill"/>.
@@ -22,9 +24,10 @@ namespace CK.MQTT
         /// <param name="qos">The qos of the will message.</param>
         protected OutgoingLastWill( bool retain, string topic, QualityOfService qos )
         {
+            MqttBinaryWriter.ThrowIfInvalidMQTTString( topic );
             Retain = retain;
             Qos = qos;
-            _topic = topic;
+            Topic = topic;
         }
 
         /// <summary>
@@ -38,9 +41,12 @@ namespace CK.MQTT
         /// <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349233">Specification link</a>
         /// </summary>
         public QualityOfService Qos { get; }
+        public ushort PacketId { get; set; }
+
+        public PacketType Type => PacketType.Publish;
 
         /// <inheritdoc/>
-        public abstract int GetSize( ProtocolLevel protocolLevel );
+        public abstract uint GetSize( ProtocolLevel protocolLevel );
 
         /// <summary>
         /// Should write the payload the the last will.
@@ -48,21 +54,20 @@ namespace CK.MQTT
         /// <param name="writer">The <see cref="PipeWriter"/> to use.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> to cancel the writing.</param>
         /// <returns></returns>
-        protected abstract ValueTask<WriteResult> WritePayload( PipeWriter writer, CancellationToken cancellationToken );
+        protected abstract ValueTask WritePayloadAsync( PipeWriter writer, CancellationToken cancellationToken );
 
         /// <summary>
-        /// Write only the topic, then call <see cref="WritePayload(PipeWriter, CancellationToken)"/>.
+        /// Write only the topic, then call <see cref="WritePayloadAsync(PipeWriter, CancellationToken)"/>.
         /// </summary>
         /// <param name="writer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async ValueTask<WriteResult> WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
+        public async ValueTask WriteAsync( ProtocolLevel protocolLevel, PipeWriter writer, CancellationToken cancellationToken )
         {
-            int stringSize = _topic.MQTTSize();
-            writer.GetSpan( stringSize ).WriteMQTTString( _topic );
+            int stringSize = (int)Topic.MQTTSize();
+            writer.GetSpan( stringSize ).WriteMQTTString( Topic );
             writer.Advance( stringSize );
-            await writer.FlushAsync( cancellationToken );
-            return await WritePayload( writer, cancellationToken );
+            await WritePayloadAsync( writer, cancellationToken );
         }
     }
 }

@@ -1,14 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Common\Mqtt.props" />
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
-    <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="15.0.0-r08" />
+    <PackageReference Include="CK.PerfectEvent" Version="15.0.0-r08" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CK.MQTT.LowLevelClient\CK.MQTT.LowLevelClient.csproj" />
   </ItemGroup>
 
 </Project>

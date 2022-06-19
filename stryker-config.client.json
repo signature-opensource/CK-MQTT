@@ -1,0 +1,13 @@
+{
+  "stryker-config": {
+    "ignore-methods": [
+      "Debug.Assert",
+      "*Exception.ctor",
+      "Info", "Warn", "Trace", "Debug", "Fatal", "Error"
+    ],
+    "project": "CK.MQTT.Client\\CK.MQTT.Client.csproj",
+    "test-projects": [
+      "Tests\\CK.MQTT.Client.Tests\\CK.MQTT.Client.Tests.csproj"
+    ]
+  }
+}

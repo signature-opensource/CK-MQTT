@@ -1,12 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\Common\Mqtt.props" />
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Description>MQTT server implementation (not yet available).</Description>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net6</TargetFramework>
+        <Description>MQTT server implementation (not yet available).</Description>
+        <Nullable>enable</Nullable>
+        <Features>strict</Features>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.Common\CK.MQTT.Common.csproj" />
-  </ItemGroup>
-
+    <ItemGroup>
+        <ProjectReference Include="..\CK.MQTT.Client\CK.MQTT.Client.csproj" />
+    </ItemGroup>
 </Project>

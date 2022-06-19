@@ -1,9 +1,12 @@
+using System;
+
 namespace CK.MQTT
 {
     /// <summary>
     /// Maximum QoS level that was granted for a Subscription.
     /// <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc384800444">See specification for more information</a>.
     /// </summary>
+    [Flags]
     public enum SubscribeReturnCode : byte
     {
         /// <summary>

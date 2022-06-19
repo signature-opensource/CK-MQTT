@@ -1,10 +1,13 @@
+using System;
+
 namespace CK.MQTT
 {
     /// <summary>
     /// Represents one of the possible MQTT packet types.
     /// http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc374395205
     /// </summary>
-	public enum PacketType : byte
+    [Flags]
+    public enum PacketType : byte
     {
         /// <summary>
         /// MQTT CONNECT packet

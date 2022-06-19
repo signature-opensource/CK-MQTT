@@ -25,41 +25,23 @@ namespace CK.MQTT
             return status;
         }
 
-        /// <summary>
-        /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
-        /// </summary>
-        /// <param name="reader"></param>
-        /// <param name="length"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public static bool TryReadUtf8String( ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
+        public static bool TryReadBigEndian( this ref SequenceReader<byte> sequenceReader, out uint value )
         {
-            ReadOnlySpan<byte> span = reader.UnreadSpan;
-            if( span.Length < length )
-                return TryReadMultisegmentUtf8String( ref reader, length, out value );
-
-            ReadOnlySpan<byte> slice = span.Slice( 0, length );
-            value = Encoding.UTF8.GetString( slice );
-            reader.Advance( length );
-            return true;
+            bool status = sequenceReader.TryReadBigEndian( out int toCast );
+            value = (uint)toCast;
+            return status;
         }
 
-        /// <summary>
-        /// Copy and Paste of https://github.com/dotnet/runtime/issues/29318#issuecomment-484987895
-        /// </summary>
-        static bool TryReadMultisegmentUtf8String( ref SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
+        public static bool TryReadUtf8String( ref this SequenceReader<byte> reader, int length, [NotNullWhen( true )] out string? value )
         {
-            Debug.Assert( reader.UnreadSpan.Length < length );
-
-            // Not enough data in the current segment, try to peek for the data we need.
-            // In my use case, these strings cannot be more than 64kb, so stack memory is fine.
-            Span<byte> buffer = stackalloc byte[length];
-            if( !reader.TryCopyTo( buffer ) )
+            var unreadSeq = reader.UnreadSequence;
+            if( unreadSeq.Length < length )
             {
                 value = null;
                 return false;
             }
-            value = Encoding.UTF8.GetString( buffer );
+            unreadSeq = reader.UnreadSequence.Slice( 0, length );
+            value = Encoding.UTF8.GetString( in unreadSeq );
             reader.Advance( length );
             return true;
         }

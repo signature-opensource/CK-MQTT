@@ -1,9 +1,10 @@
+using CK.MQTT.Client;
 using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -20,7 +21,7 @@ namespace CK.MQTT
         /// <param name="length">The Remaining Length, -1 if there is no enough bytes to read, -2 if the stream is corrupted.</param>
         /// <param name="position">The position after the remaining length.</param>
         /// <returns>An <see cref="OperationStatus"/>.</returns>
-        public static OperationStatus TryReadMQTTRemainingLength( this ref SequenceReader<byte> reader, out int length, out SequencePosition position )
+        public static OperationStatus TryReadVariableByteInteger( this ref SequenceReader<byte> reader, out uint length )
         {
             length = 0;
             // Read out an Int32 7 bits at a time.  The high bit
@@ -31,18 +32,15 @@ namespace CK.MQTT
             {
                 if( shift == 5 * 7 )// Check for a corrupted stream.  Read a max of 5 bytes.
                 {
-                    position = reader.Position;
                     return OperationStatus.InvalidData; // 5 bytes max per Int32, shift += 7
                 }
                 if( !reader.TryRead( out b ) ) // ReadByte handles end of stream cases for us.
                 {
-                    position = reader.Position;
                     return OperationStatus.NeedMoreData;
                 }
-                length |= (b & 0x7F) << shift;
+                length |= (b & 0x7Fu) << shift;
                 shift += 7;
             } while( (b & 0x80) != 0 );
-            position = reader.Position;
             return OperationStatus.Done;
         }
 
@@ -52,32 +50,31 @@ namespace CK.MQTT
         /// <param name="reader">The string will be read from this <see cref="SequenceReader{T}"/>.</param>
         /// <param name="output">The parsed string.</param>
         /// <returns><see langword="true"/> if the <see cref="string"/> was correctly read, <see langword="false"/> if there is not enough data.</returns>
-        public static bool TryReadMQTTString( this ref SequenceReader<byte> reader, int maxExpectedLength, [NotNullWhen( true )] out string? output )
+        public static bool TryReadMQTTString( this ref SequenceReader<byte> reader, [NotNullWhen( true )] out string? output ) // TODO: this need to be used only once, to expose the topic to the user.
         {
             if( reader.TryReadBigEndian( out ushort size ) )
             {
-                if( size > maxExpectedLength ) throw new InvalidDataException();
                 return reader.TryReadUtf8String( size, out output );
             }
             output = null;
             return false;
         }
 
-        /// <summary>
-        /// Read a mqtt string on a <see cref="ReadOnlySequence{T}"/>, usefull when you cannot create a SequenceReader because you are on an async context.
-        /// </summary>
-        /// <param name="buffer">The buffer to read the string from.</param>
-        /// <param name="output">The parsed <see cref="string"/>.</param>
-        /// <param name="sequencePosition">The <see cref="SequencePosition"/> after the string.</param>
-        /// <returns><see langword="true"/> if the <see cref="string"/> was correctly read, <see langword="false"/> if there is not enough data.</returns>
-        static bool TryReadMQTTString( ReadOnlySequence<byte> buffer, int maxExpectedLength, [NotNullWhen( true )] out string? output, out SequencePosition sequencePosition )
+        public static bool TryReadMQTTBinaryData( this ref SequenceReader<byte> reader, out ReadOnlyMemory<byte> memory )
         {
-            SequenceReader<byte> reader = new SequenceReader<byte>( buffer );
-            bool result = reader.TryReadMQTTString( maxExpectedLength, out output );
-            sequencePosition = reader.Position;
-            Debug.Assert( result == (output != null) );
-            // return result; // TODO when this issue is resolved, simplify this code: https://github.com/dotnet/roslyn/issues/44080
-            return output != null;
+            if( !reader.TryReadBigEndian( out ushort length ) )
+            {
+                memory = ReadOnlyMemory<byte>.Empty;
+                return false;
+            }
+            Memory<byte> buffer = new byte[length];
+            memory = buffer;
+            if( !reader.TryCopyTo( buffer.Span ) )
+            {
+                reader.Rewind( 2 );
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -86,46 +83,12 @@ namespace CK.MQTT
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask SkipBytes( this PipeReader reader, int skipCount )
+        public static async ValueTask SkipBytesAsync( this PipeReader reader, IMqtt3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
         {
-            while( skipCount > 0 )
-            {
-                ReadResult read = await reader.ReadAsync();
-                int bufferLength = (int)read.Buffer.Length;
-                // If the read fetched more data than what we wanted to skip,
-                // we need to advance exactly the amount needed.
-                if( bufferLength > skipCount )
-                {
-                    reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
-                    // And the job is done.
-                    return;
-                }
-                // We mark the data as consumed.
-                reader.AdvanceTo( read.Buffer.End );
-                skipCount -= bufferLength;
-            };
-        }
-
-        /// <summary>
-        /// Read a mqtt string directly from a <see cref="PipeReader"/>. Use this only if you are in an async context, and the next read cannot use a <see cref="SequenceReader{T}"/>.
-        /// </summary>
-        /// <param name="pipeReader">The <see cref="PipeReader"/> to read the data from.</param>
-        /// <returns>A <see cref="ValueTask{TResult}"/> that complete when the string is read.</returns>
-        public static async ValueTask<string> ReadMQTTString( this PipeReader pipeReader, int maxExpectedLength )
-        {
-            while( true ) //If the data was not available on the first try, we redo the process.
-            {
-                ReadResult result = await pipeReader.ReadAsync();
-                if( result.IsCanceled ) throw new OperationCanceledException();//The read may have been canceled.
-                if( TryReadMQTTString( result.Buffer, maxExpectedLength, out string? output, out SequencePosition sequencePosition ) )
-                { //string was correctly read.
-                    pipeReader.AdvanceTo( sequencePosition );//we mark that the data was read.
-                    return output;
-                }
-                //We mark that all the data was observed, the next Read operation won't complete until more data are available.
-                pipeReader.AdvanceTo( result.Buffer.Start, result.Buffer.End );
-                if( result.IsCompleted ) throw new EndOfStreamException();//we may have hit an end of stream...
-            }
+            ReadResult read = await reader.ReadAtLeastAsync( (int)skipCount, cancellationToken );
+            if( read.Buffer.Length < skipCount ) throw new EndOfStreamException( "Unexpected end of stream." );
+            sink.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, skipCount ) );
+            reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
         }
     }
 }

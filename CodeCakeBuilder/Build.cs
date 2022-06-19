@@ -1,8 +1,6 @@
 using Cake.Common.IO;
 using Cake.Core;
 using Cake.Core.Diagnostics;
-using SimpleGitVersion;
-using System.Linq;
 
 namespace CodeCake
 {
@@ -51,8 +49,7 @@ namespace CodeCake
                                      || Cake.ReadInteractiveOption( "RunUnitTests", "Run Unit Tests?", 'Y', 'N' ) == 'Y' )
                .Does( () =>
                 {
-                    var testProjects = globalInfo.GetDotnetSolution().Projects.Where( p => p.Name.EndsWith( "CK.MQTT.Tests" ) );
-                    globalInfo.GetDotnetSolution().Test( testProjects );
+                    globalInfo.GetDotnetSolution().Test();
                 } );
 
 
@@ -67,9 +64,9 @@ namespace CodeCake
             Task( "Push-Packages" )
                 .WithCriteria( () => globalInfo.IsValid )
                 .IsDependentOn( "Create-NuGet-Packages" )
-                .Does( () =>
+                .Does( async () =>
                  {
-                     /* Please add async on the Does: .Does( async() => ...) above.*/await globalInfo.PushArtifactsAsync();
+                     await globalInfo.PushArtifactsAsync();
                  } );
 
             // The Default task for this script can be set here.
