@@ -53,6 +53,9 @@ namespace CK.MQTT
             if( _tcpClient == null ) throw new InvalidOperationException( "Channel not started." );
             _stream!.Dispose();
             _tcpClient.Close();
+            _tcpClient = null;
+            _stream = null;
+            _duplexPipe = null;
         }
 
         /// <inheritdoc/>

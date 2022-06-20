@@ -117,7 +117,19 @@ namespace CK.MQTT
                     .UseMiddleware( new UnsubackReflex( this ) );
 
                 await Channel.StartAsync( cancellationToken ); // Will create the connection to server.
-
+                OutputProcessor outputProcessor;
+                // Enable keepalive only if we need it.
+                if( ClientConfig.KeepAliveSeconds == 0 )
+                {
+                    outputProcessor = new OutputProcessor( this );
+                }
+                else
+                {
+                    // If keepalive is enabled, we add it's handler to the middlewares.
+                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
+                    outputProcessor = withKeepAlive;
+                    builder.UseMiddleware( withKeepAlive );
+                }
                 // This reflex handle the connection packet.
                 // It will replace itself with the regular packet processing.
                 ConnectAckReflex connectAckReflex = new
@@ -167,19 +179,7 @@ namespace CK.MQTT
                     }
                 }
 
-                OutputProcessor outputProcessor;
-                // Enable keepalive only if we need it.
-                if( ClientConfig.KeepAliveSeconds == 0 )
-                {
-                    outputProcessor = new OutputProcessor( this );
-                }
-                else
-                {
-                    // If keepalive is enabled, we add it's handler to the middlewares.
-                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
-                    outputProcessor = withKeepAlive;
-                    builder.UseMiddleware( withKeepAlive );
-                }
+                
 
                 // When receiving the ConnAck, this reflex will replace the reflex with this property.
                 Pumps = new( // Require channel started.
