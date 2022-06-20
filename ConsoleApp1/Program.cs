@@ -1,47 +1,81 @@
+using CK.Core;
 using CK.MQTT;
 using CK.MQTT.Client;
 using CK.MQTT.Packets;
 using System.Diagnostics;
 
+if( args.Length < 2 || args.Length > 3 )
+{
+    Console.WriteLine( $"Erreur, trouvé {args.Length}, il faut 2 à 3 arguments uniquement. Exemple: \"MqttTester.exe hostname port\"" );
+    return;
+}
+if( !int.TryParse( args[1], out int port ) )
+{
+    Console.WriteLine( $"Le port '{port}' n'est pas un nombre." );
+    return;
+}
+
+bool stressMax = args.Length > 2 && args[2] == "stress-max";
+
 var buffer = new byte[500];
 buffer = buffer.Select( ( s, i ) => (byte)i ).ToArray();
-var message = new SmallOutgoingApplicationMessage( "A", QualityOfService.AtMostOnce, false, buffer );
 var client = new MqttClientAgent(
                ( sink ) => new LowLevelMqttClient( ProtocolConfiguration.Mqtt3, new Mqtt3ClientConfiguration()
                {
-                   KeepAliveSeconds = 0
-               }, sink, new TcpChannel( "localhost", 1883 ) )
+                   KeepAliveSeconds = 30,
+                   DisconnectBehavior = DisconnectBehavior.AutoReconnect,
+                   Credentials = new MqttClientCredentials( "test", true )
+               }, sink, new TcpChannel( args[0], port ) )
 );
-var sendCount = 50_000;
-int msgCount = 0;
-var tcs = new TaskCompletionSource();
-Stopwatch readStopWatch = new();
-client.OnMessage.Simple.Sync += OnMessage_Sync;
-void OnMessage_Sync( CK.Core.IActivityMonitor monitor, ApplicationMessage e )
+
+var connectRes = await client.ConnectAsync();
+if( connectRes.Status != ConnectStatus.Successful )
 {
-    if( msgCount++ == 0 ) readStopWatch.Start();
-    if( msgCount == sendCount )
+    Console.WriteLine( $"Error while connecting: {connectRes}" );
+    return;
+}
+client.OnConnectionChange.Sync += OnConnectionChange;
+
+void OnConnectionChange( IActivityMonitor monitor, DisconnectReason e )
+{
+    if( e == DisconnectReason.None ) return;
+    Console.WriteLine( $"Error: Got disconnected:" + e );
+    Environment.Exit( 1 );
+}
+Console.WriteLine( "Connected." );
+int inFlight = 0;
+for( int i = 0; i < 26000; i++ )
+{
+    if( stressMax )
     {
-        tcs.TrySetResult();
+        if( i % 1000 == 0 )
+        {
+            Console.WriteLine( "Sent 1000 messages." );
+        }
+    }
+    else
+    {
+        if( i % 100 == 0 )
+        {
+            Console.WriteLine( "Sent 100 messages." );
+        }
+    }
+
+    var task = await client.PublishAsync( new SmallOutgoingApplicationMessage( "test-topic", QualityOfService.AtLeastOnce, false, buffer ) );
+    Interlocked.Increment( ref inFlight );
+    var foo = i;
+    _ = task.ContinueWith( ( a ) =>
+    {
+        Interlocked.Decrement( ref inFlight );
+        Console.WriteLine( "received ack for msg number: " + foo );
+    } );
+    while( inFlight > 100 && !stressMax )
+    {
+        await Task.Delay( 1000 );
+        Console.WriteLine( "Waiting for response..." );
     }
 }
 
-var connectRes = await client.ConnectAsync();
-Console.WriteLine( connectRes );
-var res = await await client.SubscribeAsync( new Subscription( "A", QualityOfService.AtMostOnce ) );
-if( res != SubscribeReturnCode.MaximumQoS0 ) throw new InvalidOperationException();
-Console.WriteLine( "Starting" );
-Stopwatch _stopwatch = Stopwatch.StartNew();
-int i;
-for( i = 0; i < sendCount; i++ )
-{
-    await await client.PublishAsync( message );
-}
-Console.WriteLine( $"Finished sending. sent in:{_stopwatch.Elapsed} receivedWhenSending:{msgCount}" );
-await tcs.Task;
-Console.WriteLine( $"Finish reading, read in: {_stopwatch.Elapsed}" );
-GC.Collect( 2, GCCollectionMode.Forced );
-Console.WriteLine( $"Allocated: {GC.GetTotalAllocatedBytes( true )}" );
-Console.WriteLine( $"0:{GC.CollectionCount( 0 )}" );
-Console.WriteLine( $"1:{GC.CollectionCount( 1 )}" );
-Console.WriteLine( $"2:{GC.CollectionCount( 2 )}" );
+await await client.PublishAsync( new SmallOutgoingApplicationMessage( "test-topic", QualityOfService.ExactlyOnce, false, buffer ) );
+
+Console.WriteLine( "Done" );
