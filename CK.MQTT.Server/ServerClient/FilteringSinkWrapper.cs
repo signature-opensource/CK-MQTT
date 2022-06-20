@@ -27,9 +27,6 @@ namespace CK.MQTT.Server.ServerClient
 
         public void OnPacketWithDupFlagReceived( PacketType packetType ) => _sink.OnPacketWithDupFlagReceived( packetType );
 
-        public void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount )
-            => _sink.OnPoisonousPacket( packetId, packetType, poisonousTotalCount );
-
         public void OnQueueFullPacketDropped( ushort packetId, PacketType packetType )
             => _sink.OnQueueFullPacketDropped( packetId, packetType );
 

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public abstract class MessageExchangerAgentBase<T> : Mqtt3SinkWrapper<T> where T : IConnectedMessageExchanger
+    public abstract class MessageExchangerAgentBase<T> : Mqtt3SinkWrapper<T> where T : IConnectedMessageSender
     {
         protected MessageExchangerAgentBase( Func<IMqtt3Sink, T> clientFactory ) : base( clientFactory )
         {

@@ -29,8 +29,6 @@ namespace CK.MQTT.Client
         /// </summary>
         void Connected();
 
-        void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount );
-
         void OnPacketResent( ushort packetId, int packetInTransitOrLost, bool isDropped );
 
         void OnQueueFullPacketDropped( ushort packetId );

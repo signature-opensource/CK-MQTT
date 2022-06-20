@@ -228,7 +228,7 @@ namespace CK.MQTT
                     await Pumps.CloseAsync();
                     await Pumps.DisposeAsync();
                 }
-                return new ConnectResult( ConnectError.InternalException, exception );
+                return new ConnectResult( exception );
             }
         }
 
