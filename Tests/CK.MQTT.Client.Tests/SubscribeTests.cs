@@ -27,15 +27,15 @@ namespace CK.MQTT.Client.Tests
         public abstract string ClassCase { get; }
 
         [Test]
-        public async Task simple_subscribe_works()
+        public async Task simple_subscribe_works_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
 
             var task = await client.SubscribeAsync( new Subscription( "test", QualityOfService.ExactlyOnce ) );
-            await replayer.AssertClientSent( TestHelper.Monitor, "8209000100047465737402" );
-            await replayer.SendToClient( TestHelper.Monitor, "9003000102" );
+            await replayer.AssertClientSentAsync( TestHelper.Monitor, "8209000100047465737402" );
+            await replayer.SendToClientAsync( TestHelper.Monitor, "9003000102" );
             (await task).Should().Be( SubscribeReturnCode.MaximumQoS2 );
         }
     }

@@ -30,7 +30,7 @@ namespace CK.MQTT.Client.Tests
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
             await await client.PublishAsync( new string( 'a', 128 - 2/*packet id size*/ ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
 
             //TODO: add assert ?

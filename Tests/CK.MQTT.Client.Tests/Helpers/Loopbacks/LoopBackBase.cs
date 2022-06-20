@@ -13,7 +13,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public LoopBackBase( ChannelWriter<object?> writer ) => _writer = writer;
 
         TaskCompletionSource<IDuplexPipe> _tcs = new();
-        public Task<IDuplexPipe> GetTestDuplexPipe() => _tcs.Task;
+        public Task<IDuplexPipe> GetTestDuplexPipeAsync() => _tcs.Task;
         public abstract IDuplexPipe? DuplexPipe { get; protected set; }
 
         public bool IsConnected { get; private set; } = false;

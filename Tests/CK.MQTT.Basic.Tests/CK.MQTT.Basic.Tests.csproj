@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
+    <Import Project="..\..\Common\Shared.props" />
+    <PropertyGroup>
     <TargetFramework>net6</TargetFramework>
 
     <IsPackable>false</IsPackable>

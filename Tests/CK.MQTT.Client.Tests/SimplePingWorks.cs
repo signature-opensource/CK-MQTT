@@ -28,26 +28,26 @@ namespace CK.MQTT.Client.Tests
         public abstract string ClassCase { get; }
 
         [Test]
-        public async Task normal_ping_works()
+        public async Task normal_ping_works_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 4 ) );
             await Task.Delay( 1000 );
             replayer.Events.Reader.Count.Should().Be( 0 );
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
-            await replayer.AssertClientSent( TestHelper.Monitor, "C0" );
+            await replayer.AssertClientSentAsync( TestHelper.Monitor, "C0" );
         }
 
         [Test]
-        public async Task ping_no_response_disconnect()
+        public async Task ping_no_response_disconnect_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
-            await replayer.AssertClientSent( TestHelper.Monitor, "C0" );
+            await replayer.AssertClientSentAsync( TestHelper.Monitor, "C0" );
             for( int i = 0; i < 5; i++ )
             {
                 replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
@@ -59,11 +59,11 @@ namespace CK.MQTT.Client.Tests
         }
 
         [Test]
-        public async Task no_pings_sent_if_publish()
+        public async Task no_pings_sent_if_publish_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfigWithKeepAlive( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 4 ) );
 
             await Task.Delay( 100 );
@@ -71,13 +71,13 @@ namespace CK.MQTT.Client.Tests
             await await client.PublishAsync( new ApplicationMessage(
                "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false )
            );
-            await replayer.AssertClientSent( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+            await replayer.AssertClientSentAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
 
             await Task.Delay( 100 );
             replayer.Events.Reader.Count.Should().Be( 0 );
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 5 ) );
             await Task.Delay( 100 );
-            await replayer.AssertClientSent( TestHelper.Monitor, "C0" );
+            await replayer.AssertClientSentAsync( TestHelper.Monitor, "C0" );
         }
     }
 }
