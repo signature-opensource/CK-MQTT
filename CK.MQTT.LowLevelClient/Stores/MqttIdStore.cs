@@ -325,35 +325,29 @@ namespace CK.MQTT.Stores
         {
             TimeSpan currentTime = _stopwatch.Elapsed;
             TimeSpan timeOut = TimeSpan.FromMilliseconds( Config.WaitTimeoutMilliseconds );
-            TimeSpan oldest;
             lock( _idStore )
             {
                 // If there is no packet id allocated, there is no unacked packet id.
                 if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
                 var currId = _idStore._head;
-                ref var curr = ref _idStore._entries[currId];
-                if(
-                        (curr.Content._lastEmissionTime + timeOut <= currentTime &&
-                        !curr.Content._state.HasFlag( QoSState.UncertainDead )
-                    )
-                    || curr.Content._state.HasFlag( QoSState.Dropped ))
+                var nextId = currId;
+                TimeSpan oldest = TimeSpan.MaxValue;
+                do
                 {
-                    return RestorePacketInternalAsync( currId );
-                }
-                oldest = curr.Content._lastEmissionTime;
-                while( currId != _idStore._newestIdAllocated ) // We loop over all older packets.
-                {
-                    currId = curr.NextId;
-                    curr = ref _idStore._entries[currId];
+                    ref var curr = ref _idStore._entries[nextId];
+                    currId = nextId;
                     // If there is a packet that reached the peremption time, or is marked as dropped.
-                    if( curr.Content._state != QoSState.UncertainDead && (curr.Content._lastEmissionTime + timeOut >= currentTime
+                    if( curr.Content._state != QoSState.UncertainDead &&
+                        (curr.Content._lastEmissionTime + timeOut <= currentTime
                         || curr.Content._state.HasFlag( QoSState.Dropped )) )
                     {
                         return RestorePacketInternalAsync( currId );
                     }
                     if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
-                }
+                    nextId = curr.NextId;
+                } while( currId != _idStore._newestIdAllocated ); // We loop over all older packets.
                 TimeSpan timeUntilAnotherRetry = oldest + timeOut - currentTime;
+
                 Debug.Assert( timeUntilAnotherRetry.TotalMilliseconds > 0 );
                 return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeUntilAnotherRetry) );
             }
