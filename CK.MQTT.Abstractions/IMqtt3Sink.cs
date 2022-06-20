@@ -29,7 +29,7 @@ namespace CK.MQTT.Client
         /// </summary>
         void Connected();
 
-        void OnPacketResent( ushort packetId, int packetInTransitOrLost, bool isDropped );
+        void OnPacketResent( ushort packetId, ulong packetInTransitOrLost, bool isDropped );
 
         void OnQueueFullPacketDropped( ushort packetId );
         void OnQueueFullPacketDropped( ushort packetId, PacketType packetType );

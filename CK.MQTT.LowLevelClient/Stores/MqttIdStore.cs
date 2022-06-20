@@ -54,7 +54,7 @@ namespace CK.MQTT.Stores
         {
             internal TimeSpan _lastEmissionTime;
             public T Storage;
-            internal byte _attemptInTransitOrLost;
+            internal ulong _attemptInTransitOrLost;
             internal QoSState _state;
             internal TaskCompletionSource<object?> _taskCompletionSource;
 
@@ -320,7 +320,7 @@ namespace CK.MQTT.Stores
         async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( ushort packetId )
             => (await RestorePacketAsync( packetId ), TimeSpan.Zero);
 
-        [ThreadColor("WriteLoop")]
+        [ThreadColor( "WriteLoop" )]
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync()
         {
             TimeSpan currentTime = _stopwatch.Elapsed;
@@ -332,7 +332,11 @@ namespace CK.MQTT.Stores
                 if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
                 var currId = _idStore._head;
                 ref var curr = ref _idStore._entries[currId];
-                if( (curr.Content._lastEmissionTime + timeOut <= currentTime || curr.Content._state.HasFlag( QoSState.Dropped )) )
+                if(
+                        (curr.Content._lastEmissionTime + timeOut <= currentTime &&
+                        !curr.Content._state.HasFlag( QoSState.UncertainDead )
+                    )
+                    || curr.Content._state.HasFlag( QoSState.Dropped ))
                 {
                     return RestorePacketInternalAsync( currId );
                 }

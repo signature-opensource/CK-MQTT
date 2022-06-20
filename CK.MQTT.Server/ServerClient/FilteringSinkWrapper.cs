@@ -22,7 +22,7 @@ namespace CK.MQTT.Server.ServerClient
         public IMqtt3Sink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult )
             => _sink.OnFailedManualConnect( connectResult );
 
-        public void OnPacketResent( ushort packetId, int packetInTransitOrLost, bool isDropped )
+        public void OnPacketResent( ushort packetId, ulong packetInTransitOrLost, bool isDropped )
             => _sink.OnPacketResent( packetId, packetInTransitOrLost, isDropped );
 
         public void OnPacketWithDupFlagReceived( PacketType packetType ) => _sink.OnPacketWithDupFlagReceived( packetType );

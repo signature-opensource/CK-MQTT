@@ -40,10 +40,10 @@ namespace CK.MQTT.Client
             return new ValueTask();
         }
 
-        record PacketResent( ushort PacketId, int ResentCount, bool IsDropped );
+        record PacketResent( ushort PacketId, ulong ResentCount, bool IsDropped );
         record PoisonousPacket( ushort PacketId, PacketType PacketType, int PoisnousTotalCount );
 
-        protected override void OnPacketResent( ushort packetId, int resentCount, bool isDropped )
+        protected override void OnPacketResent( ushort packetId, ulong resentCount, bool isDropped )
             => Events!.Writer.TryWrite( new PacketResent( packetId, resentCount, isDropped ) );
 
         protected override void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount )
