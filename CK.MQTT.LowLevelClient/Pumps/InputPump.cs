@@ -70,6 +70,7 @@ namespace CK.MQTT.Pumps
                     OperationStatus res = TryParsePacketHeader( read.Buffer, out byte header, out uint length, out SequencePosition position );
                     if( res == OperationStatus.InvalidData )
                     {
+                        await pipeReader.CompleteAsync();
                         await SelfCloseAsync( DisconnectReason.ProtocolError );
                         break;
                     }
@@ -79,11 +80,13 @@ namespace CK.MQTT.Pumps
                         OperationStatus status = await CurrentReflex.ProcessIncomingPacketAsync( MessageExchanger.Sink, this, header, length, pipeReader, CloseToken );
                         if( status == OperationStatus.InvalidData )
                         {
+                            await pipeReader.CompleteAsync();
                             await SelfCloseAsync( DisconnectReason.ProtocolError );
                             return;
                         }
                         if( status == OperationStatus.NeedMoreData )
                         {
+                            await pipeReader.CompleteAsync();
                             if( !CloseToken.IsCancellationRequested )
                             {
                                 //End Of Stream
@@ -97,35 +100,34 @@ namespace CK.MQTT.Pumps
                     Debug.Assert( res == OperationStatus.NeedMoreData );
                     if( read.IsCompleted )
                     {
-                        if( read.Buffer.Length == 0 ) return;
+                        await pipeReader.CompleteAsync();
                         await SelfCloseAsync( DisconnectReason.RemoteDisconnected );
-                        break;
+                        return;
                     }
                     pipeReader.AdvanceTo( read.Buffer.Start, read.Buffer.End );//Mark data observed, so we will wait new data.
                 }
+                await pipeReader.CompleteAsync();
+
             }
-            catch( IOException )
+            catch( IOException e)
             {
+                await pipeReader.CompleteAsync(e);
                 await SelfCloseAsync( DisconnectReason.RemoteDisconnected );
             }
-            catch( OperationCanceledException )
+            catch( OperationCanceledException e)
             {
+                await pipeReader.CompleteAsync(e);
             }
-            catch( ProtocolViolationException )
+            catch( ProtocolViolationException e)
             {
+                await pipeReader.CompleteAsync(e);
                 await SelfCloseAsync( DisconnectReason.ProtocolError );
             }
-            catch( Exception )
+            catch( Exception e)
             {
+                await pipeReader.CompleteAsync(e);
                 await SelfCloseAsync( DisconnectReason.InternalException );
             }
-        }
-
-        public override async Task CloseAsync()
-        {
-            var task = MessageExchanger.Channel.DuplexPipe?.Input.CompleteAsync();
-            if( task.HasValue ) await task.Value;
-            await base.CloseAsync();
         }
     }
 }

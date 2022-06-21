@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public interface IMqtt3Client : IConnectedMessageExchanger
+    public interface IMqtt3Client : IConnectedMessageSender
     {
         /// <summary>
-        /// Connect the <see cref="IConnectedMessageExchanger"/> to a Broker.
+        /// Connect the <see cref="IConnectedMessageSender"/> to a Broker.
         /// </summary>
         /// <param name="m">The logger used to log activities about the connection.</param>
         /// <param name="credentials">

@@ -20,7 +20,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static TestMqttClient CreateMQTT5Client( this PacketReplayer replayer, ProtocolConfiguration pConfig, Mqtt5ClientConfiguration config )
             => new( ProtocolConfiguration.Mqtt5, config, replayer.CreateChannel(), replayer.Events );
 
-        public static async Task AssertClientSent( this PacketReplayer @this, IActivityMonitor m, string hexArray )
+        public static async Task AssertClientSentAsync( this PacketReplayer @this, IActivityMonitor m, string hexArray )
         {
             using( m.OpenInfo( "Outgoing packet..." ) )
             {
@@ -29,7 +29,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
                 using( CancellationTokenSource cts = Debugger.IsAttached ? new() : new( 500 ) )
                 {
-                    var testPipe = await @this.Channel!.GetTestDuplexPipe();
+                    var testPipe = await @this.Channel!.GetTestDuplexPipeAsync();
                     ReadResult readResult = await testPipe.Input.ReadAtLeastAsync( buffer.Length, cts.Token );
 
                     if( cts.IsCancellationRequested || readResult.IsCanceled ) Assert.Fail( "Timeout." );
@@ -43,26 +43,26 @@ namespace CK.MQTT.Client.Tests.Helpers
                 }
             }
         }
-        public static async Task SendToClient( this PacketReplayer @this, IActivityMonitor m, ReadOnlyMemory<byte> data )
+        public static async Task SendToClientAsync( this PacketReplayer @this, IActivityMonitor m, ReadOnlyMemory<byte> data )
         {
             using( m.OpenInfo( "Sending to client..." ) )
             {
-                var testPipe = await @this.Channel!.GetTestDuplexPipe();
+                var testPipe = await @this.Channel!.GetTestDuplexPipeAsync();
                 await testPipe.Output.WriteAsync( data );
                 await testPipe.Output.FlushAsync();
             }
         }
 
-        public static Task SendToClient( this PacketReplayer @this, IActivityMonitor m, string hexArray ) =>
-            @this.SendToClient( m, Convert.FromHexString( hexArray ) );
+        public static Task SendToClientAsync( this PacketReplayer @this, IActivityMonitor m, string hexArray ) =>
+            @this.SendToClientAsync( m, Convert.FromHexString( hexArray ) );
 
-        public static async Task ConnectClient( this PacketReplayer @this, IActivityMonitor m, TestMqttClient client )
+        public static async Task ConnectClientAsync( this PacketReplayer @this, IActivityMonitor m, TestMqttClient client )
         {
             var task = client.ConnectAsync();
-            await @this.AssertClientSent( TestHelper.Monitor,
+            await @this.AssertClientSentAsync( TestHelper.Monitor,
                 "101600044d5154540402" + Convert.ToHexString( BitConverter.GetBytes( client.Config.KeepAliveSeconds ).Reverse().ToArray() ) + "000a434b4d71747454657374"
             );
-            await @this.SendToClient( TestHelper.Monitor, "20020000" );
+            await @this.SendToClientAsync( TestHelper.Monitor, "20020000" );
             await task;
             await @this.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
             await @this.ShouldContainEventAsync<TestMqttClient.Connected>();

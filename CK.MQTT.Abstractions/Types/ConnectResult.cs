@@ -24,6 +24,11 @@ namespace CK.MQTT
         /// The connect return code.
         /// </summary>
         public readonly ProtocolConnectReturnCode ProtocolReturnCode;
+
+        /// <summary>
+        /// Not null when <see cref="Error"/> is <see cref="ConnectError.InternalException"/>.
+        /// Contain the exception that was throwed when connecting.
+        /// </summary>
         public Exception? Exception { get; }
 
 
@@ -49,7 +54,6 @@ namespace CK.MQTT
                     ConnectError.InternalException => ConnectStatus.ErrorUnknown,
                     ConnectError.None => throw new InvalidOperationException( "This code path should not be hit. 1" ),
                     ConnectError.SeeReturnCode => throw new InvalidOperationException( "This code path should not be hit. 2" ),
-                    ConnectError.Other => ConnectStatus.ErrorUnknown,
                     ConnectError.ProtocolError_IncompleteResponse => ConnectStatus.ErrorMaybeRecoverable,
                     ConnectError.ProtocolError_InvalidConnackState => ConnectStatus.ErrorMaybeRecoverable,
                     ConnectError.ProtocolError_SessionNotFlushed => ConnectStatus.ErrorMaybeRecoverable,
@@ -68,9 +72,24 @@ namespace CK.MQTT
         /// <see cref="ProtocolReturnCode"/> will be <see cref="ProtocolConnectReturnCode.Unknown"/>.
         /// </summary>
         /// <param name="connectError">The reason the client could not connect.</param>
-        public ConnectResult( ConnectError connectError, Exception? exception = null )
+        public ConnectResult( ConnectError connectError )
         {
             Error = connectError;
+            Exception = null;
+            SessionState = SessionState.Unknown;
+            ProtocolReturnCode = ProtocolConnectReturnCode.Unknown;
+            _deffered = false;
+        }
+
+        /// <summary>
+        /// Instantiate a new <see cref="ConnectResult"/> where the result is an internal exception.
+        /// <see cref="SessionState"/> will be <see cref="SessionState.Unknown"/>.
+        /// <see cref="ProtocolReturnCode"/> will be <see cref="ProtocolConnectReturnCode.Unknown"/>.
+        /// </summary>
+        /// <param name="exception"> The exception that caused the internal exception.</param>
+        public ConnectResult( Exception? exception = null )
+        {
+            Error = ConnectError.InternalException;
             Exception = exception;
             SessionState = SessionState.Unknown;
             ProtocolReturnCode = ProtocolConnectReturnCode.Unknown;
@@ -104,18 +123,26 @@ namespace CK.MQTT
             Exception = exception;
         }
 
+        /// <inheritdoc/>
         public override bool Equals( object? obj )
             => obj is ConnectResult result
             && result.Error == Error
             && result.ProtocolReturnCode == ProtocolReturnCode
             && result.SessionState == SessionState;
 
+        /// <inheritdoc/>
         public override int GetHashCode() => HashCode.Combine( SessionState, Error, ProtocolReturnCode );
 
+        /// <inheritdoc/>
         public static bool operator ==( ConnectResult left, ConnectResult right ) => left.Equals( right );
 
+        /// <inheritdoc/>
         public static bool operator !=( ConnectResult left, ConnectResult right ) => !(left == right);
 
+        /// <summary>
+        /// Return a string containing various 
+        /// </summary>
+        /// <returns></returns>
         public override string ToString()
             => $"ConnectResult(Status:'{Status}' ReturnCode:'{ProtocolReturnCode}' Deffered:'{_deffered}' ConnectError:'{Error}' SessionState:'{SessionState}')";
     }

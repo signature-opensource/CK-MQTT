@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+    <PropertyGroup>
     <TargetFramework>net6</TargetFramework>
     <IsPackable>false</IsPackable>
     <LangVersion>9</LangVersion>

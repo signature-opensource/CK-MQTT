@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public class MessageExchangerAgent<T> : MessageExchangerAgentBase<T> where T : IConnectedMessageExchanger
+    public class MessageExchangerAgent<T> : MessageExchangerAgentBase<T> where T : IConnectedMessageSender
     {
         readonly PerfectEventSender<ApplicationMessage> _onMessageSender = new();
         readonly PerfectEventSender<RefCountingApplicationMessage> _refcountingMessageSender = new();

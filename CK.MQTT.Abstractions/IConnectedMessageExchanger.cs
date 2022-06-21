@@ -7,14 +7,12 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Represent a MQTT3 Client.
+    /// Represent an already connected message exchanger.
     /// </summary>
-    public interface IConnectedMessageExchanger : IAsyncDisposable
+    public interface IConnectedMessageSender : IAsyncDisposable
     {
         /// <summary>
         /// Disconnect the client.
-        /// Once the client is successfully disconnected, the <see cref="Disconnected"/> event will be fired
-        /// with the <see cref="DisconnectReason.UserDisconnected"/>.
         /// </summary>
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
         /// <remarks>

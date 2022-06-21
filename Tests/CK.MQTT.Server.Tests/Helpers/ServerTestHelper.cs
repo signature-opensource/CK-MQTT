@@ -27,14 +27,14 @@ namespace CK.MQTT.Server.Tests.Helpers
             _server.StartListening();
         }
 
-        TaskCompletionSource<MessageExchangerAgent<IConnectedMessageExchanger>>? _tcs;
-        void OnNewClient( IActivityMonitor m, MessageExchangerAgent<IConnectedMessageExchanger> client )
+        TaskCompletionSource<MessageExchangerAgent<IConnectedMessageSender>>? _tcs;
+        void OnNewClient( IActivityMonitor m, MessageExchangerAgent<IConnectedMessageSender> client )
         {
             _tcs?.SetResult( client );
             _tcs = null;
         }
 
-        public async Task<(IConnectedMessageExchanger client, MessageExchangerAgent<IConnectedMessageExchanger> serverClient)> CreateClient()
+        public async Task<(IConnectedMessageSender client, MessageExchangerAgent<IConnectedMessageSender> serverClient)> CreateClientAsync()
         {
             var client = new MqttClientAgent(
                 ( sink ) => new LowLevelMqttClient(

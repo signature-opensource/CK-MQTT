@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public abstract class Mqtt3SinkWrapper<T> : IMqtt3Sink, IConnectedMessageExchanger where T : IConnectedMessageExchanger
+    public abstract class Mqtt3SinkWrapper<T> : IMqtt3Sink, IConnectedMessageSender where T : IConnectedMessageSender
     {
         public T Client { get; }
 
@@ -31,7 +31,7 @@ namespace CK.MQTT.Client
 
         protected abstract void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount );
 
-        protected abstract void OnPacketResent( ushort packetId, int resentCount, bool isDropped );
+        protected abstract void OnPacketResent( ushort packetId, ulong resentCount, bool isDropped );
 
         protected virtual void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) { }
         protected virtual void OnQueueFullPacketDropped( ushort packetId ) { }
@@ -53,9 +53,7 @@ namespace CK.MQTT.Client
 
         void IMqtt3Sink.Connected() => OnConnected();
 
-        void IMqtt3Sink.OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount ) => OnPoisonousPacket( packetId, packetType, poisonousTotalCount );
-
-        void IMqtt3Sink.OnPacketResent( ushort packetId, int resentCount, bool isDropped ) => OnPacketResent( packetId, resentCount, isDropped );
+        void IMqtt3Sink.OnPacketResent( ushort packetId, ulong resentCount, bool isDropped ) => OnPacketResent( packetId, resentCount, isDropped );
 
         void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => OnQueueFullPacketDropped( packetId, packetType );
         void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId ) => OnQueueFullPacketDropped( packetId );

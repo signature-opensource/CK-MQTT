@@ -26,7 +26,7 @@ namespace CK.MQTT.Client.Tests
         public abstract string ClassCase { get; }
 
         [Test]
-        public async Task can_read_maxsized_topic()
+        public async Task can_read_maxsized_topic_Async()
         {
             StringBuilder sb = new StringBuilder()
                 .Append( "30818004FFFF" );
@@ -36,19 +36,19 @@ namespace CK.MQTT.Client.Tests
             }
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
-            await replayer.SendToClient( TestHelper.Monitor, sb.ToString() );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
+            await replayer.SendToClientAsync( TestHelper.Monitor, sb.ToString() );
             await replayer.ShouldContainEventAsync<ApplicationMessage>();
         }
 
         [Test]
-        public async Task message_with_invalid_size_lead_to_protocol_error()
+        public async Task message_with_invalid_size_lead_to_protocol_error_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
 
-            await replayer.SendToClient( TestHelper.Monitor, "308080808080000a7465737420746f70696374657374207061796c" );
+            await replayer.SendToClientAsync( TestHelper.Monitor, "308080808080000a7465737420746f70696374657374207061796c" );
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
             (await replayer
                 .ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>())
@@ -56,17 +56,17 @@ namespace CK.MQTT.Client.Tests
         }
 
         [Test]
-        public async Task can_parse_5_messages()
+        public async Task can_parse_5_messages_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
-            await replayer.ConnectClient( TestHelper.Monitor, client );
+            await replayer.ConnectClientAsync( TestHelper.Monitor, client );
 
-            await replayer.SendToClient( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
-            await replayer.SendToClient( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
-            await replayer.SendToClient( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
-            await replayer.SendToClient( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
-            await replayer.SendToClient( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+            await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+            await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+            await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+            await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
+            await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
             await replayer.ShouldContainEventAsync<ApplicationMessage>();
             await replayer.ShouldContainEventAsync<ApplicationMessage>();
             await replayer.ShouldContainEventAsync<ApplicationMessage>();

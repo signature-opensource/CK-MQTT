@@ -1,4 +1,4 @@
 namespace CK.MQTT
 {
-    public interface IConnectedLowLevelMqtt5Client : IConnectedMessageExchanger { }
+    public interface IConnectedLowLevelMqtt5Client : IConnectedMessageSender { }
 }

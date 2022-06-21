@@ -50,9 +50,10 @@ namespace CK.MQTT.Pumps
         async Task WriteLoopAsync()
         {
             Debug.Assert( _outputProcessor != null ); // TODO: Put non nullable init on output processor when it will be available.
+            PipeWriter? pw = null;
             try
             {
-                var pw = MessageExchanger.Channel.DuplexPipe!.Output;
+                pw = MessageExchanger.Channel.DuplexPipe!.Output;
                 while( !StopToken.IsCancellationRequested )
                 {
                     bool packetSent = true;
@@ -70,12 +71,15 @@ namespace CK.MQTT.Pumps
                     var res = await MessagesChannel.WaitToReadAsync( StopToken );
                     if( !res || StopToken.IsCancellationRequested ) return;
                 }
+                await pw.CompleteAsync();
             }
-            catch( OperationCanceledException )
+            catch( OperationCanceledException e )
             {
+                if( pw != null ) await pw.CompleteAsync( e );
             }
-            catch( Exception )
+            catch( Exception e )
             {
+                if( pw != null ) await pw.CompleteAsync( e );
                 await SelfCloseAsync( DisconnectReason.InternalException );
             }
         }
@@ -94,17 +98,9 @@ namespace CK.MQTT.Pumps
         }
 
         public ValueTask QueueMessageAsync( IOutgoingPacket item )
-        {
-            return _messagesChannel.Writer.WriteAsync( item );
-        }
+            => _messagesChannel.Writer.WriteAsync( item );
 
         public void UnblockWriteLoop() => _messagesChannel.Writer.TryWrite( FlushPacket.Instance );
 
-        public override async Task CloseAsync()
-        {
-            var task = MessageExchanger.Channel.DuplexPipe?.Output!.CompleteAsync();
-            if( task.HasValue ) await task.Value;
-            await base.CloseAsync();
-        }
     }
 }

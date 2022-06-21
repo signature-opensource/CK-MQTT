@@ -10,7 +10,7 @@ namespace CK.MQTT.Server
     public interface IMqttChannelFactory : IDisposable
     {
         /// <summary>
-        /// This method will be called in the <see cref="IConnectedMessageExchanger.ConnectAsync(IActivityMonitor, MqttClientCredentials?, OutgoingLastWill?)"/>.
+        /// This method will be called in the <see cref="IConnectedMessageSender.ConnectAsync(IActivityMonitor, MqttClientCredentials?, OutgoingLastWill?)"/>.
         /// <br/> It must create a <see cref="IMqttChannel"/> connected to a broker.
         /// <br/> Exceptions will not be catched and throwed directly to the users, use it to signal to the user that you couldn't connect.
         /// </summary>
