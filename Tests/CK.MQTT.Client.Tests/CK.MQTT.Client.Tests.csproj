@@ -1,22 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\..\Common\Shared.props" />
-    <PropertyGroup>
-        <TargetFramework>net6</TargetFramework>
-        <LangVersion>9</LangVersion>
-        <IsPackable>false</IsPackable>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="CK.Testing.Monitoring" Version="3.0.0-r08-00-0001-develop" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
-        <PackageReference Include="FluentAssertions" Version="6.6.0" />
-        <PackageReference Include="NUnit" Version="3.13.2" />
-        <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\..\CK.MQTT.Server\CK.MQTT.Server.csproj" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <TargetFramework>net6</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.Testing.Monitoring" Version="3.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
+    <PackageReference Include="FluentAssertions" Version="6.7.0" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CK.MQTT.Server\CK.MQTT.Server.csproj" />
+  </ItemGroup>
 </Project>

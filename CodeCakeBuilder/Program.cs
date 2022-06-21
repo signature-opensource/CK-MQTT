@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace CodeCake
 {
@@ -10,7 +11,7 @@ namespace CodeCake
         /// instead of using the default lookup to "Solution/Builder/bin/[Configuration]/[targetFramework]" folder.
         /// Check of this argument uses <see cref="StringComparer.OrdinalIgnoreCase"/>.
         /// </summary>
-        const string _solutionDirectoryIsCurrentDirectoryParameter = "SolutionDirectoryIsCurrentDirectory";
+        const string SolutionDirectoryIsCurrentDirectoryParameter = "SolutionDirectoryIsCurrentDirectory";
 
         /// <summary>
         /// CodeCakeBuilder entry point. This is a default, simple, implementation that can 
@@ -18,20 +19,13 @@ namespace CodeCake
         /// </summary>
         /// <param name="args">The command line arguments.</param>
         /// <returns>An error code (typically negative), 0 on success.</returns>
-        static int Main( string[] args )
+        static async Task<int> Main( string[] args )
         {
-            string solutionDirectory = args.Contains( _solutionDirectoryIsCurrentDirectoryParameter, StringComparer.OrdinalIgnoreCase )
+            string? solutionDirectory = args.Contains( SolutionDirectoryIsCurrentDirectoryParameter, StringComparer.OrdinalIgnoreCase )
                                         ? Environment.CurrentDirectory
                                         : null;
-            CodeCakeApplication app = new CodeCakeApplication( solutionDirectory );
-            RunResult result = app.Run( args.Where( a => !StringComparer.OrdinalIgnoreCase.Equals( a, _solutionDirectoryIsCurrentDirectoryParameter ) ) );
-            if( result.InteractiveMode == InteractiveMode.Interactive )
-            {
-                Console.WriteLine();
-                Console.WriteLine( $"Hit any key to exit." );
-                Console.WriteLine( $"Use -{InteractiveAliases.NoInteractionArgument} or -{InteractiveAliases.AutoInteractionArgument} parameter to exit immediately." );
-                Console.ReadKey();
-            }
+            var app = new CodeCakeApplication( solutionDirectory );
+            RunResult result = await app.RunAsync( args.Where( a => !StringComparer.OrdinalIgnoreCase.Equals( a, SolutionDirectoryIsCurrentDirectoryParameter ) ) );
             return result.ReturnCode;
         }
     }

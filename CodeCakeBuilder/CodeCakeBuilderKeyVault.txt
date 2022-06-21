@@ -1,4 +1,4 @@
-﻿-- Version: 2
+-- Version: 2
 -- Keys below can be removed if needed.
 NUGET_ORG_PUSH_API_KEY
 AZURE_FEED_SIGNATURE_OPENSOURCE_PAT
