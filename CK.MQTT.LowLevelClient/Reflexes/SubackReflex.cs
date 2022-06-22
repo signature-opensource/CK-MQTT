@@ -28,7 +28,7 @@ namespace CK.MQTT
             if( read.Buffer.Length < packetLength ) return (OperationStatus.NeedMoreData, true); // Will happen when the reader is completed/cancelled.
             Parse( read.Buffer, packetLength, out ushort packetId, out SubscribeReturnCode[]? qos, out SequencePosition position );
             pipeReader.AdvanceTo( position );
-            bool detectedDrop = await _exchanger.LocalPacketStore.OnQos1AckAsync( sink, packetId, qos );
+            bool detectedDrop = _exchanger.LocalPacketStore.OnQos1Ack( sink, packetId, qos );
             if( detectedDrop )
             {
                 _exchanger.Pumps!.Left.UnblockWriteLoop();
