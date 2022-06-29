@@ -18,7 +18,14 @@ namespace CK.MQTT
 {
     public sealed class LowLevelMqttClient : MessageExchanger, IMqtt3Client
     {
+        CancellationTokenSource? _running;
+
+        Task? _autoReconnectTask;
+        TaskCompletionSource<bool>? _disconnectTCS;
+        string? _clientId;
+
         public Mqtt3ClientConfiguration ClientConfig { get; }
+
 
         public LowLevelMqttClient(
             ProtocolConfiguration pConfig,
@@ -36,17 +43,15 @@ namespace CK.MQTT
             ClientConfig = config;
         }
 
+        public override string? ClientId => _clientId;
 
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
-            if( lastWill != null )
-            {
-                MqttBinaryWriter.ThrowIfInvalidMQTTString( lastWill.Topic );
-            }
-
+            if( lastWill != null ) MqttBinaryWriter.ThrowIfInvalidMQTTString( lastWill.Topic );
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
 
+            _clientId = ClientConfig.Credentials?.ClientId;
             while( true )
             {
                 var res = await DoConnectAsync( lastWill, cancellationToken );
@@ -86,7 +91,7 @@ namespace CK.MQTT
                         },
                         ManualConnectBehavior.TryOnceThenRetryInBackground when ClientConfig.DisconnectBehavior != DisconnectBehavior.AutoReconnect => throw new ArgumentException( $"Cannot use {ManualConnectBehavior.TryOnceThenRetryInBackground} when {nameof( DisconnectBehavior )} is not set to {DisconnectBehavior.AutoReconnect}.." ),
                         ManualConnectBehavior.TryOnceThenRetryInBackground => Return( new ConnectResult( true, res.Error, res.SessionState, res.ProtocolReturnCode, res.Exception ), true ),
-                            ManualConnectBehavior.RetryUntilConnectedOrUnrecoverable when res.Status == ConnectStatus.ErrorUnknown => Return( res, false ),
+                        ManualConnectBehavior.RetryUntilConnectedOrUnrecoverable when res.Status == ConnectStatus.ErrorUnknown => Return( res, false ),
                         ManualConnectBehavior.RetryUntilConnectedOrUnrecoverable when res.Status == ConnectStatus.ErrorUnrecoverable => Return( res, false ),
                         ManualConnectBehavior.RetryUntilConnectedOrUnrecoverable => Retry( res ),
                         ManualConnectBehavior.RetryUntilConnected => Retry( res ),
@@ -179,7 +184,7 @@ namespace CK.MQTT
                     }
                 }
 
-                
+
 
                 // When receiving the ConnAck, this reflex will replace the reflex with this property.
                 Pumps = new( // Require channel started.
@@ -279,10 +284,8 @@ namespace CK.MQTT
         }
 
 
-        CancellationTokenSource? _running;
 
-        Task? _autoReconnectTask;
-        TaskCompletionSource<bool>? _disconnectTCS;
+
         public async Task ReconnectBackgroundAsync()
         {
             var shouldReconnect = await _disconnectTCS!.Task;

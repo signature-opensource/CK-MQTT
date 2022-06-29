@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace CK.MQTT
@@ -46,6 +47,7 @@ namespace CK.MQTT
 
         static bool StringTooLong( string str ) => str.Length > ushort.MaxValue;
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void ThrowIfInvalidMQTTString( string str )
         {
             if( StringTooLong( str ) ) throw new ArgumentException( "Serializing a string that is longer than 65535 chars." );

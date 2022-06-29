@@ -12,6 +12,8 @@ namespace CK.MQTT.Client
     {
         public T Client { get; }
 
+        public string? ClientId => Client.ClientId;
+
         protected Mqtt3SinkWrapper( Func<IMqtt3Sink, T> clientFactory )
         {
             Client = clientFactory( this );

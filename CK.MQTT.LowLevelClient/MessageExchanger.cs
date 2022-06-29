@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class MessageExchanger : IConnectedLowLevelMqttClient
+    public abstract class MessageExchanger : IConnectedLowLevelMqttClient
     {
         /// <summary>
         /// Instantiate the <see cref="MessageExchanger"/> with the given configuration.
@@ -31,6 +31,8 @@ namespace CK.MQTT
             LocalPacketStore = localPacketStore ?? new MemoryPacketStore( pConfig, Config, ushort.MaxValue );
         }
 
+        /// <inheritdoc/>
+        public abstract string? ClientId { get; }
         public Mqtt3ConfigurationBase Config { get; }
         public virtual IMqtt3Sink Sink { get; }
         public IRemotePacketStore RemotePacketStore { get; }

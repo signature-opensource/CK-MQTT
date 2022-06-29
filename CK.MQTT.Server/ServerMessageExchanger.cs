@@ -16,7 +16,10 @@ namespace CK.MQTT.Server
     {
         readonly ITopicManager _topicManager;
 
+        public override string? ClientId { get; }
+
         public ServerMessageExchanger(
+            string? clientId,
             ProtocolConfiguration pConfig,
             Mqtt3ConfigurationBase config,
             IMqtt3Sink sink,
@@ -26,6 +29,7 @@ namespace CK.MQTT.Server
             ILocalPacketStore? localPacketStore = null
         ) : base( pConfig, config, sink, channel, remotePacketStore, localPacketStore )
         {
+            ClientId = clientId;
             _topicManager = outgoingTopicManager;
             Engage();
         }

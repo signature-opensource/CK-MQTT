@@ -2,28 +2,31 @@ using System;
 
 [assembly: Fody.ConfigureAwait( false )]
 
-[AttributeUsage( AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Method )]
-public class ThreadColorAttribute : Attribute
+namespace CK.MQTT
 {
-    public ThreadColorAttribute( string colorName )
+    [AttributeUsage( AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Method )]
+    public class ThreadColorAttribute : Attribute
     {
-        ColorName = colorName;
-        Color = ThreadColor.Special;
+        public ThreadColorAttribute( string colorName )
+        {
+            ColorName = colorName;
+            Color = ThreadColor.Special;
+        }
+
+        public ThreadColorAttribute( ThreadColor color )
+        {
+            if( color == ThreadColor.Special ) throw new ArgumentException( $"Color should not be set to special manually, set your own color for that." );
+            Color = color;
+        }
+
+        public string? ColorName { get; }
+        public ThreadColor Color { get; }
     }
 
-    public ThreadColorAttribute( ThreadColor color )
+    public enum ThreadColor
     {
-        if( color == ThreadColor.Special ) throw new ArgumentException( $"Color should not be set to special manually, set your own color for that." );
-        Color = color;
+        None,
+        Special,
+        Rainbow
     }
-
-    public string? ColorName { get; }
-    public ThreadColor Color { get; }
-}
-
-public enum ThreadColor
-{
-    None,
-    Special,
-    Rainbow
 }
