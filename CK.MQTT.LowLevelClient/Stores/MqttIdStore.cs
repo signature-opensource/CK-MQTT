@@ -341,7 +341,7 @@ namespace CK.MQTT.Stores
                     ref var curr = ref _idStore._entries[nextId];
                     currId = nextId;
                     // If there is a packet that reached the peremption time, or is marked as dropped.
-                    if( curr.Content._state != QoSState.UncertainDead &&
+                    if( !curr.Content._state.HasFlag( QoSState.UncertainDead ) &&
                         (curr.Content._lastEmissionTime + timeOut <= currentTime
                         || curr.Content._state.HasFlag( QoSState.Dropped )) )
                     {
