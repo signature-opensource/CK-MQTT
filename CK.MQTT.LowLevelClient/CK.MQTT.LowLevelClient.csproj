@@ -4,7 +4,6 @@
         <TargetFramework>net6.0</TargetFramework>
         <Nullable>enable</Nullable>
         <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
-        <Features>strict</Features>
     </PropertyGroup>
 
     <ItemGroup>

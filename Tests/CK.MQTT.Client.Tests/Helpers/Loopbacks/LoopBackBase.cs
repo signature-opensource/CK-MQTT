@@ -30,7 +30,11 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             if( !IsConnected ) throw new InvalidOperationException( "Closing when not connected." );
             if( DuplexPipe == null ) throw new InvalidOperationException( "Not started." );
+#pragma warning disable VSTHRD002 // Test code.
+#pragma warning disable VSTHRD104 // Test code.
             var pipe = _tcs.Task.Result;
+#pragma warning restore VSTHRD104 // Test code.
+#pragma warning restore VSTHRD002 // Test code.
             pipe!.Input.Complete();
             pipe!.Output.Complete();
             pipe!.Input.CancelPendingRead();
@@ -49,7 +53,11 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public void CloseConnectionBackdoor()
         {
+#pragma warning disable VSTHRD002 // Test code.
+#pragma warning disable VSTHRD104 // Test code.
             var pipe = _tcs.Task.Result;
+#pragma warning restore VSTHRD104 // Test code.
+#pragma warning restore VSTHRD002 // Test code.
             pipe!.Input.Complete();
             pipe!.Output.Complete();
             DuplexPipe!.Output.CancelPendingFlush();

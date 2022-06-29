@@ -26,7 +26,7 @@ namespace CK.MQTT.Client.Tests
         public abstract string ClassCase { get; }
 
         [Test]
-        public async Task packet_of_128_bytes_payload_serialized_correctly()
+        public async Task packet_of_128_bytes_payload_serialized_correctlyAsync()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );

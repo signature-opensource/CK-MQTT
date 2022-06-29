@@ -231,7 +231,6 @@ namespace CK.MQTT.Server
             return OperationStatus.Done;
         }
 
-
         OperationStatus ParsePropertiesFields( ref SequenceReader<byte> sequenceReader )
         {
             SequencePosition sequencePosition;

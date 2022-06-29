@@ -28,12 +28,12 @@ namespace CK.MQTT.Server.Server
         public PerfectEvent<MessageExchangerAgent<IConnectedMessageSender>> OnNewClient => _onNewClientSender.PerfectEvent;
         protected override async ValueTask CreateClientAsync(
             IActivityMonitor m,
+            string clientId,
             IMqttChannel channel,
             IAuthenticationProtocolHandler securityManager,
             ILocalPacketStore localPacketStore,
             IRemotePacketStore remotePacketStore,
-            IConnectInfo connectInfo,
-            CancellationToken cancellationToken
+            IConnectInfo connectInfo, CancellationToken cancellationToken
         )
         {
             var exchanger = new MessageExchangerAgent<IConnectedMessageSender>(
@@ -41,6 +41,7 @@ namespace CK.MQTT.Server.Server
                 {
                     ((MessageExchangerAgent<IConnectedMessageSender>)sink).Start();
                     return new ServerMessageExchanger(
+                        clientId,
                         ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
                         _config,
                         sink,
