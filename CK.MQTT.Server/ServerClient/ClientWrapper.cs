@@ -16,7 +16,8 @@ namespace CK.MQTT.Server.ServerClient
             IMqttChannel channel,
             IRemotePacketStore? remotePacketStore = null,
             ILocalPacketStore? localPacketStore = null
-        ) : base( pConfig,
+        ) : base( serverClient.ClientId,
+                  pConfig,
                   config,
                   new FilteringSinkWrapper( sink, serverClient._inputTopicFilter ),
                   channel,

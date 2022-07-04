@@ -5,7 +5,6 @@
         <TargetFramework>net6</TargetFramework>
         <Description>MQTT server implementation (not yet available).</Description>
         <Nullable>enable</Nullable>
-        <Features>strict</Features>
     </PropertyGroup>
 
     <ItemGroup>

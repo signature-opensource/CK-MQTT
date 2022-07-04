@@ -20,6 +20,9 @@ namespace CK.MQTT.Server.ServerClient
         readonly IMqtt3Sink _sink;
         internal TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
         ClientWrapper? _wrapper;
+
+        public string? ClientId =>  _wrapper?.ClientId;
+
         public MqttServerClient( Mqtt3ConfigurationBase config, IMqtt3Sink sink, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory securityManagerFactory )
             : base( config, channelFactory, storeFactory, securityManagerFactory )
         {
@@ -27,7 +30,7 @@ namespace CK.MQTT.Server.ServerClient
             _sink = sink;
         }
 
-        protected override ValueTask CreateClientAsync( IActivityMonitor m, IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
+        protected override ValueTask CreateClientAsync( IActivityMonitor m, string clientId, IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
         {
             _needClientTCS!.SetResult( (channel, securityManager, localPacketStore, remotePacketStore, connectInfo) );
             _needClientTCS = null;

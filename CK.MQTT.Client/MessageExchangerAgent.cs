@@ -105,6 +105,7 @@ namespace CK.MQTT.Client
             }
         }
 
+        DisconnectReason _reason;
         virtual protected async Task WorkLoopAsync( ChannelReader<object?> channel )
         {
             ActivityMonitor m = new();
@@ -144,10 +145,16 @@ namespace CK.MQTT.Client
                 }
                 else if( item is UnattendedDisconnect disconnect )
                 {
+                    _reason = disconnect.Reason;
                     await _onConnectionChangeSender.RaiseAsync( m, disconnect.Reason );
+                }
+                else if( item is RaiseConnectionState )
+                {
+                    await _onConnectionChangeSender.RaiseAsync( m, _reason );
                 }
                 else if( item is Connected )
                 {
+                    _reason = DisconnectReason.None;
                     await _onConnectionChangeSender.RaiseAsync( m, DisconnectReason.None );
                 }
                 else if( item is StoreFilling storeFilling )
@@ -175,6 +182,13 @@ namespace CK.MQTT.Client
                     m.Error( "Unknown event has been sent on the channel." );
                 }
             }
+        }
+        public record RaiseConnectionState();
+        public void RaiseOnConnectionChangeWithLatestState()
+        {
+            var events = Events;
+            if( events == null ) Throw.InvalidOperationException( "Not started." );
+            events.Writer.TryWrite( new RaiseConnectionState() );
         }
     }
 }

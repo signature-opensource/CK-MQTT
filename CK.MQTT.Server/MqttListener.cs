@@ -50,12 +50,12 @@ namespace CK.MQTT.Server
 
         protected abstract ValueTask CreateClientAsync(
             IActivityMonitor m,
+            string clientId,
             IMqttChannel channel,
             IAuthenticationProtocolHandler securityManager,
             ILocalPacketStore localPacketStore,
             IRemotePacketStore remotePacketStore,
-            IConnectInfo connectInfo,
-            CancellationToken cancellationToken );
+            IConnectInfo connectInfo, CancellationToken cancellationToken );
 
         async Task AcceptLoopAsync( CancellationToken cancellationToken )
         {
@@ -114,7 +114,7 @@ namespace CK.MQTT.Server
                     var smCopy = securityManager;
                     channel = null;
                     securityManager = null;
-                    await CreateClientAsync( m, channelCopy, smCopy, localStore, remoteStore, connectHandler, cancellationToken );
+                    await CreateClientAsync( m, connectHandler.ClientId, channelCopy, smCopy, localStore, remoteStore, connectHandler, cancellationToken );
                 }
                 finally
                 {
