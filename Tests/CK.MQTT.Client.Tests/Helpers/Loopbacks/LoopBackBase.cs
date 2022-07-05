@@ -26,23 +26,19 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
 
         protected abstract ValueTask<IDuplexPipe> DoStartAsync( CancellationToken cancellationToken );
-        public void Close()
+        public async ValueTask CloseAsync(DisconnectReason reason)
         {
             if( !IsConnected ) throw new InvalidOperationException( "Closing when not connected." );
             if( DuplexPipe == null ) throw new InvalidOperationException( "Not started." );
-#pragma warning disable VSTHRD002 // Test code.
-#pragma warning disable VSTHRD104 // Test code.
-            var pipe = _tcs.Task.Result;
-#pragma warning restore VSTHRD104 // Test code.
-#pragma warning restore VSTHRD002 // Test code.
-            pipe!.Input.Complete();
-            pipe!.Output.Complete();
+            var pipe = await _tcs.Task;
+            await pipe!.Input.CompleteAsync();
+            await pipe!.Output.CompleteAsync();
             pipe!.Input.CancelPendingRead();
             pipe!.Output.CancelPendingFlush();
-            DuplexPipe.Output.Complete();
+            await DuplexPipe.Output.CompleteAsync();
             DuplexPipe.Output.CancelPendingFlush();
             DuplexPipe.Input.CancelPendingRead();
-            DuplexPipe.Input.Complete();
+            await DuplexPipe.Input.CompleteAsync();
             DuplexPipe = null;
             IsConnected = false;
             _writer.TryWrite( new ClosedChannel() );

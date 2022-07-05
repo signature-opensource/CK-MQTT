@@ -73,11 +73,11 @@ namespace CK.MQTT.Server.ServerClient
             _duplexPipe = new DuplexPipe( PipeReader.Create( _stream ), PipeWriter.Create( _stream ) );
         }
 
-        public void Close()
+        public async ValueTask CloseAsync(DisconnectReason reason)
         {
             if( _tcpClient == null ) throw new InvalidOperationException( "Channel is not started." );
             _tcpClient.Close();
-            _stream!.Dispose();
+            await _stream!.DisposeAsync();
             _tcpClient = null;
         }
 

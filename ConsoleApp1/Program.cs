@@ -2,39 +2,66 @@ using CK.Core;
 using CK.MQTT;
 using CK.MQTT.Client;
 using CK.MQTT.Packets;
-using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Net;
+using System.Net.Sockets;
 
-if( args.Length < 2 || args.Length > 3 )
-{
-    Console.WriteLine( $"Erreur, trouvé {args.Length}, il faut 2 à 3 arguments uniquement. Exemple: \"MqttTester.exe hostname port\"" );
-    return;
-}
-if( !int.TryParse( args[1], out int port ) )
-{
-    Console.WriteLine( $"Le port '{port}' n'est pas un nombre." );
-    return;
-}
-
-bool stressMax = args.Length > 2 && args[2] == "stress-max";
+var listener = new TcpListener( IPAddress.Loopback, 0 );
+listener.Start();
+int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+var accept = listener.AcceptTcpClientAsync();
 
 var buffer = new byte[500];
 buffer = buffer.Select( ( s, i ) => (byte)i ).ToArray();
 var client = new MqttClientAgent(
                ( sink ) => new LowLevelMqttClient( ProtocolConfiguration.Mqtt3, new Mqtt3ClientConfiguration()
                {
-                   KeepAliveSeconds = 30,
+                   KeepAliveSeconds = 3000,
                    DisconnectBehavior = DisconnectBehavior.AutoReconnect,
-                   Credentials = new MqttClientCredentials( "test", true )
-               }, sink, new TcpChannel( args[0], port ) )
+                   Credentials = new MqttClientCredentials( "test", true ),
+                   WaitTimeoutMilliseconds = 500000
+               }, sink, new TcpChannel( "localhost", port ) )
 );
 
+client.OnConnectionChange.Sync += OnConnectionChange;
+var backgroundRedirect = BackgroundRedirect();
 var connectRes = await client.ConnectAsync();
+
+async Task BackgroundRedirect()
+{
+    Random rnd = new Random( 42 );
+    TcpClient source = await accept;
+    TcpClient target = new TcpClient( "localhost", 1883 );
+    using( var destStream = target.GetStream() )
+    using( var sourceStream = source.GetStream() )
+    using( var fsStream = File.OpenWrite( "dump.bin" ) )
+    {
+        var incoming = destStream.CopyToAsync( sourceStream );
+        var buffer = new byte[10];
+        while( true )
+        {
+            var size = await sourceStream.ReadAsync( buffer );
+            var tmpBuffer = buffer[0..size];
+            await destStream.WriteAsync( tmpBuffer );
+            await fsStream.WriteAsync( tmpBuffer );
+            await fsStream.FlushAsync();
+            if( tmpBuffer.Length == 0 ) break;
+            await Task.Delay( 5 );
+            var nxt = rnd.Next( 100 );
+            if( nxt == 20 )
+            {
+                Console.WriteLine( "Big wait" );
+                await Task.Delay( 5000 );
+            }
+        }
+        await incoming;
+    }
+}
 if( connectRes.Status != ConnectStatus.Successful )
 {
     Console.WriteLine( $"Error while connecting: {connectRes}" );
     return;
 }
-client.OnConnectionChange.Sync += OnConnectionChange;
 
 void OnConnectionChange( IActivityMonitor monitor, DisconnectReason e )
 {
@@ -46,7 +73,7 @@ Console.WriteLine( "Connected." );
 int inFlight = 0;
 for( int i = 0; i < 26000; i++ )
 {
-    if( stressMax )
+    if( false )
     {
         if( i % 1000 == 0 )
         {
@@ -67,9 +94,9 @@ for( int i = 0; i < 26000; i++ )
     _ = task.ContinueWith( ( a ) =>
     {
         Interlocked.Decrement( ref inFlight );
-        Console.WriteLine( "received ack for msg number: " + foo );
+        //Console.WriteLine( "received ack for msg number: " + foo );
     } );
-    while( inFlight > 100 && !stressMax )
+    while( inFlight > 100 && !false )
     {
         await Task.Delay( 1000 );
         Console.WriteLine( "Waiting for response..." );
@@ -79,3 +106,5 @@ for( int i = 0; i < 26000; i++ )
 await await client.PublishAsync( new SmallOutgoingApplicationMessage( "test-topic", QualityOfService.ExactlyOnce, false, buffer ) );
 
 Console.WriteLine( "Done" );
+await backgroundRedirect;
+Console.WriteLine( "Background redirect done." );

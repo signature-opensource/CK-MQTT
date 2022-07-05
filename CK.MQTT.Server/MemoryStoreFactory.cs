@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    class MemoryStoreFactory : IStoreFactory
+    public class MemoryStoreFactory : IStoreFactory
     {
         readonly Dictionary<string, (ILocalPacketStore, IRemotePacketStore)> _stores = new();
         public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken )

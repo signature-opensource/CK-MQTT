@@ -152,9 +152,9 @@ namespace CK.MQTT
                     await Channel.DuplexPipe.Output.FlushAsync( cts.Token );
                 }
 
-                async ValueTask<ConnectResult> Exit( ConnectError connectError )
+                async ValueTask<ConnectResult> Exit( ConnectError connectError, DisconnectReason reason )
                 {
-                    Channel.Close();
+                    await Channel.CloseAsync( reason );
                     var pumps = Pumps;
                     if( pumps != null )
                     {
@@ -178,8 +178,8 @@ namespace CK.MQTT
                     {
                         return cancellationToken.IsCancellationRequested switch
                         {
-                            true => await Exit( ConnectError.Connection_Cancelled ),
-                            false => await Exit( ConnectError.Timeout )
+                            true => await Exit( ConnectError.Connection_Cancelled, DisconnectReason.UserDisconnected ),
+                            false => await Exit( ConnectError.Timeout, DisconnectReason.Timeout )
                         };
                     }
                 }
@@ -194,23 +194,23 @@ namespace CK.MQTT
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.
                                                         // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )
-                    return await Exit( ConnectError.Connection_Cancelled );
+                    return await Exit( ConnectError.Connection_Cancelled, DisconnectReason.UserDisconnected );
                 if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
-                    return await Exit( ConnectError.InternalException );
+                    return await Exit( ConnectError.InternalException, DisconnectReason.InternalException );
                 if( Pumps.IsClosed )
-                    return await Exit( ConnectError.RemoteDisconnected );
+                    return await Exit( ConnectError.RemoteDisconnected, DisconnectReason.RemoteDisconnected );
 
                 if( res.Error != ConnectError.None )
                 {
                     await Pumps.StopWorkAsync();
                     await Pumps.DisposeAsync();
-                    Channel.Close();
+                    await Channel.CloseAsync( DisconnectReason.None );
                     return res;
                 }
 
                 bool askedCleanSession = ClientConfig.Credentials?.CleanSession ?? true;
                 if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-                    return await Exit( ConnectError.ProtocolError_SessionNotFlushed );
+                    return await Exit( ConnectError.ProtocolError_SessionNotFlushed, DisconnectReason.ProtocolError );
                 if( res.SessionState == SessionState.CleanSession )
                 {
                     ValueTask task = RemotePacketStore.ResetAsync();
@@ -229,7 +229,7 @@ namespace CK.MQTT
                 // We may throw before the creation of the duplex pump.
                 if( Pumps is not null )
                 {
-                    Channel.Close();
+                    await Channel.CloseAsync( DisconnectReason.InternalException );
                     await Pumps.CloseAsync();
                     await Pumps.DisposeAsync();
                 }
