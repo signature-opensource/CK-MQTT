@@ -17,7 +17,7 @@ namespace CK.MQTT.Server.ServerClient
         internal readonly ITopicManager _inputTopicFilter = new SimpleTopicManager(); //TODO: 
         internal readonly ITopicManager _outputTopicFilter = new SimpleTopicManager();
         internal readonly Channel<(Subscription[]?, string[]?)> _subscriptionsCommand = Channel.CreateUnbounded<(Subscription[]?, string[]?)>();
-        readonly IMqtt3Sink _sink;
+        public IMqtt3Sink Sink { get; set; }
         internal TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
         ClientWrapper? _wrapper;
 
@@ -27,7 +27,7 @@ namespace CK.MQTT.Server.ServerClient
             : base( config, channelFactory, storeFactory, securityManagerFactory )
         {
             AuthProtocolHandlerFactory = new SecurityManagerFactoryWrapper( this, securityManagerFactory );
-            _sink = sink;
+            Sink = sink;
         }
 
         protected override ValueTask CreateClientAsync( IActivityMonitor m, string clientId, IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
@@ -44,7 +44,7 @@ namespace CK.MQTT.Server.ServerClient
             var tcs = new TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
             _needClientTCS = tcs;
             var (channel, _, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
-            _wrapper = new ClientWrapper( this, ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ), Config, _sink, channel, remotePacketStore, localPacketStore );
+            _wrapper = new ClientWrapper( this, ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ), Config, Sink, channel, remotePacketStore, localPacketStore );
             return new ConnectResult( localPacketStore.IsRevivedSession ? SessionState.SessionPresent : SessionState.CleanSession, ProtocolConnectReturnCode.Accepted );
         }
 

@@ -15,7 +15,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     static class PacketReplayerAssertsExtensions
     {
         public static TestMqttClient CreateMQTT3Client( this PacketReplayer replayer, Mqtt3ClientConfiguration config )
-            => new( config, replayer.Events );
+            => new( ProtocolConfiguration.Mqtt3, config, replayer.CreateChannel(), replayer.Events );
 
         public static TestMqttClient CreateMQTT5Client( this PacketReplayer replayer, ProtocolConfiguration pConfig, Mqtt5ClientConfiguration config )
             => new( ProtocolConfiguration.Mqtt5, config, replayer.CreateChannel(), replayer.Events );

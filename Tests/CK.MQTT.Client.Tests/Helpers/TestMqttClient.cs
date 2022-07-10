@@ -1,5 +1,6 @@
 using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.ConstrainedExecution;
@@ -20,6 +21,12 @@ namespace CK.MQTT.Client
         {
             Config = config;
             _eventWriter = eventWriter;
+            OnMessage.Simple.Async += Simple_Async;
+        }
+
+        async Task Simple_Async( IActivityMonitor monitor, ApplicationMessage message )
+        {
+            await Events!.Writer.WriteAsync( message, default );
         }
 
         protected override async Task WorkLoopAsync( ChannelReader<object?> channel )
@@ -42,12 +49,5 @@ namespace CK.MQTT.Client
             }
             await task;
         }
-
-
-        protected override async ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
-            => await new NewApplicationMessageClosure( ReceivedMessageAsync ).HandleMessageAsync( topic, reader, size, q, retain, cancellationToken );
-
-        async ValueTask ReceivedMessageAsync( IActivityMonitor? m, ApplicationMessage message, CancellationToken cancellationToken )
-            => await Events!.Writer.WriteAsync( message, cancellationToken );
     }
 }

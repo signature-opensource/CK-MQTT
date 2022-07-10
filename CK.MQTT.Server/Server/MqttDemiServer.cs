@@ -22,10 +22,10 @@ namespace CK.MQTT.Server.Server
             _config = config;
         }
 
-        readonly PerfectEventSender<MessageExchangerAgent<IConnectedMessageSender>> _onNewClientSender = new();
+        readonly PerfectEventSender<MessageExchangerAgent> _onNewClientSender = new();
         readonly Mqtt3ConfigurationBase _config;
 
-        public PerfectEvent<MessageExchangerAgent<IConnectedMessageSender>> OnNewClient => _onNewClientSender.PerfectEvent;
+        public PerfectEvent<MessageExchangerAgent> OnNewClient => _onNewClientSender.PerfectEvent;
         protected override async ValueTask CreateClientAsync(
             IActivityMonitor m,
             string clientId,
@@ -36,21 +36,15 @@ namespace CK.MQTT.Server.Server
             IConnectInfo connectInfo, CancellationToken cancellationToken
         )
         {
-            var exchanger = new MessageExchangerAgent<IConnectedMessageSender>(
-                ( sink ) =>
-                {
-                    ((MessageExchangerAgent<IConnectedMessageSender>)sink).Start();
-                    return new ServerMessageExchanger(
-                        clientId,
-                        ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
-                        _config,
-                        sink,
+            var exchanger = new ServerMessageExchanger(
+                clientId,
+                ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
+                _config,
+                TODO,
                         channel,
                         new SimpleTopicManager(),
                         remotePacketStore,
                         localPacketStore
-                    );
-                }
             );
             await _onNewClientSender.SafeRaiseAsync( m, exchanger );
         }
