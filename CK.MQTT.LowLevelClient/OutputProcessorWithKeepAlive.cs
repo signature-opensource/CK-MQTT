@@ -32,7 +32,7 @@ namespace CK.MQTT.Client
 
                 if( elapsed.TotalMilliseconds > _client.Config.WaitTimeoutMilliseconds )
                 {
-                    await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
+                    await SelfDisconnectAsync( DisconnectReason.Timeout );
                     return true;
                 }
             }

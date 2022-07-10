@@ -119,6 +119,7 @@ namespace CK.MQTT.Client
             }
         }
 
+        DisconnectReason _reason;
         virtual protected async Task WorkLoopAsync( ChannelReader<object?> channel )
         {
             ActivityMonitor m = new();
@@ -163,10 +164,14 @@ namespace CK.MQTT.Client
                     }
                     break;
                 case UnattendedDisconnect disconnect:
+                    _reason = disconnect.Reason;
                     await _onConnectionChangeSender.RaiseAsync( m, disconnect.Reason );
                     break;
                 case StoreFilling storeFilling:
                     await _onStoreQueueFilling.SafeRaiseAsync( m, storeFilling.FreeLeftSlot );
+                    break;
+                case RaiseConnectionState connectionState:
+                    await _onConnectionChangeSender.RaiseAsync( m, _reason );
                     break;
                 case UnparsedExtraData extraData:
                     m.Warn( $"There was {extraData.UnparsedData.Length} bytes unparsed in Packet {extraData.PacketId}." );
@@ -188,5 +193,12 @@ namespace CK.MQTT.Client
         public ValueTask<Task> PublishAsync( OutgoingMessage message ) => Sender.PublishAsync( message );
 
         public ValueTask DisposeAsync() => Sender.DisposeAsync();
+        public record RaiseConnectionState();
+        public void RaiseOnConnectionChangeWithLatestState()
+        {
+            var events = Events;
+            if( events == null ) Throw.InvalidOperationException( "Not started." );
+            events.Writer.TryWrite( new RaiseConnectionState() );
+        }
     }
 }

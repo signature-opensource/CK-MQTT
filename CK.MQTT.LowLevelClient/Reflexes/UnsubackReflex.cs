@@ -26,7 +26,7 @@ namespace CK.MQTT
             }
             ushort? packetId = await pipeReader.ReadPacketIdPacketAsync( sink, packetLength, cancellationToken );
             if( !packetId.HasValue ) return (OperationStatus.NeedMoreData, true);
-            bool detectedDrop = await _exchanger.LocalPacketStore.OnQos1AckAsync( sink, packetId.Value, null );
+            bool detectedDrop = _exchanger.LocalPacketStore.OnQos1Ack( sink, packetId.Value, null );
             if( detectedDrop )
             {
                 _exchanger.Pumps!.Left.UnblockWriteLoop();

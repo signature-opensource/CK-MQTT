@@ -29,7 +29,7 @@ namespace CK.MQTT
                 case PacketType.PublishAck:
                     ushort? packetId2 = await pipe.ReadPacketIdPacketAsync( sink, packetLength, cancellationToken );
                     if( !packetId2.HasValue ) return (OperationStatus.NeedMoreData, true);
-                    bool detectedDrop = await _exchanger.LocalPacketStore.OnQos1AckAsync( sink, packetId2.Value, null );
+                    bool detectedDrop = _exchanger.LocalPacketStore.OnQos1Ack( sink, packetId2.Value, null );
                     if( detectedDrop )
                     {
                         _exchanger.Pumps!.Left.UnblockWriteLoop();

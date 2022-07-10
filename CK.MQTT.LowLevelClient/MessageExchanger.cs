@@ -7,9 +7,6 @@ using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -114,7 +111,7 @@ namespace CK.MQTT
         internal protected async virtual ValueTask<bool> SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );
-            Channel.Close();
+            await Channel.CloseAsync( disconnectedReason );
             await Pumps.StopWorkAsync();
             return Sink.OnUnattendedDisconnect( disconnectedReason );
         }

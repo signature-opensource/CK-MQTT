@@ -234,51 +234,53 @@ namespace CK.MQTT.Stores
             }
         }
 
-        protected abstract ValueTask RemovePacketDataAsync( ref T storage );
+        protected abstract void RemovePacketData( ref T storage );
 
-        public async ValueTask<bool> OnQos1AckAsync( IMqtt3Sink sink, ushort packetId, object? result )
+        public bool OnQos1Ack( IMqtt3Sink sink, ushort packetId, object? result )
         {
-            MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
-            Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
-
-            // If it was already acked, the packet would be marked as "UncertainDed".
-            bool wasNeverAcked = (state & QoSState.UncertainDead) != QoSState.UncertainDead;
-            if( wasNeverAcked )
+            lock( _idStore )
             {
-                await DoRemovePacketData();
-                ValueTask DoRemovePacketData() // Cant do ref inside Async method, so you ... avoid it like this.
+                MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+                Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
+
+                // If it was already acked, the packet would be marked as "UncertainDed".
+                bool wasNeverAcked = (state & QoSState.UncertainDead) != QoSState.UncertainDead;
+                if( wasNeverAcked )
                 {
                     ref MqttIdStore<T>.EntryContent content = ref _idStore._entries[packetId].Content;
                     content._taskCompletionSource.SetResult( result ); // TODO: provide user a transaction window and remove packet when he is done..
-                    return RemovePacketDataAsync( ref content.Storage );
+                    RemovePacketData( ref content.Storage );
                 }
-            }
-            return End();
-            bool End()
-            {
-                ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
-                bool res = DropPreviousUnackedPacket( sink, ref entry, packetId );
-                if( entry.Content._attemptInTransitOrLost > 1 )
+                return End();
+                bool End()
                 {
-                    entry.Content._attemptInTransitOrLost--;
-                    entry.Content._state |= QoSState.UncertainDead;
+                    ref IdStoreEntry<EntryContent> entry = ref _idStore._entries[packetId];
+                    bool res = DropPreviousUnackedPacket( sink, ref entry, packetId );
+                    if( entry.Content._attemptInTransitOrLost > 1 )
+                    {
+                        entry.Content._attemptInTransitOrLost--;
+                        entry.Content._state |= QoSState.UncertainDead;
+                    }
+                    else
+                    {
+                        FreeId( packetId );
+                    }
+                    return res;
                 }
-                else
-                {
-                    FreeId( packetId );
-                }
-                return res;
             }
         }
 
+        [ThreadColor( "ReadLoop" )]
         public async ValueTask<IOutgoingPacket> OnQos2AckStep1Async( ushort packetId )
         {
-            MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
-            Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.ExactlyOnce );
-
-            bool wasNeverAcked = (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked;
-            if( wasNeverAcked )
+            lock( _idStore )
             {
+
+                MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+                Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.ExactlyOnce );
+
+                bool wasNeverAcked = (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked;
+                if( !wasNeverAcked ) return LifecyclePacketV3.Pubrel( packetId );
                 DoRemovePacket();
                 void DoRemovePacket()
                 {
@@ -288,11 +290,11 @@ namespace CK.MQTT.Stores
                     content._state |= QoSState.QoS2PubRecAcked;
                     content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
                 }
-                return await OverwriteMessageAsync( LifecyclePacketV3.Pubrel( packetId ) );
             }
-            return LifecyclePacketV3.Pubrel( packetId );
+            return await OverwriteMessageAsync( LifecyclePacketV3.Pubrel( packetId ) );
         }
 
+        [ThreadColor( "ReadLoop" )]
         public void OnQos2AckStep2( ushort packetId )
         {
             lock( _idStore )
@@ -315,8 +317,10 @@ namespace CK.MQTT.Stores
             }
         }
 
+        [ThreadColor( "WriteLoop" )]
         protected abstract ValueTask<IOutgoingPacket> RestorePacketAsync( ushort packetId );
 
+        [ThreadColor( "WriteLoop" )]
         async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( ushort packetId )
             => (await RestorePacketAsync( packetId ), TimeSpan.Zero);
 
@@ -337,7 +341,7 @@ namespace CK.MQTT.Stores
                     ref var curr = ref _idStore._entries[nextId];
                     currId = nextId;
                     // If there is a packet that reached the peremption time, or is marked as dropped.
-                    if( curr.Content._state != QoSState.UncertainDead &&
+                    if( !curr.Content._state.HasFlag( QoSState.UncertainDead ) &&
                         (curr.Content._lastEmissionTime + timeOut <= currentTime
                         || curr.Content._state.HasFlag( QoSState.Dropped )) )
                     {

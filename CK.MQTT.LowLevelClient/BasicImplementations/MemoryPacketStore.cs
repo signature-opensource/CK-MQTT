@@ -44,11 +44,10 @@ namespace CK.MQTT
         }
 
         /// <inheritdoc/>
-        protected override ValueTask RemovePacketDataAsync( ref StoredPacket storedPacket )
+        protected override void RemovePacketData( ref StoredPacket storedPacket )
         {
             storedPacket.Dispose();
             storedPacket = default;
-            return new ValueTask();
         }
 
         protected override async ValueTask<IOutgoingPacket> DoStorePacketAsync( IOutgoingPacket packet )
