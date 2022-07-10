@@ -7,27 +7,11 @@ namespace CK.MQTT.Client
 {
     public interface IMqtt3Sink
     {
+        IConnectedMessageSender Sender { get; set; }
         ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
-
-        public enum ManualConnectRetryBehavior
-        {
-            GiveUp,
-            Retry,
-            YieldToBackground
-        }
-
-        ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult );
 
         /// <returns><see langword="true"/>to keep reconnecting.</returns>
         bool OnUnattendedDisconnect( DisconnectReason reason );
-
-        /// <returns><see langword="true"/> to try reconnecting. You can add delay logic to temporise a reconnection.</returns>
-        ValueTask<bool> OnReconnectionFailedAsync( ConnectResult result );
-
-        /// <summary>
-        /// Called when the client is successfuly connected.
-        /// </summary>
-        void Connected();
 
         void OnPacketResent( ushort packetId, ulong packetInTransitOrLost, bool isDropped );
 

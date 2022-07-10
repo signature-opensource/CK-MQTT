@@ -26,6 +26,7 @@ namespace CK.MQTT
             PConfig = pConfig;
             Config = config;
             Sink = sink;
+            sink.Sender = this;
             Channel = channel;
             RemotePacketStore = remotePacketStore ?? new MemoryPacketIdStore();
             LocalPacketStore = localPacketStore ?? new MemoryPacketStore( pConfig, Config, ushort.MaxValue );

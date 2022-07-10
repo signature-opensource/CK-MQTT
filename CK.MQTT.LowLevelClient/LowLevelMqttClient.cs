@@ -25,12 +25,12 @@ namespace CK.MQTT
         string? _clientId;
 
         public Mqtt3ClientConfiguration ClientConfig { get; }
-
+        public IMqtt3ClientSink ClientSink { get; }
 
         public LowLevelMqttClient(
             ProtocolConfiguration pConfig,
             Mqtt3ClientConfiguration config,
-            IMqtt3Sink sink,
+            IMqtt3ClientSink sink,
             IMqttChannel channel,
             IRemotePacketStore? remotePacketStore = null,
             ILocalPacketStore? localPacketStore = null
@@ -41,6 +41,8 @@ namespace CK.MQTT
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
             }
             ClientConfig = config;
+            ClientSink = sink;
+            sink.Client = this;
         }
 
         public override string? ClientId => _clientId;
@@ -66,7 +68,7 @@ namespace CK.MQTT
                 static (ConnectResult, bool) Retry( ConnectResult result ) => (result, false);
 
                 Debug.Assert( res.Status != ConnectStatus.Deffered );
-                var sinkBehavior = Sink.OnFailedManualConnect( res );
+                var sinkBehavior = ClientSink.OnFailedManualConnect( res );
                 var configBehavior = ClientConfig.ManualConnectBehavior;
                 (ConnectResult connectResult, bool stopRetries) = res.Status switch
                 {
@@ -76,8 +78,8 @@ namespace CK.MQTT
                         ManualConnectBehavior.TryOnce => Return( res, true ),
                         ManualConnectBehavior.UseSinkBehavior => sinkBehavior switch
                         {
-                            IMqtt3Sink.ManualConnectRetryBehavior.GiveUp => Return( res, res.Status == ConnectStatus.Successful ),
-                            IMqtt3Sink.ManualConnectRetryBehavior.YieldToBackground =>
+                            IMqtt3ClientSink.ManualConnectRetryBehavior.GiveUp => Return( res, res.Status == ConnectStatus.Successful ),
+                            IMqtt3ClientSink.ManualConnectRetryBehavior.YieldToBackground =>
                                 (ClientConfig.DisconnectBehavior != DisconnectBehavior.AutoReconnect) switch
                                 {
                                     true => throw new ArgumentException(
@@ -86,8 +88,8 @@ namespace CK.MQTT
                                     ),
                                     false => Return( new ConnectResult( true, res.Error, res.SessionState, res.ProtocolReturnCode, res.Exception ), true )
                                 },
-                            IMqtt3Sink.ManualConnectRetryBehavior.Retry => Retry( res ),
-                            _ => throw new InvalidOperationException( $"Invalid {nameof( IMqtt3Sink.ManualConnectRetryBehavior )}:{sinkBehavior}" )
+                            IMqtt3ClientSink.ManualConnectRetryBehavior.Retry => Retry( res ),
+                            _ => throw new InvalidOperationException( $"Invalid {nameof( IMqtt3ClientSink.ManualConnectRetryBehavior )}:{sinkBehavior}" )
                         },
                         ManualConnectBehavior.TryOnceThenRetryInBackground when ClientConfig.DisconnectBehavior != DisconnectBehavior.AutoReconnect => throw new ArgumentException( $"Cannot use {ManualConnectBehavior.TryOnceThenRetryInBackground} when {nameof( DisconnectBehavior )} is not set to {DisconnectBehavior.AutoReconnect}.." ),
                         ManualConnectBehavior.TryOnceThenRetryInBackground => Return( new ConnectResult( true, res.Error, res.SessionState, res.ProtocolReturnCode, res.Exception ), true ),
@@ -221,7 +223,7 @@ namespace CK.MQTT
                 {
                     throw new NotImplementedException();
                 }
-                Sink.Connected();
+                ClientSink.OnConnected();
                 return res;
             }
             catch( Exception exception )
@@ -298,7 +300,7 @@ namespace CK.MQTT
                     ConnectResult result = await DoConnectAsync( null, _running.Token );
                     if( result.Error != ConnectError.None )
                     {
-                        shouldReconnect = await Sink.OnReconnectionFailedAsync( result );
+                        shouldReconnect = await ClientSink.OnReconnectionFailedAsync( result );
                         if( !shouldReconnect ) return;
                     }
                     shouldReconnect = await _disconnectTCS.Task;

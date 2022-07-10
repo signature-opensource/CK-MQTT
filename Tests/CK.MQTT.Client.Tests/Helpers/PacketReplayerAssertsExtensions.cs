@@ -15,7 +15,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     static class PacketReplayerAssertsExtensions
     {
         public static TestMqttClient CreateMQTT3Client( this PacketReplayer replayer, Mqtt3ClientConfiguration config )
-            => new( ProtocolConfiguration.Mqtt3, config, replayer.CreateChannel(), replayer.Events );
+            => new( config, replayer.Events );
 
         public static TestMqttClient CreateMQTT5Client( this PacketReplayer replayer, ProtocolConfiguration pConfig, Mqtt5ClientConfiguration config )
             => new( ProtocolConfiguration.Mqtt5, config, replayer.CreateChannel(), replayer.Events );
@@ -65,7 +65,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             await @this.SendToClientAsync( TestHelper.Monitor, "20020000" );
             await task;
             await @this.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
-            await @this.ShouldContainEventAsync<TestMqttClient.Connected>();
+            await @this.ShouldContainEventAsync<DefaultClientMessageSink.Connected>();
         }
 
         public static Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this )

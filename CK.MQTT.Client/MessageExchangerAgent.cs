@@ -8,15 +8,17 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using static CK.MQTT.Client.MqttMessageSink;
 
 namespace CK.MQTT.Client
 {
-    public class MessageExchangerAgent<T> : MessageExchangerAgentBase<T> where T : IConnectedMessageSender
+    public abstract class MessageExchangerAgent : IConnectedMessageSender
     {
         readonly PerfectEventSender<ApplicationMessage> _onMessageSender = new();
         readonly PerfectEventSender<RefCountingApplicationMessage> _refcountingMessageSender = new();
-        readonly PerfectEventSender<DisconnectReason> _onConnectionChangeSender = new();
+        protected readonly PerfectEventSender<DisconnectReason> _onConnectionChangeSender = new();
         readonly PerfectEventSender<ushort> _onStoreQueueFilling = new();
+        private Channel<object?>? _events;
 
         public ref struct EventTypeChoice
         {
@@ -38,30 +40,41 @@ namespace CK.MQTT.Client
             _refcountingMessageSender.PerfectEvent
         );
 
+        
+        protected abstract MqttMessageSink MessageSink { get; }
+        protected abstract IConnectedMessageSender Sender { get; }
+
+        IMqtt3Sink IConnectedMessageSender.Sink => MessageSink;
+
         public PerfectEvent<DisconnectReason> OnConnectionChange => _onConnectionChangeSender.PerfectEvent;
 
         public PerfectEvent<ushort> OnStoreQueueFilling => _onStoreQueueFilling.PerfectEvent;
 
-        protected Task? WorkLoop { get; set; }
-        public MessageExchangerAgent( Func<IMqtt3Sink, T> clientFactory ) : base( clientFactory )
+        protected Channel<object?>? Events
         {
+            get => _events;
+            private set
+            {
+                MessageSink.Events = value!.Writer; // We set the value to null, the sink should not use the events in this meantime !
+                // We expect the client to be in a "dead" state where no message will be emitted.
+                _events = value;
+            }
         }
+        protected Task? WorkLoop { get; set; }
 
         [MemberNotNull( nameof( WorkLoop ) )]
-        public override void Start()
+        public void Start()
         {
-            if( WorkLoop == null )
+            if( Events != null ) throw new InvalidOperationException( "Already started." );
+            Events = Channel.CreateUnbounded<object?>( new UnboundedChannelOptions()
             {
-                base.Start();
-                WorkLoop = WorkLoopAsync( Events.Reader );
-            }
-            Debug.Assert( Events != null );
+                SingleReader = true,
+                SingleWriter = false
+            } );
+            WorkLoop = WorkLoopAsync( Events.Reader );
         }
 
-        protected override IMqtt3Sink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult )
-            => throw new NotSupportedException( "https://github.com/signature-opensource/CK-MQTT/issues/35" );
-
-        public override Task<bool> DisconnectAsync( bool deleteSession )
+        public Task<bool> DisconnectAsync( bool deleteSession )
             => DisconnectAsync( deleteSession, true );
 
 
@@ -74,15 +87,16 @@ namespace CK.MQTT.Client
             // 1. agent doesn't support reconnecting, it can be disconnected only once, and it called Start in base ctor.
             // 2. agent support reconnecting, in this case it will call Start() at each connection.
             // in these 2 scenario, Messages & WorkLoop is not null because set in base constructor.
-            var res = await base.DisconnectAsync( deleteSession );
+            var res = await Sender.DisconnectAsync( deleteSession );
             await StopAsync( waitForCompletion );
             return res;
         }
 
 
-        protected override async ValueTask StopAsync( bool waitForCompletion )
+        protected async ValueTask StopAsync( bool waitForCompletion )
         {
-            await base.StopAsync( waitForCompletion );
+            Events!.Writer.Complete();
+            Events = null;
             if( waitForCompletion )
             {
                 await WorkLoop!;
@@ -110,8 +124,15 @@ namespace CK.MQTT.Client
             ActivityMonitor m = new();
             await foreach( var item in channel.ReadAllAsync() )
             {
-                if( item is VolatileApplicationMessage msg )
-                {
+                await ProcessMessageAsync( m, item );
+            }
+        }
+
+        protected virtual async Task ProcessMessageAsync( IActivityMonitor m, object? item )
+        {
+            switch( item )
+            {
+                case VolatileApplicationMessage msg:
                     using( m.OpenTrace( $"Incoming MQTT Application Message '{msg.Message}'..." ) )
                     {
                         // all this part may be subject to various race condition.
@@ -140,41 +161,32 @@ namespace CK.MQTT.Client
                             appMessage.DecrementRef();
                         }
                     }
-
-                }
-                else if( item is UnattendedDisconnect disconnect )
-                {
+                    break;
+                case UnattendedDisconnect disconnect:
                     await _onConnectionChangeSender.RaiseAsync( m, disconnect.Reason );
-                }
-                else if( item is Connected )
-                {
-                    await _onConnectionChangeSender.RaiseAsync( m, DisconnectReason.None );
-                }
-                else if( item is StoreFilling storeFilling )
-                {
+                    break;
+                case StoreFilling storeFilling:
                     await _onStoreQueueFilling.SafeRaiseAsync( m, storeFilling.FreeLeftSlot );
-                }
-                else if( item is UnparsedExtraData extraData )
-                {
+                    break;
+                case UnparsedExtraData extraData:
                     m.Warn( $"There was {extraData.UnparsedData.Length} bytes unparsed in Packet {extraData.PacketId}." );
-                }
-                else if( item is ReconnectionFailed )
-                {
-                    m.Warn( $"Reconnection failed." );
-                }
-                else if( item is QueueFullPacketDestroyed queueFullPacketDestroyed )
-                {
+                    break;
+                case QueueFullPacketDestroyed queueFullPacketDestroyed:
                     m.Warn( $"Because the queue is full, {queueFullPacketDestroyed.PacketType} with id {queueFullPacketDestroyed.PacketId} has been dropped. " );
-                }
-                else if( item is TaskCompletionSource tcs )
-                {
+                    break;
+                case TaskCompletionSource tcs:
                     tcs.SetResult();
-                }
-                else
-                {
+                    break;
+                default:
                     m.Error( "Unknown event has been sent on the channel." );
-                }
+                    break;
             }
         }
+        public string? ClientId => Sender.ClientId;
+
+
+        public ValueTask<Task> PublishAsync( OutgoingMessage message ) => Sender.PublishAsync( message );
+
+        public ValueTask DisposeAsync() => Sender.DisposeAsync();
     }
 }
