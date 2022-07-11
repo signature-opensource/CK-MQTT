@@ -67,7 +67,7 @@ namespace CK.MQTT
                 }
                 if( packetSize > 2 )
                 {
-                    await reader.SkipBytesAsync( sink, 0, (ushort)(packetSize - 2), cancellationToken );
+                    await reader.UnparsedExtraDataAsync( sink, 0, (ushort)(packetSize - 2), cancellationToken );
                 }
                 sender.CurrentReflex = _reflex;
                 _tcs.TrySetResult( new ConnectResult( (SessionState)state, (ProtocolConnectReturnCode)code ) );

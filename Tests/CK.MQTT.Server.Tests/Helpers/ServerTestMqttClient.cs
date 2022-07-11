@@ -11,20 +11,23 @@ namespace CK.MQTT.Server.Tests.Helpers
 {
     class ServerTestMqttClient : TestMqttClient
     {
-        ServerTestMqttClient( 
+        ServerTestMqttClient( ProtocolConfiguration pConfig,
                              Mqtt3ClientConfiguration config,
+                             IMqttChannel channel,
                              ChannelWriter<object?> eventWriter )
-            : base( config, eventWriter )
+            : base( pConfig, config, channel, eventWriter )
         {
         }
 
         public ChannelReader<object?> ClientEvents { get; init; } = null!;
 
         public static ServerTestMqttClient Create(
-            Mqtt3ClientConfiguration config )
+            ProtocolConfiguration pConfig,
+            Mqtt3ClientConfiguration config,
+            IMqttChannel channel )
         {
             Channel<object?> events = Channel.CreateUnbounded<object?>();
-            return new ServerTestMqttClient(config,  events.Writer )
+            return new ServerTestMqttClient( pConfig, config, channel, events.Writer )
             {
                 ClientEvents = events.Reader
             };

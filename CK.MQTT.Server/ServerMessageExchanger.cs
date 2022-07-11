@@ -3,34 +3,26 @@ using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
 using CK.MQTT.Server.Reflexes;
 using CK.MQTT.Stores;
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    class ServerMessageExchanger : MessageExchanger
+    public class ServerMessageExchanger : MessageExchanger
     {
-        readonly ITopicManager _topicManager;
-
         public override string? ClientId { get; }
+        public IMqttServerSink ServerSink { get; }
 
         public ServerMessageExchanger(
             string? clientId,
             ProtocolConfiguration pConfig,
             Mqtt3ConfigurationBase config,
-            IMqtt3Sink sink,
+            IMqttServerSink sink,
             IMqttChannel channel,
-            ITopicManager outgoingTopicManager,
             IRemotePacketStore? remotePacketStore = null,
             ILocalPacketStore? localPacketStore = null
         ) : base( pConfig, config, sink, channel, remotePacketStore, localPacketStore )
         {
             ClientId = clientId;
-            _topicManager = outgoingTopicManager;
+            ServerSink = sink;
             Engage();
         }
 
@@ -41,8 +33,8 @@ namespace CK.MQTT.Server
             ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( this ) )
                 .UseMiddleware( new PublishLifecycleReflex( this ) )
-                .UseMiddleware( new SubscribeReflex( _topicManager, PConfig.ProtocolLevel, output ) )
-                .UseMiddleware( new UnsubscribeReflex( _topicManager, output, PConfig.ProtocolLevel ) );
+                .UseMiddleware( new SubscribeReflex( ServerSink, PConfig.ProtocolLevel, output ) )
+                .UseMiddleware( new UnsubscribeReflex( ServerSink, output, PConfig.ProtocolLevel ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
             Reflex reflex = builder.Build();
             var input = CreateInputPump( reflex );

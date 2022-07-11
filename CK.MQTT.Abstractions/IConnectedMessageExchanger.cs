@@ -12,7 +12,6 @@ namespace CK.MQTT
     /// </summary>
     public interface IConnectedMessageSender : IAsyncDisposable
     {
-        public IMqtt3Sink Sink { get; }
         /// <summary>
         /// Gets the ClientId that the client used to connect with.
         /// Maybe <see langword="null"/> when the client is not connected.

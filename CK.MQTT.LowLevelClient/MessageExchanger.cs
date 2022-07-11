@@ -48,9 +48,6 @@ namespace CK.MQTT
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-
-
-
         [ThreadColor( ThreadColor.Rainbow )]
         async ValueTask<Task<T?>> StoreAndSendAsync<T>( IOutgoingPacket msg )
         {

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.Server
 {
-    public class MqttDemiServer : MqttListener
+    public class MqttDemiServer : MqttListenerBase
     {
         public MqttDemiServer( Mqtt3ConfigurationBase config,
                               IMqttChannelFactory channelFactory,
@@ -22,10 +22,10 @@ namespace CK.MQTT.Server.Server
             _config = config;
         }
 
-        readonly PerfectEventSender<MessageExchangerAgent> _onNewClientSender = new();
+        readonly PerfectEventSender<ServerMessageExchanger> _onNewClientSender = new();
         readonly Mqtt3ConfigurationBase _config;
 
-        public PerfectEvent<MessageExchangerAgent> OnNewClient => _onNewClientSender.PerfectEvent;
+        public PerfectEvent<ServerMessageExchanger> OnNewClient => _onNewClientSender.PerfectEvent;
         protected override async ValueTask CreateClientAsync(
             IActivityMonitor m,
             string clientId,
@@ -41,10 +41,9 @@ namespace CK.MQTT.Server.Server
                 ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
                 _config,
                 TODO,
-                        channel,
-                        new SimpleTopicManager(),
-                        remotePacketStore,
-                        localPacketStore
+                channel,
+                remotePacketStore,
+                localPacketStore
             );
             await _onNewClientSender.SafeRaiseAsync( m, exchanger );
         }

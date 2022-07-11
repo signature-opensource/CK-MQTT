@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public abstract class MqttListener : IDisposable
+    public abstract class MqttListenerBase : IDisposable
     {
         Task? _acceptLoop;
         CancellationTokenSource? _cts;
@@ -17,7 +17,7 @@ namespace CK.MQTT.Server
 
         protected Mqtt3ConfigurationBase Config { get; }
 
-        public MqttListener(
+        public MqttListenerBase(
             Mqtt3ConfigurationBase config,
             IMqttChannelFactory channelFactory,
             IStoreFactory storeFactory,

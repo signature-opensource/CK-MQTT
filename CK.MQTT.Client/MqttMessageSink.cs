@@ -39,7 +39,7 @@ namespace CK.MQTT.Client
         public void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData )
             => Events.TryWrite( new UnparsedExtraData( packetId, unparsedData ) );
 
-        public async ValueTask ReceiveAsync( string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
+        public async ValueTask OnMessageAsync( string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
             var memoryOwner = MemoryPool<byte>.Shared.Rent( (int)payloadLength );
             if( payloadLength != 0 )

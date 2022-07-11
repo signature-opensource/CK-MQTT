@@ -29,6 +29,6 @@ namespace CK.MQTT.Client
 
         public virtual void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData ) => _sink.OnUnparsedExtraData( packetId, unparsedData );
 
-        public virtual ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken ) => _sink.ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
+        public virtual ValueTask OnMessageAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken ) => _sink.OnMessageAsync( topic, reader, size, q, retain, cancellationToken );
     }
 }

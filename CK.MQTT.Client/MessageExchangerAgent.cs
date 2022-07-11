@@ -44,8 +44,6 @@ namespace CK.MQTT.Client
         protected abstract MqttMessageSink MessageSink { get; }
         protected abstract IConnectedMessageSender Sender { get; }
 
-        IMqtt3Sink IConnectedMessageSender.Sink => MessageSink;
-
         public PerfectEvent<DisconnectReason> OnConnectionChange => _onConnectionChangeSender.PerfectEvent;
 
         public PerfectEvent<ushort> OnStoreQueueFilling => _onStoreQueueFilling.PerfectEvent;

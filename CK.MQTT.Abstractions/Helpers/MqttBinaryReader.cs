@@ -4,6 +4,7 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -82,13 +83,27 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="reader">The <see cref="PipeReader"/> to use.</param>
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
+        /// <param name="sink">Pass the sink to emit a warn about unreaded data.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask SkipBytesAsync( this PipeReader reader, IMqtt3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
+        public static async ValueTask UnparsedExtraDataAsync( this PipeReader reader, IMqtt3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
         {
             ReadResult read = await reader.ReadAtLeastAsync( (int)skipCount, cancellationToken );
             if( read.Buffer.Length < skipCount ) throw new EndOfStreamException( "Unexpected end of stream." );
             sink.OnUnparsedExtraData( packetId, read.Buffer.Slice( 0, skipCount ) );
             reader.AdvanceTo( read.Buffer.Slice( skipCount ).Start );
+        }
+
+        public static async ValueTask SkipDataAsync( this PipeReader reader, long skipCount, CancellationToken cancellationToken )
+        {
+            while( skipCount > 0 )
+            {
+                var readResult = await reader.ReadAsync( cancellationToken );
+                skipCount -= Math.Min( skipCount, readResult.Buffer.Length );
+                reader.AdvanceTo( readResult.Buffer.Slice( skipCount ).Start );
+                if( skipCount == 0 ) return;
+                if( readResult.IsCanceled ) throw new OperationCanceledException();
+                if( readResult.IsCompleted ) throw new EndOfStreamException();
+            }
         }
     }
 }

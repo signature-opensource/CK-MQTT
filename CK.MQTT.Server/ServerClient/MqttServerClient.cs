@@ -12,18 +12,15 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.ServerClient
 {
-    public class MqttServerClient : MqttListener, IMqtt3Client, IAsyncDisposable
+    public class MqttServerClient : MqttListenerBase, IMqtt3Client, IAsyncDisposable
     {
-        internal readonly ITopicManager _inputTopicFilter = new SimpleTopicManager(); //TODO: 
-        internal readonly ITopicManager _outputTopicFilter = new SimpleTopicManager();
-        internal readonly Channel<(Subscription[]?, string[]?)> _subscriptionsCommand = Channel.CreateUnbounded<(Subscription[]?, string[]?)>();
-        public IMqtt3Sink Sink { get; set; }
+        public IMqttServerSink Sink { get; set; }
         internal TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
-        ClientWrapper? _wrapper;
+        ServerMessageExchanger? _wrapper;
 
-        public string? ClientId =>  _wrapper?.ClientId;
+        public string? ClientId => _wrapper?.ClientId;
 
-        public MqttServerClient( Mqtt3ConfigurationBase config, IMqtt3Sink sink, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory securityManagerFactory )
+        public MqttServerClient( Mqtt3ConfigurationBase config, IMqttServerSink sink, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory securityManagerFactory )
             : base( config, channelFactory, storeFactory, securityManagerFactory )
         {
             AuthProtocolHandlerFactory = new SecurityManagerFactoryWrapper( this, securityManagerFactory );
@@ -44,33 +41,29 @@ namespace CK.MQTT.Server.ServerClient
             var tcs = new TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
             _needClientTCS = tcs;
             var (channel, _, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
-            _wrapper = new ClientWrapper( this, ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ), Config, Sink, channel, remotePacketStore, localPacketStore );
+            _wrapper = new ServerMessageExchanger( connectInfo.ClientId,
+                ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
+                Config, Sink, channel, remotePacketStore, localPacketStore );
             return new ConnectResult( localPacketStore.IsRevivedSession ? SessionState.SessionPresent : SessionState.CleanSession, ProtocolConnectReturnCode.Accepted );
         }
 
-        public async ValueTask<Task> UnsubscribeAsync( params string[] topics )
-        {
-            await _subscriptionsCommand.Writer.WriteAsync( (null, topics) );
-            return Task.CompletedTask;
-        }
+        public ValueTask<Task> UnsubscribeAsync( params string[] topics )
+            => new ValueTask<Task>( Task.CompletedTask );
 
-        public async ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
+        public ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
         {
-            var subs = subscriptions.ToArray();
-            await _subscriptionsCommand.Writer.WriteAsync( (subs, null) );
-            return Task.FromResult(
-                new SubscribeReturnCode[subs.Length]
+            return new( Task.FromResult(
+                new SubscribeReturnCode[subscriptions.Count()]
             // We cannot ask the client a certain QoS as it's a fake subscribe, we return 0 because we canno't make the guarentee the QoS will be higher.
-            );
+            ) );
         }
 
-        public async ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
+        public ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
         {
-            await _subscriptionsCommand.Writer.WriteAsync( (new Subscription[] { subscriptions }, null) );
-            return Task.FromResult(
+            return new( Task.FromResult(
                 SubscribeReturnCode.MaximumQoS0
             // We cannot ask the client a certain QoS as it's a fake subscribe, we return 0 because we canno't make the guarentee the QoS will be higher.
-            );
+            ) );
         }
 
         public Task<bool> DisconnectAsync( bool deleteSession )
