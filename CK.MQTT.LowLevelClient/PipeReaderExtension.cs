@@ -44,7 +44,7 @@ namespace CK.MQTT
                     remainingLength -= 2;
                     if( remainingLength > 0 ) //The packet may contain more data, but we don't know how to process it, so we skip it.
                     {
-                        await pipeReader.SkipBytesAsync( sink, packetId, remainingLength, cancellationToken );
+                        await pipeReader.UnparsedExtraDataAsync( sink, packetId, remainingLength, cancellationToken );
                     }
                     return packetId;
                 }

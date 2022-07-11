@@ -25,12 +25,12 @@ namespace CK.MQTT
         string? _clientId;
 
         public Mqtt3ClientConfiguration ClientConfig { get; }
-
+        public IMqtt3ClientSink ClientSink { get; }
 
         public LowLevelMqttClient(
             ProtocolConfiguration pConfig,
             Mqtt3ClientConfiguration config,
-            IMqtt3Sink sink,
+            IMqtt3ClientSink sink,
             IMqttChannel channel,
             IRemotePacketStore? remotePacketStore = null,
             ILocalPacketStore? localPacketStore = null
@@ -41,6 +41,8 @@ namespace CK.MQTT
                 throw new ArgumentException( "Wait timeout should be smaller than the keep alive." );
             }
             ClientConfig = config;
+            ClientSink = sink;
+            sink.Client = this;
         }
 
         public override string? ClientId => _clientId;
@@ -66,7 +68,7 @@ namespace CK.MQTT
                 static (ConnectResult, bool) Retry( ConnectResult result ) => (result, false);
 
                 Debug.Assert( res.Status != ConnectStatus.Deffered );
-                var sinkBehavior = Sink.OnFailedManualConnect( res );
+                var sinkBehavior = ClientSink.OnFailedManualConnect( res );
                 var configBehavior = ClientConfig.ManualConnectBehavior;
                 (ConnectResult connectResult, bool stopRetries) = res.Status switch
                 {
@@ -76,8 +78,8 @@ namespace CK.MQTT
                         ManualConnectBehavior.TryOnce => Return( res, true ),
                         ManualConnectBehavior.UseSinkBehavior => sinkBehavior switch
                         {
-                            IMqtt3Sink.ManualConnectRetryBehavior.GiveUp => Return( res, res.Status == ConnectStatus.Successful ),
-                            IMqtt3Sink.ManualConnectRetryBehavior.YieldToBackground =>
+                            IMqtt3ClientSink.ManualConnectRetryBehavior.GiveUp => Return( res, res.Status == ConnectStatus.Successful ),
+                            IMqtt3ClientSink.ManualConnectRetryBehavior.YieldToBackground =>
                                 (ClientConfig.DisconnectBehavior != DisconnectBehavior.AutoReconnect) switch
                                 {
                                     true => throw new ArgumentException(
@@ -86,8 +88,8 @@ namespace CK.MQTT
                                     ),
                                     false => Return( new ConnectResult( true, res.Error, res.SessionState, res.ProtocolReturnCode, res.Exception ), true )
                                 },
-                            IMqtt3Sink.ManualConnectRetryBehavior.Retry => Retry( res ),
-                            _ => throw new InvalidOperationException( $"Invalid {nameof( IMqtt3Sink.ManualConnectRetryBehavior )}:{sinkBehavior}" )
+                            IMqtt3ClientSink.ManualConnectRetryBehavior.Retry => Retry( res ),
+                            _ => throw new InvalidOperationException( $"Invalid {nameof( IMqtt3ClientSink.ManualConnectRetryBehavior )}:{sinkBehavior}" )
                         },
                         ManualConnectBehavior.TryOnceThenRetryInBackground when ClientConfig.DisconnectBehavior != DisconnectBehavior.AutoReconnect => throw new ArgumentException( $"Cannot use {ManualConnectBehavior.TryOnceThenRetryInBackground} when {nameof( DisconnectBehavior )} is not set to {DisconnectBehavior.AutoReconnect}.." ),
                         ManualConnectBehavior.TryOnceThenRetryInBackground => Return( new ConnectResult( true, res.Error, res.SessionState, res.ProtocolReturnCode, res.Exception ), true ),
@@ -152,9 +154,9 @@ namespace CK.MQTT
                     await Channel.DuplexPipe.Output.FlushAsync( cts.Token );
                 }
 
-                async ValueTask<ConnectResult> Exit( ConnectError connectError )
+                async ValueTask<ConnectResult> Exit( ConnectError connectError, DisconnectReason reason )
                 {
-                    Channel.Close();
+                    await Channel.CloseAsync( reason );
                     var pumps = Pumps;
                     if( pumps != null )
                     {
@@ -178,8 +180,8 @@ namespace CK.MQTT
                     {
                         return cancellationToken.IsCancellationRequested switch
                         {
-                            true => await Exit( ConnectError.Connection_Cancelled ),
-                            false => await Exit( ConnectError.Timeout )
+                            true => await Exit( ConnectError.Connection_Cancelled, DisconnectReason.UserDisconnected ),
+                            false => await Exit( ConnectError.Timeout, DisconnectReason.Timeout )
                         };
                     }
                 }
@@ -194,23 +196,23 @@ namespace CK.MQTT
                 output.StartPumping( outputProcessor ); // Start processing incoming messages.
                                                         // This following code wouldn't be better with a sort of ... switch/pattern matching ?
                 if( cancellationToken.IsCancellationRequested )
-                    return await Exit( ConnectError.Connection_Cancelled );
+                    return await Exit( ConnectError.Connection_Cancelled, DisconnectReason.UserDisconnected );
                 if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
-                    return await Exit( ConnectError.InternalException );
+                    return await Exit( ConnectError.InternalException, DisconnectReason.InternalException );
                 if( Pumps.IsClosed )
-                    return await Exit( ConnectError.RemoteDisconnected );
+                    return await Exit( ConnectError.RemoteDisconnected, DisconnectReason.RemoteDisconnected );
 
                 if( res.Error != ConnectError.None )
                 {
                     await Pumps.StopWorkAsync();
                     await Pumps.DisposeAsync();
-                    Channel.Close();
+                    await Channel.CloseAsync( DisconnectReason.None );
                     return res;
                 }
 
                 bool askedCleanSession = ClientConfig.Credentials?.CleanSession ?? true;
                 if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-                    return await Exit( ConnectError.ProtocolError_SessionNotFlushed );
+                    return await Exit( ConnectError.ProtocolError_SessionNotFlushed, DisconnectReason.ProtocolError );
                 if( res.SessionState == SessionState.CleanSession )
                 {
                     ValueTask task = RemotePacketStore.ResetAsync();
@@ -221,7 +223,7 @@ namespace CK.MQTT
                 {
                     throw new NotImplementedException();
                 }
-                Sink.Connected();
+                ClientSink.OnConnected();
                 return res;
             }
             catch( Exception exception )
@@ -229,7 +231,7 @@ namespace CK.MQTT
                 // We may throw before the creation of the duplex pump.
                 if( Pumps is not null )
                 {
-                    Channel.Close();
+                    await Channel.CloseAsync( DisconnectReason.InternalException );
                     await Pumps.CloseAsync();
                     await Pumps.DisposeAsync();
                 }
@@ -298,7 +300,7 @@ namespace CK.MQTT
                     ConnectResult result = await DoConnectAsync( null, _running.Token );
                     if( result.Error != ConnectError.None )
                     {
-                        shouldReconnect = await Sink.OnReconnectionFailedAsync( result );
+                        shouldReconnect = await ClientSink.OnReconnectionFailedAsync( result );
                         if( !shouldReconnect ) return;
                     }
                     shouldReconnect = await _disconnectTCS.Task;

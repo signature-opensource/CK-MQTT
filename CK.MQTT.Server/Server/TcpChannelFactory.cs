@@ -26,9 +26,7 @@ namespace CK.MQTT.Server
 
         public async ValueTask<(IMqttChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
         {
-            Console.WriteLine( "Waiting a connection..." );
             var client = await _listener.AcceptTcpClientAsync( cancellationToken );
-            Console.WriteLine( "Client connected" );
             return (new ServerTcpChannel( client ), "");
         }
 

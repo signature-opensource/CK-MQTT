@@ -29,7 +29,7 @@ namespace CK.MQTT
             _port = port;
         }
 
-        public async ValueTask StartAsync(CancellationToken cancellationToken)
+        public async ValueTask StartAsync( CancellationToken cancellationToken )
         {
             if( _tcpClient != null ) throw new InvalidOperationException( "Already started." );
             _tcpClient = new TcpClient
@@ -48,10 +48,10 @@ namespace CK.MQTT
         public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException( "Start the channel before accessing the pipes." );
 
         /// <inheritdoc/>
-        public void Close()
+        public async ValueTask CloseAsync( DisconnectReason reason )
         {
             if( _tcpClient == null ) throw new InvalidOperationException( "Channel not started." );
-            _stream!.Dispose();
+            await _stream!.DisposeAsync();
             _tcpClient.Close();
             _tcpClient = null;
             _stream = null;

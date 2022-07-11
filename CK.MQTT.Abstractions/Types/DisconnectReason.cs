@@ -36,9 +36,8 @@ namespace CK.MQTT
 		InternalException,
 
         /// <summary>
-        /// The disconnection is due to a Ping timeout: the server is lost.
-        /// This applies to Client only.
+        /// The disconnection is due to a timeout, due to pingreq, or any other packet expecting a response.
         /// </summary>
-        PingReqTimeout
+        Timeout
     }
 }

@@ -1,3 +1,4 @@
+using CK.MQTT.Client;
 using CK.MQTT.Packets;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public interface IMqtt3Client : IConnectedMessageSender
+    public interface IMqtt3Client: IConnectedMessageSender
     {
         /// <summary>
         /// Connect the <see cref="IConnectedMessageSender"/> to a Broker.

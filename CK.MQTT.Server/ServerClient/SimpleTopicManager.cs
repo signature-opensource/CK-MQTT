@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class SimpleTopicManager : ITopicManager
+    public class SimpleTopicManager
     {
         readonly Dictionary<ulong, HashSet<string>> _noWildcardSubscriptionsByTopicHash = new();
         readonly Dictionary<ulong, TopicHashMaskSubscriptions> _wildcardSubscriptionsByTopicHash = new();
@@ -48,7 +48,6 @@ namespace CK.MQTT.Server
             }
             return true;
         }
-
 
         void Subscribe( string topicFilter )
         {
@@ -103,7 +102,6 @@ namespace CK.MQTT.Server
                 subscriptions.Add( topicFilter );
             }
         }
-
         void Unsubscribe( string topicFilter )
         {
             var removedSubscriptions = new List<string>();
@@ -241,7 +239,6 @@ namespace CK.MQTT.Server
             resultHashMask = ~hashMaskInverted;
             resultHasWildcard = hasWildcard;
         }
-
         public void Reset()
         {
             _noWildcardSubscriptionsByTopicHash.Clear();
@@ -257,15 +254,7 @@ namespace CK.MQTT.Server
             }
             return new ValueTask<SubscribeReturnCode[]>( new SubscribeReturnCode[subscriptions.Length] );
         }
-
-        public ValueTask UnsubscribeAsync( params string[] topicFilter )
-        {
-            foreach( var subscription in topicFilter )
-            {
-                Unsubscribe( subscription );
-            }
-            return new ValueTask();
-        }
+       
 
         public ValueTask ResetAsync()
         {
@@ -273,6 +262,15 @@ namespace CK.MQTT.Server
             _subscriptions.Clear();
             _wildcardSubscriptionsByTopicHash.Clear();
             return new ValueTask();
+        }
+
+        public ValueTask UnsubscribeAsync( string[] topics )
+        {
+            foreach( var topicFilter in topics )
+            {
+                Unsubscribe( topicFilter );
+            }
+            return new();
         }
 
         sealed class TopicHashMaskSubscriptions

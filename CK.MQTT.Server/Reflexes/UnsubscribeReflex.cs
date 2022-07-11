@@ -15,13 +15,13 @@ namespace CK.MQTT.Server.Reflexes
 {
     class UnsubscribeReflex : IReflexMiddleware
     {
-        private readonly ITopicManager _topicManager;
+        private readonly IMqttServerSink _sink;
         readonly OutputPump _outputPump;
         readonly ProtocolLevel _protocolLevel;
 
-        public UnsubscribeReflex( ITopicManager topicManager, OutputPump outputPump, ProtocolLevel protocolLevel )
+        public UnsubscribeReflex( IMqttServerSink sink, OutputPump outputPump, ProtocolLevel protocolLevel )
         {
-            _topicManager = topicManager;
+            _sink = sink;
             _outputPump = outputPump;
             _protocolLevel = protocolLevel;
         }
@@ -37,7 +37,7 @@ namespace CK.MQTT.Server.Reflexes
             var buffer = read.Buffer.Slice( 0, packetLength );
             Parse( buffer, out ushort packetId, out List<string> filters );
             var arrFilter = filters.ToArray();
-            await _topicManager.UnsubscribeAsync( arrFilter );
+            await _sink.OnUnsubscribeAsync( arrFilter );
             _outputPump.TryQueueReflexMessage( OutgoingUnsubscribeAck.UnsubscribeAck( packetId ) );
             pipeReader.AdvanceTo( buffer.End );
             return (OperationStatus.Done, true);

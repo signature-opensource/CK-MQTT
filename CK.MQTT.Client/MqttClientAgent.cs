@@ -3,19 +3,26 @@ using CK.MQTT.Packets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
+using static CK.MQTT.Client.DefaultClientMessageSink;
 
 namespace CK.MQTT.Client
 {
-    public class MqttClientAgent : MessageExchangerAgent<IMqtt3Client>, IMqtt3Client
+    public class MqttClientAgent : MessageExchangerAgent, IMqtt3Client
     {
-        public MqttClientAgent( Func<IMqtt3Sink, IMqtt3Client> clientFactory ) : base( clientFactory )
+        readonly DefaultClientMessageSink _sink = new();
+        public MqttClientAgent(Func<IMqtt3ClientSink, IMqtt3Client> factory) // Sink.Client is not set.
         {
             OnConnectionChange.Sync += OnConnectionChangeSync;
+            factory( _sink );
         }
+
+        public IMqtt3Client Client => _sink.Client;
+
+        protected override MqttMessageSink MessageSink => _sink;
+
+        protected override IConnectedMessageSender Sender => Client;
 
         void OnConnectionChangeSync( IActivityMonitor monitor, DisconnectReason e )
             => IsConnected = e == DisconnectReason.None;
@@ -23,17 +30,11 @@ namespace CK.MQTT.Client
         public Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill = null, CancellationToken cancellationToken = default )
             => ConnectAsync( true, lastwill, cancellationToken );
 
-        int _manualCountRetry;
-        protected override IMqtt3Sink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult )
-        {
-            if( connectResult.Status == ConnectStatus.ErrorUnrecoverable ) return IMqtt3Sink.ManualConnectRetryBehavior.GiveUp;
-            if( _manualCountRetry++ >= 3 ) return IMqtt3Sink.ManualConnectRetryBehavior.GiveUp;
-            return IMqtt3Sink.ManualConnectRetryBehavior.Retry;
-        }
+
 
         public async Task<ConnectResult> ConnectAsync( bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
-            _manualCountRetry = 0;
+            _sink._manualCountRetry = 0;
             Start();
             var res = await Client.ConnectAsync( lastWill, cancellationToken );
             if( res.Status != ConnectStatus.Successful && res.Status == ConnectStatus.Deffered )
@@ -60,5 +61,22 @@ namespace CK.MQTT.Client
 
         public ValueTask<Task> UnsubscribeAsync( string topic )
             => Client.UnsubscribeAsync( topic );
+
+
+        protected override async Task ProcessMessageAsync( IActivityMonitor m, object? item )
+        {
+            switch( item )
+            {
+                case Connected:
+                    await _onConnectionChangeSender.RaiseAsync( m, DisconnectReason.None );
+                    break;
+                case ReconnectionFailed:
+                    m.Warn( $"Reconnection failed." );
+                    break;
+                default:
+                    await base.ProcessMessageAsync( m, item );
+                    break;
+            }
+        }
     }
 }

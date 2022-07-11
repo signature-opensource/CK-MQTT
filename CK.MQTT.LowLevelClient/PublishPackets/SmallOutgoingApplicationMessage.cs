@@ -1,10 +1,11 @@
+using CK.MQTT.Packets;
 using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Packets
+namespace CK.MQTT
 {
     public class SmallOutgoingApplicationMessage : OutgoingMessage
     {
@@ -36,6 +37,14 @@ namespace CK.MQTT.Packets
                 pw.Advance( (int)_payload.Length );
             }
             return new ValueTask();
+        }
+    }
+
+    public static class SmallOutgoingApplicationMessageExtensions
+    {
+        public static ValueTask<Task> PublishAsync( this IConnectedMessageSender sender, string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
+        {
+            return sender.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
         }
     }
 }

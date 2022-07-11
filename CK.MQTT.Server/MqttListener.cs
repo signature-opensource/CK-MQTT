@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public abstract class MqttListener : IDisposable
+    public abstract class MqttListenerBase : IDisposable
     {
         Task? _acceptLoop;
         CancellationTokenSource? _cts;
@@ -17,7 +17,7 @@ namespace CK.MQTT.Server
 
         protected Mqtt3ConfigurationBase Config { get; }
 
-        public MqttListener(
+        public MqttListenerBase(
             Mqtt3ConfigurationBase config,
             IMqttChannelFactory channelFactory,
             IStoreFactory storeFactory,
@@ -66,22 +66,22 @@ namespace CK.MQTT.Server
                 (IMqttChannel? channel, var connectionInfo) = await _channelFactory.CreateAsync( cancellationToken );
                 try
                 {
-                    void CloseConnection()
+                    async ValueTask CloseConnectionAsync()
                     {
-                        channel.Close();
+                        await channel.CloseAsync( DisconnectReason.None );
                         channel.Dispose();
                         channel = null;
                     }
 
                     //channel is disposable, this accept loop should not crash.
-                    //if it does, the server is screwed, and this is a bug (and I doesn't care that the disposable leak).
+                    //if it does, the server is screwed, and this is a bug
 
                     if( cancellationToken.IsCancellationRequested ) return;
 
                     securityManager = await AuthProtocolHandlerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );
                     if( securityManager is null )
                     {
-                        CloseConnection();
+                        await CloseConnectionAsync();
                         continue;
                     }
                     if( cancellationToken.IsCancellationRequested ) return;
@@ -96,13 +96,13 @@ namespace CK.MQTT.Server
                         {
                             await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output, cancellationToken );
                         }
-                        CloseConnection();
+                        await CloseConnectionAsync();
                         continue;
                     }
 
                     (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync( ProtocolConfiguration.FromProtocolLevel( protocolLevel ), Config, connectHandler.ClientId, connectHandler.CleanSession, cancellationToken );
                     await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output, cancellationToken );
-                    await channel.DuplexPipe.Output.FlushAsync(cancellationToken);
+                    await channel.DuplexPipe.Output.FlushAsync( cancellationToken );
                     if( cancellationToken.IsCancellationRequested )
                     {
                         localStore.Dispose();
@@ -122,8 +122,11 @@ namespace CK.MQTT.Server
                     {
                         await securityManager.DisposeAsync();
                     }
-                    channel?.Close();
-                    channel?.Dispose();
+                    if( channel != null )
+                    {
+                        await channel.CloseAsync( DisconnectReason.None ); ;
+                        channel.Dispose();
+                    }
                 }
             }
         }
