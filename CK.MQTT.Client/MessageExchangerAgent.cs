@@ -40,9 +40,9 @@ namespace CK.MQTT.Client
             _refcountingMessageSender.PerfectEvent
         );
 
-        
+
         protected abstract MqttMessageSink MessageSink { get; }
-        protected abstract IConnectedMessageSender Sender { get; }
+        public IConnectedMessageSender Sender => MessageSink.Sender;
 
         public PerfectEvent<DisconnectReason> OnConnectionChange => _onConnectionChangeSender.PerfectEvent;
 
@@ -53,7 +53,7 @@ namespace CK.MQTT.Client
             get => _events;
             private set
             {
-                MessageSink.Events = value!.Writer; // We set the value to null, the sink should not use the events in this meantime !
+                MessageSink.Events = value?.Writer!; // We set the value to null, the sink should not use the events in this meantime !
                 // We expect the client to be in a "dead" state where no message will be emitted.
                 _events = value;
             }
@@ -160,29 +160,29 @@ namespace CK.MQTT.Client
                             appMessage.DecrementRef();
                         }
                     }
-                    break;
+                    return;
                 case UnattendedDisconnect disconnect:
                     _reason = disconnect.Reason;
                     await _onConnectionChangeSender.RaiseAsync( m, disconnect.Reason );
-                    break;
+                    return;
                 case StoreFilling storeFilling:
                     await _onStoreQueueFilling.SafeRaiseAsync( m, storeFilling.FreeLeftSlot );
-                    break;
+                    return;
                 case RaiseConnectionState connectionState:
                     await _onConnectionChangeSender.RaiseAsync( m, _reason );
-                    break;
+                    return;
                 case UnparsedExtraData extraData:
                     m.Warn( $"There was {extraData.UnparsedData.Length} bytes unparsed in Packet {extraData.PacketId}." );
-                    break;
+                    return;
                 case QueueFullPacketDestroyed queueFullPacketDestroyed:
                     m.Warn( $"Because the queue is full, {queueFullPacketDestroyed.PacketType} with id {queueFullPacketDestroyed.PacketId} has been dropped. " );
-                    break;
+                    return;
                 case TaskCompletionSource tcs:
                     tcs.SetResult();
-                    break;
+                    return;
                 default:
                     m.Error( "Unknown event has been sent on the channel." );
-                    break;
+                    return;
             }
         }
         public string? ClientId => Sender.ClientId;

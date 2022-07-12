@@ -15,14 +15,12 @@ namespace CK.MQTT.Client
         public MqttClientAgent(Func<IMqtt3ClientSink, IMqtt3Client> factory) // Sink.Client is not set.
         {
             OnConnectionChange.Sync += OnConnectionChangeSync;
-            factory( _sink );
+            factory( _sink ); //TODO: big code smell. We don't use the output there.
         }
 
         public IMqtt3Client Client => _sink.Client;
 
         protected override MqttMessageSink MessageSink => _sink;
-
-        protected override IConnectedMessageSender Sender => Client;
 
         void OnConnectionChangeSync( IActivityMonitor monitor, DisconnectReason e )
             => IsConnected = e == DisconnectReason.None;
@@ -37,7 +35,7 @@ namespace CK.MQTT.Client
             _sink._manualCountRetry = 0;
             Start();
             var res = await Client.ConnectAsync( lastWill, cancellationToken );
-            if( res.Status != ConnectStatus.Successful && res.Status == ConnectStatus.Deffered )
+            if( res.Status != ConnectStatus.Successful && res.Status != ConnectStatus.Deffered )
             {
                 await StopAsync( waitForCompletion );
             }

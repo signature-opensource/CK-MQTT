@@ -8,6 +8,7 @@ namespace CK.MQTT.Server
 {
     public class ServerMessageExchanger : MessageExchanger
     {
+
         public override string? ClientId { get; }
         public IMqttServerSink ServerSink { get; }
 
