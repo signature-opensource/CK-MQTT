@@ -65,7 +65,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             await @this.SendToClientAsync( TestHelper.Monitor, "20020000" );
             await task;
             await @this.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
-            await @this.ShouldContainEventAsync<TestMqttClient.Connected>();
+            await @this.ShouldContainEventAsync<DefaultClientMessageSink.Connected>();
         }
 
         public static Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this )

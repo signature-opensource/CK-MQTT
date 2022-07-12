@@ -19,7 +19,7 @@ namespace CK.MQTT
         {
             _exchanger = exchanger;
         }
-        const byte _dupFlag = 1 << 4;
+        const byte _dupFlag = 1 << 3;
         const byte _retainFlag = 1;
 
         public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader reader, CancellationToken cancellationToken )
@@ -62,7 +62,7 @@ namespace CK.MQTT
                     {
                         continue;
                     }
-                    await _exchanger.Sink.ReceiveAsync( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
+                    await _exchanger.Sink.OnMessageAsync( theTopic, reader, packetLength - theTopic.MQTTSize(), qos, retain, cancellationToken );
                     return (OperationStatus.Done, true);
                 }
                 if( ParsePublishWithPacketId( read.Buffer, out topic, out packetId, out SequencePosition position ) )
@@ -74,13 +74,13 @@ namespace CK.MQTT
             }
             if( qos == QualityOfService.AtLeastOnce )
             {
-                await _exchanger.Sink.ReceiveAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+                await _exchanger.Sink.OnMessageAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
                 _exchanger.Pumps!.Left.TryQueueReflexMessage( LifecyclePacketV3.Puback( packetId ) );
                 return (OperationStatus.Done, true);
             }
             if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
             await _exchanger.RemotePacketStore.StoreIdAsync( packetId );
-            await _exchanger.Sink.ReceiveAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
+            await _exchanger.Sink.OnMessageAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
             _exchanger.Pumps!.Left.TryQueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) );
             return (OperationStatus.Done, true);
         }

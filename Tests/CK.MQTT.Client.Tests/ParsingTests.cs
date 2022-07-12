@@ -38,7 +38,7 @@ namespace CK.MQTT.Client.Tests
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
             await replayer.ConnectClientAsync( TestHelper.Monitor, client );
             await replayer.SendToClientAsync( TestHelper.Monitor, sb.ToString() );
-            await replayer.ShouldContainEventAsync<ApplicationMessage>();
+            await replayer.ShouldContainEventAsync<VolatileApplicationMessage>();
         }
 
         [Test]
@@ -51,7 +51,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.SendToClientAsync( TestHelper.Monitor, "308080808080000a7465737420746f70696374657374207061796c" );
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
             (await replayer
-                .ShouldContainEventAsync<TestMqttClient.UnattendedDisconnect>())
+                .ShouldContainEventAsync<MqttMessageSink.UnattendedDisconnect>())
                 .Reason.Should().Be( DisconnectReason.ProtocolError );
         }
 
@@ -67,11 +67,11 @@ namespace CK.MQTT.Client.Tests
             await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
             await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
             await replayer.SendToClientAsync( TestHelper.Monitor, "3018000a7465737420746f70696374657374207061796c6f6164" );
-            await replayer.ShouldContainEventAsync<ApplicationMessage>();
-            await replayer.ShouldContainEventAsync<ApplicationMessage>();
-            await replayer.ShouldContainEventAsync<ApplicationMessage>();
-            await replayer.ShouldContainEventAsync<ApplicationMessage>();
-            await replayer.ShouldContainEventAsync<ApplicationMessage>();
+            await replayer.ShouldContainEventAsync<VolatileApplicationMessage>();
+            await replayer.ShouldContainEventAsync<VolatileApplicationMessage>();
+            await replayer.ShouldContainEventAsync<VolatileApplicationMessage>();
+            await replayer.ShouldContainEventAsync<VolatileApplicationMessage>();
+            await replayer.ShouldContainEventAsync<VolatileApplicationMessage>();
         }
     }
 }

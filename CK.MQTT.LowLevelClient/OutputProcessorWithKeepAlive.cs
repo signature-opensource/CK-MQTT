@@ -32,7 +32,7 @@ namespace CK.MQTT.Client
 
                 if( elapsed.TotalMilliseconds > _client.Config.WaitTimeoutMilliseconds )
                 {
-                    await SelfDisconnectAsync( DisconnectReason.PingReqTimeout );
+                    await SelfDisconnectAsync( DisconnectReason.Timeout );
                     return true;
                 }
             }
@@ -86,7 +86,7 @@ namespace CK.MQTT.Client
         {
             if( PacketType.PingResponse != (PacketType)header ) return (OperationStatus.Done, false);
             WaitingPingResp = false;
-            await pipeReader.SkipBytesAsync( sink, 0, packetLength, cancellationToken );
+            await pipeReader.UnparsedExtraDataAsync( sink, 0, packetLength, cancellationToken );
             return (OperationStatus.Done, true);
         }
     }

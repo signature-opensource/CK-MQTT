@@ -1,3 +1,4 @@
+using CK.MQTT.Client;
 using CK.MQTT.Packets;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,12 @@ namespace CK.MQTT
     /// </summary>
     public interface IConnectedMessageSender : IAsyncDisposable
     {
+        /// <summary>
+        /// Gets the ClientId that the client used to connect with.
+        /// Maybe <see langword="null"/> when the client is not connected.
+        /// </summary>
+        string? ClientId { get; }
+
         /// <summary>
         /// Disconnect the client.
         /// </summary>

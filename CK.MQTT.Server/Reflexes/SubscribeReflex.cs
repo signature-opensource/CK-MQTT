@@ -16,13 +16,13 @@ namespace CK.MQTT.Server.Reflexes
 {
     class SubscribeReflex : IReflexMiddleware
     {
-        readonly ITopicManager _topicManager;
+        readonly IMqttServerSink _sink;
         readonly ProtocolLevel _protocolLevel;
         readonly OutputPump _output;
 
-        public SubscribeReflex( ITopicManager topicManager, ProtocolLevel protocolLevel, OutputPump output )
+        public SubscribeReflex( IMqttServerSink sink, ProtocolLevel protocolLevel, OutputPump output )
         {
-            _topicManager = topicManager;
+            _sink = sink;
             _protocolLevel = protocolLevel;
             _output = output;
         }
@@ -37,7 +37,7 @@ namespace CK.MQTT.Server.Reflexes
             if( read.Buffer.Length < packetLength ) return (OperationStatus.NeedMoreData, true); // Will happen when the reader is completed/cancelled.
             var buffer = read.Buffer.Slice( 0, packetLength );
             Parse( buffer, out ushort packetId, out List<Subscription> filters );
-            var subscribeReturnCodes = await _topicManager.SubscribeAsync( filters.ToArray() );
+            var subscribeReturnCodes = await _sink.OnSubscribeAsync( filters.ToArray() );
             _output.TryQueueReflexMessage( new OutgoingSubscribeAck( packetId, subscribeReturnCodes ) );
             pipeReader.AdvanceTo( buffer.End );
             return (OperationStatus.Done, true);

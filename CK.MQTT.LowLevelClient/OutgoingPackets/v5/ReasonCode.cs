@@ -9,22 +9,6 @@ namespace CK.MQTT.Packets
         /// <summary>
         /// DISCONNECT
         /// </summary>
-        NormalDisconnection = 0x00,
-        /// <summary>
-        /// SUBACK
-        /// </summary>
-        GrantedQoS0 = 0x00,
-        /// <summary>
-        /// SUBACK
-        /// </summary>
-        GrantedQoS1 = 0x01,
-        /// <summary>
-        /// SUBACK
-        /// </summary>
-        GrantedQoS2 = 0x02,
-        /// <summary>
-        /// DISCONNECT
-        /// </summary>
         DisconnectWithWillMessage = 0x04,
         /// <summary>
         /// PUBACK,PUBREC

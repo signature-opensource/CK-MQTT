@@ -21,10 +21,11 @@ namespace CK.MQTT.Server
         public IDuplexPipe? DuplexPipe => _duplexPipe;
 
         bool _closed;
-        public void Close()
+        public ValueTask CloseAsync( DisconnectReason reason )
         {
             _closed = true;
             _tcpClient.Close();
+            return new ValueTask();
         }
 
         public void Dispose() => _tcpClient.Dispose();

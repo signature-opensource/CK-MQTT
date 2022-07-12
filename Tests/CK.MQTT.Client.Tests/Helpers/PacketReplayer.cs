@@ -36,9 +36,5 @@ namespace CK.MQTT.Client.Tests.Helpers
             };
             return Channel;
         }
-
-        public void Dispose()
-        {
-        }
     }
 }

@@ -18,7 +18,7 @@ namespace CK.MQTT
         /// Disconnect the <see cref="IMqttChannel"/>.
         /// </summary>
         /// <param name="m">The logger to use.</param>
-        void Close();
+        ValueTask CloseAsync( DisconnectReason closeReason );
 
         /// <summary>
         /// <see langword="true"/> if the channel was connected in the last operation on the <see cref="DuplexPipe"/>.

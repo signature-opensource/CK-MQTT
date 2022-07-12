@@ -1,5 +1,6 @@
 using CK.Core;
 using CK.MQTT.Client.Tests.Helpers;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Runtime.ConstrainedExecution;
@@ -32,8 +33,20 @@ namespace CK.MQTT.Client
                 task = base.WorkLoopAsync( copyChannel.Reader );
                 await foreach( var item in channel.ReadAllAsync() )
                 {
-                    await copyChannel.Writer.WriteAsync( item );
-                    await _eventWriter.WriteAsync( item );
+                    if( item is VolatileApplicationMessage msg )
+                    {
+                        var buffer = msg.Message.Payload.ToArray();
+                        var appMessage = new VolatileApplicationMessage(
+                            new ApplicationMessage( msg.Message.Topic, buffer, msg.Message.QoS, msg.Message.Retain ), new DisposableComposite()
+                        );
+                        await copyChannel.Writer.WriteAsync( item );
+                        await _eventWriter.WriteAsync( appMessage );
+                    }
+                    else
+                    {
+                        await copyChannel.Writer.WriteAsync( item );
+                        await _eventWriter.WriteAsync( item );
+                    }
                 }
             }
             finally
@@ -42,12 +55,5 @@ namespace CK.MQTT.Client
             }
             await task;
         }
-
-
-        protected override async ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
-            => await new NewApplicationMessageClosure( ReceivedMessageAsync ).HandleMessageAsync( topic, reader, size, q, retain, cancellationToken );
-
-        async ValueTask ReceivedMessageAsync( IActivityMonitor? m, ApplicationMessage message, CancellationToken cancellationToken )
-            => await Events!.Writer.WriteAsync( message, cancellationToken );
     }
 }

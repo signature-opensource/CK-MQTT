@@ -1,5 +1,6 @@
 using CK.MQTT.Packets;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
@@ -8,63 +9,26 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public abstract class Mqtt3SinkWrapper<T> : IMqtt3Sink, IConnectedMessageSender where T : IConnectedMessageSender
+    public abstract class Mqtt3SinkWrapper : IMqtt3Sink
     {
-        public T Client { get; }
+        protected readonly IMqtt3Sink _sink;
 
-        protected Mqtt3SinkWrapper( Func<IMqtt3Sink, T> clientFactory )
-        {
-            Client = clientFactory( this );
-        }
+        public Mqtt3SinkWrapper( IMqtt3Sink sink ) => _sink = sink;
 
-        protected abstract ValueTask ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
+        public virtual IConnectedMessageSender Sender { get; set; } = null!; //Set by the client.
 
-        public virtual Task<bool> DisconnectAsync( bool deleteSession ) => Client.DisconnectAsync( deleteSession );
+        public virtual void OnPacketResent( ushort packetId, ulong packetInTransitOrLost, bool isDropped ) => _sink.OnPacketResent( packetId, packetInTransitOrLost, isDropped );
 
-        protected abstract IMqtt3Sink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult );
-        protected abstract bool OnUnattendedDisconnect( DisconnectReason reason );
-        protected abstract ValueTask<bool> OnReconnectionFailedAsync( ConnectResult result );
+        public virtual void OnPacketWithDupFlagReceived( PacketType packetType ) => _sink.OnPacketWithDupFlagReceived( packetType );
 
-        protected abstract void OnConnected();
+        public virtual void OnQueueFullPacketDropped( ushort packetId ) => _sink.OnQueueFullPacketDropped( packetId );
 
-        protected abstract void OnStoreFull( ushort freeLeftSlot );
+        public virtual void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => _sink.OnQueueFullPacketDropped( packetId, packetType );
 
-        protected abstract void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount );
+        public virtual bool OnUnattendedDisconnect( DisconnectReason reason ) => _sink.OnUnattendedDisconnect( reason );
 
-        protected abstract void OnPacketResent( ushort packetId, ulong resentCount, bool isDropped );
+        public virtual void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData ) => _sink.OnUnparsedExtraData( packetId, unparsedData );
 
-        protected virtual void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) { }
-        protected virtual void OnQueueFullPacketDropped( ushort packetId ) { }
-        protected abstract void OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData );
-
-        protected virtual void OnPacketWithDupFlagReceived( PacketType packetType ) { }
-
-        public ValueTask<Task> PublishAsync( OutgoingMessage message ) => Client.PublishAsync( message );
-
-        public ValueTask<Task> PublishAsync( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
-            => Client.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
-
-        ValueTask IMqtt3Sink.ReceiveAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken )
-            => ReceiveAsync( topic, reader, size, q, retain, cancellationToken );
-
-        bool IMqtt3Sink.OnUnattendedDisconnect( DisconnectReason reason ) => OnUnattendedDisconnect( reason );
-
-        ValueTask<bool> IMqtt3Sink.OnReconnectionFailedAsync( ConnectResult result ) => OnReconnectionFailedAsync(result);
-
-        void IMqtt3Sink.Connected() => OnConnected();
-
-        void IMqtt3Sink.OnPacketResent( ushort packetId, ulong resentCount, bool isDropped ) => OnPacketResent( packetId, resentCount, isDropped );
-
-        void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => OnQueueFullPacketDropped( packetId, packetType );
-        void IMqtt3Sink.OnQueueFullPacketDropped( ushort packetId ) => OnQueueFullPacketDropped( packetId );
-        void IMqtt3Sink.OnUnparsedExtraData( ushort packetId, System.Buffers.ReadOnlySequence<byte> unparsedData )
-            => OnUnparsedExtraData( packetId, unparsedData );
-        void IMqtt3Sink.OnPacketWithDupFlagReceived( PacketType packetType )
-            => OnPacketWithDupFlagReceived( packetType );
-
-        IMqtt3Sink.ManualConnectRetryBehavior IMqtt3Sink.OnFailedManualConnect( ConnectResult connectResult ) => OnFailedManualConnect( connectResult );
-
-
-        public ValueTask DisposeAsync() => Client.DisposeAsync();
+        public virtual ValueTask OnMessageAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken ) => _sink.OnMessageAsync( topic, reader, size, q, retain, cancellationToken );
     }
 }

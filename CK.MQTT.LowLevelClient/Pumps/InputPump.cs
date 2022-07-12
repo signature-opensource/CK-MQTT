@@ -27,10 +27,7 @@ namespace CK.MQTT.Pumps
             CurrentReflex = reflex;
         }
 
-        public void StartPumping()
-        {
-            SetRunningLoop( ReadLoopAsync() );
-        }
+        public void StartPumping() => SetRunningLoop( ReadLoopAsync() );
 
         /// <summary>
         /// Current <see cref="Reflex"/> that will be run on the incoming messages.

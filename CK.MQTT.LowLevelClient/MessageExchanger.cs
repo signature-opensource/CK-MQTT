@@ -7,14 +7,11 @@ using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class MessageExchanger : IConnectedLowLevelMqttClient
+    public abstract class MessageExchanger : IConnectedLowLevelMqttClient
     {
         /// <summary>
         /// Instantiate the <see cref="MessageExchanger"/> with the given configuration.
@@ -26,11 +23,14 @@ namespace CK.MQTT
             PConfig = pConfig;
             Config = config;
             Sink = sink;
+            sink.Sender = this;
             Channel = channel;
             RemotePacketStore = remotePacketStore ?? new MemoryPacketIdStore();
             LocalPacketStore = localPacketStore ?? new MemoryPacketStore( pConfig, Config, ushort.MaxValue );
         }
 
+        /// <inheritdoc/>
+        public abstract string? ClientId { get; }
         public Mqtt3ConfigurationBase Config { get; }
         public virtual IMqtt3Sink Sink { get; }
         public IRemotePacketStore RemotePacketStore { get; }
@@ -47,9 +47,6 @@ namespace CK.MQTT
                 QualityOfService.ExactlyOnce => StoreAndSendAsync<T>( outgoingPacket ),
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
-
-
-
 
         [ThreadColor( ThreadColor.Rainbow )]
         async ValueTask<Task<T?>> StoreAndSendAsync<T>( IOutgoingPacket msg )
@@ -111,7 +108,7 @@ namespace CK.MQTT
         internal protected async virtual ValueTask<bool> SelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
             Debug.Assert( Pumps != null );
-            Channel.Close();
+            await Channel.CloseAsync( disconnectedReason );
             await Pumps.StopWorkAsync();
             return Sink.OnUnattendedDisconnect( disconnectedReason );
         }
