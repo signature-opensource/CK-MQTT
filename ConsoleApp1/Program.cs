@@ -1,61 +1,36 @@
-using CK.Core;
-using CK.MQTT;
-using CK.MQTT.Client;
-using CK.MQTT.Packets;
-using System.Net.Sockets;
+using CK.MQTT.Server;
+using CK.MQTT.Server.Server;
 
-int port = 1883;
-var buffer = new byte[500];
-buffer = buffer.Select( ( s, i ) => (byte)i ).ToArray();
-var client = new MqttClientAgent(
-               ( sink ) => new LowLevelMqttClient( ProtocolConfiguration.Mqtt3, new Mqtt3ClientConfiguration()
-               {
-                   KeepAliveSeconds = 3000,
-                   DisconnectBehavior = DisconnectBehavior.AutoReconnect,
-                   Credentials = new MqttClientCredentials( "test", true ),
-                   WaitTimeoutMilliseconds = 500000
-               }, sink, new TcpChannel( "localhost", port ) )
-);
-client.OnConnectionChange.Sync += OnConnectionChange;
+var server = new MqttServer(
+        new CK.MQTT.Mqtt3ConfigurationBase(),
+        new TcpChannelFactory( 1883 ),
+        new MemoryStoreFactory(),
+        new TestAuthHandlerFactory()
+    );
 
-var connectRes = await client.ConnectAsync();
+server.StartListening();
 
-void OnConnectionChange( IActivityMonitor monitor, DisconnectReason e )
+await Task.Delay( 500_000_000 );
+
+await server.StopListeningAsync();
+
+class TestAuthHandlerFactory : IAuthenticationProtocolHandlerFactory
 {
-    Console.WriteLine( $"Connect changed:" + e );
-}
-Console.WriteLine( "Connected." );
-int inFlight = 0;
-for( int i = 0; i < 26000; i++ )
-{
-    if( false )
-    {
-        if( i % 1000 == 0 )
-        {
-            Console.WriteLine( "Sent 1000 messages." );
-        }
-    }
-    else
-    {
-        if( i % 100 == 0 )
-        {
-            Console.WriteLine( "Sent 100 messages." );
-        }
-    }
-
-    var task = await client.PublishAsync( new SmallOutgoingApplicationMessage( "test-topic", QualityOfService.AtLeastOnce, false, buffer ) );
-    Interlocked.Increment( ref inFlight );
-    var foo = i;
-    _ = task.ContinueWith( ( a ) =>
-    {
-        Interlocked.Decrement( ref inFlight );
-        //Console.WriteLine( "received ack for msg number: " + foo );
-    } );
-    while( inFlight > 100 && !false )
-    {
-        await Task.Delay( 1000 );
-        Console.WriteLine( "Waiting for response..." );
-    }
+    public ValueTask<IAuthenticationProtocolHandler?> ChallengeIncomingConnectionAsync( string connectionInfo, CancellationToken cancellationToken )
+        => new( new TestAuthHandler() );
 }
 
-await await client.PublishAsync( new SmallOutgoingApplicationMessage( "test-topic", QualityOfService.ExactlyOnce, false, buffer ) );
+class TestAuthHandler : IAuthenticationProtocolHandler
+{
+    public ValueTask<bool> ChallengeClientIdAsync( string clientId ) => new( true );
+
+    public ValueTask<bool> ChallengePasswordAsync( string password ) => new( true );
+
+    public ValueTask<bool> ChallengeShouldHaveCredsAsync( bool hasUserName, bool hasPassword ) => new( true );
+
+    public ValueTask<bool> ChallengeUserNameAsync( string userName ) => new( true );
+
+    public ValueTask DisposeAsync() => new();
+}
+
+

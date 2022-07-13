@@ -16,6 +16,7 @@ namespace CK.MQTT.Server
         readonly ServerClientMessageSink _sink = new();
         public MqttServerAgent(Func<IMqttServerSink, IConnectedMessageSender> factory)
         {
+            Start();
             factory( _sink ); //TODO: big code smell. We don't use the output there.
         }
         readonly PerfectEventSender<Subscription> _subscribeSender = new();

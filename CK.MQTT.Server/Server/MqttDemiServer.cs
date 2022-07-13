@@ -46,7 +46,6 @@ namespace CK.MQTT.Server.Server
                 remotePacketStore,
                 localPacketStore
             ) );
-            agent.Start();
             await _onNewClientSender.SafeRaiseAsync( m, agent );
         }
     }
