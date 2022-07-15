@@ -66,7 +66,7 @@ namespace CK.MQTT
                     return (result, true);
                 }
                 static (ConnectResult, bool) Retry( ConnectResult result ) => (result, false);
-
+                if( res.Status == ConnectStatus.Successful ) return Return(res, true).Item1;
                 Debug.Assert( res.Status != ConnectStatus.Deffered );
                 var sinkBehavior = ClientSink.OnFailedManualConnect( res );
                 var configBehavior = ClientConfig.ManualConnectBehavior;

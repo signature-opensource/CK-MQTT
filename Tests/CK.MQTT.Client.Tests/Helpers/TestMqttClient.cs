@@ -21,12 +21,6 @@ namespace CK.MQTT.Client
         {
             Config = config;
             _eventWriter = eventWriter;
-            OnMessage.Simple.Async += Simple_Async;
-        }
-
-        async Task Simple_Async( IActivityMonitor monitor, ApplicationMessage message )
-        {
-            await Events!.Writer.WriteAsync( message, default );
         }
 
         protected override async Task WorkLoopAsync( ChannelReader<object?> channel )
@@ -39,8 +33,20 @@ namespace CK.MQTT.Client
                 task = base.WorkLoopAsync( copyChannel.Reader );
                 await foreach( var item in channel.ReadAllAsync() )
                 {
-                    await copyChannel.Writer.WriteAsync( item );
-                    await _eventWriter.WriteAsync( item );
+                    if( item is VolatileApplicationMessage msg )
+                    {
+                        var buffer = msg.Message.Payload.ToArray();
+                        var appMessage = new VolatileApplicationMessage(
+                            new ApplicationMessage( msg.Message.Topic, buffer, msg.Message.QoS, msg.Message.Retain ), new DisposableComposite()
+                        );
+                        await copyChannel.Writer.WriteAsync( item );
+                        await _eventWriter.WriteAsync( appMessage );
+                    }
+                    else
+                    {
+                        await copyChannel.Writer.WriteAsync( item );
+                        await _eventWriter.WriteAsync( item );
+                    }
                 }
             }
             finally

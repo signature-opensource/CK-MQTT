@@ -19,7 +19,7 @@ namespace CK.MQTT
         {
             _exchanger = exchanger;
         }
-        const byte _dupFlag = 1 << 4;
+        const byte _dupFlag = 1 << 3;
         const byte _retainFlag = 1;
 
         public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader reader, CancellationToken cancellationToken )
