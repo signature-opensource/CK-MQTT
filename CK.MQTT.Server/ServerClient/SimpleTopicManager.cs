@@ -21,7 +21,7 @@ namespace CK.MQTT.Server
         {
             CalculateTopicHash( topic, out ulong topicHash, out _, out _ );
             _noWildcardSubscriptionsByTopicHash.TryGetValue( topicHash, out HashSet<string>? noWildcardSubscriptions );
-            if( noWildcardSubscriptions?.Contains( topic ) ?? false ) return true;
+            if( noWildcardSubscriptions?.Contains( topic ) ?? false ) return false;
 
             if( noWildcardSubscriptions != null )
             {
@@ -49,7 +49,7 @@ namespace CK.MQTT.Server
             return true;
         }
 
-        void Subscribe( string topicFilter )
+        public void Subscribe( string topicFilter )
         {
             bool isNewSubscription = !_subscriptions.ContainsKey( topicFilter );
 
@@ -102,7 +102,7 @@ namespace CK.MQTT.Server
                 subscriptions.Add( topicFilter );
             }
         }
-        void Unsubscribe( string topicFilter )
+        public void Unsubscribe( string topicFilter )
         {
             var removedSubscriptions = new List<string>();
 
@@ -246,15 +246,6 @@ namespace CK.MQTT.Server
             _subscriptions.Clear();
         }
 
-        public ValueTask<SubscribeReturnCode[]> SubscribeAsync( params Subscription[] subscriptions )
-        {
-            foreach( var subscription in subscriptions )
-            {
-                Subscribe( subscription.TopicFilter );
-            }
-            return new ValueTask<SubscribeReturnCode[]>( new SubscribeReturnCode[subscriptions.Length] );
-        }
-       
 
         public ValueTask ResetAsync()
         {
@@ -264,14 +255,6 @@ namespace CK.MQTT.Server
             return new ValueTask();
         }
 
-        public ValueTask UnsubscribeAsync( string[] topics )
-        {
-            foreach( var topicFilter in topics )
-            {
-                Unsubscribe( topicFilter );
-            }
-            return new();
-        }
 
         sealed class TopicHashMaskSubscriptions
         {

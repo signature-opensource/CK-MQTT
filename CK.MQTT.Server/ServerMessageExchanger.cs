@@ -34,6 +34,7 @@ namespace CK.MQTT.Server
             ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( this ) )
                 .UseMiddleware( new PublishLifecycleReflex( this ) )
+                .UseMiddleware( new PingReqReflex( output ) )
                 .UseMiddleware( new SubscribeReflex( ServerSink, PConfig.ProtocolLevel, output ) )
                 .UseMiddleware( new UnsubscribeReflex( ServerSink, output, PConfig.ProtocolLevel ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
