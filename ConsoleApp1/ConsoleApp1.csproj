@@ -15,7 +15,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CKSetup\CKSetup.csproj" />
-      <ProjectReference Include="..\CK.MQTT.DefaultMQTTDemiServer\CK.MQTT.DefaultMQTTDemiServer.csproj" />
+      <ProjectReference Include="..\CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj" />
     </ItemGroup>
 
 </Project>

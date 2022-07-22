@@ -169,9 +169,7 @@ namespace CK.MQTT.Server
         }
 
         public ValueTask<(IMqttChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
-        {
-            return _multiChannelFactory.CreateAsync( cancellationToken );
-        }
+            => _multiChannelFactory.CreateAsync( cancellationToken );
 
         public void Dispose()
         {

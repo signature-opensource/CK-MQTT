@@ -45,9 +45,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "ConsoleApp1\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Server.Tests", "Tests\CK.MQTT.Server.Tests\CK.MQTT.Server.Tests.csproj", "{D22C454E-8E17-47BA-A359-3B3D30E41567}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.DefaultMQTTDemiServer", "CK.MQTT.DefaultMQTTDemiServer\CK.MQTT.DefaultMQTTDemiServer.csproj", "{A525DAF2-2799-474B-81E2-09D97DEB9242}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.LocalMQTTDemiServer", "CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj", "{A525DAF2-2799-474B-81E2-09D97DEB9242}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CKSetup", "CKSetup\CKSetup.csproj", "{24BE891B-38E4-4FCB-8363-F8F8A83F4972}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "CKSetup\CKSetup.csproj", "{24BE891B-38E4-4FCB-8363-F8F8A83F4972}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
