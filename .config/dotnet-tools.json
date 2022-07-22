@@ -1,0 +1,11 @@
+﻿{
+  "isRoot": true,
+  "tools": {
+    "cksetup": {
+      "version": "15.0.0",
+      "commands": [
+        "cksetup"
+      ]
+    }
+  }
+}

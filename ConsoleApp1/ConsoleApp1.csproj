@@ -3,13 +3,19 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>net6.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\CK.MQTT.Server\CK.MQTT.Server.csproj" />
+      <PackageReference Include="CK.Monitoring.Hosting" Version="15.1.0" />
+      <PackageReference Include="CK.StObj.Model" Version="20.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\CKSetup\CKSetup.csproj" />
+      <ProjectReference Include="..\CK.MQTT.DefaultMQTTDemiServer\CK.MQTT.DefaultMQTTDemiServer.csproj" />
     </ItemGroup>
 
 </Project>

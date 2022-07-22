@@ -131,7 +131,7 @@ namespace CK.MQTT.Server
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             _channelFactory.Dispose();
             _cts?.Cancel();

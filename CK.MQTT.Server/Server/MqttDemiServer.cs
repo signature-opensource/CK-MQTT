@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server.Server
+namespace CK.MQTT.Server
 {
     public class MqttDemiServer : MqttListenerBase
     {
@@ -19,11 +19,9 @@ namespace CK.MQTT.Server.Server
                               IAuthenticationProtocolHandlerFactory authenticationProtocolHandler )
             : base( config, channelFactory, storeFactory, authenticationProtocolHandler )
         {
-            _config = config;
         }
 
         readonly PerfectEventSender<MqttServerAgent> _onNewClientSender = new();
-        readonly Mqtt3ConfigurationBase _config;
 
         public PerfectEvent<MqttServerAgent> OnNewClient => _onNewClientSender.PerfectEvent;
         protected override async ValueTask CreateClientAsync(
@@ -40,7 +38,7 @@ namespace CK.MQTT.Server.Server
             new ServerMessageExchanger(
                 clientId,
                 ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
-                _config,
+                Config,
                 sink,
                 channel,
                 remotePacketStore,

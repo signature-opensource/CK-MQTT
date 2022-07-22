@@ -9,7 +9,7 @@ namespace CK.MQTT
     /// </summary>
     public class Mqtt3ConfigurationBase
     {
-        readonly int _waitTimeoutMilliseconds = 5_000;
+        int _waitTimeoutMilliseconds = 5_000;
 
         /// <summary>
         /// Time to wait before a non acknowledged packet is resent.
@@ -20,7 +20,7 @@ namespace CK.MQTT
         public int WaitTimeoutMilliseconds
         {
             get => _waitTimeoutMilliseconds;
-            init
+            set
             {
                 if( value <= 20 ) throw new ArgumentException( "waitTimeoutMilliseconds must be greater than 20." );
                 _waitTimeoutMilliseconds = value;
@@ -38,12 +38,12 @@ namespace CK.MQTT
         /// Using a bounded channel enables back pressure handling.
         /// Defaults to 32.
         /// </summary>
-        public int OutgoingPacketsChannelCapacity { get; init; } = 32;
+        public int OutgoingPacketsChannelCapacity { get; set; } = 32;
 
         /// <summary>
         /// Initial capacity of the ID Store. May grow bigger.
         /// </summary>
-        public ushort IdStoreStartCount { get; init; } = 32;
+        public ushort IdStoreStartCount { get; set; } = 32;
 
         /// <summary>
         /// Gets the maximal number of retries to send the same packet

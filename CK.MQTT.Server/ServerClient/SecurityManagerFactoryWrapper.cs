@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.ServerClient
@@ -18,6 +18,11 @@ namespace CK.MQTT.Server.ServerClient
         {
             if( _client._needClientTCS == null ) return null; //Deny all connection when we dont need a client.
             return await _securityManagerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );
+        }
+
+        public void Dispose()
+        {
+            _securityManagerFactory.Dispose();
         }
     }
 }
