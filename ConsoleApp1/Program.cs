@@ -4,6 +4,8 @@ using CK.MQTT.Server.Server;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.Collections;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -66,7 +68,7 @@ namespace ConsoleApp1
 
         private void OnNewClient_Sync( IActivityMonitor monitor, MqttServerAgent e )
         {
-            monitor.Info( $"Hello client {e.ClientId}" );
+            Console.WriteLine( $"Hello client {e.ClientId}" );
         }
     }
 }

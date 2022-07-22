@@ -157,25 +157,13 @@ namespace CK.MQTT.Server
                 return -1;
             }
         }
-        static string? GetWSConfig( IActivityMonitor m, string item )
-        {
-            var splitted = item.Split( ":" );
-            if( splitted.Length != 2 )
-            {
-                m.Error( $"Error 0 or multiple ':' were given to ListenTo:'{item}', the format is ws:{{httpPrefix}}" );
-                return null;
-            }
-            return splitted[1];
-        }
+        static string? GetWSConfig( IActivityMonitor m, string item ) => item.Substring( 3 );
 
         public ValueTask<(IMqttChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
         {
             return _multiChannelFactory.CreateAsync( cancellationToken );
         }
 
-        public void Dispose()
-        {
-            _multiChannelFactory.Dispose();
-        }
+        public void Dispose() => _multiChannelFactory.Dispose();
     }
 }
