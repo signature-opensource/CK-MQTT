@@ -67,7 +67,7 @@ namespace ConsoleApp1
 
         private void OnNewClient_Sync( IActivityMonitor monitor, MqttServerAgent e )
         {
-            monitor.Info( $"Hello client {e.ClientId}" );
+            Console.WriteLine( $"Hello client {e.ClientId}" );
         }
     }
 }
