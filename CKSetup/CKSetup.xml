@@ -5,7 +5,7 @@
   <UseSignatureFiles>True</UseSignatureFiles>
 
   <BinPaths>
-    <BinPath Path="../CK.MQTT.DefaultMQTTDemiServer/bin/[Debug|Release]/net6.0">
+    <BinPath Path="../CK.MQTT.LocalMQTTDemiServer/bin/[Debug|Release]/net6.0">
       <ProjectPath>../ConsoleApp1</ProjectPath>
     </BinPath>
   </BinPaths>
