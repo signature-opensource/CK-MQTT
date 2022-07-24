@@ -13,7 +13,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 0,
-                Credentials = credentials ?? new MQTTClientCredentials( "CKMQTTTest", true ),
+                Credentials = credentials ?? new MQTTClientCredentials( "CKMq"+"ttTest", true ),
                 ManualConnectBehavior = ManualConnectBehavior.TryOnce
             };
         }
@@ -29,7 +29,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 0,
-                Credentials = credentials ?? new MQTTClientCredentials( "CKMQTTTest", true )
+                Credentials = credentials ?? new MQTTClientCredentials( "CKMq" + "ttTest", true )
             };
         }
 
@@ -44,7 +44,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 5,
-                Credentials = credentials ?? new MQTTClientCredentials( "CKMQTTTest", true ),
+                Credentials = credentials ?? new MQTTClientCredentials( "CKMq" + "ttTest", true ),
                 DisconnectBehavior = disconnectBehavior
             };
         }
