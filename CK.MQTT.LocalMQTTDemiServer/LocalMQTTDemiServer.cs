@@ -14,9 +14,9 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class DefaultMQTTDemiServer : MQTTDemiServer, IHostedService, ISingletonAutoService, IDisposable
+    public class LocalMQTTDemiServer : MQTTDemiServer, IHostedService, ISingletonAutoService, IDisposable
     {
-        public DefaultMQTTDemiServer( IOptionsMonitor<MQTTDemiServerConfig> config )
+        public LocalMQTTDemiServer( IOptionsMonitor<MQTTDemiServerConfig> config )
             : base(
                   new DynamicallyConfiguredConfig( config ),
                   new DynamicallyConfiguredChannelFactory( config ),

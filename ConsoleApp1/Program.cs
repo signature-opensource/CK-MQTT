@@ -53,9 +53,9 @@ namespace ConsoleApp1
 
     public class MyMQTTService : IHostedService
     {
-        readonly DefaultMQTTDemiServer _server;
+        readonly LocalMQTTDemiServer _server;
 
-        public MyMQTTService( DefaultMQTTDemiServer server )
+        public MyMQTTService( LocalMQTTDemiServer server )
         {
             _server = server;
             _server.OnNewClient.Sync += OnNewClient_Sync;
