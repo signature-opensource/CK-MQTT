@@ -11,30 +11,30 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class MqttDemiServer : MqttListenerBase
+    public class MQTTDemiServer : MQTTListenerBase
     {
-        public MqttDemiServer( Mqtt3ConfigurationBase config,
-                              IMqttChannelFactory channelFactory,
+        public MQTTDemiServer( MQTT3ConfigurationBase config,
+                              IMQTTChannelFactory channelFactory,
                               IStoreFactory storeFactory,
                               IAuthenticationProtocolHandlerFactory authenticationProtocolHandler )
             : base( config, channelFactory, storeFactory, authenticationProtocolHandler )
         {
         }
 
-        readonly PerfectEventSender<MqttServerAgent> _onNewClientSender = new();
+        readonly PerfectEventSender<MQTTServerAgent> _onNewClientSender = new();
 
-        public PerfectEvent<MqttServerAgent> OnNewClient => _onNewClientSender.PerfectEvent;
+        public PerfectEvent<MQTTServerAgent> OnNewClient => _onNewClientSender.PerfectEvent;
         protected override async ValueTask CreateClientAsync(
             IActivityMonitor m,
             string clientId,
-            IMqttChannel channel,
+            IMQTTChannel channel,
             IAuthenticationProtocolHandler securityManager,
             ILocalPacketStore localPacketStore,
             IRemotePacketStore remotePacketStore,
             IConnectInfo connectInfo, CancellationToken cancellationToken
         )
         {
-            var agent = new MqttServerAgent( ( sink ) =>
+            var agent = new MQTTServerAgent( ( sink ) =>
             new ServerMessageExchanger(
                 clientId,
                 ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),

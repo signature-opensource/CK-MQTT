@@ -18,7 +18,7 @@ When should you flush the pipe ? https://github.com/dotnet/runtime/issues/26747#
 
 
 ## TODO:
-MqttIdStore<T> : IOutgoingPacketStore:
+MQTTIdStore<T> : IOutgoingPacketStore:
 Remove interface, use abstract method instead.
 
 Document and implement a full object lifecycle.

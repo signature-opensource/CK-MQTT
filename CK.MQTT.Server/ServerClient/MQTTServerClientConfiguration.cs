@@ -2,9 +2,9 @@ using System;
 
 namespace CK.MQTT.Server.ServerClient
 {
-    public class MqttServerClientConfiguration : Mqtt3ConfigurationBase
+    public class MQTTServerClientConfiguration : MQTT3ConfigurationBase
     {
-        public MqttServerClientConfiguration()
+        public MQTTServerClientConfiguration()
         {
         }
 

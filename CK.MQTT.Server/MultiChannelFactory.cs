@@ -10,10 +10,10 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class MultiChannelFactory : IMqttChannelFactory
+    public class MultiChannelFactory : IMQTTChannelFactory
     {
-        readonly List<IMqttChannelFactory> _factories;
-        readonly List<(Task<(IMqttChannel channel, string connectionInfo)> task, CancellationTokenSource cts)?> _createAsync;
+        readonly List<IMQTTChannelFactory> _factories;
+        readonly List<(Task<(IMQTTChannel channel, string connectionInfo)> task, CancellationTokenSource cts)?> _createAsync;
         readonly SemaphoreSlim _channelListLock = new( 1 );
         TaskCompletionSource _newChannelTCS = new();
         public MultiChannelFactory()
@@ -21,7 +21,7 @@ namespace CK.MQTT.Server
             _factories = new();
             _createAsync = new();
         }
-        public async ValueTask<(IMqttChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
+        public async ValueTask<(IMQTTChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
         {
             while( !cancellationToken.IsCancellationRequested )
             {
@@ -78,7 +78,7 @@ namespace CK.MQTT.Server
             }
             throw new OperationCanceledException();
 
-            (IMqttChannel, string) PullCompletedChannel()
+            (IMQTTChannel, string) PullCompletedChannel()
             {
                 for( int i = 0; i < _createAsync.Count; i++ )
                 {
@@ -100,7 +100,7 @@ namespace CK.MQTT.Server
             }
         }
 
-        public async Task AddFactoryAsync( IMqttChannelFactory factory )
+        public async Task AddFactoryAsync( IMQTTChannelFactory factory )
         {
             await _channelListLock.WaitAsync();
             try
@@ -114,7 +114,7 @@ namespace CK.MQTT.Server
             }
         }
 
-        public async Task<bool> RemoveFactoryAsync( IActivityMonitor m, IMqttChannelFactory factory )
+        public async Task<bool> RemoveFactoryAsync( IActivityMonitor m, IMQTTChannelFactory factory )
         {
             await _channelListLock.WaitAsync();
             try
@@ -143,7 +143,7 @@ namespace CK.MQTT.Server
             }
         }
 
-        async Task<bool> DoRemoveFactoryAsync( IActivityMonitor m, IMqttChannelFactory factory )
+        async Task<bool> DoRemoveFactoryAsync( IActivityMonitor m, IMQTTChannelFactory factory )
         {
             int id = _factories.IndexOf( factory );
             if( id == -1 ) return false;

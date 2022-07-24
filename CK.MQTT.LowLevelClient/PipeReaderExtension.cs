@@ -29,10 +29,10 @@ namespace CK.MQTT
         /// Read a <see cref="ushort"/> directly from a <see cref="PipeReader"/>. Use this only if you are in an async context, and the next read cannot use a <see cref="SequenceReader{T}"/>.
         /// </summary>
         /// <param name="pipeReader">The <see cref="PipeReader"/> to read the data from.</param>
-        /// <param name="m">The <see cref="IMqttLogger"/> to use.</param>
+        /// <param name="m">The <see cref="IMQTTLogger"/> to use.</param>
         /// <param name="remainingLength">The remaining length of the packet. If it's bigger than 2, will log a warning.</param>
         /// <returns>A <see cref="ValueTask{TResult}"/> that contain a <see cref="ushort"/> when completed.</returns>
-        public static async ValueTask<ushort?> ReadPacketIdPacketAsync( this PipeReader pipeReader, IMqtt3Sink sink, uint remainingLength, CancellationToken cancellationToken )
+        public static async ValueTask<ushort?> ReadPacketIdPacketAsync( this PipeReader pipeReader, IMQTT3Sink sink, uint remainingLength, CancellationToken cancellationToken )
         {
             while( true )//If the data was not available on the first try, we redo the process.
             {

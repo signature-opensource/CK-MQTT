@@ -9,13 +9,13 @@ namespace CK.MQTT
     /// <summary>
     /// Represent the network connection.
     /// </summary>
-    public interface IMqttChannel : IDisposable
+    public interface IMQTTChannel : IDisposable
     {
         [MemberNotNull( nameof( DuplexPipe ) )] //after task completion.
         ValueTask StartAsync( CancellationToken cancellationToken );
 
         /// <summary>
-        /// Disconnect the <see cref="IMqttChannel"/>.
+        /// Disconnect the <see cref="IMQTTChannel"/>.
         /// </summary>
         /// <param name="m">The logger to use.</param>
         ValueTask CloseAsync( DisconnectReason closeReason );

@@ -9,18 +9,18 @@ using static CK.MQTT.Client.DefaultClientMessageSink;
 
 namespace CK.MQTT.Client
 {
-    public class MqttClientAgent : MessageExchangerAgent, IMqtt3Client
+    public class MQTTClientAgent : MessageExchangerAgent, IMQTT3Client
     {
         readonly DefaultClientMessageSink _sink = new();
-        public MqttClientAgent(Func<IMqtt3ClientSink, IMqtt3Client> factory) // Sink.Client is not set.
+        public MQTTClientAgent(Func<IMQTT3ClientSink, IMQTT3Client> factory) // Sink.Client is not set.
         {
             OnConnectionChange.Sync += OnConnectionChangeSync;
             factory( _sink ); //TODO: big code smell. We don't use the output there.
         }
 
-        public IMqtt3Client Client => _sink.Client;
+        public IMQTT3Client Client => _sink.Client;
 
-        protected override MqttMessageSink MessageSink => _sink;
+        protected override MQTTMessageSink MessageSink => _sink;
 
         void OnConnectionChangeSync( IActivityMonitor monitor, DisconnectReason e )
             => IsConnected = e == DisconnectReason.None;

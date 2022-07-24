@@ -11,17 +11,17 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class MqttServerAgent : MessageExchangerAgent
+    public class MQTTServerAgent : MessageExchangerAgent
     {
         readonly ServerClientMessageSink _sink = new();
-        public MqttServerAgent(Func<IMqttServerSink, IConnectedMessageSender> factory)
+        public MQTTServerAgent(Func<IMQTTServerSink, IConnectedMessageSender> factory)
         {
             Start();
             factory( _sink ); //TODO: big code smell. We don't use the output there.
         }
         readonly PerfectEventSender<Subscription> _subscribeSender = new();
         readonly PerfectEventSender<string> _unsubscribeSender = new();
-        protected override MqttMessageSink MessageSink => _sink;
+        protected override MQTTMessageSink MessageSink => _sink;
 
         public PerfectEvent<Subscription> OnSubscribe => _subscribeSender.PerfectEvent;
         public PerfectEvent<string> OnUnsubscribe => _unsubscribeSender.PerfectEvent;

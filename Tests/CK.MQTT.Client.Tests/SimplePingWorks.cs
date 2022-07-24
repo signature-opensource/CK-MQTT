@@ -54,7 +54,7 @@ namespace CK.MQTT.Client.Tests
                 await Task.Delay( 5 );
             }
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
-            var disconnect = await replayer.ShouldContainEventAsync<MqttMessageSink.UnattendedDisconnect>();
+            var disconnect = await replayer.ShouldContainEventAsync<MQTTMessageSink.UnattendedDisconnect>();
             disconnect.Reason.Should().Be( DisconnectReason.Timeout );
         }
 

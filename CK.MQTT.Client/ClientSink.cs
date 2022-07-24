@@ -2,17 +2,17 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public class DefaultClientMessageSink : MqttMessageSink, IMqtt3ClientSink
+    public class DefaultClientMessageSink : MQTTMessageSink, IMQTT3ClientSink
     {
         internal int _manualCountRetry;
-        public IMqtt3Client Client { get; set; } = null!; //set by the client.
+        public IMQTT3Client Client { get; set; } = null!; //set by the client.
 
-        public record FailedManualConnect( ConnectResult connectResult, IMqtt3ClientSink.ManualConnectRetryBehavior behavior );
-        public IMqtt3ClientSink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult )
+        public record FailedManualConnect( ConnectResult connectResult, IMQTT3ClientSink.ManualConnectRetryBehavior behavior );
+        public IMQTT3ClientSink.ManualConnectRetryBehavior OnFailedManualConnect( ConnectResult connectResult )
         {
             var behavior = connectResult.Status == ConnectStatus.ErrorUnrecoverable || _manualCountRetry++ >= 3
-                    ? IMqtt3ClientSink.ManualConnectRetryBehavior.GiveUp
-                    : IMqtt3ClientSink.ManualConnectRetryBehavior.Retry;
+                    ? IMQTT3ClientSink.ManualConnectRetryBehavior.GiveUp
+                    : IMQTT3ClientSink.ManualConnectRetryBehavior.Retry;
             Events.TryWrite( new FailedManualConnect( connectResult, behavior ) );
             return behavior;
         }

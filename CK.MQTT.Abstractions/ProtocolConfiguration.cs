@@ -23,18 +23,18 @@ namespace CK.MQTT
         /// <summary>
         /// Default for MQTT3.
         /// </summary>
-        public static ProtocolConfiguration Mqtt3 => new( 8883, 1883, ProtocolLevel.MQTT3, "MQTT" );
+        public static ProtocolConfiguration MQTT3 => new( 8883, 1883, ProtocolLevel.MQTT3, "MQTT" );
 
         /// <summary>
         /// Defaults for MQTT5
         /// </summary>
-        public static ProtocolConfiguration Mqtt5 => new( 8883, 1883, ProtocolLevel.MQTT5, "MQTT" );
+        public static ProtocolConfiguration MQTT5 => new( 8883, 1883, ProtocolLevel.MQTT5, "MQTT" );
 
         public static ProtocolConfiguration FromProtocolLevel( ProtocolLevel protocolLevel )
             => protocolLevel switch
             {
-                ProtocolLevel.MQTT3 => Mqtt3,
-                ProtocolLevel.MQTT5 => Mqtt5,
+                ProtocolLevel.MQTT3 => MQTT3,
+                ProtocolLevel.MQTT5 => MQTT5,
                 _ => throw new ArgumentOutOfRangeException( nameof( protocolLevel ), "Unknow protocol level" )
             };
     }

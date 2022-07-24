@@ -8,18 +8,18 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public abstract class MqttListenerBase : IDisposable
+    public abstract class MQTTListenerBase : IDisposable
     {
         Task? _acceptLoop;
         CancellationTokenSource? _cts;
-        readonly IMqttChannelFactory _channelFactory;
+        readonly IMQTTChannelFactory _channelFactory;
         readonly IStoreFactory _storeFactory;
 
-        protected Mqtt3ConfigurationBase Config { get; }
+        protected MQTT3ConfigurationBase Config { get; }
 
-        public MqttListenerBase(
-            Mqtt3ConfigurationBase config,
-            IMqttChannelFactory channelFactory,
+        public MQTTListenerBase(
+            MQTT3ConfigurationBase config,
+            IMQTTChannelFactory channelFactory,
             IStoreFactory storeFactory,
             IAuthenticationProtocolHandlerFactory authenticationProtocolHandler
         )
@@ -51,7 +51,7 @@ namespace CK.MQTT.Server
         protected abstract ValueTask CreateClientAsync(
             IActivityMonitor m,
             string clientId,
-            IMqttChannel channel,
+            IMQTTChannel channel,
             IAuthenticationProtocolHandler securityManager,
             ILocalPacketStore localPacketStore,
             IRemotePacketStore remotePacketStore,
@@ -63,7 +63,7 @@ namespace CK.MQTT.Server
             while( !cancellationToken.IsCancellationRequested )
             {
                 IAuthenticationProtocolHandler? securityManager = null;
-                (IMqttChannel? channel, var connectionInfo) = await _channelFactory.CreateAsync( cancellationToken );
+                (IMQTTChannel? channel, var connectionInfo) = await _channelFactory.CreateAsync( cancellationToken );
                 try
                 {
                     async ValueTask CloseConnectionAsync()

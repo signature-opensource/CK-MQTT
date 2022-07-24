@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.Tests.Helpers
 {
-    class ServerTestMqttClient : TestMqttClient
+    class ServerTestMQTTClient : TestMQTTClient
     {
-        ServerTestMqttClient( ProtocolConfiguration pConfig,
-                             Mqtt3ClientConfiguration config,
-                             IMqttChannel channel,
+        ServerTestMQTTClient( ProtocolConfiguration pConfig,
+                             MQTT3ClientConfiguration config,
+                             IMQTTChannel channel,
                              ChannelWriter<object?> eventWriter )
             : base( pConfig, config, channel, eventWriter )
         {
@@ -21,13 +21,13 @@ namespace CK.MQTT.Server.Tests.Helpers
 
         public ChannelReader<object?> ClientEvents { get; init; } = null!;
 
-        public static ServerTestMqttClient Create(
+        public static ServerTestMQTTClient Create(
             ProtocolConfiguration pConfig,
-            Mqtt3ClientConfiguration config,
-            IMqttChannel channel )
+            MQTT3ClientConfiguration config,
+            IMQTTChannel channel )
         {
             Channel<object?> events = Channel.CreateUnbounded<object?>();
-            return new ServerTestMqttClient( pConfig, config, channel, events.Writer )
+            return new ServerTestMQTTClient( pConfig, config, channel, events.Writer )
             {
                 ClientEvents = events.Reader
             };

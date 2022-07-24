@@ -29,7 +29,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     }
     static class ApplicationMessageExtensions
     {
-        public static ValueTask<Task> PublishAsync( this TestMqttClient @this, ApplicationMessage message )
+        public static ValueTask<Task> PublishAsync( this TestMQTTClient @this, ApplicationMessage message )
             => @this.PublishAsync( message.Topic, message.QoS, message.Retain, message.Payload );
     }
 }

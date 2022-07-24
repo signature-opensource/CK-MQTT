@@ -12,14 +12,14 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.Server
 {
-    public class MqttServer : MqttDemiServer
+    public class MQTTServer : MQTTDemiServer
     {
-        public MqttServer( Mqtt3ConfigurationBase config, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory authenticationProtocolHandler ) : base( config, channelFactory, storeFactory, authenticationProtocolHandler )
+        public MQTTServer( MQTT3ConfigurationBase config, IMQTTChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory authenticationProtocolHandler ) : base( config, channelFactory, storeFactory, authenticationProtocolHandler )
         {
             OnNewClient.Sync += OnNewClient_Sync;
         }
 
-        private void OnNewClient_Sync( IActivityMonitor monitor, MqttServerAgent e )
+        private void OnNewClient_Sync( IActivityMonitor monitor, MQTTServerAgent e )
         {
             var state = new ClientState( this, e );
             e.OnMessage.RefCounted.Async += state.ListenMessageAsync;
@@ -29,12 +29,12 @@ namespace CK.MQTT.Server.Server
 
         class ClientState
         {
-            readonly MqttServer _parent;
+            readonly MQTTServer _parent;
             readonly SimpleTopicManager _topicManager = new();
-            readonly MqttServerAgent _agent;
+            readonly MQTTServerAgent _agent;
             readonly ReaderWriterLockSlim _topicManagerLock = new();
 
-            public ClientState( MqttServer parent, MqttServerAgent agent )
+            public ClientState( MQTTServer parent, MQTTServerAgent agent )
             {
                 _parent = parent;
                 _agent = agent;

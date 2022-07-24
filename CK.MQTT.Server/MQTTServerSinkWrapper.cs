@@ -7,14 +7,14 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class MqttServerSinkWrapper : Mqtt3SinkWrapper, IMqttServerSink
+    public class MQTTServerSinkWrapper : MQTT3SinkWrapper, IMQTTServerSink
     {
-        public MqttServerSinkWrapper( IMqttServerSink sink ) : base( sink )
+        public MQTTServerSinkWrapper( IMQTTServerSink sink ) : base( sink )
         {
             ServerSink = sink;
         }
 
-        public IMqttServerSink ServerSink { get; }
+        public IMQTTServerSink ServerSink { get; }
 
         public ValueTask<SubscribeReturnCode[]> OnSubscribeAsync( params Subscription[] subscriptions ) => ServerSink.OnSubscribeAsync( subscriptions );
 

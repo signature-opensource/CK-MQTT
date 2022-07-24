@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 namespace CK.MQTT
 {
     /// <summary>
-    /// Wrapper of <see cref="TcpClient"/> to <see cref="IMqttChannel"/>.
+    /// Wrapper of <see cref="TcpClient"/> to <see cref="IMQTTChannel"/>.
     /// </summary>
-    public class TcpChannel : IMqttChannel
+    public class TcpChannel : IMQTTChannel
     {
         readonly string _host;
         readonly int _port;

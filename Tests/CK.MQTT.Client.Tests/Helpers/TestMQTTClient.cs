@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public class TestMqttClient : MqttClientAgent
+    public class TestMQTTClient : MQTTClientAgent
     {
         readonly ChannelWriter<object?> _eventWriter;
 
-        public Mqtt3ClientConfiguration Config { get; }
+        public MQTT3ClientConfiguration Config { get; }
 
-        public TestMqttClient( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, IMqttChannel channel, ChannelWriter<object?> eventWriter )
-            : base( ( sink ) => new LowLevelMqttClient( pConfig, config, sink, channel ) )
+        public TestMQTTClient( ProtocolConfiguration pConfig, MQTT3ClientConfiguration config, IMQTTChannel channel, ChannelWriter<object?> eventWriter )
+            : base( ( sink ) => new LowLevelMQTTClient( pConfig, config, sink, channel ) )
         {
             Config = config;
             _eventWriter = eventWriter;

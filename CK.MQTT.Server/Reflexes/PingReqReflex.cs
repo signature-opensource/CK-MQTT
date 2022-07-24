@@ -20,7 +20,7 @@ namespace CK.MQTT.Server.Reflexes
         {
             _outputPump = outputPump;
         }
-        public ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
+        public ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMQTT3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
         {
             if( header >> 6 != 3 ) return new((OperationStatus.Done, false));
             _outputPump.TryQueueReflexMessage( OutgoingPingResp.Instance );

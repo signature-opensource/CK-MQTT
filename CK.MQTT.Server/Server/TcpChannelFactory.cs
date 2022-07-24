@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class TcpChannelFactory : IMqttChannelFactory
+    public class TcpChannelFactory : IMQTTChannelFactory
     {
         readonly TcpListener _listener;
         public TcpChannelFactory( int port )
@@ -24,7 +24,7 @@ namespace CK.MQTT.Server
 
         public int Port { get; }
 
-        public async ValueTask<(IMqttChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
+        public async ValueTask<(IMQTTChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
         {
             var client = await _listener.AcceptTcpClientAsync( cancellationToken );
             return (new ServerTcpChannel( client ), "");

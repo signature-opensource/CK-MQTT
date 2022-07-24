@@ -5,7 +5,7 @@ namespace CK.MQTT
     /// <summary>
     /// Configuration of a <see cref="IConnectedMessageSender"/>.
     /// </summary>
-    public class Mqtt5ClientConfiguration : Mqtt3ClientConfiguration
+    public class MQTT5ClientConfiguration : MQTT3ClientConfiguration
     {
     }
 }

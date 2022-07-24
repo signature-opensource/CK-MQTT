@@ -19,7 +19,7 @@ namespace CK.MQTT.Stores
 
         /// <returns><see langword="true"/> if a packet has been dropped.</returns>
         [ThreadColor( "ReadLoop" )]
-        bool OnQos1Ack( IMqtt3Sink sink, ushort PacketId, object? result );
+        bool OnQos1Ack( IMQTT3Sink sink, ushort PacketId, object? result );
 
         /// <returns>The lifecycle packet to send.</returns>
         [ThreadColor( "ReadLoop" )]

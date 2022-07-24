@@ -5,10 +5,10 @@ namespace CK.MQTT.Server.ServerClient
 {
     class SecurityManagerFactoryWrapper : IAuthenticationProtocolHandlerFactory
     {
-        readonly MqttServerClient _client;
+        readonly MQTTServerClient _client;
         readonly IAuthenticationProtocolHandlerFactory _securityManagerFactory;
 
-        public SecurityManagerFactoryWrapper( MqttServerClient client, IAuthenticationProtocolHandlerFactory securityManagerFactory )
+        public SecurityManagerFactoryWrapper( MQTTServerClient client, IAuthenticationProtocolHandlerFactory securityManagerFactory )
         {
             _client = client;
             _securityManagerFactory = securityManagerFactory;

@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public interface IMqtt3ClientSink : IMqtt3Sink
+    public interface IMQTT3ClientSink : IMQTT3Sink
     {
-        IMqtt3Client Client { get; set; }
+        IMQTT3Client Client { get; set; }
 
         public enum ManualConnectRetryBehavior
         {

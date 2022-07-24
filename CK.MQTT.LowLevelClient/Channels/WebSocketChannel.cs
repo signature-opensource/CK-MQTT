@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public class WebSocketChannel : IMqttChannel
+    public class WebSocketChannel : IMQTTChannel
     {
         readonly HttpListenerWebSocketContext _context;
 

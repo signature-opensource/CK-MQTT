@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public abstract class MessageExchanger : IConnectedLowLevelMqttClient
+    public abstract class MessageExchanger : IConnectedLowLevelMQTTClient
     {
         /// <summary>
         /// Instantiate the <see cref="MessageExchanger"/> with the given configuration.
         /// </summary>
         /// <param name="config">The configuration to use.</param>
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
-        public MessageExchanger( ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, IMqtt3Sink sink, IMqttChannel channel, IRemotePacketStore? remotePacketStore = null, ILocalPacketStore? localPacketStore = null )
+        public MessageExchanger( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, IMQTT3Sink sink, IMQTTChannel channel, IRemotePacketStore? remotePacketStore = null, ILocalPacketStore? localPacketStore = null )
         {
             PConfig = pConfig;
             Config = config;
@@ -31,11 +31,11 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         public abstract string? ClientId { get; }
-        public Mqtt3ConfigurationBase Config { get; }
-        public virtual IMqtt3Sink Sink { get; }
+        public MQTT3ConfigurationBase Config { get; }
+        public virtual IMQTT3Sink Sink { get; }
         public IRemotePacketStore RemotePacketStore { get; }
         public ILocalPacketStore LocalPacketStore { get; }
-        public IMqttChannel Channel { get; }
+        public IMQTTChannel Channel { get; }
         public ProtocolConfiguration PConfig { get; }
         public DuplexPump<OutputPump, InputPump>? Pumps { get; protected set; }
         public bool IsConnected => Pumps?.IsRunning ?? false;

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Stores
 {
-    public abstract class MqttIdStore<T> : ILocalPacketStore
+    public abstract class MQTTIdStore<T> : ILocalPacketStore
     {
         // * Lot of important logic happen here:
         //   - When a packet ID is freed. (Not as simple as it seems)
@@ -62,17 +62,17 @@ namespace CK.MQTT.Stores
 
             public override int GetHashCode() => throw new NotSupportedException();
 
-            public static bool operator ==( MqttIdStore<T>.EntryContent left, MqttIdStore<T>.EntryContent right ) => left.Equals( right );
+            public static bool operator ==( MQTTIdStore<T>.EntryContent left, MQTTIdStore<T>.EntryContent right ) => left.Equals( right );
 
-            public static bool operator !=( MqttIdStore<T>.EntryContent left, MqttIdStore<T>.EntryContent right ) => !(left == right);
+            public static bool operator !=( MQTTIdStore<T>.EntryContent left, MQTTIdStore<T>.EntryContent right ) => !(left == right);
         }
 
         readonly IdStore<EntryContent> _idStore;
         readonly IStopwatch _stopwatch;
-        protected readonly Mqtt3ConfigurationBase Config;
+        protected readonly MQTT3ConfigurationBase Config;
         TaskCompletionSource? _idFullTCS = null;
         int _droppedCount;
-        protected MqttIdStore( ushort packetIdMaxValue, Mqtt3ConfigurationBase config )
+        protected MQTTIdStore( ushort packetIdMaxValue, MQTT3ConfigurationBase config )
         {
             _idStore = new( packetIdMaxValue, config.IdStoreStartCount );
             _stopwatch = config.TimeUtilities.CreateStopwatch();
@@ -120,7 +120,7 @@ namespace CK.MQTT.Stores
         /// <param name="m"></param>
         /// <param name="entry"></param>
         /// <param name="packetId"></param>
-        bool DropPreviousUnackedPacket( IMqtt3Sink sink, ref IdStoreEntry<EntryContent> entry, ushort packetId )
+        bool DropPreviousUnackedPacket( IMQTT3Sink sink, ref IdStoreEntry<EntryContent> entry, ushort packetId )
         {
             bool dropped = false;
             var currId = packetId;
@@ -236,18 +236,18 @@ namespace CK.MQTT.Stores
 
         protected abstract void RemovePacketData( ref T storage );
 
-        public bool OnQos1Ack( IMqtt3Sink sink, ushort packetId, object? result )
+        public bool OnQos1Ack( IMQTT3Sink sink, ushort packetId, object? result )
         {
             lock( _idStore )
             {
-                MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+                MQTTIdStore<T>.QoSState state = GetStateAndChecks( packetId );
                 Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.AtLeastOnce );
 
                 // If it was already acked, the packet would be marked as "UncertainDed".
                 bool wasNeverAcked = (state & QoSState.UncertainDead) != QoSState.UncertainDead;
                 if( wasNeverAcked )
                 {
-                    ref MqttIdStore<T>.EntryContent content = ref _idStore._entries[packetId].Content;
+                    ref MQTTIdStore<T>.EntryContent content = ref _idStore._entries[packetId].Content;
                     content._taskCompletionSource.SetResult( result ); // TODO: provide user a transaction window and remove packet when he is done..
                     RemovePacketData( ref content.Storage );
                 }
@@ -276,7 +276,7 @@ namespace CK.MQTT.Stores
             lock( _idStore )
             {
 
-                MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+                MQTTIdStore<T>.QoSState state = GetStateAndChecks( packetId );
                 Debug.Assert( (QualityOfService)((byte)state & (byte)QualityOfService.Mask) == QualityOfService.ExactlyOnce );
 
                 bool wasNeverAcked = (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked;
@@ -299,7 +299,7 @@ namespace CK.MQTT.Stores
         {
             lock( _idStore )
             {
-                MqttIdStore<T>.QoSState state = GetStateAndChecks( packetId );
+                MQTTIdStore<T>.QoSState state = GetStateAndChecks( packetId );
                 if( (state & QoSState.QoS2PubRecAcked) != QoSState.QoS2PubRecAcked )
                 {
                     throw new ProtocolViolationException( "PubRec not acked but we received PubRel" );

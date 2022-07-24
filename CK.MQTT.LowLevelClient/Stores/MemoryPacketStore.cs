@@ -14,7 +14,7 @@ namespace CK.MQTT
     /// In memory implementation of<see cref="IPacketStore"/>.
     /// This class DONT persist the data !!!
     /// </summary>
-    public class MemoryPacketStore : MqttIdStore<MemoryPacketStore.StoredPacket>
+    public class MemoryPacketStore : MQTTIdStore<MemoryPacketStore.StoredPacket>
     {
         readonly ProtocolConfiguration _pConfig;
 
@@ -37,7 +37,7 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="config">The configuration of the mqtt client.</param>
         /// <param name="packetIdMaxValue">The maximum id supported by the protocol.</param>
-        public MemoryPacketStore( ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, ushort packetIdMaxValue )
+        public MemoryPacketStore( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, ushort packetIdMaxValue )
             : base( packetIdMaxValue, config )
         {
             _pConfig = pConfig;

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class DynamicallyConfiguredChannelFactory : IMqttChannelFactory
+    public class DynamicallyConfiguredChannelFactory : IMQTTChannelFactory
     {
         MQTTDemiServerConfig? _currentConfig;
         readonly MultiChannelFactory _multiChannelFactory = new();
@@ -20,8 +20,8 @@ namespace CK.MQTT.Server
             config.OnChange( ApplyConfig );
         }
 
-        readonly Dictionary<int, IMqttChannelFactory> _tcpFactories = new();
-        IMqttChannelFactory? _wsFactory;
+        readonly Dictionary<int, IMQTTChannelFactory> _tcpFactories = new();
+        IMQTTChannelFactory? _wsFactory;
         readonly HashSet<string> _prefixes = new();
 #pragma warning disable VSTHRD100 // Avoid async void methods
         async void ApplyConfig( MQTTDemiServerConfig config ) // I don't see other way of async void sadly.
@@ -41,7 +41,7 @@ namespace CK.MQTT.Server
                     using( var grp = m.OpenTrace( "Applying new configuration." ) )
                     {
 
-                        var factories = new List<IMqttChannelFactory>();
+                        var factories = new List<IMQTTChannelFactory>();
                         bool success = true;
                         HashSet<int> ports = new();
                         HashSet<string> prefixes = new();
@@ -159,7 +159,7 @@ namespace CK.MQTT.Server
         }
         static string? GetWSConfig( IActivityMonitor m, string item ) => item.Substring( 3 );
 
-        public ValueTask<(IMqttChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
+        public ValueTask<(IMQTTChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
             => _multiChannelFactory.CreateAsync( cancellationToken );
 
         public void Dispose() => _multiChannelFactory.Dispose();

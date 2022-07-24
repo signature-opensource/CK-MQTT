@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CK.Observable.MQTT
 {
-    public class WebSocketChannelFactory : IMqttChannelFactory
+    public class WebSocketChannelFactory : IMQTTChannelFactory
     {
         readonly HttpListener _httpListener;
         public WebSocketChannelFactory( int port ) : this( new[] { $"http://localhost:{port}/mqtt/" } )
@@ -27,7 +27,7 @@ namespace CK.Observable.MQTT
             _httpListener.Start();
         }
 
-        public async ValueTask<(IMqttChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
+        public async ValueTask<(IMQTTChannel channel, string connectionInfo)> CreateAsync( CancellationToken cancellationToken )
         {
             var context = await _httpListener.GetContextAsync();
             var webSocketContext = await context.AcceptWebSocketAsync( "mqtt" );

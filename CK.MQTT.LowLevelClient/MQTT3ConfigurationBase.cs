@@ -7,7 +7,7 @@ namespace CK.MQTT
     /// <summary>
     /// Base configuration that applies to a server as well as a MQTT client.
     /// </summary>
-    public class Mqtt3ConfigurationBase
+    public class MQTT3ConfigurationBase
     {
         int _waitTimeoutMilliseconds = 5_000;
 

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public class MqttMessageSink : IMqtt3Sink
+    public class MQTTMessageSink : IMQTT3Sink
     {
         public ChannelWriter<object?> Events { get; set; } = null!;
         public IConnectedMessageSender Sender { get; set; } = null!; //set by the client.

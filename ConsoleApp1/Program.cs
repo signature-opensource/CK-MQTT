@@ -65,7 +65,7 @@ namespace ConsoleApp1
 
         public Task StopAsync( CancellationToken cancellationToken ) => Task.CompletedTask;
 
-        private void OnNewClient_Sync( IActivityMonitor monitor, MqttServerAgent e )
+        private void OnNewClient_Sync( IActivityMonitor monitor, MQTTServerAgent e )
         {
             Console.WriteLine( $"Hello client {e.ClientId}" );
         }

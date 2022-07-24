@@ -12,22 +12,22 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.ServerClient
 {
-    public class MqttServerClient : MqttListenerBase, IMqtt3Client, IAsyncDisposable
+    public class MQTTServerClient : MQTTListenerBase, IMQTT3Client, IAsyncDisposable
     {
-        public IMqttServerSink Sink { get; set; }
-        internal TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
+        public IMQTTServerSink Sink { get; set; }
+        internal TaskCompletionSource<(IMQTTChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
         ServerMessageExchanger? _wrapper;
 
         public string? ClientId => _wrapper?.ClientId;
 
-        public MqttServerClient( Mqtt3ConfigurationBase config, IMqttServerSink sink, IMqttChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory securityManagerFactory )
+        public MQTTServerClient( MQTT3ConfigurationBase config, IMQTTServerSink sink, IMQTTChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory securityManagerFactory )
             : base( config, channelFactory, storeFactory, securityManagerFactory )
         {
             AuthProtocolHandlerFactory = new SecurityManagerFactoryWrapper( this, securityManagerFactory );
             Sink = sink;
         }
 
-        protected override ValueTask CreateClientAsync( IActivityMonitor m, string clientId, IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
+        protected override ValueTask CreateClientAsync( IActivityMonitor m, string clientId, IMQTTChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo, CancellationToken cancellationToken )
         {
             _needClientTCS!.SetResult( (channel, securityManager, localPacketStore, remotePacketStore, connectInfo) );
             _needClientTCS = null;
@@ -38,7 +38,7 @@ namespace CK.MQTT.Server.ServerClient
         {
             if( lastWill != null ) throw new ArgumentException( "Last will is not supported by a P2P client." );
             if( _wrapper?.IsConnected ?? false ) throw new InvalidOperationException( "This client is already connected." );
-            var tcs = new TaskCompletionSource<(IMqttChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
+            var tcs = new TaskCompletionSource<(IMQTTChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>();
             _needClientTCS = tcs;
             var (channel, _, localPacketStore, remotePacketStore, connectInfo) = await tcs.Task;
             _wrapper = new ServerMessageExchanger( connectInfo.ClientId,

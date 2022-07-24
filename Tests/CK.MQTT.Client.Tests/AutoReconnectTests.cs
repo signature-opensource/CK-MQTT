@@ -37,7 +37,7 @@ namespace CK.MQTT.Client.Tests
             replayer.TestTimeHandler.IncrementTime( TimeSpan.FromSeconds( 6 ) );
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
 
-            await replayer.ShouldContainEventsAsync<MqttMessageSink.UnattendedDisconnect, LoopBackBase.StartedChannel>();
+            await replayer.ShouldContainEventsAsync<MQTTMessageSink.UnattendedDisconnect, LoopBackBase.StartedChannel>();
 
             await replayer.AssertClientSentAsync( TestHelper.Monitor, "101600044d51545404020005000a434b4d71747454657374" );
             await replayer.SendToClientAsync( TestHelper.Monitor, "20020000" );

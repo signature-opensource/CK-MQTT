@@ -13,7 +13,7 @@ namespace CK.MQTT
     /// <summary>
     /// Various extensions methods that help reading MQTT values on <see cref="PipeReader"/>, <see cref="SequenceReader{T}"/>, or <see cref="ReadOnlySequence{T}"/>.
     /// </summary>
-    public static class MqttBinaryReader
+    public static class MQTTBinaryReader
     {
         /// <summary>
         /// Read the Remaining Length of a packet, <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc304802782">as described in the spec</a>.
@@ -85,7 +85,7 @@ namespace CK.MQTT
         /// <param name="skipCount">The number of <see cref="byte"/> to skip.</param>
         /// <param name="sink">Pass the sink to emit a warn about unreaded data.</param>
         /// <returns>The awaitable.</returns>
-        public static async ValueTask UnparsedExtraDataAsync( this PipeReader reader, IMqtt3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
+        public static async ValueTask UnparsedExtraDataAsync( this PipeReader reader, IMQTT3Sink sink, ushort packetId, uint skipCount, CancellationToken cancellationToken )
         {
             ReadResult read = await reader.ReadAtLeastAsync( (int)skipCount, cancellationToken );
             if( read.Buffer.Length < skipCount ) throw new EndOfStreamException( "Unexpected end of stream." );

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public static class MqttTopicFilterComparer
+    public static class MQTTTopicFilterComparer
     {
         public const char LevelSeparator = '/';
         public const char MultiLevelWildcard = '#';

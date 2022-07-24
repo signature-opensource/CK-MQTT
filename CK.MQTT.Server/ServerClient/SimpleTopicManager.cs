@@ -16,7 +16,7 @@ namespace CK.MQTT.Server
     {
         readonly Dictionary<ulong, HashSet<string>> _noWildcardSubscriptionsByTopicHash = new();
         readonly Dictionary<ulong, TopicHashMaskSubscriptions> _wildcardSubscriptionsByTopicHash = new();
-        readonly Dictionary<string, MqttSubscription> _subscriptions = new();
+        readonly Dictionary<string, MQTTSubscription> _subscriptions = new();
         public bool IsFiltered( string topic )
         {
             CalculateTopicHash( topic, out ulong topicHash, out _, out _ );
@@ -27,7 +27,7 @@ namespace CK.MQTT.Server
             {
                 foreach( var subscription in noWildcardSubscriptions )
                 {
-                    if( MqttTopicFilterComparer.IsMatch( topic, subscription ) ) return false;
+                    if( MQTTTopicFilterComparer.IsMatch( topic, subscription ) ) return false;
                 }
             }
 
@@ -42,7 +42,7 @@ namespace CK.MQTT.Server
                 {
                     foreach( var subscription in wildcardSubscriptions.Subscriptions )
                     {
-                        if( MqttTopicFilterComparer.IsMatch( topic, subscription ) ) return false;
+                        if( MQTTTopicFilterComparer.IsMatch( topic, subscription ) ) return false;
                     }
                 }
             }
@@ -78,7 +78,7 @@ namespace CK.MQTT.Server
                 }
             }
 
-            _subscriptions.Add( topicFilter, new MqttSubscription( topicFilter ) );
+            _subscriptions.Add( topicFilter, new MQTTSubscription( topicFilter ) );
 
             // Add or re-add to topic hash dictionary
             if( hasWildcard )
@@ -154,7 +154,7 @@ namespace CK.MQTT.Server
             while( i < topic.Length )
             {
                 var c = topic[i];
-                if( c == MqttTopicFilterComparer.LevelSeparator )
+                if( c == MQTTTopicFilterComparer.LevelSeparator )
                 {
                     // done with this level
                     hash <<= 8;
@@ -169,12 +169,12 @@ namespace CK.MQTT.Server
                         break;
                     }
                 }
-                else if( c == MqttTopicFilterComparer.SingleLevelWildcard )
+                else if( c == MQTTTopicFilterComparer.SingleLevelWildcard )
                 {
                     levelBitMask = 0xff;
                     hasWildcard = true;
                 }
-                else if( c == MqttTopicFilterComparer.MultiLevelWildcard )
+                else if( c == MQTTTopicFilterComparer.MultiLevelWildcard )
                 {
                     // checksum is zero for a valid topic
                     levelBitMask = 0xff;
@@ -226,7 +226,7 @@ namespace CK.MQTT.Server
                 while( i < topic.Length )
                 {
                     var c = topic[i];
-                    if( c == MqttTopicFilterComparer.SingleLevelWildcard || c == MqttTopicFilterComparer.MultiLevelWildcard )
+                    if( c == MQTTTopicFilterComparer.SingleLevelWildcard || c == MQTTTopicFilterComparer.MultiLevelWildcard )
                     {
                         hasWildcard = true;
                         break;
@@ -268,9 +268,9 @@ namespace CK.MQTT.Server
             public HashSet<string> Subscriptions { get; } = new HashSet<string>();
         }
 
-        sealed class MqttSubscription
+        sealed class MQTTSubscription
         {
-            public MqttSubscription( string topic )
+            public MQTTSubscription( string topic )
             {
                 Topic = topic;
 

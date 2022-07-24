@@ -16,18 +16,18 @@ namespace CK.MQTT.Server.Reflexes
 {
     class SubscribeReflex : IReflexMiddleware
     {
-        readonly IMqttServerSink _sink;
+        readonly IMQTTServerSink _sink;
         readonly ProtocolLevel _protocolLevel;
         readonly OutputPump _output;
 
-        public SubscribeReflex( IMqttServerSink sink, ProtocolLevel protocolLevel, OutputPump output )
+        public SubscribeReflex( IMQTTServerSink sink, ProtocolLevel protocolLevel, OutputPump output )
         {
             _sink = sink;
             _protocolLevel = protocolLevel;
             _output = output;
         }
 
-        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMQTT3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Subscribe )
             {

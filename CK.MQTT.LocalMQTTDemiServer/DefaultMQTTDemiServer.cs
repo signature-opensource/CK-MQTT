@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    public class DefaultMQTTDemiServer : MqttDemiServer, IHostedService, ISingletonAutoService, IDisposable
+    public class DefaultMQTTDemiServer : MQTTDemiServer, IHostedService, ISingletonAutoService, IDisposable
     {
         public DefaultMQTTDemiServer( IOptionsMonitor<MQTTDemiServerConfig> config )
             : base(
@@ -26,7 +26,7 @@ namespace CK.MQTT.Server
         {
         }
 
-        class DynamicallyConfiguredConfig : Mqtt3ConfigurationBase, IDisposable
+        class DynamicallyConfiguredConfig : MQTT3ConfigurationBase, IDisposable
         {
             readonly IDisposable _disposable;
             public DynamicallyConfiguredConfig( IOptionsMonitor<MQTTDemiServerConfig> config )

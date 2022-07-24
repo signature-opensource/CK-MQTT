@@ -17,7 +17,7 @@ namespace CK.MQTT
             _middlewares = middlewares;
         }
 
-        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
+        public async ValueTask<OperationStatus> ProcessIncomingPacketAsync( IMQTT3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
         {
             for( int i = 0; i < _middlewares.Length; i++ )
             {

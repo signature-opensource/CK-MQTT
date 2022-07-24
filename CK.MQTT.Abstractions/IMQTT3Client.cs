@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public interface IMqtt3Client: IConnectedMessageSender
+    public interface IMQTT3Client: IConnectedMessageSender
     {
         /// <summary>
         /// Connect the <see cref="IConnectedMessageSender"/> to a Broker.
         /// </summary>
         /// <param name="m">The logger used to log activities about the connection.</param>
         /// <param name="credentials">
-        /// The credentials used to connect to the Server. See <see cref="MqttClientCredentials" /> for more details on the credentials information.
+        /// The credentials used to connect to the Server. See <see cref="MQTTClientCredentials" /> for more details on the credentials information.
         /// If <see langword="null"/>, the client will attempt an anonymous connection (<a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242">MQTT-3.1.3-6</a>).
         /// </param>
         /// <param name="lastWill">
@@ -51,7 +51,7 @@ namespace CK.MQTT
         ValueTask<Task> UnsubscribeAsync( params string[] topics );
 
         /// <summary>
-        /// Susbscribe the <see cref="IConnectedLowLevelMqtt3Client"/> to multiples <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
+        /// Susbscribe the <see cref="IConnectedLowLevelMQTT3Client"/> to multiples <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
         /// </summary>
         /// <param name="m">The logger used to log the activities about the subscription process.</param>
         /// <param name="subscriptions">The subscriptions to send to the broker.</param>
@@ -67,7 +67,7 @@ namespace CK.MQTT
         ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions );
 
         /// <summary>
-        /// Susbscribe the <see cref="IConnectedLowLevelMqtt3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
+        /// Susbscribe the <see cref="IConnectedLowLevelMQTT3Client"/> to a <a href="docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Ref374621403">Topic</a>.
         /// </summary>
         /// <param name="m">The logger used to log the activities about the subscription process.</param>
         /// <param name="subscriptions">The subscriptions to send to the broker.</param>

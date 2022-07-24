@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public interface IMqtt3Sink
+    public interface IMQTT3Sink
     {
         IConnectedMessageSender Sender { get; set; }
         ValueTask OnMessageAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );

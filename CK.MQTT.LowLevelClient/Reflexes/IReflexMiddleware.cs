@@ -20,6 +20,6 @@ namespace CK.MQTT
         /// <remarks>
         /// If a middleware advance the <see cref="PipeReader"/>, the next middleware can't be aware of it.
         /// </remarks>
-        ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken );
+        ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMQTT3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken );
     }
 }

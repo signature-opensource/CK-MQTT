@@ -19,7 +19,7 @@ namespace CK.MQTT.Server.Tests
         [TestCase( "foo/", "foo/#", true)]
         public void trailing_slash_is_different_than_none( string topic, string filter, bool result)
         {
-            MqttTopicFilterComparer.IsMatch(topic, filter).Should().Be(result);
+            MQTTTopicFilterComparer.IsMatch(topic, filter).Should().Be(result);
         }
     }
 }

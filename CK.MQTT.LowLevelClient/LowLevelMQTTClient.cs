@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public sealed class LowLevelMqttClient : MessageExchanger, IMqtt3Client
+    public sealed class LowLevelMQTTClient : MessageExchanger, IMQTT3Client
     {
         CancellationTokenSource? _running;
 
@@ -24,14 +24,14 @@ namespace CK.MQTT
         TaskCompletionSource<bool>? _disconnectTCS;
         string? _clientId;
 
-        public Mqtt3ClientConfiguration ClientConfig { get; }
-        public IMqtt3ClientSink ClientSink { get; }
+        public MQTT3ClientConfiguration ClientConfig { get; }
+        public IMQTT3ClientSink ClientSink { get; }
 
-        public LowLevelMqttClient(
+        public LowLevelMQTTClient(
             ProtocolConfiguration pConfig,
-            Mqtt3ClientConfiguration config,
-            IMqtt3ClientSink sink,
-            IMqttChannel channel,
+            MQTT3ClientConfiguration config,
+            IMQTT3ClientSink sink,
+            IMQTTChannel channel,
             IRemotePacketStore? remotePacketStore = null,
             ILocalPacketStore? localPacketStore = null
         ) : base( pConfig, config, sink, channel, remotePacketStore, localPacketStore )
@@ -50,7 +50,7 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
-            if( lastWill != null ) MqttBinaryWriter.ThrowIfInvalidMQTTString( lastWill.Topic );
+            if( lastWill != null ) MQTTBinaryWriter.ThrowIfInvalidMQTTString( lastWill.Topic );
             if( Pumps?.IsRunning ?? false ) throw new InvalidOperationException( "This client is already connected." );
 
             _clientId = ClientConfig.Credentials?.ClientId;
@@ -78,8 +78,8 @@ namespace CK.MQTT
                         ManualConnectBehavior.TryOnce => Return( res, true ),
                         ManualConnectBehavior.UseSinkBehavior => sinkBehavior switch
                         {
-                            IMqtt3ClientSink.ManualConnectRetryBehavior.GiveUp => Return( res, res.Status == ConnectStatus.Successful ),
-                            IMqtt3ClientSink.ManualConnectRetryBehavior.YieldToBackground =>
+                            IMQTT3ClientSink.ManualConnectRetryBehavior.GiveUp => Return( res, res.Status == ConnectStatus.Successful ),
+                            IMQTT3ClientSink.ManualConnectRetryBehavior.YieldToBackground =>
                                 (ClientConfig.DisconnectBehavior != DisconnectBehavior.AutoReconnect) switch
                                 {
                                     true => throw new ArgumentException(
@@ -88,8 +88,8 @@ namespace CK.MQTT
                                     ),
                                     false => Return( new ConnectResult( true, res.Error, res.SessionState, res.ProtocolReturnCode, res.Exception ), true )
                                 },
-                            IMqtt3ClientSink.ManualConnectRetryBehavior.Retry => Retry( res ),
-                            _ => throw new InvalidOperationException( $"Invalid {nameof( IMqtt3ClientSink.ManualConnectRetryBehavior )}:{sinkBehavior}" )
+                            IMQTT3ClientSink.ManualConnectRetryBehavior.Retry => Retry( res ),
+                            _ => throw new InvalidOperationException( $"Invalid {nameof( IMQTT3ClientSink.ManualConnectRetryBehavior )}:{sinkBehavior}" )
                         },
                         ManualConnectBehavior.TryOnceThenRetryInBackground when ClientConfig.DisconnectBehavior != DisconnectBehavior.AutoReconnect => throw new ArgumentException( $"Cannot use {ManualConnectBehavior.TryOnceThenRetryInBackground} when {nameof( DisconnectBehavior )} is not set to {DisconnectBehavior.AutoReconnect}.." ),
                         ManualConnectBehavior.TryOnceThenRetryInBackground => Return( new ConnectResult( true, res.Error, res.SessionState, res.ProtocolReturnCode, res.Exception ), true ),
@@ -252,7 +252,7 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions )
         {
-            MqttBinaryWriter.ThrowIfInvalidMQTTString( subscriptions.TopicFilter );
+            MQTTBinaryWriter.ThrowIfInvalidMQTTString( subscriptions.TopicFilter );
             var sendTask = await SendPacketWithQoSAsync<SubscribeReturnCode[]>( new OutgoingSubscribe( new[] { subscriptions } ) );
             return Send( sendTask! );
 
@@ -268,7 +268,7 @@ namespace CK.MQTT
         {
             foreach( string topic in topics )
             {
-                MqttBinaryWriter.ThrowIfInvalidMQTTString( topic );
+                MQTTBinaryWriter.ThrowIfInvalidMQTTString( topic );
             }
             return await SendPacketWithQoSAsync<object>( new OutgoingUnsubscribe( topics ) );
         }
@@ -280,7 +280,7 @@ namespace CK.MQTT
             var subs = subscriptions.ToArray();
             foreach( Subscription sub in subs )
             {
-                MqttBinaryWriter.ThrowIfInvalidMQTTString( sub.TopicFilter );
+                MQTTBinaryWriter.ThrowIfInvalidMQTTString( sub.TopicFilter );
             }
             return SendPacketWithQoSAsync<SubscribeReturnCode[]>( new OutgoingSubscribe( subs ) )!;
         }

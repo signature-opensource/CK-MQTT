@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
-    public abstract class Mqtt3SinkWrapper : IMqtt3Sink
+    public abstract class MQTT3SinkWrapper : IMQTT3Sink
     {
-        protected readonly IMqtt3Sink _sink;
+        protected readonly IMQTT3Sink _sink;
 
-        public Mqtt3SinkWrapper( IMqtt3Sink sink ) => _sink = sink;
+        public MQTT3SinkWrapper( IMQTT3Sink sink ) => _sink = sink;
 
         public virtual IConnectedMessageSender Sender { get; set; } = null!; //Set by the client.
 

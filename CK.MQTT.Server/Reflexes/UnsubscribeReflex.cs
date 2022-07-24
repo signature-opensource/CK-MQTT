@@ -15,18 +15,18 @@ namespace CK.MQTT.Server.Reflexes
 {
     class UnsubscribeReflex : IReflexMiddleware
     {
-        private readonly IMqttServerSink _sink;
+        private readonly IMQTTServerSink _sink;
         readonly OutputPump _outputPump;
         readonly ProtocolLevel _protocolLevel;
 
-        public UnsubscribeReflex( IMqttServerSink sink, OutputPump outputPump, ProtocolLevel protocolLevel )
+        public UnsubscribeReflex( IMQTTServerSink sink, OutputPump outputPump, ProtocolLevel protocolLevel )
         {
             _sink = sink;
             _outputPump = outputPump;
             _protocolLevel = protocolLevel;
         }
 
-        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMQTT3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
         {
             if( (PacketType)((header >> 4) << 4) != PacketType.Unsubscribe )
             {

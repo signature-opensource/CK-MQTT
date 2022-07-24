@@ -1,5 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\Common\Mqtt.props" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\Common\MQTT.props" />
 
     <PropertyGroup>
         <TargetFramework>net6</TargetFramework>

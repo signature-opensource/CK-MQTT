@@ -14,7 +14,7 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         public Channel<object?> Events { get; } = System.Threading.Channels.Channel.CreateUnbounded<object?>();
         public LoopBackBase? Channel { get; private set; }
-        public TestMqttClient Client { get; set; } = null!;
+        public TestMQTTClient Client { get; set; } = null!;
         public PacketReplayer( string channelType )
         {
             ChannelType = channelType;
@@ -24,7 +24,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public delegate ValueTask<bool> ScenarioStep( IActivityMonitor m, PacketReplayer packetReplayer );
 
-        public IMqttChannel CreateChannel()
+        public IMQTTChannel CreateChannel()
         {
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch

@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using static CK.MQTT.Client.MqttMessageSink;
+using static CK.MQTT.Client.MQTTMessageSink;
 
 namespace CK.MQTT.Client
 {
@@ -41,7 +41,7 @@ namespace CK.MQTT.Client
         );
 
 
-        protected abstract MqttMessageSink MessageSink { get; }
+        protected abstract MQTTMessageSink MessageSink { get; }
         public IConnectedMessageSender Sender => MessageSink.Sender;
 
         public PerfectEvent<DisconnectReason> OnConnectionChange => _onConnectionChangeSender.PerfectEvent;

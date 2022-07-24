@@ -10,14 +10,14 @@ namespace CK.MQTT.Server
     {
 
         public override string? ClientId { get; }
-        public IMqttServerSink ServerSink { get; }
+        public IMQTTServerSink ServerSink { get; }
 
         public ServerMessageExchanger(
             string? clientId,
             ProtocolConfiguration pConfig,
-            Mqtt3ConfigurationBase config,
-            IMqttServerSink sink,
-            IMqttChannel channel,
+            MQTT3ConfigurationBase config,
+            IMQTTServerSink sink,
+            IMQTTChannel channel,
             IRemotePacketStore? remotePacketStore = null,
             ILocalPacketStore? localPacketStore = null
         ) : base( pConfig, config, sink, channel, remotePacketStore, localPacketStore )

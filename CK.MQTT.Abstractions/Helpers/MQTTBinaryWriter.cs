@@ -8,7 +8,7 @@ namespace CK.MQTT
     /// <summary>
     /// Various extension methods that help serializing MQTT values on a <see cref="Span{T}"/>.
     /// </summary>
-    public static class MqttBinaryWriter
+    public static class MQTTBinaryWriter
     {
         /// <summary>
         /// Write the packet length.

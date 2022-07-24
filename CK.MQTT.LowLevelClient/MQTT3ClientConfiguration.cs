@@ -5,7 +5,7 @@ namespace CK.MQTT
     /// <summary>
     /// Configuration of a <see cref="IConnectedMessageSender"/>.
     /// </summary>
-    public class Mqtt3ClientConfiguration : Mqtt3ConfigurationBase
+    public class MQTT3ClientConfiguration : MQTT3ConfigurationBase
     {
         /// <summary>
         /// Gets the KeepAlive Client/Server configuration that is sent to the server in the connect packet.
@@ -28,7 +28,7 @@ namespace CK.MQTT
             }
         }
 
-        public MqttClientCredentials? Credentials { get; set; }
+        public MQTTClientCredentials? Credentials { get; set; }
 
         public ManualConnectBehavior ManualConnectBehavior { get; set; }
 
