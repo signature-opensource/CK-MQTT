@@ -1,21 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <PackageReference Include="CK.Monitoring.Hosting" Version="15.1.0" />
-      <PackageReference Include="CK.StObj.Model" Version="20.0.0" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\CKSetup\CKSetup.csproj" />
-      <ProjectReference Include="..\CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CK.Monitoring.Hosting" Version="15.1.1--0001-develop" />
+    <PackageReference Include="CK.StObj.Model" Version="20.0.1--0008-develop" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CKSetup\CKSetup.csproj" />
+    <ProjectReference Include="..\CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj" />
+  </ItemGroup>
 </Project>
