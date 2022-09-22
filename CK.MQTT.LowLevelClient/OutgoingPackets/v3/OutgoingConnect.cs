@@ -12,7 +12,7 @@ namespace CK.MQTT.Packets
     class OutgoingConnect : ComplexOutgoingPacket
     {
         readonly ProtocolConfiguration _pConfig;
-        readonly Mqtt3ClientConfiguration _config;
+        readonly MQTT3ClientConfiguration _config;
         readonly OutgoingLastWill? _lastWill;
         readonly uint _sessionExpiryInterval;
         readonly ushort _receiveMaximum;
@@ -24,7 +24,7 @@ namespace CK.MQTT.Packets
         readonly byte _flags;
         readonly uint _sizePostPayload;
         readonly uint _propertiesSize;
-        static byte ByteFlag( MqttClientCredentials? creds, OutgoingLastWill? lastWill )
+        static byte ByteFlag( MQTTClientCredentials? creds, OutgoingLastWill? lastWill )
         {
             byte flags = 0;
             if( creds?.UserName != null ) flags |= 0b1000_0000; // http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Figure_3.4_-
@@ -36,7 +36,7 @@ namespace CK.MQTT.Packets
             return flags;
         }
 
-        public OutgoingConnect( ProtocolConfiguration pConfig, Mqtt3ClientConfiguration config, OutgoingLastWill? lastWill = null,
+        public OutgoingConnect( ProtocolConfiguration pConfig, MQTT3ClientConfiguration config, OutgoingLastWill? lastWill = null,
             uint sessionExpiryInterval = 0, ushort receiveMaximum = ushort.MaxValue, ushort topicAliasMaximum = 0,
             bool requestResponseInfo = false, bool requestProblemInfo = false, IReadOnlyList<UserProperty>? userProperties = null,
             (string authMethod, ReadOnlyMemory<byte> authData)? extendedAuth = null )

@@ -8,7 +8,7 @@ namespace CK.MQTT.Server
     public class MemoryStoreFactory : IStoreFactory
     {
         readonly Dictionary<string, (ILocalPacketStore, IRemotePacketStore)> _stores = new();
-        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken )
+        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken )
         {
             bool newSession = resetStore || !_stores.ContainsKey( storeId );
             if( newSession )

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.Server
 {
-    public class ServerClientMessageSink : MqttMessageSink, IMqttServerSink
+    public class ServerClientMessageSink : MQTTMessageSink, IMQTTServerSink
     {
         public record Subscribe( Subscription[] Subscriptions );
         public ValueTask<SubscribeReturnCode[]> OnSubscribeAsync( params Subscription[] subscriptions )

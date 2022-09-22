@@ -20,7 +20,7 @@ namespace CK.MQTT
             _exchanger = exchanger;
         }
 
-        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMqtt3Sink sink,
+        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMQTT3Sink sink,
             InputPump input, byte header, uint packetLength, PipeReader pipe, CancellationToken cancellationToken )
         {
             PacketType packetType = (PacketType)((header >> 4) << 4);//to remove right bits that may store flags data

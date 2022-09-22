@@ -6,16 +6,16 @@ namespace CK.MQTT.Server.Tests.Helpers
 {
     public class TestStoreFactory : IStoreFactory
     {
-        readonly Mqtt3ConfigurationBase _config;
+        readonly MQTT3ConfigurationBase _config;
 
-        public TestStoreFactory( Mqtt3ConfigurationBase _config )
+        public TestStoreFactory( MQTT3ConfigurationBase _config )
         {
             this._config = _config;
         }
-        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, Mqtt3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken )
+        public ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken )
             => new(
                 (
-                    new MemoryPacketStore( ProtocolConfiguration.Mqtt3, _config, ushort.MaxValue ),
+                    new MemoryPacketStore( ProtocolConfiguration.MQTT3, _config, ushort.MaxValue ),
                     new MemoryPacketIdStore()
                 )
             );

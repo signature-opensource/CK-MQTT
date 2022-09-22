@@ -7,5 +7,7 @@ namespace CK.MQTT.Server.Tests.Helpers
     {
         public ValueTask<IAuthenticationProtocolHandler?> ChallengeIncomingConnectionAsync( string connectionInfo, CancellationToken cancellationToken )
             => new( new TestAuthHandler() );
+
+        public void Dispose() { }
     }
 }

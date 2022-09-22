@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.ServerClient
 {
-    public class TcpListenerSingleChannel : IMqttChannel
+    public class TcpListenerSingleChannel : IMQTTChannel
     {
         // I feel this object is badly designed, as long as it's alive it block a port.
         readonly CancellationTokenSource _cts = new();

@@ -14,32 +14,32 @@ namespace CK.MQTT.Server.Tests.Helpers
     class ServerTestHelper : IAsyncDisposable
     {
         readonly int _port;
-        readonly MqttDemiServer _server;
+        readonly MQTTDemiServer _server;
         public ServerTestHelper()
         {
             // When the debugger is attached, we use the default port.
             // Wireshark only detect mqtt on it's default port.
             var channelFactory = Debugger.IsAttached ? new TcpChannelFactory( 1883 ) : new TcpChannelFactory();
             _port = channelFactory.Port;
-            var cfg = new Mqtt3ConfigurationBase();
-            _server = new MqttDemiServer( cfg, channelFactory, new TestStoreFactory( cfg ), new TestAuthHandlerFactory() );
+            var cfg = new MQTT3ConfigurationBase();
+            _server = new MQTTDemiServer( cfg, channelFactory, new TestStoreFactory( cfg ), new TestAuthHandlerFactory() );
             _server.OnNewClient.Sync += OnNewClient;
             _server.StartListening();
         }
 
-        TaskCompletionSource<MqttServerAgent>? _tcs;
-        void OnNewClient( IActivityMonitor m, MqttServerAgent client )
+        TaskCompletionSource<MQTTServerAgent>? _tcs;
+        void OnNewClient( IActivityMonitor m, MQTTServerAgent client )
         {
             _tcs?.SetResult( client );
             _tcs = null;
         }
 
-        public async Task<(IConnectedMessageSender client, MqttServerAgent serverClient)> CreateClientAsync()
+        public async Task<(IConnectedMessageSender client, MQTTServerAgent serverClient)> CreateClientAsync()
         {
-            var client = new MqttClientAgent(
-                ( sink ) => new LowLevelMqttClient(
-                    ProtocolConfiguration.Mqtt3,
-                    new Mqtt3ClientConfiguration()
+            var client = new MQTTClientAgent(
+                ( sink ) => new LowLevelMQTTClient(
+                    ProtocolConfiguration.MQTT3,
+                    new MQTT3ClientConfiguration()
                     {
                         WaitTimeoutMilliseconds = 50_000,
                         KeepAliveSeconds = 0

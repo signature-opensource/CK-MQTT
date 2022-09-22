@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {
-    class ServerTcpChannel : IMqttChannel
+    class ServerTcpChannel : IMQTTChannel
     {
         readonly TcpClient _tcpClient;
         readonly DuplexPipe _duplexPipe;

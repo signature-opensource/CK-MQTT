@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
-    public abstract class LoopBackBase : IMqttChannel
+    public abstract class LoopBackBase : IMQTTChannel
     {
         readonly ChannelWriter<object?> _writer;
 

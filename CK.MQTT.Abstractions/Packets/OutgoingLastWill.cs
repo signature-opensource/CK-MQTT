@@ -24,7 +24,7 @@ namespace CK.MQTT.Packets
         /// <param name="qos">The qos of the will message.</param>
         protected OutgoingLastWill( bool retain, string topic, QualityOfService qos )
         {
-            MqttBinaryWriter.ThrowIfInvalidMQTTString( topic );
+            MQTTBinaryWriter.ThrowIfInvalidMQTTString( topic );
             Retain = retain;
             Qos = qos;
             Topic = topic;

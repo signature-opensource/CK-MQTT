@@ -45,6 +45,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "ConsoleApp1\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Server.Tests", "Tests\CK.MQTT.Server.Tests\CK.MQTT.Server.Tests.csproj", "{D22C454E-8E17-47BA-A359-3B3D30E41567}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.LocalMQTTDemiServer", "CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj", "{A525DAF2-2799-474B-81E2-09D97DEB9242}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "CKSetup\CKSetup.csproj", "{24BE891B-38E4-4FCB-8363-F8F8A83F4972}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +129,22 @@ Global
 		{D22C454E-8E17-47BA-A359-3B3D30E41567}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D22C454E-8E17-47BA-A359-3B3D30E41567}.Release|x64.ActiveCfg = Release|Any CPU
 		{D22C454E-8E17-47BA-A359-3B3D30E41567}.Release|x64.Build.0 = Release|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Debug|x64.Build.0 = Debug|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Release|x64.ActiveCfg = Release|Any CPU
+		{A525DAF2-2799-474B-81E2-09D97DEB9242}.Release|x64.Build.0 = Release|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Debug|x64.Build.0 = Debug|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Release|x64.ActiveCfg = Release|Any CPU
+		{24BE891B-38E4-4FCB-8363-F8F8A83F4972}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

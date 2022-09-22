@@ -10,4 +10,5 @@ namespace CK.MQTT.Server
         ValueTask<bool> ChallengeUserNameAsync( string userName );
         ValueTask<bool> ChallengePasswordAsync( string password );
     }
+
 }

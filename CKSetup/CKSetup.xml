@@ -1,0 +1,16 @@
+<Setup Engine="CK.Setup.StObjEngine, CK.StObj.Engine">
+
+  <WorkingDirectory>WorkingDir</WorkingDirectory>
+  <LogLevel>Debug</LogLevel>
+  <UseSignatureFiles>True</UseSignatureFiles>
+
+  <BinPaths>
+    <BinPath Path="../CK.MQTT.LocalMQTTDemiServer/bin/[Debug|Release]/net6.0">
+      <ProjectPath>../ConsoleApp1</ProjectPath>
+    </BinPath>
+  </BinPaths>
+
+  <WorkingDirectory>WorkingDir</WorkingDirectory>
+
+</Setup>
+

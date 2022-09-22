@@ -10,11 +10,11 @@ namespace CK.MQTT.Client
 {
     class OutputProcessorWithKeepAlive : OutputProcessor, IReflexMiddleware
     {
-        readonly LowLevelMqttClient _client;
+        readonly LowLevelMQTTClient _client;
 
         DateTime _lastPacketSent;
 
-        public OutputProcessorWithKeepAlive( LowLevelMqttClient client )
+        public OutputProcessorWithKeepAlive( LowLevelMQTTClient client )
             : base( client )
         {
             _client = client;
@@ -77,7 +77,7 @@ namespace CK.MQTT.Client
         }
 
         public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync(
-            IMqtt3Sink sink,
+            IMQTT3Sink sink,
             InputPump sender,
             byte header,
             uint packetLength,

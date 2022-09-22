@@ -228,7 +228,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.AssertClientSentAsync( TestHelper.Monitor, "101600044d51545404020000000a434b4d71747454657374" );
             await replayer.SendToClientAsync( TestHelper.Monitor, connackBuffer );
             await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
-            await replayer.ShouldContainEventAsync<MqttMessageSink.UnparsedExtraData>();
+            await replayer.ShouldContainEventAsync<MQTTMessageSink.UnparsedExtraData>();
             await replayer.ShouldContainEventAsync<DefaultClientMessageSink.Connected>();
             var res = await task;
             res.Status.Should().Be( ConnectStatus.Successful );
@@ -246,7 +246,7 @@ namespace CK.MQTT.Client.Tests
         public async Task anonymous_connect_works_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
-            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer, credentials: new MqttClientCredentials() ) );
+            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer, credentials: new MQTTClientCredentials() ) );
 
             var task = client.ConnectAsync();
 
@@ -264,7 +264,7 @@ namespace CK.MQTT.Client.Tests
         public async Task invalid_length_connack_lead_to_end_of_stream_Async()
         {
             var replayer = new PacketReplayer( ClassCase );
-            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer, credentials: new MqttClientCredentials() ) );
+            var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer, credentials: new MQTTClientCredentials() ) );
 
             var task = client.ConnectAsync();
 

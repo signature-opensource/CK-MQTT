@@ -1,5 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\Common\Mqtt.props" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\Common\MQTT.props" />
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
         <Nullable>enable</Nullable>
@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" Version="7.1.2" />
+        <PackageReference Include="Nerdbank.Streams" Version="2.8.61" />
     </ItemGroup>
 
     <ItemGroup>

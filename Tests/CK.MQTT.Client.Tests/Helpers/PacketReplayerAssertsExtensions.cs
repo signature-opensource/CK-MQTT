@@ -14,11 +14,11 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     static class PacketReplayerAssertsExtensions
     {
-        public static TestMqttClient CreateMQTT3Client( this PacketReplayer replayer, Mqtt3ClientConfiguration config )
-            => new( ProtocolConfiguration.Mqtt3, config, replayer.CreateChannel(), replayer.Events );
+        public static TestMQTTClient CreateMQTT3Client( this PacketReplayer replayer, MQTT3ClientConfiguration config )
+            => new( ProtocolConfiguration.MQTT3, config, replayer.CreateChannel(), replayer.Events );
 
-        public static TestMqttClient CreateMQTT5Client( this PacketReplayer replayer, ProtocolConfiguration pConfig, Mqtt5ClientConfiguration config )
-            => new( ProtocolConfiguration.Mqtt5, config, replayer.CreateChannel(), replayer.Events );
+        public static TestMQTTClient CreateMQTT5Client( this PacketReplayer replayer, ProtocolConfiguration pConfig, MQTT5ClientConfiguration config )
+            => new( ProtocolConfiguration.MQTT5, config, replayer.CreateChannel(), replayer.Events );
 
         public static async Task AssertClientSentAsync( this PacketReplayer @this, IActivityMonitor m, string hexArray )
         {
@@ -56,7 +56,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static Task SendToClientAsync( this PacketReplayer @this, IActivityMonitor m, string hexArray ) =>
             @this.SendToClientAsync( m, Convert.FromHexString( hexArray ) );
 
-        public static async Task ConnectClientAsync( this PacketReplayer @this, IActivityMonitor m, TestMqttClient client )
+        public static async Task ConnectClientAsync( this PacketReplayer @this, IActivityMonitor m, TestMQTTClient client )
         {
             var task = client.ConnectAsync();
             await @this.AssertClientSentAsync( TestHelper.Monitor,
