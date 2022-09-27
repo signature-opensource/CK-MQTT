@@ -5,8 +5,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="16.0.0" />
-    <PackageReference Include="CK.PerfectEvent" Version="16.0.0" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="16.0.1--0001-develop" />
+    <PackageReference Include="CK.PerfectEvent" Version="16.0.1--0001-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.LowLevelClient\CK.MQTT.LowLevelClient.csproj" />
