@@ -1,10 +1,12 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace CK.MQTT.Server
 {
     public class MQTTDemiServerConfig
     {
-        public IEnumerable<string> ListenTo { get; set; } = new[] { "tcp:1883" };
+        public HashSet<string>? ListenTo { get; set; } = null!;
         public MQTT3ConfigurationBase ImplementationConfig { get; set; } = new();
     }
 }

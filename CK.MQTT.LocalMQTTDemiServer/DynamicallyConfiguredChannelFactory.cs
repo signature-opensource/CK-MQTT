@@ -34,13 +34,13 @@ namespace CK.MQTT.Server
                     ActivityMonitor.StaticLogger.Error( "DefaultMQTTDemiServer.ChannelFactory: null config, ignoring." );
                     return;
                 }
+                config.ListenTo ??= new HashSet<string>( new[] { "tcp:1883" } );
 
-                if( !config.ListenTo.SequenceEqual( _currentConfig?.ListenTo ?? Array.Empty<string>() ) )
+                if( _currentConfig?.ListenTo == null || !config.ListenTo.SequenceEqual( _currentConfig!.ListenTo! ) )
                 {
                     var m = new ActivityMonitor( $"{nameof( DynamicallyConfiguredChannelFactory )} logger." );
                     using( var grp = m.OpenTrace( "Applying new configuration." ) )
                     {
-
                         var factories = new List<IMQTTChannelFactory>();
                         bool success = true;
                         HashSet<int> ports = new();
