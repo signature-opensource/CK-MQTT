@@ -104,16 +104,16 @@ namespace CK.MQTT.Server
                             {
                                 await _multiChannelFactory.RemoveFactoryAsync( m, _wsFactory );
                                 _wsFactory.Dispose();
-                                try
-                                {
-                                    _wsFactory = new WebSocketChannelFactory( prefixes );
-                                    await _multiChannelFactory.AddFactoryAsync( _wsFactory );
-                                }
-                                catch( Exception e )
-                                {
-                                    m.Error( $"Error while creating {nameof( WebSocketChannelFactory )}. Continuing applying configuration.", e );
-                                    success = false;
-                                }
+                            }
+                            try
+                            {
+                                _wsFactory = new WebSocketChannelFactory( prefixes );
+                                await _multiChannelFactory.AddFactoryAsync( _wsFactory );
+                            }
+                            catch( Exception e )
+                            {
+                                m.Error( $"Error while creating {nameof( WebSocketChannelFactory )}. Continuing applying configuration.", e );
+                                success = false;
                             }
                         }
 
