@@ -62,71 +62,83 @@ namespace CK.MQTT.Server
             var m = new ActivityMonitor();
             while( !cancellationToken.IsCancellationRequested )
             {
-                IAuthenticationProtocolHandler? securityManager = null;
                 (IMQTTChannel? channel, var connectionInfo) = await _channelFactory.CreateAsync( cancellationToken );
-                try
+                var token = m.CreateDependentToken();
+                _ = Task.Run( () => AcceptSingleClientAsync( token, channel, connectionInfo, cancellationToken ), cancellationToken );
+            }
+        }
+
+        async Task AcceptSingleClientAsync( ActivityMonitor.DependentToken token, IMQTTChannel channelIn, string connectionInfo,
+            CancellationToken cancellationToken )
+        {
+            var m = new ActivityMonitor();
+            using var _ = m.StartDependentActivity( token );
+            IAuthenticationProtocolHandler? securityManager = null;
+            IMQTTChannel? channel = channelIn;
+            try
+            {
+                //channel is disposable, this accept loop should not crash.
+                //if it does, the server is screwed, and this is a bug
+
+                if( cancellationToken.IsCancellationRequested ) return;
+
+                securityManager =
+                    await AuthProtocolHandlerFactory.ChallengeIncomingConnectionAsync( connectionInfo,
+                        cancellationToken );
+                if( securityManager is null ) return;
+
+                if( cancellationToken.IsCancellationRequested ) return;
+                await channel.StartAsync( cancellationToken );
+                if( cancellationToken.IsCancellationRequested ) return;
+                var connectHandler = new ConnectHandler();
+                (ProtocolConnectReturnCode returnCode, ProtocolLevel protocolLevel) =
+                    await connectHandler.HandleAsync( channel.DuplexPipe.Input, securityManager, cancellationToken );
+                if( cancellationToken.IsCancellationRequested ) return;
+                if( returnCode != ProtocolConnectReturnCode.Accepted )
                 {
-                    async ValueTask CloseConnectionAsync()
+                    if( returnCode !=
+                        ProtocolConnectReturnCode
+                            .Unknown ) // Unknown malformed data or internal error. In this case we don't answer and close the connection.
                     {
-                        await channel.CloseAsync( DisconnectReason.None );
-                        channel.Dispose();
-                        channel = null;
+                        await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel,
+                            channel.DuplexPipe.Output, cancellationToken );
                     }
-
-                    //channel is disposable, this accept loop should not crash.
-                    //if it does, the server is screwed, and this is a bug
-
-                    if( cancellationToken.IsCancellationRequested ) return;
-
-                    securityManager = await AuthProtocolHandlerFactory.ChallengeIncomingConnectionAsync( connectionInfo, cancellationToken );
-                    if( securityManager is null )
-                    {
-                        await CloseConnectionAsync();
-                        continue;
-                    }
-                    if( cancellationToken.IsCancellationRequested ) return;
-                    await channel.StartAsync( cancellationToken );
-                    if( cancellationToken.IsCancellationRequested ) return;
-                    var connectHandler = new ConnectHandler();
-                    (ProtocolConnectReturnCode returnCode, ProtocolLevel protocolLevel) = await connectHandler.HandleAsync( channel.DuplexPipe.Input, securityManager, cancellationToken );
-                    if( cancellationToken.IsCancellationRequested ) return;
-                    if( returnCode != ProtocolConnectReturnCode.Accepted )
-                    {
-                        if( returnCode != ProtocolConnectReturnCode.Unknown ) // Unknown malformed data or internal error. In this case we don't answer and close the connection.
-                        {
-                            await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output, cancellationToken );
-                        }
-                        await CloseConnectionAsync();
-                        continue;
-                    }
-
-                    (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync( ProtocolConfiguration.FromProtocolLevel( protocolLevel ), Config, connectHandler.ClientId, connectHandler.CleanSession, cancellationToken );
-                    await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output, cancellationToken );
-                    await channel.DuplexPipe.Output.FlushAsync( cancellationToken );
-                    if( cancellationToken.IsCancellationRequested )
-                    {
-                        localStore.Dispose();
-                        remoteStore.Dispose();
-                        return;
-                    }
-                    // ownership of channel and security manager is now transfered to the CreateClientAsync implementation.
-                    var channelCopy = channel; // We copy the reference so these objects are not cleaned if the cancellationToken is triggered.
-                    var smCopy = securityManager;
-                    channel = null;
-                    securityManager = null;
-                    await CreateClientAsync( m, connectHandler.ClientId, channelCopy, smCopy, localStore, remoteStore, connectHandler, cancellationToken );
+                    return;
                 }
-                finally
+
+                (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync(
+                    ProtocolConfiguration.FromProtocolLevel( protocolLevel ), Config, connectHandler.ClientId,
+                    connectHandler.CleanSession, cancellationToken );
+                await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output,
+                    cancellationToken );
+                await channel.DuplexPipe.Output.FlushAsync( cancellationToken );
+                if( cancellationToken.IsCancellationRequested )
                 {
-                    if( securityManager is not null )
-                    {
-                        await securityManager.DisposeAsync();
-                    }
-                    if( channel != null )
-                    {
-                        await channel.CloseAsync( DisconnectReason.None ); ;
-                        channel.Dispose();
-                    }
+                    localStore.Dispose();
+                    remoteStore.Dispose();
+                    return;
+                }
+
+                // ownership of channel and security manager is now transfered to the CreateClientAsync implementation.
+                var channelCopy =
+                    channel; // We copy the reference so these objects are not cleaned if the cancellationToken is triggered.
+                var smCopy = securityManager;
+                channel = null;
+                securityManager = null;
+                await CreateClientAsync( m, connectHandler.ClientId, channelCopy, smCopy, localStore, remoteStore,
+                    connectHandler, cancellationToken );
+            }
+            finally
+            {
+                if( securityManager is not null )
+                {
+                    await securityManager.DisposeAsync();
+                }
+
+                if( channel is not null )
+                {
+                    await channel.CloseAsync( DisconnectReason.None );
+                    channel.Dispose();
                 }
             }
         }
