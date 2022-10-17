@@ -46,28 +46,26 @@ namespace CK.MQTT.Server
             uint currentStep = 0;
             byte header;
             OperationStatus status;
-            do
+            while( true )
             {
                 res = await reader.ReadAsync( cancellationToken );
                 //FIXME: it's not normal that the length is not accessed here.
-                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out uint length,
-                    out SequencePosition position );
+                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out uint length, out SequencePosition position );
                 if( status == OperationStatus.Done )
                 {
                     reader.AdvanceTo( position );
                     break;
                 }
-
                 if( status != OperationStatus.NeedMoreData )
                 {
                     return (ProtocolConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
                 }
-
                 reader.AdvanceTo( res.Buffer.Start, position );
-            } while( !res.IsCompleted );
-            if( status != OperationStatus.Done )
-            {
-                return (ProtocolConnectReturnCode.Unknown, 0);
+
+                if( res.IsCompleted )
+                {
+                    return (ProtocolConnectReturnCode.Unknown, 0);
+                }
             }
             if( header != 0x10 ) return (ProtocolConnectReturnCode.Unknown, 0);
 
@@ -111,6 +109,10 @@ namespace CK.MQTT.Server
                     if( !await securityManager.ChallengePasswordAsync( Password ) ) return (ProtocolConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 currentStep = _fieldCount;
+                if( res.IsCompleted && status == OperationStatus.NeedMoreData)
+                {
+                    return (ProtocolConnectReturnCode.Unknown, 0);
+                }
             }
             // TODO:
             // - Last Will
