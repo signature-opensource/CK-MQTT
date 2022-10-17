@@ -46,21 +46,28 @@ namespace CK.MQTT.Server
             uint currentStep = 0;
             byte header;
             OperationStatus status;
-            while( true )
+            do
             {
                 res = await reader.ReadAsync( cancellationToken );
                 //FIXME: it's not normal that the length is not accessed here.
-                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out uint length, out SequencePosition position );
+                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out uint length,
+                    out SequencePosition position );
                 if( status == OperationStatus.Done )
                 {
                     reader.AdvanceTo( position );
                     break;
                 }
+
                 if( status != OperationStatus.NeedMoreData )
                 {
                     return (ProtocolConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
                 }
+
                 reader.AdvanceTo( res.Buffer.Start, position );
+            } while( !res.IsCompleted );
+            if( status != OperationStatus.Done )
+            {
+                return (ProtocolConnectReturnCode.Unknown, 0);
             }
             if( header != 0x10 ) return (ProtocolConnectReturnCode.Unknown, 0);
 
@@ -121,7 +128,7 @@ namespace CK.MQTT.Server
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
         public bool Retain => (_flags & 0b0010_0000) != 0;
-        public QualityOfService QoS => (QualityOfService)(_flags << 3 >> 6); // 3 shift on the left to delete the 3 flags on the right. 
+        public QualityOfService QoS => (QualityOfService)(_flags << 3 >> 6); // 3 shift on the left to delete the 3 flags on the right.
         public bool HasLastWill => (_flags & 0b0000_0100) != 0;
         public bool CleanSession => (_flags & 0b0000_0010) != 0;
         public IReadOnlyList<(string, string)> UserProperties => _userProperties;
