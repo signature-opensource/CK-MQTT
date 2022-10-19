@@ -35,6 +35,7 @@ namespace CK.MQTT
         {
             switch( reason )
             {
+                case DisconnectReason.None:
                 case DisconnectReason.RemoteDisconnected:
                     //TODO: Remote disconnected... Do I have to close the websocket ?
                     break;
@@ -50,7 +51,6 @@ namespace CK.MQTT
                 case DisconnectReason.Timeout:
                     await _context.WebSocket.CloseAsync( WebSocketCloseStatus.EndpointUnavailable, "Timeout", default );
                     break;
-                case DisconnectReason.None:
                 default:
                     throw new InvalidOperationException();
             }

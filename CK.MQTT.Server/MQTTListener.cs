@@ -137,7 +137,7 @@ namespace CK.MQTT.Server
 
                 if( channel is not null )
                 {
-                    await channel.CloseAsync( DisconnectReason.None );
+                    await channel.CloseAsync( DisconnectReason.RemoteDisconnected );
                     channel.Dispose();
                 }
             }
