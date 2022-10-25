@@ -6,12 +6,12 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring.Hosting" Version="16.0.0" />
-    <PackageReference Include="CK.StObj.Model" Version="21.0.0" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="16.0.1--0000-develop" />
+    <PackageReference Include="CK.StObj.Model" Version="21.0.1--0000-develop" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CKSetup\CKSetup.csproj" />
-    <ProjectReference Include="..\CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj" />
+    <ProjectReference Include="..\..\CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj" />
   </ItemGroup>
 </Project>
