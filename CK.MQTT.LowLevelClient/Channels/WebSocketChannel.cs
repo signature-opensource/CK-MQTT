@@ -31,9 +31,30 @@ namespace CK.MQTT
 
         public IDuplexPipe? DuplexPipe { get; private set; }
 
-        public async ValueTask CloseAsync(DisconnectReason reason)
+        public async ValueTask CloseAsync( DisconnectReason reason )
         {
-            await _context.WebSocket.CloseAsync( WebSocketCloseStatus.Empty, "todo-status-description", default );
+            switch( reason )
+            {
+                case DisconnectReason.None:
+                case DisconnectReason.RemoteDisconnected:
+                    //TODO: Remote disconnected... Do I have to close the websocket ?
+                    break;
+                case DisconnectReason.UserDisconnected:
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.NormalClosure, null, default );
+                    break;
+                case DisconnectReason.ProtocolError:
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.ProtocolError, null, default );
+                    break;
+                case DisconnectReason.InternalException:
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.InternalServerError, null, default );
+                    break;
+                case DisconnectReason.Timeout:
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.EndpointUnavailable, "Timeout", default );
+                    break;
+                default:
+                    throw new InvalidOperationException();
+            }
+
         }
 
         public void Dispose() => _context.WebSocket.Dispose();

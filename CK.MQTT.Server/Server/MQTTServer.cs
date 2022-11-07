@@ -91,7 +91,7 @@ namespace CK.MQTT.Server.Server
                 }
             }
 
-            public async Task ListenMessageAsync( IActivityMonitor m, RefCountingApplicationMessage msg )
+            public async Task ListenMessageAsync( IActivityMonitor m, RefCountingApplicationMessage msg, CancellationToken cancellationToken )
             {
                 _parent._agentLock.EnterReadLock();
 

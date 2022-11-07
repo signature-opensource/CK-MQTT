@@ -263,3 +263,4 @@ CodeCakeBuilder/MemoryKey.*.txt
 Tests/**/Logs/
 Tests/**/CKSetup-WorkingDir/
 /CKSetup/WorkingDir
+/Sample/CKSetup/WorkingDir/
