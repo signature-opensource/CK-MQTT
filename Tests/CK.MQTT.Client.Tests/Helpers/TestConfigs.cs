@@ -7,7 +7,6 @@ namespace CK.MQTT.Client.Tests.Helpers
             int timeoutMs = 5_000,
             MQTTClientCredentials? credentials = null )
         {
-            _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
             return new MQTT3ClientConfiguration()
             {
                 TimeUtilities = packetReplayer.TestTimeHandler,

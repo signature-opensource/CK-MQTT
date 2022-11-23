@@ -6,6 +6,12 @@
       "commands": [
         "cksetup"
       ]
+    },
+    "microsoft.coyote.cli": {
+      "version": "1.7.1",
+      "commands": [
+        "coyote"
+      ]
     }
   }
 }

@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using static CK.Testing.MonitorTestHelper;
 namespace CK.MQTT.Client.Tests.Helpers
 {
     static class PacketReplayerAssertsExtensions
@@ -59,10 +58,10 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static async Task ConnectClientAsync( this PacketReplayer @this, IActivityMonitor m, TestMQTTClient client )
         {
             var task = client.ConnectAsync();
-            await @this.AssertClientSentAsync( TestHelper.Monitor,
+            await @this.AssertClientSentAsync( m,
                 "101600044d5154540402" + Convert.ToHexString( BitConverter.GetBytes( client.Config.KeepAliveSeconds ).Reverse().ToArray() ) + "000a434b4d71747454657374"
             );
-            await @this.SendToClientAsync( TestHelper.Monitor, "20020000" );
+            await @this.SendToClientAsync( m, "20020000" );
             await task;
             await @this.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
             await @this.ShouldContainEventAsync<DefaultClientMessageSink.Connected>();
