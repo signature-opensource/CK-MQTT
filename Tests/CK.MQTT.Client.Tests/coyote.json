@@ -1,0 +1,13 @@
+{
+  "AssembliesPath": "bin/Debug/net6.0",
+  "OutputPath": "bin/Debug/net6.0/rewritten",
+  "Assemblies": [
+    "CK.MQTT.Abstractions.dll",
+    "CK.MQTT.Client.dll",
+    "CK.MQTT.Client.Tests.dll",
+    "CK.MQTT.LowLevelClient.dll",
+    "CK.MQTT.Server.dll",
+    "CK.PerfectEvent.dll",
+    "CK.Core.dll"
+  ]
+}

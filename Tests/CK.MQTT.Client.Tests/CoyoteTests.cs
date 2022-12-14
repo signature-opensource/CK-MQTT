@@ -11,15 +11,16 @@ namespace CK.MQTT.Client.Tests
 {
     public class CoyoteTests
     {
-        [Test]
-        public static void CoyoteTestTask()
-        {
-            Environment.CurrentDirectory = "C:\\dev\\CK-MQTT\\Tests\\CK.MQTT.Client.Tests";
-            var configuration = Configuration.Create().WithTestingIterations( 10 );
-            var engine = TestingEngine.Create( configuration, simple_publish_qos2_works_Async );
-            engine.Run();
-        }
+        //public static void CoyoteTestTask()
+        //{
+        //    Environment.CurrentDirectory = "C:\\dev\\CK-MQTT\\Tests\\CK.MQTT.Client.Tests";
+        //    var configuration = Configuration.Create().WithTestingIterations( 1000 )
+        //        .WithMaxSchedulingSteps(5000);
+        //    var engine = TestingEngine.Create( configuration, simple_publish_qos2_works_Async );
+        //    engine.Run();
+        //}
 
+        [Test]
         public static async Task simple_publish_qos2_works_Async()
         {
             var m = new ActivityMonitor();
