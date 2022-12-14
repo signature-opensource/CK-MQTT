@@ -8,6 +8,14 @@
     "CK.MQTT.LowLevelClient.dll",
     "CK.MQTT.Server.dll",
     "CK.PerfectEvent.dll",
-    "CK.Core.dll"
+    "CK.Core.dll",
+    "CK.ActivityMonitor.dll",
+    "CK.ActivityMonitor.SimpleSender.dll",
+    "CK.Monitoring.dll",
+    "CK.Reflection.dll",
+    "CK.Testing.dll",
+    "CK.Testing.Monitoring.dll",
+    "CK.WeakAssemblyNameResolver.dll"
+
   ]
 }
