@@ -61,6 +61,11 @@ namespace CK.MQTT.Server
                     return (ProtocolConnectReturnCode.Unknown, ProtocolLevel.MQTT3);
                 }
                 reader.AdvanceTo( res.Buffer.Start, position );
+
+                if( res.IsCompleted )
+                {
+                    return (ProtocolConnectReturnCode.Unknown, 0);
+                }
             }
             if( header != 0x10 ) return (ProtocolConnectReturnCode.Unknown, 0);
 
@@ -104,6 +109,10 @@ namespace CK.MQTT.Server
                     if( !await securityManager.ChallengePasswordAsync( Password ) ) return (ProtocolConnectReturnCode.BadUserNameOrPassword, ProtocolLevel);
                 }
                 currentStep = _fieldCount;
+                if( res.IsCompleted && status == OperationStatus.NeedMoreData)
+                {
+                    return (ProtocolConnectReturnCode.Unknown, 0);
+                }
             }
             // TODO:
             // - Last Will
@@ -121,7 +130,7 @@ namespace CK.MQTT.Server
         public bool HasUserName => (_flags & 0b1000_0000) != 0;
         public bool HasPassword => (_flags & 0b0100_0000) != 0;
         public bool Retain => (_flags & 0b0010_0000) != 0;
-        public QualityOfService QoS => (QualityOfService)(_flags << 3 >> 6); // 3 shift on the left to delete the 3 flags on the right. 
+        public QualityOfService QoS => (QualityOfService)(_flags << 3 >> 6); // 3 shift on the left to delete the 3 flags on the right.
         public bool HasLastWill => (_flags & 0b0000_0100) != 0;
         public bool CleanSession => (_flags & 0b0000_0010) != 0;
         public IReadOnlyList<(string, string)> UserProperties => _userProperties;

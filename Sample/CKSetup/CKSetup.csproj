@@ -15,7 +15,7 @@
   </Target>
 
   <ItemGroup>
-    <ProjectReference Include="..\CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj" />
+    <ProjectReference Include="..\..\CK.MQTT.LocalMQTTDemiServer\CK.MQTT.LocalMQTTDemiServer.csproj" />
   </ItemGroup>
 
 </Project>

@@ -127,10 +127,25 @@ namespace CK.MQTT.Client
             }
         }
 
+        record SynchronisationMessage(TaskCompletionSource Tcs);
+        /// <summary>
+        /// Send a message in the event queue and wait for it to be processed.
+        /// </summary>
+        /// <returns></returns>
+        public async Task SynchronizeEventLoopAsync()
+        {
+            var tcs = new TaskCompletionSource();
+            await _events!.Writer.WriteAsync( new SynchronisationMessage( tcs ) );
+            await tcs.Task;
+        }
+
         protected virtual async Task ProcessMessageAsync( IActivityMonitor m, object? item )
         {
             switch( item )
             {
+                case SynchronisationMessage synchronisationMessage:
+                    synchronisationMessage.Tcs.SetResult();
+                    break;
                 case VolatileApplicationMessage msg:
                     using( m.OpenTrace( $"Incoming MQTT Application Message '{msg.Message}'..." ) )
                     {

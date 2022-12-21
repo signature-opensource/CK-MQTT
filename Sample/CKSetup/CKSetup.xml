@@ -5,8 +5,8 @@
   <UseSignatureFiles>True</UseSignatureFiles>
 
   <BinPaths>
-    <BinPath Path="../CK.MQTT.LocalMQTTDemiServer/bin/[Debug|Release]/net6.0">
-      <ProjectPath>../ConsoleApp1</ProjectPath>
+    <BinPath Path="../../CK.MQTT.LocalMQTTDemiServer/bin/[Debug|Release]/net6.0">
+      <ProjectPath>../Demo.DemiServer</ProjectPath>
     </BinPath>
   </BinPaths>
 
