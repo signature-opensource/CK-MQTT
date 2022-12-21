@@ -51,7 +51,11 @@ namespace CK.MQTT
         public async ValueTask CloseAsync( DisconnectReason reason )
         {
             if( _tcpClient == null ) throw new InvalidOperationException( "Channel not started." );
-            await _stream!.DisposeAsync();
+            var stream = _stream;
+            if( stream is not null )
+            {
+                await stream.DisposeAsync();
+            }
             _tcpClient.Close();
             _tcpClient = null;
             _stream = null;
