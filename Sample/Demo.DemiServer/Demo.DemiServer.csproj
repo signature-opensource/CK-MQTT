@@ -6,8 +6,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring.Hosting" Version="16.0.1--0015-develop" />
-    <PackageReference Include="CK.StObj.Model" Version="21.0.1--0008-develop" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="17.0.0" />
+    <PackageReference Include="CK.StObj.Model" Version="22.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
