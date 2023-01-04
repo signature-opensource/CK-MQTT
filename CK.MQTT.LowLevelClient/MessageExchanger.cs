@@ -99,10 +99,7 @@ namespace CK.MQTT
         void QueueMessageIfConnected( IOutgoingPacket packet )
         {
             var pumps = Pumps;
-            if( pumps != null )
-            {
-                pumps.Left.TryQueueMessage( packet );
-            }
+            pumps?.Left.TryQueueMessage( packet );
         }
         /// <returns><see langword="true"/> if the sink asked to reconnect.</returns>
         internal protected async virtual ValueTask<bool> SelfDisconnectAsync( DisconnectReason disconnectedReason )

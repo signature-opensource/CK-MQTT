@@ -185,11 +185,16 @@ namespace CK.MQTT.Stores
             Debug.Assert( qos != QualityOfService.AtMostOnce );
             EntryContent entry = new()
             {
-                _lastEmissionTime = _stopwatch.Elapsed,
                 _attemptInTransitOrLost = 0,
                 _state = (QoSState)(byte)qos,
                 _taskCompletionSource = new()
             };
+
+            void UpdateEntryTime()
+            {
+                entry._lastEmissionTime = _stopwatch.Elapsed;
+            }
+
             ushort packetId;
             bool res = false;
             lock( _idStore )
@@ -327,10 +332,11 @@ namespace CK.MQTT.Stores
         [ThreadColor( "WriteLoop" )]
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync()
         {
-            TimeSpan currentTime = _stopwatch.Elapsed;
-            TimeSpan timeOut = TimeSpan.FromMilliseconds( Config.WaitTimeoutMilliseconds );
             lock( _idStore )
             {
+                // We track the current time inside the lock, so there are no entry younger than the current time.
+                TimeSpan currentTime = _stopwatch.Elapsed;
+                TimeSpan timeOut = TimeSpan.FromMilliseconds( Config.WaitTimeoutMilliseconds );
                 // If there is no packet id allocated, there is no unacked packet id.
                 if( _idStore.NoPacketAllocated ) return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, Timeout.InfiniteTimeSpan) );
                 var currId = _idStore._head;
