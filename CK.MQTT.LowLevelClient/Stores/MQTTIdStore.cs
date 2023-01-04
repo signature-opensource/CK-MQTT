@@ -185,15 +185,11 @@ namespace CK.MQTT.Stores
             Debug.Assert( qos != QualityOfService.AtMostOnce );
             EntryContent entry = new()
             {
+                _lastEmissionTime = _stopwatch.Elapsed,
                 _attemptInTransitOrLost = 0,
                 _state = (QoSState)(byte)qos,
                 _taskCompletionSource = new()
             };
-
-            void UpdateEntryTime()
-            {
-                entry._lastEmissionTime = _stopwatch.Elapsed;
-            }
 
             ushort packetId;
             bool res = false;

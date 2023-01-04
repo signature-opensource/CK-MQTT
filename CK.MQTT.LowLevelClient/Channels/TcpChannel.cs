@@ -50,7 +50,7 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async ValueTask CloseAsync( DisconnectReason reason )
         {
-            if( _tcpClient == null ) throw new InvalidOperationException( "Channel not started." );
+            if( _tcpClient == null ) return;
             var stream = _stream;
             if( stream is not null )
             {
