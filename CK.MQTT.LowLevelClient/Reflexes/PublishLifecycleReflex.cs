@@ -32,7 +32,7 @@ namespace CK.MQTT
                     bool detectedDrop = _exchanger.LocalPacketStore.OnQos1Ack( sink, packetId2.Value, null );
                     if( detectedDrop )
                     {
-                        _exchanger.Pumps!.Left.UnblockWriteLoop();
+                        _exchanger.OutputPump?.UnblockWriteLoop();
                     }
                     return (OperationStatus.Done, true);
                 case PacketType.PublishComplete:
@@ -46,13 +46,13 @@ namespace CK.MQTT
                     if( !packetId.HasValue ) return (OperationStatus.NeedMoreData, true);
                     await _exchanger.RemotePacketStore.RemoveIdAsync( packetId.Value );
                     // We doesn't care of the return value, if the queue is filled we have too much job to do currently and we drop that packet.
-                    _exchanger.Pumps!.Left.TryQueueReflexMessage( LifecyclePacketV3.Pubcomp( packetId.Value ) );
+                    _exchanger.OutputPump?.TryQueueReflexMessage( LifecyclePacketV3.Pubcomp( packetId.Value ) );
                     return (OperationStatus.Done, true);
                 case PacketType.PublishReceived:
                     ushort? packetId4 = await pipe.ReadPacketIdPacketAsync( sink, packetLength, cancellationToken );
                     if( !packetId4.HasValue ) return (OperationStatus.NeedMoreData, true);
                     IOutgoingPacket msg = await _exchanger.LocalPacketStore.OnQos2AckStep1Async( packetId4.Value );
-                    _exchanger.Pumps!.Left.TryQueueReflexMessage( msg );
+                    _exchanger.OutputPump?.TryQueueReflexMessage( msg );
                     return (OperationStatus.Done, true);
                 default:
                     return (OperationStatus.Done, false);

@@ -72,7 +72,7 @@ namespace CK.MQTT.Client
             }
             WaitingPingResp = true;
             _lastPacketSent = MessageExchanger.Config.TimeUtilities.UtcNow;
-            MessageExchanger.Pumps!.Left.TryQueueMessage( OutgoingPingReq.Instance );
+            MessageExchanger.OutputPump?.TryQueueMessage( OutgoingPingReq.Instance );
             base.OnTimeout( MessageExchanger.Config.WaitTimeoutMilliseconds );
         }
 

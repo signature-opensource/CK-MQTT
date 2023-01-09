@@ -271,7 +271,6 @@ namespace CK.MQTT.Stores
             }
         }
 
-        [ThreadColor( "ReadLoop" )]
         public async ValueTask<IOutgoingPacket> OnQos2AckStep1Async( ushort packetId )
         {
             lock( _idStore )
@@ -295,7 +294,6 @@ namespace CK.MQTT.Stores
             return await OverwriteMessageAsync( LifecyclePacketV3.Pubrel( packetId ) );
         }
 
-        [ThreadColor( "ReadLoop" )]
         public void OnQos2AckStep2( ushort packetId )
         {
             lock( _idStore )
@@ -318,14 +316,11 @@ namespace CK.MQTT.Stores
             }
         }
 
-        [ThreadColor( "WriteLoop" )]
         protected abstract ValueTask<IOutgoingPacket> RestorePacketAsync( ushort packetId );
 
-        [ThreadColor( "WriteLoop" )]
         async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( ushort packetId )
             => (await RestorePacketAsync( packetId ), TimeSpan.Zero);
 
-        [ThreadColor( "WriteLoop" )]
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync()
         {
             lock( _idStore )

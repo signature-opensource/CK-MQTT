@@ -14,11 +14,6 @@ namespace CK.MQTT
         /// <summary>
         /// Connect the <see cref="IConnectedMessageSender"/> to a Broker.
         /// </summary>
-        /// <param name="m">The logger used to log activities about the connection.</param>
-        /// <param name="credentials">
-        /// The credentials used to connect to the Server. See <see cref="MQTTClientCredentials" /> for more details on the credentials information.
-        /// If <see langword="null"/>, the client will attempt an anonymous connection (<a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242">MQTT-3.1.3-6</a>).
-        /// </param>
         /// <param name="lastWill">
         /// The <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Will_Flag">
         /// last will message </a> that the Server will send if an unexpected Client disconnection occurs. 
@@ -32,6 +27,7 @@ namespace CK.MQTT
         /// for more details about the connection protocol.
         /// </remarks>
         Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default );
+        Task<ConnectResult> ConnectAsync( CancellationToken cancellationToken = default );
 
         /// <summary>
         /// Unsubscribe the client from topics.

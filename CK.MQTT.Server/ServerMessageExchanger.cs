@@ -29,24 +29,20 @@ namespace CK.MQTT.Server
 
         protected void Engage()
         {
-            var output = new OutputPump( this );
+            OutputPump = new OutputPump( this );
             // Middleware that will processes the requests.
             ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( this ) )
                 .UseMiddleware( new PublishLifecycleReflex( this ) )
-                .UseMiddleware( new PingReqReflex( output ) )
-                .UseMiddleware( new SubscribeReflex( ServerSink, PConfig.ProtocolLevel, output ) )
-                .UseMiddleware( new UnsubscribeReflex( ServerSink, output, PConfig.ProtocolLevel ) );
+                .UseMiddleware( new PingReqReflex( OutputPump ) )
+                .UseMiddleware( new SubscribeReflex( ServerSink, PConfig.ProtocolLevel, OutputPump ) )
+                .UseMiddleware( new UnsubscribeReflex( ServerSink, OutputPump, PConfig.ProtocolLevel ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
             Reflex reflex = builder.Build();
-            var input = CreateInputPump( reflex );
+            InputPump = CreateInputPump( reflex );
             // Creating pumps. Need to be started.
-            Pumps = new DuplexPump<OutputPump, InputPump>(
-                output,
-                input
-            );
-            output.StartPumping( CreateOutputProcessor() );
-            input.StartPumping();
+            OutputPump.StartPumping( CreateOutputProcessor() );
+            InputPump.StartPumping();
         }
 
         protected virtual InputPump CreateInputPump( Reflex reflex ) => new( this, reflex );

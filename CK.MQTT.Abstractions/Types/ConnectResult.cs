@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
 
 namespace CK.MQTT
@@ -39,7 +40,8 @@ namespace CK.MQTT
         /// This is default logic, it may not be correct for your use case.
         /// For example, <see cref="ProtocolConnectReturnCode.ServerUnavailable"/> is defined as <see cref="ConnectStatus.ErrorMaybeRecoverable"/>.
         /// </remarks>
-        public ConnectStatus Status => _deffered ? ConnectStatus.Deffered
+        public ConnectStatus Status => _deffered ?
+            ConnectStatus.Deffered
             : ProtocolReturnCode switch
             {
                 ProtocolConnectReturnCode.Accepted => ConnectStatus.Successful,
@@ -74,6 +76,7 @@ namespace CK.MQTT
         /// <param name="connectError">The reason the client could not connect.</param>
         public ConnectResult( ConnectError connectError )
         {
+            Debug.Assert( connectError != ConnectError.SeeReturnCode );
             Error = connectError;
             Exception = null;
             SessionState = SessionState.Unknown;

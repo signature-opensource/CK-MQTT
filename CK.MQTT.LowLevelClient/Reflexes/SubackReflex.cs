@@ -31,7 +31,7 @@ namespace CK.MQTT
             bool detectedDrop = _exchanger.LocalPacketStore.OnQos1Ack( sink, packetId, qos );
             if( detectedDrop )
             {
-                _exchanger.Pumps!.Left.UnblockWriteLoop();
+                _exchanger.OutputPump?.UnblockWriteLoop();
             }
             return (OperationStatus.Done, true);
         }

@@ -20,7 +20,7 @@ namespace CK.MQTT.Client
         readonly PerfectEventSender<ushort> _onStoreQueueFilling = new();
         private Channel<object?>? _events;
 
-        public ref struct EventTypeChoice
+        public readonly ref struct EventTypeChoice
         {
             public PerfectEvent<ApplicationMessage> Simple { get; }
             public PerfectEvent<RefCountingApplicationMessage> RefCounted { get; }
@@ -183,7 +183,7 @@ namespace CK.MQTT.Client
                 case StoreFilling storeFilling:
                     await _onStoreQueueFilling.SafeRaiseAsync( m, storeFilling.FreeLeftSlot );
                     return;
-                case RaiseConnectionState connectionState:
+                case RaiseConnectionState:
                     await _onConnectionChangeSender.RaiseAsync( m, _reason );
                     return;
                 case UnparsedExtraData extraData:

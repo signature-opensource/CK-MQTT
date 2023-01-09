@@ -21,15 +21,14 @@ namespace CK.MQTT.Pumps
 
         void TimerTimeoutWrapper( object? obj ) => OnTimeout(Timeout.Infinite);
 
-        protected ChannelReader<IOutgoingPacket> ReflexesChannel => MessageExchanger.Pumps!.Left.ReflexesChannel;
-        protected ChannelReader<IOutgoingPacket> MessagesChannel => MessageExchanger.Pumps!.Left.MessagesChannel;
+        protected ChannelReader<IOutgoingPacket> ReflexesChannel => MessageExchanger.OutputPump!.ReflexesChannel;
+        protected ChannelReader<IOutgoingPacket> MessagesChannel => MessageExchanger.OutputPump!.MessagesChannel;
 
         public void Starting()
         {
             _timer.Change( GetTimeoutTime( Timeout.Infinite ), Timeout.Infinite );
         }
 
-        [ThreadColor( "WriteLoop" )]
         public virtual async ValueTask<bool> SendPacketsAsync( CancellationToken cancellationToken )
         {
             bool newPacketSent = await SendAMessageFromQueueAsync( cancellationToken ); // We want to send a fresh new packet...
@@ -47,18 +46,17 @@ namespace CK.MQTT.Pumps
         public virtual void OnTimeout( int msUntilNextTrigger )
         {
             _timer.Change( msUntilNextTrigger, Timeout.Infinite );
-            MessageExchanger.Pumps!.Left.UnblockWriteLoop();
+            MessageExchanger.OutputPump!.UnblockWriteLoop();
         }
 
-        protected ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason ) => MessageExchanger.Pumps!.Left.SelfCloseAsync( disconnectedReason );
+        protected ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason ) => MessageExchanger.OutputPump!.SelfCloseAsync( disconnectedReason );
 
-        [ThreadColor( "WriteLoop" )]
         protected virtual async ValueTask<bool> SendAMessageFromQueueAsync( CancellationToken cancellationToken )
         {
             IOutgoingPacket? packet;
             do
             {
-                var outputPump = MessageExchanger.Pumps!.Left;
+                var outputPump = MessageExchanger.OutputPump!;
                 if( !outputPump.ReflexesChannel.TryRead( out packet ) && !outputPump.MessagesChannel.TryRead( out packet ) )
                 {
                     return false;
@@ -69,7 +67,6 @@ namespace CK.MQTT.Pumps
             return true;
         }
 
-        [ThreadColor( "WriteLoop" )]
         async ValueTask<(bool, TimeSpan)> ResendAllUnackPacketAsync( CancellationToken cancellationToken )
         {
             Debug.Assert( MessageExchanger.Config.WaitTimeoutMilliseconds != int.MaxValue );
@@ -86,7 +83,6 @@ namespace CK.MQTT.Pumps
             }
         }
 
-        [ThreadColor( "WriteLoop" )]
         protected async ValueTask ProcessOutgoingPacketAsync( IOutgoingPacket outgoingPacket, CancellationToken cancellationToken )
         {
             if( cancellationToken.IsCancellationRequested ) return;

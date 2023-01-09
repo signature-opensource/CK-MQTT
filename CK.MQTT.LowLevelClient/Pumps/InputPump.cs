@@ -2,6 +2,7 @@ using CK.MQTT.Client;
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Pipelines;
 using System.Net;
@@ -27,8 +28,6 @@ namespace CK.MQTT.Pumps
             CurrentReflex = reflex;
         }
 
-        public void StartPumping() => SetRunningLoop( ReadLoopAsync() );
-
         /// <summary>
         /// Current <see cref="Reflex"/> that will be run on the incoming messages.
         /// </summary>
@@ -51,15 +50,17 @@ namespace CK.MQTT.Pumps
         protected virtual async ValueTask<ReadResult> ReadAsync( CancellationToken cancellationToken )
             => await MessageExchanger.Channel.DuplexPipe!.Input.ReadAsync( cancellationToken );
 
-        async Task ReadLoopAsync()
+        public void StartPumping() => SetRunningLoop( WorkLoopAsync() );
+
+        async Task WorkLoopAsync()
         {
             var pipeReader = MessageExchanger.Channel.DuplexPipe!.Input;
             try
             {
-                while( !StopToken.IsCancellationRequested )
+                while( !MessageExchanger.StopTokenSource.IsCancellationRequested )
                 {
-                    var read = await ReadAsync( CloseToken );
-                    if( CloseToken.IsCancellationRequested || read.IsCanceled )
+                    var read = await ReadAsync( MessageExchanger.StopTokenSource.Token );
+                    if( MessageExchanger.StopTokenSource.IsCancellationRequested || read.IsCanceled )
                     {
                         break; // When we are notified to stop, we don't need to notify the external world of it.
                     }
@@ -74,7 +75,7 @@ namespace CK.MQTT.Pumps
                     if( res == OperationStatus.Done )
                     {
                         pipeReader.AdvanceTo( position );
-                        OperationStatus status = await CurrentReflex.ProcessIncomingPacketAsync( MessageExchanger.Sink, this, header, length, pipeReader, CloseToken );
+                        OperationStatus status = await CurrentReflex.ProcessIncomingPacketAsync( MessageExchanger.Sink, this, header, length, pipeReader, MessageExchanger.StopTokenSource.Token );
                         if( status == OperationStatus.InvalidData )
                         {
                             await pipeReader.CompleteAsync();
@@ -84,7 +85,7 @@ namespace CK.MQTT.Pumps
                         if( status == OperationStatus.NeedMoreData )
                         {
                             await pipeReader.CompleteAsync();
-                            if( !CloseToken.IsCancellationRequested )
+                            if( !MessageExchanger.StopTokenSource.IsCancellationRequested )
                             {
                                 //End Of Stream
                                 await SelfCloseAsync( DisconnectReason.RemoteDisconnected );

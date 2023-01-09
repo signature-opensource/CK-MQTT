@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
@@ -20,6 +21,8 @@ namespace CK.MQTT
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
         public MessageExchanger( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, IMQTT3Sink sink, IMQTTChannel channel, IRemotePacketStore? remotePacketStore = null, ILocalPacketStore? localPacketStore = null )
         {
+            StopTokenSource = new(); // Never null.
+            StopTokenSource.Cancel(); // But default state is stopped. 
             PConfig = pConfig;
             Config = config;
             Sink = sink;
@@ -29,6 +32,7 @@ namespace CK.MQTT
             LocalPacketStore = localPacketStore ?? new MemoryPacketStore( pConfig, Config, ushort.MaxValue );
         }
 
+        internal protected CancellationTokenSource StopTokenSource { get; protected set; }
         /// <inheritdoc/>
         public abstract string? ClientId { get; }
         public MQTT3ConfigurationBase Config { get; }
@@ -37,8 +41,9 @@ namespace CK.MQTT
         public ILocalPacketStore LocalPacketStore { get; }
         public IMQTTChannel Channel { get; }
         public ProtocolConfiguration PConfig { get; }
-        public DuplexPump<OutputPump, InputPump>? Pumps { get; protected set; }
-        public bool IsConnected => Pumps?.IsRunning ?? false;
+        public OutputPump? OutputPump { get; protected set; }
+        public InputPump? InputPump { get; protected set; }
+        public bool IsConnected => !StopTokenSource.IsCancellationRequested;
 
         protected ValueTask<Task<T?>> SendPacketWithQoSAsync<T>( IOutgoingPacket outgoingPacket )
             => outgoingPacket.Qos switch
@@ -48,17 +53,15 @@ namespace CK.MQTT
                 _ => throw new ArgumentException( "Invalid QoS." ),
             };
 
-        [ThreadColor( ThreadColor.Rainbow )]
         async ValueTask<Task<T?>> StoreAndSendAsync<T>( IOutgoingPacket msg )
         {
             (Task<object?> ackReceived, IOutgoingPacket newPacket) = await LocalPacketStore.StoreMessageAsync( msg, msg.Qos );
             return SendAsync<T>( newPacket, ackReceived );
         }
 
-        [ThreadColor( ThreadColor.Rainbow )]
         async Task<T?> SendAsync<T>( IOutgoingPacket packet, Task<object?> ackReceived )
         {
-            QueueMessageIfConnected( packet );
+            OutputPump?.TryQueueMessage( packet );
             object? res = await ackReceived;
             if( res is null ) return default;
             if( res is T a ) return a;
@@ -83,10 +86,10 @@ namespace CK.MQTT
 
         async ValueTask<Task> PublishQoS0Async( OutgoingMessage packet )
         {
-            var pumps = Pumps;
-            if( pumps != null )
+            var pump = OutputPump;
+            if( pump != null )
             {
-                await pumps.Left.QueueMessageAsync( packet );
+                await pump.QueueMessageAsync( packet );
             }
             else
             {
@@ -95,18 +98,10 @@ namespace CK.MQTT
             return Task.CompletedTask;
         }
 
-        [ThreadColor( ThreadColor.Rainbow )]
-        void QueueMessageIfConnected( IOutgoingPacket packet )
-        {
-            var pumps = Pumps;
-            pumps?.Left.TryQueueMessage( packet );
-        }
         /// <returns><see langword="true"/> if the sink asked to reconnect.</returns>
-        internal protected async virtual ValueTask<bool> SelfDisconnectAsync( DisconnectReason disconnectedReason )
+        internal protected async virtual ValueTask<bool> FinishSelfDisconnectAsync( DisconnectReason disconnectedReason )
         {
-            Debug.Assert( Pumps != null );
             await Channel.CloseAsync( disconnectedReason );
-            await Pumps.StopWorkAsync();
             return Sink.OnUnattendedDisconnect( disconnectedReason );
         }
 
@@ -116,12 +111,9 @@ namespace CK.MQTT
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
         public async Task<bool> DisconnectAsync( bool clearSession )
         {
-            var pumps = Pumps;
-            if( pumps is null ) return false;
-            if( !pumps.IsRunning ) return false;
-            await pumps.StopWorkAsync();
+            if( StopTokenSource.IsCancellationRequested ) return false;
+            StopTokenSource.Cancel();
             LocalPacketStore.CancelAllAckTask(); //Cancel acks when we know no more work will come.
-            if( pumps.IsClosed ) return false;
             // Because we stopped the pumps, their states won't change anymore.
             var channel = Channel;
             if( !(channel?.IsConnected ?? false) ) return false;
@@ -130,22 +122,17 @@ namespace CK.MQTT
             await BeforeUserDisconnectAsync( duplexPipe, clearSession );
             await LocalPacketStore.ResetAsync();
             await RemotePacketStore.ResetAsync();
-
-            await pumps.DisposeAsync();
-            Pumps = null;
+            InputPump = null;
+            OutputPump = null;
             return true;
         }
 
         protected virtual ValueTask BeforeUserDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new();
 
-        [ThreadColor( ThreadColor.None )]
-        public virtual async ValueTask DisposeAsync()
+        public virtual ValueTask DisposeAsync()
         {
-            var pumps = Pumps;
-            if( pumps is not null )
-            {
-                await pumps.DisposeAsync();
-            }
+            Channel.Dispose();
+            return ValueTask.CompletedTask;
         }
     }
 }

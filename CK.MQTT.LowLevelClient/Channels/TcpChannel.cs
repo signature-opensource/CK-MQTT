@@ -45,7 +45,7 @@ namespace CK.MQTT
         public bool IsConnected => _tcpClient?.Connected ?? false;
 
         /// <inheritdoc/>
-        public IDuplexPipe DuplexPipe => _duplexPipe ?? throw new InvalidOperationException( "Start the channel before accessing the pipes." );
+        public IDuplexPipe? DuplexPipe => _duplexPipe;
 
         /// <inheritdoc/>
         public async ValueTask CloseAsync( DisconnectReason reason )

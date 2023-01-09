@@ -75,7 +75,6 @@ namespace CK.MQTT.Client.Tests
         }
 
 
-
         [Test]
         public async Task connect_with_clean_session_but_connack_return_code_is_invalid_should_throw_Async()
         {

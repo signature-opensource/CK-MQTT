@@ -53,23 +53,28 @@ namespace CK.MQTT.Pumps
             PipeWriter? pw = null;
             try
             {
-                pw = MessageExchanger.Channel.DuplexPipe!.Output;
-                while( !StopToken.IsCancellationRequested )
+                pw = MessageExchanger.Channel.DuplexPipe?.Output;
+                if( pw is null )
+                {
+                    Debug.Assert( MessageExchanger.StopTokenSource.IsCancellationRequested );
+                    return;
+                }
+                while( !MessageExchanger.StopTokenSource.IsCancellationRequested )
                 {
                     bool packetSent = true;
                     while( packetSent )
                     {
-                        if( StopToken.IsCancellationRequested ) break;
-                        packetSent = await _outputProcessor.SendPacketsAsync( CloseToken );
+                        if( MessageExchanger.StopTokenSource.IsCancellationRequested ) break;
+                        packetSent = await _outputProcessor.SendPacketsAsync( MessageExchanger.StopTokenSource.Token );
                         if( pw.CanGetUnflushedBytes && pw.UnflushedBytes > 50_000 )
                         {
-                            await pw.FlushAsync( CloseToken );
+                            await pw.FlushAsync( MessageExchanger.StopTokenSource.Token );
                         }
                     }
-                    await pw.FlushAsync( CloseToken );
-                    if( StopToken.IsCancellationRequested ) return;
-                    var res = await MessagesChannel.WaitToReadAsync( StopToken );
-                    if( !res || StopToken.IsCancellationRequested ) return;
+                    await pw.FlushAsync( MessageExchanger.StopTokenSource.Token );
+                    if( MessageExchanger.StopTokenSource.Token.IsCancellationRequested ) return;
+                    var res = await MessagesChannel.WaitToReadAsync( MessageExchanger.StopTokenSource.Token );
+                    if( !res || MessageExchanger.StopTokenSource.IsCancellationRequested ) return;
                 }
                 await pw.CompleteAsync();
             }
