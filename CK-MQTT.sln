@@ -29,8 +29,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{25AD6D5E
 		TestHelper.config = TestHelper.config
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Abstractions", "CK.MQTT.Abstractions\CK.MQTT.Abstractions.csproj", "{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.LowLevelClient", "CK.MQTT.LowLevelClient\CK.MQTT.LowLevelClient.csproj", "{6481B999-0479-4162-AC53-5936CE5FD8BF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CK.MQTT.Client", "CK.MQTT.Client\CK.MQTT.Client.csproj", "{EE22D1F2-A6E2-4F5D-896D-8F2C25CA0B3E}"
@@ -51,7 +49,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CKSetup", "Sample\CKSetup\C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sample", "Sample", "{08CD1477-5DF4-4503-AB86-C6E8F98AC641}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientSample", "Samples\ClientSample\ClientSample.csproj", "{421E7EE7-03CA-49FC-A724-55C5B938B1F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClientSample", "Samples\ClientSample\ClientSample.csproj", "{421E7EE7-03CA-49FC-A724-55C5B938B1F2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,14 +67,6 @@ Global
 		{642792BA-206F-45D2-A743-E20AE1333B6E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{642792BA-206F-45D2-A743-E20AE1333B6E}.Release|x64.ActiveCfg = Release|Any CPU
 		{642792BA-206F-45D2-A743-E20AE1333B6E}.Release|x64.Build.0 = Release|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Debug|x64.Build.0 = Debug|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Release|x64.ActiveCfg = Release|Any CPU
-		{8C1B32B4-08B7-48C0-9DA0-99BBD5B6CAC5}.Release|x64.Build.0 = Release|Any CPU
 		{6481B999-0479-4162-AC53-5936CE5FD8BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6481B999-0479-4162-AC53-5936CE5FD8BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6481B999-0479-4162-AC53-5936CE5FD8BF}.Debug|x64.ActiveCfg = Debug|Any CPU

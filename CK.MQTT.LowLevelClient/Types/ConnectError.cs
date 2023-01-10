@@ -20,7 +20,7 @@ namespace CK.MQTT
         /// <summary>
         /// The server closed the connection.
         /// </summary>
-        RemoteDisconnected,
+        Disconnected,
         /// <summary>
         /// Internal exception while trying to connect.
         /// </summary>
@@ -28,7 +28,7 @@ namespace CK.MQTT
         /// <summary>
         /// Connection has been cancelled by the provided <see cref="System.Threading.CancellationToken"/>.
         /// </summary>
-        Connection_Cancelled,
+        UserCancelled,
         /// <summary>
         /// Protocol error.
         /// </summary>

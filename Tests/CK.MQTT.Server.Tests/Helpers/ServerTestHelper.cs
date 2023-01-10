@@ -49,7 +49,7 @@ namespace CK.MQTT.Server.Tests.Helpers
                 )
             );
             var tcs = _tcs = new();
-            var res = await client.ConnectAsync();
+            var res = await client.ConnectAsync( true );
             res.Status.Should().Be( ConnectStatus.Successful ); ;
             var serverClient = await tcs.Task;
             return (client, serverClient);

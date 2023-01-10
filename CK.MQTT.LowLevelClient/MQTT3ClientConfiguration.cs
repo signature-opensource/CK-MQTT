@@ -28,7 +28,25 @@ namespace CK.MQTT
             }
         }
 
-        public MQTTClientCredentials? Credentials { get; set; }
+        public /*required*/ string ConnectionString { get; init; }
+
+        /// <summary>
+        /// Gets the Client's identifier.
+        /// <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242">It can also be empty.</a>
+        /// </summary>
+        public string ClientId { get; init; } = "";
+
+        /// <summary>
+        /// User Name used for authentication.
+        /// Authentication is not mandatory on MQTT and is up to the consumer of the API.
+        /// </summary>
+        public string? UserName { get; init; }
+
+        /// <summary>
+        /// Password used for authentication.
+        /// Authentication is not mandatory on MQTT and is up to the consumer of the API.
+        /// </summary>
+        public string? Password { get; init; }
 
         public ManualConnectBehavior ManualConnectBehavior { get; set; }
 

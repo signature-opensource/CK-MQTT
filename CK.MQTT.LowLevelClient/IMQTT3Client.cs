@@ -26,8 +26,8 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the connection protocol.
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default );
-        Task<ConnectResult> ConnectAsync( CancellationToken cancellationToken = default );
+        Task<ConnectResult> ConnectAsync( bool cleanSession, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default );
+        Task<ConnectResult> ConnectAsync( bool cleanSession, CancellationToken cancellationToken = default );
 
         /// <summary>
         /// Unsubscribe the client from topics.

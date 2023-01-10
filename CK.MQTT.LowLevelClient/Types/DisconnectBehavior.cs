@@ -8,7 +8,7 @@ namespace CK.MQTT
         /// <summary>
         /// The client will do nothing when being disconnected.
         /// Beware, the Task representing the acks will be left pending until you call
-        /// <see cref="IMQTT3Client.ConnectAsync(Packets.OutgoingLastWill?, System.Threading.CancellationToken)" /> or <see cref="IConnectedMessageSender.DisconnectAsync(bool)"/>. 
+        /// <see cref="IMQTT3Client.ConnectAsync(bool, Packets.OutgoingLastWill?, System.Threading.CancellationToken)" /> or <see cref="IConnectedMessageSender.DisconnectAsync(bool)"/>. 
         /// </summary>
         Nothing = 0,
         /// <summary>

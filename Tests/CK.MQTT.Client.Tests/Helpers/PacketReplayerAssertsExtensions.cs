@@ -58,7 +58,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public static async Task ConnectClientAsync( this PacketReplayer @this, IActivityMonitor m, TestMQTTClient client )
         {
-            var task = client.ConnectAsync();
+            var task = client.ConnectAsync( true );
             await @this.AssertClientSentAsync( TestHelper.Monitor,
                 "101600044d5154540402" + Convert.ToHexString( BitConverter.GetBytes( client.Config.KeepAliveSeconds ).Reverse().ToArray() ) + "000a434b4d71747454657374"
             );

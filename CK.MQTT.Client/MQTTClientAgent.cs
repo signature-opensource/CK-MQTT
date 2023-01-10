@@ -25,17 +25,19 @@ namespace CK.MQTT.Client
         void OnConnectionChangeSync( IActivityMonitor monitor, DisconnectReason e )
             => IsConnected = e == DisconnectReason.None;
 
-        public Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill = null, CancellationToken cancellationToken = default )
-            => ConnectAsync( true, lastwill, cancellationToken );
+        public Task<ConnectResult> ConnectAsync( bool cleanSession, CancellationToken cancellationToken = default )
+            => ConnectAsync( cleanSession, true, null, cancellationToken );
+        public Task<ConnectResult> ConnectAsync( bool cleanSession, OutgoingLastWill? lastwill, CancellationToken cancellationToken = default )
+            => ConnectAsync( cleanSession, true, lastwill, cancellationToken );
 
 
 
-        public async Task<ConnectResult> ConnectAsync( bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public async Task<ConnectResult> ConnectAsync( bool cleanSession, bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
             _sink._manualCountRetry = 0;
             Start();
-            var res = await Client.ConnectAsync( lastWill, cancellationToken );
-            if( res.Status != ConnectStatus.Successful && res.Status != ConnectStatus.Deffered )
+            var res = await Client.ConnectAsync( cleanSession, lastWill, cancellationToken );
+            if( res.Status != ConnectStatus.Successful && res.Status != ConnectStatus.Deferred )
             {
                 await StopAsync( waitForCompletion );
             }

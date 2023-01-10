@@ -12,13 +12,10 @@ namespace ClientSample
 
                 var client = new MQTTClientAgent(
                     ( sink ) => new LowLevelMQTTClient( ProtocolConfiguration.MQTT3,
-                                                       new MQTT3ClientConfiguration()
-                                                       {
-                                                           Credentials = new MQTTClientCredentials( "test-client", true )
-                                                       },
+                                                       new MQTT3ClientConfiguration(),
                                                        sink,
                                                        new TcpChannel( "localhost", 1883 ) ) );
-                await client.ConnectAsync();
+                await client.ConnectAsync( true );
             }
         }
     }

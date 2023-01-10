@@ -34,7 +34,10 @@ namespace CK.MQTT.Server.ServerClient
             return new ValueTask();
         }
 
-        public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public Task<ConnectResult> ConnectAsync( bool cleanSession, CancellationToken cancellationToken )
+            => ConnectAsync( cleanSession, null, cancellationToken );
+
+        public async Task<ConnectResult> ConnectAsync( bool cleanSession, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
         {
             if( lastWill != null ) throw new ArgumentException( "Last will is not supported by a P2P client." );
             if( _wrapper?.IsConnected ?? false ) throw new InvalidOperationException( "This client is already connected." );

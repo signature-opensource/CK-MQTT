@@ -48,15 +48,19 @@ namespace CK.MQTT
         public override string? ClientId => _clientId;
 
         /// <inheritdoc/>
-        public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public Task<ConnectResult> ConnectAsync( bool cleanSession, CancellationToken cancellationToken = default )
+            => ConnectAsync( cleanSession, null, cancellationToken );
+
+        /// <inheritdoc/>
+        public async Task<ConnectResult> ConnectAsync( bool cleanSession, OutgoingLastWill? lastWill, CancellationToken cancellationToken = default )
         {
             if( lastWill != null ) MQTTBinaryWriter.ThrowIfInvalidMQTTString( lastWill.Topic );
             if( !StopTokenSource.IsCancellationRequested ) throw new InvalidOperationException( "This client is already connected." );
 
-            _clientId = ClientConfig.Credentials?.ClientId;
+            _clientId = ClientConfig.ClientId;
             while( true )
             {
-                var res = await DoConnectAsync( lastWill, cancellationToken );
+                var res = await DoConnectAsync( cleanSession, lastWill, cancellationToken );
                 (ConnectResult, bool) Return( ConnectResult result, bool success )
                 {
                     if( success && ClientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
@@ -67,7 +71,7 @@ namespace CK.MQTT
                 }
                 static (ConnectResult, bool) Retry( ConnectResult result ) => (result, false);
                 if( res.Status == ConnectStatus.Successful ) return Return( res, true ).Item1;
-                Debug.Assert( res.Status != ConnectStatus.Deffered );
+                Debug.Assert( res.Status != ConnectStatus.Deferred );
                 var sinkBehavior = ClientSink.OnFailedManualConnect( res );
                 var configBehavior = ClientConfig.ManualConnectBehavior;
                 (ConnectResult connectResult, bool stopRetries) = res.Status switch
@@ -104,98 +108,38 @@ namespace CK.MQTT
             }
 
         }
-        async Task<ConnectResult> DoConnectAsync( OutgoingLastWill? lastWill, CancellationToken paramToken )
+        async Task<ConnectResult> DoConnectAsync( bool cleanSession, OutgoingLastWill? lastWill, CancellationToken paramToken )
         {
             try
             {
-
-                // http://web.archive.org/web/20160203062224/http://blogs.msdn.com/b/pfxteam/archive/2012/03/25/10287435.aspx
-                // Disposing the CTS is not necessary and would involve locking, etc.
-                Debug.Assert( StopTokenSource.IsCancellationRequested );
-                StopTokenSource = new();
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource( paramToken, StopTokenSource.Token );
-                var token = cts.Token;
                 if( ClientConfig.DisconnectBehavior == DisconnectBehavior.AutoReconnect )
                 {
                     _disconnectTCS = new TaskCompletionSource<bool>();
                 }
 
+                await Channel.StartAsync( paramToken ); // Will create the connection to server.
 
-                // Middleware that will processes the requests.
-                ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
-                    .UseMiddleware( new PublishReflex( this ) )
-                    .UseMiddleware( new PublishLifecycleReflex( this ) )
-                    .UseMiddleware( new SubackReflex( this ) )
-                    .UseMiddleware( new UnsubackReflex( this ) );
-
-                await Channel.StartAsync( token ); // Will create the connection to server.
-                OutputProcessor outputProcessor;
-                // Enable keepalive only if we need it.
-                if( ClientConfig.KeepAliveSeconds == 0 )
-                {
-                    outputProcessor = new OutputProcessor( this );
-                }
-                else
-                {
-                    // If keepalive is enabled, we add it's handler to the middlewares.
-                    OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
-                    outputProcessor = withKeepAlive;
-                    builder.UseMiddleware( withKeepAlive );
-                }
-                // This reflex handle the connection packet.
-                // It will replace itself with the regular packet processing.
-                ConnectAckReflex connectAckReflex = new
-                (
-                    this,
-                    builder.Build()
-                );
-
-                OutgoingConnect outgoingConnect = new( PConfig, ClientConfig, lastWill );
-
-                using( CancellationTokenSource timeoutCts = Config.TimeUtilities.CreateCTS( token, Config.WaitTimeoutMilliseconds ) )
+                using( CancellationTokenSource timeoutCts = Config.TimeUtilities.CreateCTS( paramToken, Config.WaitTimeoutMilliseconds ) )
                 {
                     // Send the packet.
+                    var outgoingConnect = new OutgoingConnect( cleanSession, PConfig, ClientConfig, lastWill );
                     await outgoingConnect.WriteAsync( PConfig.ProtocolLevel, Channel.DuplexPipe.Output, timeoutCts.Token );
                     await Channel.DuplexPipe.Output.FlushAsync( timeoutCts.Token );
                 }
-
-                // Creating pumps. Need to be started.
-                InputPump = new InputPump( this, connectAckReflex.AsReflex );
-                OutputPump = new OutputPump( this );
-                InputPump.StartPumping();
                 ConnectResult res;
-                using( CancellationTokenSource cts2 = Config.TimeUtilities.CreateCTS( token, Config.WaitTimeoutMilliseconds ) )
-                using( cts2.Token.Register( () => connectAckReflex.TrySetCanceled( cts2.Token ) ) )
+                using( CancellationTokenSource cts2 = Config.TimeUtilities.CreateCTS( paramToken, Config.WaitTimeoutMilliseconds ) )
                 {
-                    try
+                    res = await ConnectResult.ReadAsync( Channel.DuplexPipe.Input, Sink, cts2.Token );
+                    if( cts2.Token.IsCancellationRequested )
                     {
-                        res = await connectAckReflex.Task.WaitAsync( cts2.Token );
-                    }
-                    catch( OperationCanceledException )
-                    {
-                        return cts2.Token.IsCancellationRequested ?
-                             await ConnectExitAsync( ConnectError.Connection_Cancelled, DisconnectReason.UserDisconnected )
-                            : await ConnectExitAsync( ConnectError.Timeout, DisconnectReason.Timeout );
+                        return paramToken.IsCancellationRequested ?
+                           await ConnectExitAsync( ConnectError.UserCancelled, DisconnectReason.UserDisconnected )
+                          : await ConnectExitAsync( ConnectError.Timeout, DisconnectReason.Timeout );
                     }
                 }
 
-                OutputPump.StartPumping( outputProcessor ); // Start processing incoming messages.
-                                                            // This following code wouldn't be better with a sort of ... switch/pattern matching ?
-                bool askedCleanSession = ClientConfig.Credentials?.CleanSession ?? true;
-                if( token.IsCancellationRequested )
-                    return await ConnectExitAsync( ConnectError.Connection_Cancelled, DisconnectReason.UserDisconnected );
-                if( connectAckReflex.Task.Exception is not null || connectAckReflex.Task.IsFaulted )
-                    return await ConnectExitAsync( ConnectError.InternalException, DisconnectReason.InternalException );
-                if( StopTokenSource.IsCancellationRequested )
-                    return await ConnectExitAsync( ConnectError.RemoteDisconnected, DisconnectReason.RemoteDisconnected );
-                if( res.Error != ConnectError.None )
-                {
-
-                    await CloseAsync( DisconnectReason.None );
-                    return res;
-                }
-                if( askedCleanSession && res.SessionState != SessionState.CleanSession )
-                    return await ConnectExitAsync( ConnectError.ProtocolError_SessionNotFlushed, DisconnectReason.ProtocolError );
+                if( cleanSession && res.SessionState != SessionState.CleanSession )
+                    return await ConnectExitAsync( ConnectError.ProtocolError, DisconnectReason.ProtocolError );
 
                 if( res.SessionState == SessionState.CleanSession )
                 {
@@ -203,10 +147,38 @@ namespace CK.MQTT
                     await LocalPacketStore.ResetAsync();
                     await task;
                 }
-                else
+
+                if( res.Error != ConnectError.None )
                 {
-                    throw new NotImplementedException();
+                    await CloseAsync( DisconnectReason.None );
+                    return res;
                 }
+
+
+                Debug.Assert( StopTokenSource.IsCancellationRequested );
+                // http://web.archive.org/web/20160203062224/http://blogs.msdn.com/b/pfxteam/archive/2012/03/25/10287435.aspx
+                // Disposing the CTS is not necessary and would involve locking, etc.
+                StopTokenSource = new();
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource( paramToken, StopTokenSource.Token );
+                var token = cts.Token;
+
+                // Middleware that will processes the requests.
+                ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
+                    .UseMiddleware( new PublishReflex( this ) )
+                    .UseMiddleware( new PublishLifecycleReflex( this ) )
+                    .UseMiddleware( new SubackReflex( this ) )
+                    .UseMiddleware( new UnsubackReflex( this ) );
+                OutputProcessor outputProcessor = BuildOutputProcessor( builder );
+
+               
+
+                // Creating pumps. Need to be started.
+                InputPump = new InputPump( this, builder.Build() );
+                OutputPump = new OutputPump( this );
+                InputPump.StartPumping();
+                OutputPump.StartPumping( outputProcessor );
+
                 ClientSink.OnConnected();
                 return res;
             }
@@ -216,6 +188,26 @@ namespace CK.MQTT
                 return new ConnectResult( exception );
             }
         }
+
+        private OutputProcessor BuildOutputProcessor( ReflexMiddlewareBuilder builder )
+        {
+            OutputProcessor outputProcessor;
+            // Enable keepalive only if we need it.
+            if( ClientConfig.KeepAliveSeconds == 0 )
+            {
+                outputProcessor = new OutputProcessor( this );
+            }
+            else
+            {
+                // If keepalive is enabled, we add it's handler to the middlewares.
+                OutputProcessorWithKeepAlive withKeepAlive = new( this ); // Require channel started.
+                outputProcessor = withKeepAlive;
+                builder.UseMiddleware( withKeepAlive );
+            }
+
+            return outputProcessor;
+        }
+
         async ValueTask<ConnectResult> ConnectExitAsync( ConnectError connectError, DisconnectReason reason )
         {
             await CloseAsync( reason );
@@ -226,8 +218,8 @@ namespace CK.MQTT
         {
             StopTokenSource.Cancel();
             await Channel.CloseAsync( reason );
-            if( OutputPump!.WorkTask != null ) await OutputPump.WorkTask;
-            if( InputPump!.WorkTask != null ) await InputPump.WorkTask;
+            if( OutputPump?.WorkTask != null ) await OutputPump.WorkTask;
+            if( InputPump?.WorkTask != null ) await InputPump.WorkTask;
         }
 
 
@@ -288,7 +280,7 @@ namespace CK.MQTT
             {
                 while( !_running.IsCancellationRequested && shouldReconnect )
                 {
-                    ConnectResult result = await DoConnectAsync( null, _running.Token );
+                    ConnectResult result = await DoConnectAsync( false, null, _running.Token );
                     if( result.Error != ConnectError.None )
                     {
                         shouldReconnect = await ClientSink.OnReconnectionFailedAsync( result );

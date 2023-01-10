@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public abstract class MessageExchanger : IConnectedLowLevelMQTTClient
+    public abstract class MessageExchanger : IConnectedMessageSender
     {
         /// <summary>
         /// Instantiate the <see cref="MessageExchanger"/> with the given configuration.
