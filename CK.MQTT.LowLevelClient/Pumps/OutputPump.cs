@@ -1,6 +1,5 @@
 using CK.MQTT.Client;
 using CK.MQTT.Packets;
-using CK.MQTT.Stores;
 using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
@@ -18,88 +17,86 @@ namespace CK.MQTT.Pumps
     {
         readonly Channel<IOutgoingPacket> _messagesChannel;
         readonly Channel<IOutgoingPacket> _reflexesChannel;
-        OutputProcessor? _outputProcessor;
+        readonly PipeWriter _pipeWriter;
+        readonly IMQTT3Sink _sink;
+
         /// <summary>
         /// Instantiates a new <see cref="OutputPump"/>.
         /// </summary>
         /// <param name="writer">The pipe where the pump will write the messages to.</param>
         /// <param name="store">The packet store to use to retrieve packets.</param>
-        public OutputPump( MessageExchanger messageExchanger ) : base( messageExchanger )
+        public OutputPump( IMQTT3Sink sink,
+                          PipeWriter pipeWriter,
+                          Func<DisconnectReason, ValueTask> closeHandler,
+                          int channelCapacity ) : base( closeHandler )
         {
-            _messagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
+            _messagesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( channelCapacity )
             {
                 SingleReader = true
             } );
-            _reflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( MessageExchanger.Config.OutgoingPacketsChannelCapacity )
+            _reflexesChannel = Channel.CreateBounded<IOutgoingPacket>( new BoundedChannelOptions( channelCapacity )
             {
                 SingleReader = true
             } );
+            _pipeWriter = pipeWriter;
+            _sink = sink;
         }
 
+        public OutputProcessor OutputProcessor { get; set; } = null!;
 
         public ChannelReader<IOutgoingPacket> MessagesChannel => _messagesChannel.Reader;
         public ChannelReader<IOutgoingPacket> ReflexesChannel => _reflexesChannel.Reader;
 
-        public void StartPumping( OutputProcessor outputProcessor )
+        protected override async Task WorkLoopAsync( CancellationToken stopToken, CancellationToken closeToken )
         {
-            _outputProcessor = outputProcessor;
-            SetRunningLoop( WriteLoopAsync() );
-            _outputProcessor.Starting();
-        }
-
-        async Task WriteLoopAsync()
-        {
-            Debug.Assert( _outputProcessor != null ); // TODO: Put non nullable init on output processor when it will be available.
-            PipeWriter? pw = null;
             try
             {
-                pw = MessageExchanger.Channel.DuplexPipe?.Output;
-                if( pw is null )
+                if( _pipeWriter is null )
                 {
-                    Debug.Assert( MessageExchanger.StopTokenSource.IsCancellationRequested );
+                    Debug.Assert( stopToken.IsCancellationRequested );
                     return;
                 }
-                while( !MessageExchanger.StopTokenSource.IsCancellationRequested )
+                while( !stopToken.IsCancellationRequested )
                 {
                     bool packetSent = true;
                     while( packetSent )
                     {
-                        if( MessageExchanger.StopTokenSource.IsCancellationRequested ) break;
-                        packetSent = await _outputProcessor.SendPacketsAsync( MessageExchanger.StopTokenSource.Token );
-                        if( pw.CanGetUnflushedBytes && pw.UnflushedBytes > 50_000 )
+                        if( stopToken.IsCancellationRequested ) break;
+                        packetSent = await OutputProcessor.SendPacketsAsync( closeToken );
+                        if( _pipeWriter.CanGetUnflushedBytes && _pipeWriter.UnflushedBytes > 50_000 )
                         {
-                            await pw.FlushAsync( MessageExchanger.StopTokenSource.Token );
+                            await _pipeWriter.FlushAsync( closeToken );
                         }
                     }
-                    await pw.FlushAsync( MessageExchanger.StopTokenSource.Token );
-                    if( MessageExchanger.StopTokenSource.Token.IsCancellationRequested ) return;
-                    var res = await MessagesChannel.WaitToReadAsync( MessageExchanger.StopTokenSource.Token );
-                    if( !res || MessageExchanger.StopTokenSource.IsCancellationRequested ) return;
+                    await _pipeWriter.FlushAsync( closeToken );
+                    if( stopToken.IsCancellationRequested ) return;
+                    var res = await MessagesChannel.WaitToReadAsync( stopToken );
+                    if( !res || stopToken.IsCancellationRequested ) return;
                 }
-                await pw.CompleteAsync();
+                await _pipeWriter.CompleteAsync();
             }
             catch( OperationCanceledException e )
             {
-                if( pw != null ) await pw.CompleteAsync( e );
+                if( _pipeWriter != null ) await _pipeWriter.CompleteAsync( e );
             }
             catch( Exception e )
             {
-                if( pw != null ) await pw.CompleteAsync( e );
-                await SelfCloseAsync( DisconnectReason.InternalException );
+                if( _pipeWriter != null ) await _pipeWriter.CompleteAsync( e );
+                await SelfDisconnectAsync( DisconnectReason.InternalException );
             }
         }
 
         public void TryQueueReflexMessage( IOutgoingPacket item )
         {
             bool result = _reflexesChannel.Writer.TryWrite( item );
-            if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( item.PacketId );
+            if( !result ) _sink.OnQueueFullPacketDropped( item.PacketId );
             UnblockWriteLoop();
         }
 
         public void TryQueueMessage( IOutgoingPacket item )
         {
             bool result = _messagesChannel.Writer.TryWrite( item );
-            if( !result ) MessageExchanger.Sink.OnQueueFullPacketDropped( item.Qos == QualityOfService.AtMostOnce ? (ushort)0 : item.PacketId, item.Type );
+            if( !result ) _sink.OnQueueFullPacketDropped( item.Qos == QualityOfService.AtMostOnce ? (ushort)0 : item.PacketId, item.Type );
         }
 
         public ValueTask QueueMessageAsync( IOutgoingPacket item )

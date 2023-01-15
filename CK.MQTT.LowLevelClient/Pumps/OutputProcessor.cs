@@ -1,3 +1,4 @@
+using CK.MQTT.LowLevelClient.Time;
 using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
@@ -12,17 +13,23 @@ namespace CK.MQTT.Pumps
     public class OutputProcessor : IAsyncDisposable
     {
         readonly ITimer _timer;
-        protected readonly MessageExchanger MessageExchanger;
-        public OutputProcessor( MessageExchanger messageExchanger )
+        readonly PipeWriter _pipeWriter;
+        readonly ProtocolConfiguration _pConfig;
+        readonly MQTT3ConfigurationBase _config;
+        readonly ILocalPacketStore _localPacketStore;
+
+        public OutputProcessor( PipeWriter pipeWriter, ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, ILocalPacketStore localPacketStore )
         {
-            MessageExchanger = messageExchanger;
-            _timer = messageExchanger.Config.TimeUtilities.CreateTimer( TimerTimeoutWrapper );
+            _timer = config.TimeUtilities.CreateTimer( TimerTimeoutWrapper );
+            _pipeWriter = pipeWriter;
+            _pConfig = pConfig;
+            _config = config;
+            _localPacketStore = localPacketStore;
         }
 
-        void TimerTimeoutWrapper( object? obj ) => OnTimeout(Timeout.Infinite);
+        public OutputPump OutputPump { get; set; } = null!;
 
-        protected ChannelReader<IOutgoingPacket> ReflexesChannel => MessageExchanger.OutputPump!.ReflexesChannel;
-        protected ChannelReader<IOutgoingPacket> MessagesChannel => MessageExchanger.OutputPump!.MessagesChannel;
+        void TimerTimeoutWrapper( object? obj ) => OnTimeout( Timeout.Infinite );
 
         public void Starting()
         {
@@ -46,17 +53,15 @@ namespace CK.MQTT.Pumps
         public virtual void OnTimeout( int msUntilNextTrigger )
         {
             _timer.Change( msUntilNextTrigger, Timeout.Infinite );
-            MessageExchanger.OutputPump!.UnblockWriteLoop();
+            OutputPump.UnblockWriteLoop();
         }
-
-        protected ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason ) => MessageExchanger.OutputPump!.SelfCloseAsync( disconnectedReason );
 
         protected virtual async ValueTask<bool> SendAMessageFromQueueAsync( CancellationToken cancellationToken )
         {
             IOutgoingPacket? packet;
             do
             {
-                var outputPump = MessageExchanger.OutputPump!;
+                var outputPump = OutputPump;
                 if( !outputPump.ReflexesChannel.TryRead( out packet ) && !outputPump.MessagesChannel.TryRead( out packet ) )
                 {
                     return false;
@@ -69,11 +74,11 @@ namespace CK.MQTT.Pumps
 
         async ValueTask<(bool, TimeSpan)> ResendAllUnackPacketAsync( CancellationToken cancellationToken )
         {
-            Debug.Assert( MessageExchanger.Config.WaitTimeoutMilliseconds != int.MaxValue );
+            Debug.Assert( _config.WaitTimeoutMilliseconds != int.MaxValue );
             bool sentPacket = false;
             while( true )
             {
-                (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilNextRetry) = await MessageExchanger.LocalPacketStore.GetPacketToResendAsync();
+                (IOutgoingPacket? outgoingPacket, TimeSpan timeUntilNextRetry) = await _localPacketStore.GetPacketToResendAsync();
                 if( outgoingPacket is null )
                 {
                     return (sentPacket, timeUntilNextRetry);
@@ -91,12 +96,12 @@ namespace CK.MQTT.Pumps
                 // This must be done BEFORE writing the packet to avoid concurrency issues.
                 if( !outgoingPacket.IsRemoteOwnedPacketId )
                 {
-                    MessageExchanger.LocalPacketStore.OnPacketSent( outgoingPacket.PacketId );
+                    _localPacketStore.OnPacketSent( outgoingPacket.PacketId );
                 }
                 // Explanation:
                 // The receiver and input loop can run before the next line is executed.
             }
-            await outgoingPacket.WriteAsync( MessageExchanger.PConfig.ProtocolLevel, MessageExchanger.Channel.DuplexPipe!.Output, cancellationToken );
+            await outgoingPacket.WriteAsync( _pConfig.ProtocolLevel, _pipeWriter, cancellationToken );
         }
 
         public ValueTask DisposeAsync() => _timer.DisposeAsync();

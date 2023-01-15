@@ -1,10 +1,8 @@
 using CK.MQTT.Client;
-using CK.MQTT.Common.Pumps;
 using CK.MQTT.Packets;
 using CK.MQTT.Pumps;
 using CK.MQTT.Stores;
 using System;
-using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
@@ -21,8 +19,10 @@ namespace CK.MQTT
         /// <param name="messageHandler">The delegate that will handle incoming messages. <see cref="MessageHandlerDelegate"/> docs for more info.</param>
         public MessageExchanger( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, IMQTT3Sink sink, IMQTTChannel channel, IRemotePacketStore? remotePacketStore = null, ILocalPacketStore? localPacketStore = null )
         {
-            StopTokenSource = new(); // Never null.
-            StopTokenSource.Cancel(); // But default state is stopped. 
+            _stopTokenSource = new(); // Never null.
+            _stopTokenSource.Cancel(); // But default state is stopped. 
+            _closeTokenSource = new(); // Never null.
+            _closeTokenSource.Cancel();
             PConfig = pConfig;
             Config = config;
             Sink = sink;
@@ -32,9 +32,21 @@ namespace CK.MQTT
             LocalPacketStore = localPacketStore ?? new MemoryPacketStore( pConfig, Config, ushort.MaxValue );
         }
 
-        internal protected CancellationTokenSource StopTokenSource { get; protected set; }
+        CancellationTokenSource _stopTokenSource;
+        public CancellationToken StopToken => _stopTokenSource.Token;
+        CancellationTokenSource _closeTokenSource;
+        public CancellationToken CloseToken => _closeTokenSource.Token;
+
+        protected void RenewTokens()
+        {
+            _stopTokenSource.Dispose();
+            // http://web.archive.org/web/20160203062224/http://blogs.msdn.com/b/pfxteam/archive/2012/03/25/10287435.aspx
+            // Disposing the CTS is not necessary and would involve locking, etc.
+            _closeTokenSource = new CancellationTokenSource();
+            _stopTokenSource = CancellationTokenSource.CreateLinkedTokenSource( _closeTokenSource.Token );
+        }
+
         /// <inheritdoc/>
-        public abstract string? ClientId { get; }
         public MQTT3ConfigurationBase Config { get; }
         public virtual IMQTT3Sink Sink { get; }
         public IRemotePacketStore RemotePacketStore { get; }
@@ -43,7 +55,7 @@ namespace CK.MQTT
         public ProtocolConfiguration PConfig { get; }
         public OutputPump? OutputPump { get; protected set; }
         public InputPump? InputPump { get; protected set; }
-        public bool IsConnected => !StopTokenSource.IsCancellationRequested;
+        public bool IsConnected => !_stopTokenSource.IsCancellationRequested;
 
         protected ValueTask<Task<T?>> SendPacketWithQoSAsync<T>( IOutgoingPacket outgoingPacket )
             => outgoingPacket.Qos switch
@@ -98,40 +110,68 @@ namespace CK.MQTT
             return Task.CompletedTask;
         }
 
-        /// <returns><see langword="true"/> if the sink asked to reconnect.</returns>
-        internal protected async virtual ValueTask<bool> FinishSelfDisconnectAsync( DisconnectReason disconnectedReason )
-        {
-            await Channel.CloseAsync( disconnectedReason );
-            return Sink.OnUnattendedDisconnect( disconnectedReason );
-        }
-
         /// <summary>
         /// Called by the external world to explicitly close the connection to the remote.
         /// </summary>
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
         public async Task<bool> DisconnectAsync( bool clearSession )
         {
-            if( StopTokenSource.IsCancellationRequested ) return false;
-            StopTokenSource.Cancel();
+            return await DoDisconnectAsync( clearSession, DisconnectReason.UserDisconnected );
+        }
+
+        protected async ValueTask<bool> CloseAsync( Func<ValueTask> beforeDisconnect, DisconnectReason disconnectReason )
+        {
+            lock( _stopTokenSource )
+            {
+                if( _stopTokenSource.IsCancellationRequested ) return false;
+                _stopTokenSource.Cancel();
+            }
             LocalPacketStore.CancelAllAckTask(); //Cancel acks when we know no more work will come.
-            // Because we stopped the pumps, their states won't change anymore.
-            var channel = Channel;
-            if( !(channel?.IsConnected ?? false) ) return false;
-            var duplexPipe = channel.DuplexPipe;
-            if( duplexPipe == null ) return false;
-            await BeforeUserDisconnectAsync( duplexPipe, clearSession );
-            await LocalPacketStore.ResetAsync();
-            await RemotePacketStore.ResetAsync();
-            InputPump = null;
-            OutputPump = null;
+            await beforeDisconnect();
+            _closeTokenSource.Cancel();
+            await Channel.CloseAsync( disconnectReason );
             return true;
         }
 
-        protected virtual ValueTask BeforeUserDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new();
+        /// <returns><see langword="true"/> if the sink asked to reconnect.</returns>
+        protected async ValueTask PumpsDisconnectAsync( DisconnectReason disconnectedReason )
+        {
+            await Channel.CloseAsync( disconnectedReason );
+            Sink.OnUnattendedDisconnect( disconnectedReason );
+        }
+
+        /// <summary>
+        /// Will wait on pumps tasks, must not be run from a pump !
+        /// </summary>
+        /// <param name="clearSession"></param>
+        /// <param name="disconnectReason"></param>
+        /// <returns></returns>
+        protected async Task<bool> DoDisconnectAsync( bool clearSession, DisconnectReason disconnectReason )
+        {
+            return await CloseAsync( async () =>
+            {
+                // We need that the pump finish their work so they don't write/read anything.
+                var inputPump = InputPump;
+                var outputPumpt = OutputPump;
+                if(inputPump?.WorkTask != null) await inputPump.WorkTask;
+                if(outputPumpt?.WorkTask != null) await outputPumpt.WorkTask;
+                var channel = Channel;
+                var duplexPipe = channel.DuplexPipe;
+                await BeforeDisconnectAsync( duplexPipe!, clearSession );
+                if( clearSession )
+                {
+                    await LocalPacketStore.ResetAsync();
+                    await RemotePacketStore.ResetAsync();
+                }
+            }, disconnectReason );
+        }
+
+        protected virtual ValueTask BeforeDisconnectAsync( IDuplexPipe duplexPipe, bool clearSession ) => new();
 
         public virtual ValueTask DisposeAsync()
         {
             Channel.Dispose();
+            _stopTokenSource.Dispose();
             return ValueTask.CompletedTask;
         }
     }

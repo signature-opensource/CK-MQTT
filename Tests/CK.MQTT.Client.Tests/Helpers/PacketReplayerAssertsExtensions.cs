@@ -2,7 +2,6 @@ using CK.Core;
 using NUnit.Framework;
 using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;

@@ -1,8 +1,6 @@
 using CK.MQTT.Client;
 using CK.MQTT.Packets;
 using CK.MQTT.Pumps;
-using CK.MQTT.Stores;
-using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Net;

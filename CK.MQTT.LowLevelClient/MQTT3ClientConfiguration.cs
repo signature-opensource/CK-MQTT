@@ -1,5 +1,3 @@
-using System;
-
 namespace CK.MQTT
 {
     /// <summary>
@@ -17,18 +15,7 @@ namespace CK.MQTT
         /// </summary>
         public ushort KeepAliveSeconds { get; init; } = 30;
 
-        private DisconnectBehavior _disconnectBehavior = DisconnectBehavior.Nothing;
-        public DisconnectBehavior DisconnectBehavior
-        {
-            get => _disconnectBehavior;
-            init
-            {
-                if( !Enum.IsDefined( value ) ) throw new ArgumentOutOfRangeException( nameof( value ) );
-                _disconnectBehavior = value;
-            }
-        }
-
-        public /*required*/ string ConnectionString { get; init; }
+        public /*required*/ string ConnectionString { get; init; } = null!;
 
         /// <summary>
         /// Gets the Client's identifier.
@@ -48,7 +35,6 @@ namespace CK.MQTT
         /// </summary>
         public string? Password { get; init; }
 
-        public ManualConnectBehavior ManualConnectBehavior { get; set; }
 
     }
 }

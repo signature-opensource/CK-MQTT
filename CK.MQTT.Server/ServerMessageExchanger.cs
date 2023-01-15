@@ -1,5 +1,3 @@
-using CK.MQTT.Client;
-using CK.MQTT.Common.Pumps;
 using CK.MQTT.Pumps;
 using CK.MQTT.Server.Reflexes;
 using CK.MQTT.Stores;
@@ -8,8 +6,7 @@ namespace CK.MQTT.Server
 {
     public class ServerMessageExchanger : MessageExchanger
     {
-
-        public override string? ClientId { get; }
+        public string? ClientId { get; }
         public IMQTTServerSink ServerSink { get; }
 
         public ServerMessageExchanger(
@@ -29,7 +26,9 @@ namespace CK.MQTT.Server
 
         protected void Engage()
         {
-            OutputPump = new OutputPump( this );
+            OutputPump = new OutputPump( Sink, Channel.DuplexPipe!.Output, PumpsDisconnectAsync, Config.OutgoingPacketsChannelCapacity );
+            var outputProcessor = CreateOutputProcessor();
+            OutputPump.OutputProcessor = outputProcessor;
             // Middleware that will processes the requests.
             ReflexMiddlewareBuilder builder = new ReflexMiddlewareBuilder()
                 .UseMiddleware( new PublishReflex( this ) )
@@ -38,15 +37,15 @@ namespace CK.MQTT.Server
                 .UseMiddleware( new SubscribeReflex( ServerSink, PConfig.ProtocolLevel, OutputPump ) )
                 .UseMiddleware( new UnsubscribeReflex( ServerSink, OutputPump, PConfig.ProtocolLevel ) );
             // When receiving the ConnAck, this reflex will replace the reflex with this property.
-            Reflex reflex = builder.Build();
+            Reflex reflex = builder.Build( PumpsDisconnectAsync );
             InputPump = CreateInputPump( reflex );
             // Creating pumps. Need to be started.
-            OutputPump.StartPumping( CreateOutputProcessor() );
-            InputPump.StartPumping();
+            OutputPump.StartPumping( StopToken, CloseToken );
+            InputPump.StartPumping( StopToken, CloseToken );
         }
 
-        protected virtual InputPump CreateInputPump( Reflex reflex ) => new( this, reflex );
+        protected virtual InputPump CreateInputPump( Reflex reflex ) => new( Sink, Channel.DuplexPipe!.Input, PumpsDisconnectAsync, reflex );
 
-        protected virtual OutputProcessor CreateOutputProcessor() => new( this );
+        protected virtual OutputProcessor CreateOutputProcessor() => new( Channel.DuplexPipe!.Output, PConfig, Config,  LocalPacketStore );
     }
 }

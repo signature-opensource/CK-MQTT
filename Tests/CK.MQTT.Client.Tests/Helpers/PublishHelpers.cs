@@ -1,5 +1,4 @@
 using CK.Core;
-using CK.MQTT.Packets;
 using System;
 using System.Buffers;
 using System.IO.Pipelines;

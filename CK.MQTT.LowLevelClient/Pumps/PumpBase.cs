@@ -1,7 +1,5 @@
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,28 +10,35 @@ namespace CK.MQTT
     /// </summary>
     public abstract class PumpBase
     {
-        protected readonly MessageExchanger MessageExchanger;
+        readonly Func<DisconnectReason, ValueTask> _closeHandler;
 
-        private protected PumpBase( MessageExchanger messageExchanger )
+        private protected PumpBase( Func<DisconnectReason, ValueTask> closeHandler)
         {
-            MessageExchanger = messageExchanger;
+            _closeHandler = closeHandler;
         }
 
         /// <summary>
         /// Must be called at the end of the specialized constructors.
         /// </summary>
         /// <param name="loop">The running loop.</param>
-        [MemberNotNull(nameof(WorkTask))]
-        protected void SetRunningLoop( Task loop ) => WorkTask = loop;
+        [MemberNotNull( nameof( WorkTask ) )]
+        public void StartPumping(CancellationToken stopToken, CancellationToken closeToken)
+        {
+            WorkTask = WorkLoopAsync( stopToken, closeToken );
+        }
+
+        protected abstract Task WorkLoopAsync( CancellationToken stopToken, CancellationToken closeToken );
 
         public Task? WorkTask { get; private set; }
 
-        internal protected async ValueTask SelfCloseAsync( DisconnectReason disconnectedReason )
-        {
-            MessageExchanger.StopTokenSource.Cancel();
-            await MessageExchanger.FinishSelfDisconnectAsync( disconnectedReason );
-        }
+        /// <summary>
+        /// Called by the pump to trigger the client disconnection.
+        /// </summary>
+        /// <param name="disconnectedReason"></param>
+        /// <returns></returns>
+        protected async ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
+            => await _closeHandler( disconnectedReason );
 
-       
+
     }
 }

@@ -1,5 +1,3 @@
-using System.Net;
-
 namespace CK.MQTT.Client.Tests.Helpers
 {
     static class TestConfigs
@@ -14,8 +12,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 0,
-                ClientId = "CKMqttTest",
-                ManualConnectBehavior = ManualConnectBehavior.TryOnce
+                ClientId = "CKMqttTest"
             };
         }
 
@@ -43,8 +40,7 @@ namespace CK.MQTT.Client.Tests.Helpers
                 TimeUtilities = packetReplayer.TestTimeHandler,
                 WaitTimeoutMilliseconds = timeoutMs,
                 KeepAliveSeconds = 5,
-                ClientId = "CKMqttTest",
-                DisconnectBehavior = disconnectBehavior
+                ClientId = "CKMqttTest"
             };
         }
     }

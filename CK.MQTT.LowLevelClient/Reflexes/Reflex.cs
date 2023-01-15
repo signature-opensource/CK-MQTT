@@ -10,10 +10,12 @@ namespace CK.MQTT
 {
     public class Reflex
     {
+        readonly Func<DisconnectReason, ValueTask> _closeHandler;
         readonly ReadOnlyMemory<IReflexMiddleware> _middlewares;
 
-        public Reflex( ReadOnlyMemory<IReflexMiddleware> middlewares )
+        public Reflex( Func<DisconnectReason, ValueTask> closeHandler, ReadOnlyMemory<IReflexMiddleware> middlewares )
         {
+            _closeHandler = closeHandler;
             _middlewares = middlewares;
         }
 
@@ -25,7 +27,7 @@ namespace CK.MQTT
                 if( processed ) return status;
             }
             // No reflex matched the packet.
-            await sender.SelfCloseAsync( DisconnectReason.ProtocolError );
+            await _closeHandler( DisconnectReason.ProtocolError );
             return OperationStatus.Done;
         }
 

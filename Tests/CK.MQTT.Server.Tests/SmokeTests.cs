@@ -1,5 +1,3 @@
-using CK.MQTT.Client;
-using CK.MQTT.Packets;
 using CK.MQTT.Server.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;

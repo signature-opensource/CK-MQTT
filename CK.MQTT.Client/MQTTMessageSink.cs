@@ -1,9 +1,6 @@
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -29,10 +26,9 @@ namespace CK.MQTT.Client
             => Events.TryWrite( new StoreFilling( freeLeftSlot ) );
 
         public record UnattendedDisconnect( DisconnectReason Reason );
-        public bool OnUnattendedDisconnect( DisconnectReason reason )
+        public void OnUnattendedDisconnect( DisconnectReason reason )
         {
             Events.TryWrite( new UnattendedDisconnect( reason ) );
-            return true;
         }
 
         public record UnparsedExtraData( ushort PacketId, ReadOnlySequence<byte> UnparsedData );

@@ -1,14 +1,9 @@
 using System;
 using System.Buffers;
 using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.IO.Pipelines;
-using System.Reflection.PortableExecutable;
-using System.Reflection;
 using System.Threading;
-using CK.MQTT.Pumps;
-using CK.MQTT.LowLevelClient;
 using System.Threading.Tasks;
 using CK.MQTT.Client;
 
@@ -164,7 +159,7 @@ namespace CK.MQTT
                 while( true )
                 {
                     var res = await reader.ReadAsync( cancellationToken );
-                    var status = InputPump.TryParsePacketHeader( res.Buffer, out header, out length, out var headerPos );
+                    var status = MQTTTHelper.TryParsePacketHeader( res.Buffer, out header, out length, out var headerPos );
                     if( status == OperationStatus.Done )
                     {
                         reader.AdvanceTo( headerPos );

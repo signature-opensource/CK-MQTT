@@ -1,10 +1,4 @@
 using CK.Core;
-using CK.MQTT.Client.Tests.Helpers;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
-using System.Buffers;
-using System.IO.Pipelines;
-using System.Runtime.ConstrainedExecution;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 

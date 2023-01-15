@@ -1,12 +1,8 @@
-using CK.MQTT.Client;
 using CK.MQTT.Pumps;
-using CK.MQTT.Stores;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipelines;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -50,7 +46,7 @@ namespace CK.MQTT.Server
             {
                 res = await reader.ReadAsync( cancellationToken );
                 //FIXME: it's not normal that the length is not accessed here.
-                status = InputPump.TryParsePacketHeader( res.Buffer, out header, out uint length, out SequencePosition position );
+                status = MQTTTHelper.TryParsePacketHeader( res.Buffer, out header, out uint length, out SequencePosition position );
                 if( status == OperationStatus.Done )
                 {
                     reader.AdvanceTo( position );

@@ -1,12 +1,8 @@
 using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.Server.Server;
 using FluentAssertions;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.Tests.Helpers

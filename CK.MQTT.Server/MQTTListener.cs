@@ -1,6 +1,4 @@
 using CK.Core;
-using CK.MQTT.Client;
-using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
 using System.Threading;

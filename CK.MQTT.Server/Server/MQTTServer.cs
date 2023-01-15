@@ -1,12 +1,8 @@
 using CK.Core;
 using CK.MQTT.Client.ExtensionMethods;
 using CK.MQTT.Packets;
-using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -4,7 +4,6 @@ using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
@@ -63,7 +62,6 @@ namespace CK.MQTT.Client.Tests
                 res.Should().Be( new ConnectResult( ConnectError.ProtocolError ) );
                 await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
                 await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
-                await replayer.ShouldContainEventAsync<DefaultClientMessageSink.FailedManualConnect>();
             }
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
@@ -86,7 +84,6 @@ namespace CK.MQTT.Client.Tests
                 res.Should().Be( new ConnectResult( ConnectError.ProtocolError ) );
                 await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
                 await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
-                await replayer.ShouldContainEventAsync<DefaultClientMessageSink.FailedManualConnect>();
             }
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
@@ -126,7 +123,6 @@ namespace CK.MQTT.Client.Tests
                 }
                 await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
                 await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
-                await replayer.ShouldContainEventAsync<DefaultClientMessageSink.FailedManualConnect>();
             }
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
@@ -147,7 +143,6 @@ namespace CK.MQTT.Client.Tests
             (await connectTask).Error.Should().Be( ConnectError.Timeout );
             await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
-            await replayer.ShouldContainEventAsync<DefaultClientMessageSink.FailedManualConnect>();
             replayer.Events.Reader.Count.Should().Be( 0 );
         }
 
@@ -192,7 +187,6 @@ namespace CK.MQTT.Client.Tests
             var res = await task;
             res.Error.Should().NotBe( ConnectError.None );
             await replayer.ShouldContainEventAsync<LoopBackBase.ClosedChannel>();
-            await replayer.ShouldContainEventAsync<DefaultClientMessageSink.FailedManualConnect>();
 
             var task2 = client.ConnectAsync( true );
 
@@ -242,8 +236,7 @@ namespace CK.MQTT.Client.Tests
             var cfg = new MQTT3ClientConfiguration()
             {
                 TimeUtilities = replayer.TestTimeHandler,
-                KeepAliveSeconds = 0,
-                ManualConnectBehavior = ManualConnectBehavior.TryOnce
+                KeepAliveSeconds = 0
             };
             var client = replayer.CreateMQTT3Client( cfg );
 
@@ -266,8 +259,7 @@ namespace CK.MQTT.Client.Tests
             var client = replayer.CreateMQTT3Client( new MQTT3ClientConfiguration()
             {
                 TimeUtilities = replayer.TestTimeHandler,
-                KeepAliveSeconds = 0,
-                ManualConnectBehavior = ManualConnectBehavior.TryOnce
+                KeepAliveSeconds = 0
             });
 
             var task = client.ConnectAsync( true );

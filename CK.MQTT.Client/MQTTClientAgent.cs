@@ -70,9 +70,6 @@ namespace CK.MQTT.Client
                 case Connected:
                     await _onConnectionChangeSender.RaiseAsync( m, DisconnectReason.None );
                     break;
-                case ReconnectionFailed:
-                    m.Warn( $"Reconnection failed." );
-                    break;
                 default:
                     await base.ProcessMessageAsync( m, item );
                     break;

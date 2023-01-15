@@ -1,7 +1,5 @@
 using CK.Core;
 using System;
-using System.IO.Pipelines;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 

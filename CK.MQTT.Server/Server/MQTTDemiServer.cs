@@ -1,11 +1,6 @@
 using CK.Core;
-using CK.MQTT.Client;
 using CK.MQTT.Stores;
 using CK.PerfectEvent;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,7 +29,7 @@ namespace CK.MQTT.Server
             IConnectInfo connectInfo, CancellationToken cancellationToken
         )
         {
-            var agent = new MQTTServerAgent( ( sink ) =>
+            var agent = new MQTTServerAgent(clientId, ( sink ) =>
             new ServerMessageExchanger(
                 clientId,
                 ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),

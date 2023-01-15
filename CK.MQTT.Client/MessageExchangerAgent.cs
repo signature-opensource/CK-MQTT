@@ -3,9 +3,7 @@ using CK.MQTT.Client.ExtensionMethods;
 using CK.MQTT.Packets;
 using CK.PerfectEvent;
 using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using static CK.MQTT.Client.MQTTMessageSink;
@@ -200,8 +198,6 @@ namespace CK.MQTT.Client
                     return;
             }
         }
-        public string? ClientId => Sender.ClientId;
-
 
         public ValueTask<Task> PublishAsync( OutgoingMessage message ) => Sender.PublishAsync( message );
 

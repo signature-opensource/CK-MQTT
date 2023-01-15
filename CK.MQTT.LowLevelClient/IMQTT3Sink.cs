@@ -11,7 +11,7 @@ namespace CK.MQTT.Client
         ValueTask OnMessageAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
 
         /// <returns><see langword="true"/>to keep reconnecting.</returns>
-        bool OnUnattendedDisconnect( DisconnectReason reason );
+        void OnUnattendedDisconnect( DisconnectReason reason );
 
         void OnPacketResent( ushort packetId, ulong packetInTransitOrLost, bool isDropped );
 
