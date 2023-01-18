@@ -1,26 +1,24 @@
 using CK.Core;
+using CK.MQTT.Client.Middleware;
 using CK.MQTT.Packets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using static CK.MQTT.Client.DefaultClientMessageSink;
 
 namespace CK.MQTT.Client
 {
     public class MQTTClientAgent : MessageExchangerAgent, IMQTT3Client
     {
-        readonly DefaultClientMessageSink _sink = new();
-        public MQTTClientAgent(Func<IMQTT3ClientSink, IMQTT3Client> factory) // Sink.Client is not set.
+        readonly IMQTT3Client _client;
+
+        public MQTTClientAgent( IMQTT3Client client, MessageWorker messageWorker ) : base( client, messageWorker )
         {
+            messageWorker.Middlewares.Add( new HandleConnected( _onConnectionChangeSender ) );
             OnConnectionChange.Sync += OnConnectionChangeSync;
-            factory( _sink ); //TODO: big code smell. We don't use the output there.
+            _client = client;
         }
-
-        public IMQTT3Client Client => _sink.Client;
-
-        protected override MQTTMessageSink MessageSink => _sink;
 
         void OnConnectionChangeSync( IActivityMonitor monitor, DisconnectReason e )
             => IsConnected = e == DisconnectReason.None;
@@ -32,27 +30,18 @@ namespace CK.MQTT.Client
 
 
 
-        public async Task<ConnectResult> ConnectAsync( bool cleanSession, bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
-        {
-            _sink._manualCountRetry = 0;
-            Start();
-            var res = await Client.ConnectAsync( cleanSession, lastWill, cancellationToken );
-            if( res.Status != ConnectStatus.Successful && res.Status != ConnectStatus.Deferred )
-            {
-                await StopAsync( waitForCompletion );
-            }
-            return res;
-        }
+        public Task<ConnectResult> ConnectAsync( bool cleanSession, bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+            => _client.ConnectAsync( cleanSession, lastWill, cancellationToken );
 
         public bool IsConnected { get; private set; }
 
         public ValueTask<Task> UnsubscribeAsync( IEnumerable<string> topics )
-            => Client.UnsubscribeAsync( topics.ToArray() );
+            => _client.UnsubscribeAsync( topics.ToArray() );
         public virtual ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscription )
-            => Client.SubscribeAsync( subscription );
+            => _client.SubscribeAsync( subscription );
 
         public virtual ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( IEnumerable<Subscription> subscriptions )
-            => Client.SubscribeAsync( subscriptions );
+            => _client.SubscribeAsync( subscriptions );
 
         public ValueTask<Task<SubscribeReturnCode[]>> SubscribeAsync( params Subscription[] subscriptions )
             => SubscribeAsync( (IEnumerable<Subscription>)subscriptions );
@@ -60,20 +49,6 @@ namespace CK.MQTT.Client
         public ValueTask<Task> UnsubscribeAsync( params string[] topics ) => UnsubscribeAsync( (IEnumerable<string>)topics );
 
         public ValueTask<Task> UnsubscribeAsync( string topic )
-            => Client.UnsubscribeAsync( topic );
-
-
-        protected override async Task ProcessMessageAsync( IActivityMonitor m, object? item )
-        {
-            switch( item )
-            {
-                case Connected:
-                    await _onConnectionChangeSender.RaiseAsync( m, DisconnectReason.None );
-                    break;
-                default:
-                    await base.ProcessMessageAsync( m, item );
-                    break;
-            }
-        }
+            => _client.UnsubscribeAsync( topic );
     }
 }

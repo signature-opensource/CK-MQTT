@@ -45,9 +45,7 @@ namespace CK.MQTT
         /// This is default logic, it may not be correct for your use case.
         /// For example, <see cref="ProtocolConnectReturnCode.ServerUnavailable"/> is defined as <see cref="ConnectStatus.ErrorMaybeRecoverable"/>.
         /// </remarks>
-        public ConnectStatus Status => _deffered ?
-            ConnectStatus.Deferred
-            : ProtocolReturnCode switch
+        public ConnectStatus Status => ProtocolReturnCode switch
             {
                 ProtocolConnectReturnCode.Accepted => ConnectStatus.Successful,
                 ProtocolConnectReturnCode.BadUserNameOrPassword => ConnectStatus.ErrorUnrecoverable,

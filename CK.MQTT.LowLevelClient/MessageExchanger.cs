@@ -116,6 +116,7 @@ namespace CK.MQTT
         /// <returns>True if this call actually closed the connection, false if the connection has already been closed by a concurrent decision.</returns>
         public async Task<bool> DisconnectAsync( bool clearSession )
         {
+            Sink.OnUserDisconnect(clearSession);
             return await DoDisconnectAsync( clearSession, DisconnectReason.UserDisconnected );
         }
 
@@ -133,10 +134,9 @@ namespace CK.MQTT
             return true;
         }
 
-        /// <returns><see langword="true"/> if the sink asked to reconnect.</returns>
         protected async ValueTask PumpsDisconnectAsync( DisconnectReason disconnectedReason )
         {
-            await Channel.CloseAsync( disconnectedReason );
+            await CloseAsync( () => new ValueTask(), disconnectedReason );
             Sink.OnUnattendedDisconnect( disconnectedReason );
         }
 
@@ -152,16 +152,15 @@ namespace CK.MQTT
             {
                 // We need that the pump finish their work so they don't write/read anything.
                 var inputPump = InputPump;
-                var outputPumpt = OutputPump;
+                var outputPump = OutputPump;
                 if(inputPump?.WorkTask != null) await inputPump.WorkTask;
-                if(outputPumpt?.WorkTask != null) await outputPumpt.WorkTask;
+                if(outputPump?.WorkTask != null) await outputPump.WorkTask;
                 var channel = Channel;
                 var duplexPipe = channel.DuplexPipe;
                 await BeforeDisconnectAsync( duplexPipe!, clearSession );
                 if( clearSession )
                 {
                     await LocalPacketStore.ResetAsync();
-                    await RemotePacketStore.ResetAsync();
                 }
             }, disconnectReason );
         }

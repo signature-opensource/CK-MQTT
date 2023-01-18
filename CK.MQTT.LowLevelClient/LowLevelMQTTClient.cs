@@ -33,7 +33,6 @@ namespace CK.MQTT
             }
             ClientConfig = config;
             ClientSink = sink;
-            sink.Client = this;
         }
 
         /// <inheritdoc/>
@@ -72,12 +71,10 @@ namespace CK.MQTT
 
                 if( cleanSession && res.SessionState != SessionState.CleanSession )
                     return await ConnectExitAsync( ConnectError.ProtocolError, DisconnectReason.ProtocolError );
-
+                await RemotePacketStore.ResetAsync(); // ids shouldn't be kept.
                 if( res.SessionState == SessionState.CleanSession )
                 {
-                    ValueTask task = RemotePacketStore.ResetAsync();
                     await LocalPacketStore.ResetAsync();
-                    await task;
                 }
 
                 if( res.Error != ConnectError.None )

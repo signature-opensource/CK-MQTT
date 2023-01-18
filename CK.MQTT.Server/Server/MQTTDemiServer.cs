@@ -1,4 +1,7 @@
 using CK.Core;
+using CK.MQTT.Client;
+using CK.MQTT.Client.Middleware;
+using CK.MQTT.Server.Server;
 using CK.MQTT.Stores;
 using CK.PerfectEvent;
 using System.Threading;
@@ -29,16 +32,19 @@ namespace CK.MQTT.Server
             IConnectInfo connectInfo, CancellationToken cancellationToken
         )
         {
-            var agent = new MQTTServerAgent(clientId, ( sink ) =>
-            new ServerMessageExchanger(
+            var messageWorker = new MessageWorker();
+            var serverSink = new ServerClientMessageSink( messageWorker.MessageWriter );
+            var exchanger = new ServerMessageExchanger(
                 clientId,
                 ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),
                 Config,
-                sink,
+                serverSink,
                 channel,
                 remotePacketStore,
                 localPacketStore
-            ) );
+            );
+            var agent = new MQTTServerAgent( exchanger, messageWorker, clientId );
+
             await _onNewClientSender.SafeRaiseAsync( m, agent );
         }
     }

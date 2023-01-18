@@ -9,8 +9,6 @@ namespace CK.MQTT.Client
             _clientSink = clientSink;
         }
 
-        public IMQTT3Client Client { get => _clientSink.Client; set => _clientSink.Client = value; }
-
         public void OnConnected() => _clientSink.OnConnected();
     }
 }

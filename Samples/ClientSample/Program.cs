@@ -1,5 +1,7 @@
 using CK.MQTT;
 using CK.MQTT.Client;
+using CK.MQTT.Client.Middleware;
+using Microsoft;
 
 namespace ClientSample
 {
@@ -10,11 +12,14 @@ namespace ClientSample
             for( int i = 0; i < 10000; i++ )
             {
 
-                var client = new MQTTClientAgent(
-                    ( sink ) => new LowLevelMQTTClient( ProtocolConfiguration.MQTT3,
-                                                       new MQTT3ClientConfiguration(),
-                                                       sink,
-                                                       new TcpChannel( "localhost", 1883 ) ) );
+                var messageWorker = new MessageWorker();
+                var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
+                var client = new LowLevelMQTTClient(
+                        ProtocolConfiguration.MQTT3,
+                        new MQTT3ClientConfiguration(),
+                        sink,
+                        new TcpChannel( "localhost", 1883 )
+                    );
                 await client.ConnectAsync( true );
             }
         }

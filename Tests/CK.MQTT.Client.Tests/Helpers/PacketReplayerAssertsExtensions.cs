@@ -1,4 +1,5 @@
 using CK.Core;
+using CK.MQTT.Client.Middleware;
 using NUnit.Framework;
 using System;
 using System.Buffers;
@@ -13,11 +14,20 @@ namespace CK.MQTT.Client.Tests.Helpers
 {
     static class PacketReplayerAssertsExtensions
     {
-        public static TestMQTTClient CreateMQTT3Client( this PacketReplayer replayer, MQTT3ClientConfiguration config )
-            => new( ProtocolConfiguration.MQTT3, config, replayer.CreateChannel(), replayer.Events );
-
-        public static TestMQTTClient CreateMQTT5Client( this PacketReplayer replayer, ProtocolConfiguration pConfig, MQTT5ClientConfiguration config )
-            => new( ProtocolConfiguration.MQTT5, config, replayer.CreateChannel(), replayer.Events );
+        public static MQTTClientAgent CreateMQTT3Client( this PacketReplayer replayer, MQTT3ClientConfiguration config, bool withReconnect = false )
+        {
+            var messageWorker = new MessageWorker();
+            messageWorker.Middlewares.Add( new TesterMiddleware( replayer.Events.Writer ) );
+            var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
+            var client = new LowLevelMQTTClient( ProtocolConfiguration.MQTT3, config, sink, replayer.CreateChannel() );
+            if( withReconnect ) messageWorker.Middlewares.Add( new HandleAutoReconnect( config.TimeUtilities, client, messageWorker.MessageWriter, _ =>
+            {
+                return TimeSpan.FromSeconds( 5 );
+            } ));
+            replayer.Client = new MQTTClientAgent( client, messageWorker );
+            replayer.Config = config;
+            return replayer.Client;
+        }
 
         public static async Task AssertClientSentAsync( this PacketReplayer @this, IActivityMonitor m, string hexArray )
         {
@@ -55,11 +65,11 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static Task SendToClientAsync( this PacketReplayer @this, IActivityMonitor m, string hexArray ) =>
             @this.SendToClientAsync( m, Convert.FromHexString( hexArray ) );
 
-        public static async Task ConnectClientAsync( this PacketReplayer @this, IActivityMonitor m, TestMQTTClient client )
+        public static async Task ConnectClientAsync( this PacketReplayer @this, IActivityMonitor m, MQTTClientAgent client )
         {
             var task = client.ConnectAsync( true );
             await @this.AssertClientSentAsync( TestHelper.Monitor,
-                "101600044d5154540402" + Convert.ToHexString( BitConverter.GetBytes( client.Config.KeepAliveSeconds ).Reverse().ToArray() ) + "000a434b4d71747454657374"
+                "101600044d5154540402" + Convert.ToHexString( BitConverter.GetBytes( @this.Config.KeepAliveSeconds ).Reverse().ToArray() ) + "000a434b4d71747454657374"
             );
             await @this.SendToClientAsync( TestHelper.Monitor, "20020000" );
             await task;

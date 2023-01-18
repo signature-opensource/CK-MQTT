@@ -9,31 +9,31 @@ namespace CK.MQTT.Client
 {
     public class MQTTMessageSink : IMQTT3Sink
     {
-        public ChannelWriter<object?> Events { get; set; } = null!;
+        protected readonly ChannelWriter<object?> _events;
+        public MQTTMessageSink( ChannelWriter<object?> Events )
+        {
+            _events = Events;
+        }
         public IConnectedMessageSender Sender { get; set; } = null!; //set by the client.
 
         record PacketResent( ushort PacketId, ulong ResentCount, bool IsDropped );
-        record PoisonousPacket( ushort PacketId, PacketType PacketType, int PoisnousTotalCount );
 
         public void OnPacketResent( ushort packetId, ulong resentCount, bool isDropped )
-            => Events.TryWrite( new PacketResent( packetId, resentCount, isDropped ) );
-
-        public void OnPoisonousPacket( ushort packetId, PacketType packetType, int poisonousTotalCount )
-            => Events.TryWrite( new PoisonousPacket( packetId, packetType, poisonousTotalCount ) );
-
-        public record StoreFilling( ushort FreeLeftSlot );
-        public void OnStoreFull( ushort freeLeftSlot )
-            => Events.TryWrite( new StoreFilling( freeLeftSlot ) );
+            => _events.TryWrite( new PacketResent( packetId, resentCount, isDropped ) );
 
         public record UnattendedDisconnect( DisconnectReason Reason );
         public void OnUnattendedDisconnect( DisconnectReason reason )
         {
-            Events.TryWrite( new UnattendedDisconnect( reason ) );
+            _events.TryWrite( new UnattendedDisconnect( reason ) );
         }
+
+        public record UserDisconnect( bool clearSession );
+        public void OnUserDisconnect( bool clearSession )
+            => _events.TryWrite( new UserDisconnect( clearSession ) );
 
         public record UnparsedExtraData( ushort PacketId, ReadOnlySequence<byte> UnparsedData );
         public void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData )
-            => Events.TryWrite( new UnparsedExtraData( packetId, unparsedData ) );
+            => _events.TryWrite( new UnparsedExtraData( packetId, unparsedData ) );
 
         public async ValueTask OnMessageAsync( string topic, PipeReader pipe, uint payloadLength, QualityOfService qos, bool retain, CancellationToken cancellationToken )
         {
@@ -44,19 +44,21 @@ namespace CK.MQTT.Client
                 readResult.Buffer.Slice( 0, (int)payloadLength ).CopyTo( memoryOwner.Memory.Span );
                 pipe.AdvanceTo( readResult.Buffer.Slice( Math.Min( payloadLength, readResult.Buffer.Length ) ).Start );
             }
-            await Events.WriteAsync( new VolatileApplicationMessage( new ApplicationMessage( topic, memoryOwner.Memory.Slice( 0, (int)payloadLength ), qos, retain ), memoryOwner ), cancellationToken );
+            await _events.WriteAsync( new VolatileApplicationMessage( new ApplicationMessage( topic, memoryOwner.Memory.Slice( 0, (int)payloadLength ), qos, retain ), memoryOwner ), cancellationToken );
         }
 
         public record QueueFullPacketDestroyed( ushort PacketId, PacketType PacketType );
         public void OnQueueFullPacketDropped( ushort packetId, PacketType packetType )
-            => Events.TryWrite( new QueueFullPacketDestroyed( packetId, packetType ) );
+            => _events.TryWrite( new QueueFullPacketDestroyed( packetId, packetType ) );
 
         public record QueueFullPacketDestroyed2( ushort PacketId );
         public void OnQueueFullPacketDropped( ushort packetId )
-            => Events.TryWrite( new QueueFullPacketDestroyed2( packetId ) );
+            => _events.TryWrite( new QueueFullPacketDestroyed2( packetId ) );
 
-        public record PacketWithDupFlagReceived(PacketType packetType);
+        public record PacketWithDupFlagReceived( PacketType packetType );
         public void OnPacketWithDupFlagReceived( PacketType packetType )
-            => Events.TryWrite( new PacketWithDupFlagReceived( packetType ) );
+            => _events.TryWrite( new PacketWithDupFlagReceived( packetType ) );
+
+
     }
 }

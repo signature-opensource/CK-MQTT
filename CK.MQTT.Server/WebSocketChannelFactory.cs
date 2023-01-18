@@ -28,7 +28,7 @@ namespace CK.Observable.MQTT
         {
             var context = await _httpListener.GetContextAsync();
             var webSocketContext = await context.AcceptWebSocketAsync( "mqtt" );
-            return (new WebSocketChannel( webSocketContext ), webSocketContext.User?.ToString() ?? "");
+            return (new ServerWebSocketChannel( webSocketContext ), webSocketContext.User?.ToString() ?? "");
         }
 
         public void Dispose() => _httpListener.Stop();

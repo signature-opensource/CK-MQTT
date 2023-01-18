@@ -1,10 +1,12 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.MQTT.LowLevelClient.Time
 {
     public interface ITimeUtilities
     {
+        Task Delay( TimeSpan timeSpan );
         IStopwatch CreateStopwatch();
 
 #pragma warning disable RS0030 // Do not used banned APIs

@@ -30,9 +30,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             };
         }
 
-        public static MQTT3ClientConfiguration DefaultTestConfigWithKeepAlive( PacketReplayer packetReplayer,
-                                                                              int timeoutMs = 5_000,
-                                                                              DisconnectBehavior disconnectBehavior = DisconnectBehavior.Nothing )
+        public static MQTT3ClientConfiguration DefaultTestConfigWithKeepAlive( PacketReplayer packetReplayer, int timeoutMs = 5_000 )
         {
             _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
             return new MQTT3ClientConfiguration()

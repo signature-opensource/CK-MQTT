@@ -1,5 +1,6 @@
 using CK.Core;
 using CK.MQTT.Client;
+using CK.MQTT.Client.Middleware;
 using FluentAssertions;
 using System;
 using System.Diagnostics;
@@ -32,8 +33,9 @@ namespace CK.MQTT.Server.Tests.Helpers
 
         public async Task<(IConnectedMessageSender client, MQTTServerAgent serverClient)> CreateClientAsync()
         {
-            var client = new MQTTClientAgent(
-                ( sink ) => new LowLevelMQTTClient(
+            var messageWorker = new MessageWorker();
+            var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
+            var client = new LowLevelMQTTClient(
                     ProtocolConfiguration.MQTT3,
                     new MQTT3ClientConfiguration()
                     {
@@ -42,10 +44,10 @@ namespace CK.MQTT.Server.Tests.Helpers
                     },
                     sink,
                     new TcpChannel( "localhost", _port )
-                )
-            );
+                );
+            var agent = new MQTTClientAgent( client, messageWorker );
             var tcs = _tcs = new();
-            var res = await client.ConnectAsync( true );
+            var res = await agent.ConnectAsync( true );
             res.Status.Should().Be( ConnectStatus.Successful ); ;
             var serverClient = await tcs.Task;
             return (client, serverClient);

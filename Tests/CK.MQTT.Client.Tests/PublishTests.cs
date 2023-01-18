@@ -142,7 +142,7 @@ namespace CK.MQTT.Client.Tests
         public void publish_async_over_sync_does_not_deadlock()
         {
 #pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
-            (PacketReplayer replayer, TestMQTTClient client) = ConnectAsync().GetAwaiter().GetResult();
+            (PacketReplayer replayer, MQTTClientAgent client) = ConnectAsync().GetAwaiter().GetResult();
             for( int i = 0; i < 10000; i++ )
             {
                 var _ = client.PublishAsync( new ApplicationMessage(
@@ -162,7 +162,7 @@ namespace CK.MQTT.Client.Tests
 
 
 
-        async Task<(PacketReplayer, TestMQTTClient)> ConnectAsync()
+        async Task<(PacketReplayer, MQTTClientAgent)> ConnectAsync()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );

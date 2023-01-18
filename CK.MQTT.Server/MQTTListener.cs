@@ -107,6 +107,14 @@ namespace CK.MQTT.Server
                 (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync(
                     ProtocolConfiguration.FromProtocolLevel( protocolLevel ), Config, connectHandler.ClientId,
                     connectHandler.CleanSession, cancellationToken );
+                // ownership of channel and security manager is now transferred to the CreateClientAsync implementation.
+                var channelCopy =
+                    channel; // We copy the reference so these objects are not cleaned if the cancellationToken is triggered.
+                var smCopy = securityManager;
+                channel = null;
+                securityManager = null;
+                await CreateClientAsync( m, connectHandler.ClientId, channelCopy, smCopy, localStore, remoteStore,
+                   connectHandler, cancellationToken );
                 await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output,
                     cancellationToken );
                 await channel.DuplexPipe.Output.FlushAsync( cancellationToken );
@@ -116,15 +124,6 @@ namespace CK.MQTT.Server
                     remoteStore.Dispose();
                     return;
                 }
-
-                // ownership of channel and security manager is now transfered to the CreateClientAsync implementation.
-                var channelCopy =
-                    channel; // We copy the reference so these objects are not cleaned if the cancellationToken is triggered.
-                var smCopy = securityManager;
-                channel = null;
-                securityManager = null;
-                await CreateClientAsync( m, connectHandler.ClientId, channelCopy, smCopy, localStore, remoteStore,
-                    connectHandler, cancellationToken );
             }
             finally
             {

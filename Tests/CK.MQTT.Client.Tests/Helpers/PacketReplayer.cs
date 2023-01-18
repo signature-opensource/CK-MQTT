@@ -12,13 +12,14 @@ namespace CK.MQTT.Client.Tests.Helpers
     {
         public Channel<object?> Events { get; } = System.Threading.Channels.Channel.CreateUnbounded<object?>();
         public LoopBackBase? Channel { get; private set; }
-        public TestMQTTClient Client { get; set; } = null!;
+        public MQTTClientAgent Client { get; set; } = null!;
         public PacketReplayer( string channelType )
         {
             ChannelType = channelType;
         }
         public TestTimeHandler TestTimeHandler { get; } = new();
         public string ChannelType { get; set; }
+        public MQTT3ClientConfiguration Config { get; internal set; }
 
         public delegate ValueTask<bool> ScenarioStep( IActivityMonitor m, PacketReplayer packetReplayer );
 

@@ -10,8 +10,8 @@ namespace CK.MQTT.Client
         IConnectedMessageSender Sender { get; set; }
         ValueTask OnMessageAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken );
 
-        /// <returns><see langword="true"/>to keep reconnecting.</returns>
         void OnUnattendedDisconnect( DisconnectReason reason );
+        void OnUserDisconnect( bool clearSession );
 
         void OnPacketResent( ushort packetId, ulong packetInTransitOrLost, bool isDropped );
 

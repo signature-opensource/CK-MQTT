@@ -9,21 +9,20 @@ namespace CK.MQTT
 {
     public class WebSocketChannel : IMQTTChannel
     {
-        readonly ClientWebSocket _client = new ClientWebSocket();
-        readonly Uri _uri;
+        readonly HttpListenerWebSocketContext _context;
 
-        public WebSocketChannel( Uri uri )
+        public WebSocketChannel( HttpListenerWebSocketContext context )
         {
-            _uri = uri;
+            _context = context;
         }
 
-        public async ValueTask StartAsync( CancellationToken cancellationToken )
+        public ValueTask StartAsync( CancellationToken cancellationToken )
         {
-            await _client.ConnectAsync( _uri, cancellationToken );
-            DuplexPipe = _client.UsePipe( cancellationToken: cancellationToken );
+            DuplexPipe = _context.WebSocket.UsePipe( cancellationToken: cancellationToken );
+            return new ValueTask();
         }
 
-        public bool IsConnected => _client.State == WebSocketState.Open;
+        public bool IsConnected => _context.WebSocket.State == WebSocketState.Open;
 
         public IDuplexPipe? DuplexPipe { get; private set; }
 
@@ -36,16 +35,16 @@ namespace CK.MQTT
                     //TODO: Remote disconnected... Do I have to close the websocket ?
                     break;
                 case DisconnectReason.UserDisconnected:
-                    await _client.CloseAsync( WebSocketCloseStatus.NormalClosure, null, default );
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.NormalClosure, null, default );
                     break;
                 case DisconnectReason.ProtocolError:
-                    await _client.CloseAsync( WebSocketCloseStatus.ProtocolError, null, default );
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.ProtocolError, null, default );
                     break;
                 case DisconnectReason.InternalException:
-                    await _client.CloseAsync( WebSocketCloseStatus.InternalServerError, null, default );
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.InternalServerError, null, default );
                     break;
                 case DisconnectReason.Timeout:
-                    await _client.CloseAsync( WebSocketCloseStatus.EndpointUnavailable, "Timeout", default );
+                    await _context.WebSocket.CloseAsync( WebSocketCloseStatus.EndpointUnavailable, "Timeout", default );
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -53,6 +52,6 @@ namespace CK.MQTT
 
         }
 
-        public void Dispose() => _client.Dispose();
+        public void Dispose() => _context.WebSocket.Dispose();
     }
 }
