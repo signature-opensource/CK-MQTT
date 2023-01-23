@@ -357,15 +357,10 @@ namespace CK.MQTT.Stores
         {
             lock( _idStore )
             {
-                uint currId = _idStore._newestIdAllocated;
-                if( currId == 0 ) return;
-                ref var curr = ref _idStore._entries[currId];
-                do // We loop over all older packets.
+                for( int i = 1; i < _idStore._entries.Length+1; i++ )
                 {
-                    curr.Content._taskCompletionSource.TrySetCanceled();
-                    currId = curr.PreviousId;
-                    curr = ref _idStore._entries[currId];
-                } while( currId != _idStore._head );
+                    _idStore._entries[i].Content._taskCompletionSource.TrySetCanceled();
+                }
             }
         }
 

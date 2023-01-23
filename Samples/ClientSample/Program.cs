@@ -9,7 +9,8 @@ namespace ClientSample
         {
             var client = MQTTClient.Factory.Build();
             await client.ConnectAsync( cleanSession: true );
-            await client.PublishAsync( topic: "test", payload: Array.Empty<byte>(), qos: QualityOfService.AtLeastOnce, retain: false );
+            await await client.PublishAsync( topic: "test", new byte[256000000], qos: QualityOfService.AtLeastOnce, retain: false );
+            await Task.Delay( 5000 );
         }
     }
 }
