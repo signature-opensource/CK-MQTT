@@ -34,7 +34,7 @@ namespace CK.MQTT.Server.Tests.Helpers
         public async Task<(IConnectedMessageSender client, MQTTServerAgent serverClient)> CreateClientAsync()
         {
             var messageWorker = new MessageWorker();
-            var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
+            var sink = new DefaultClientMessageSink( messageWorker.QueueMessage );
             var client = new LowLevelMQTTClient(
                     ProtocolConfiguration.MQTT3,
                     new MQTT3ClientConfiguration()

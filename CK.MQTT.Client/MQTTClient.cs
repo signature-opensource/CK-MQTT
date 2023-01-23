@@ -43,7 +43,7 @@ namespace CK.MQTT.Client
             {
                 var messageWorker = new MessageWorker();
 
-                var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
+                var sink = new DefaultClientMessageSink( messageWorker.QueueMessage );
                 var channel = ChannelFromConnectionString( _config.ConnectionString );
                 var client = new LowLevelMQTTClient( ProtocolConfiguration.MQTT3, _config, sink, channel );
                 if( _autoReconnect )
@@ -51,7 +51,7 @@ namespace CK.MQTT.Client
                     messageWorker.Middlewares.Add( new HandleAutoReconnect(
                         _config.TimeUtilities,
                         client,
-                        messageWorker.MessageWriter,
+                        messageWorker.QueueMessage,
                         AutoReconnect
                     ) );
                 }

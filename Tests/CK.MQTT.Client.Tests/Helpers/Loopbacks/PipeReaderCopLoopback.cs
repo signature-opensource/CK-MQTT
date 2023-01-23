@@ -1,4 +1,5 @@
 using CK.MQTT.Client.Tests.Helpers;
+using System;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Channels;
@@ -8,7 +9,7 @@ namespace CK.MQTT.Client.Tests
 {
     public class PipeReaderCopLoopback : LoopBackBase
     {
-        public PipeReaderCopLoopback( ChannelWriter<object?> writer ) : base( writer )
+        public PipeReaderCopLoopback( Action<object?> writer ) : base( writer )
         {
         }
 

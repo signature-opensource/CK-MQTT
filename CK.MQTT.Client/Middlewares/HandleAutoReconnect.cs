@@ -16,14 +16,14 @@ namespace CK.MQTT.Client.Middleware
         readonly CancellationTokenSource _cts = new();
         readonly ITimeUtilities _timeUtilities;
         readonly IMQTT3Client _client;
-        readonly ChannelWriter<object?> _writer;
+        readonly Action<object?> _messageWriter;
         readonly Func<TimeSpan, TimeSpan> _shouldRetry;
 
-        public HandleAutoReconnect( ITimeUtilities timeUtilities, IMQTT3Client client, ChannelWriter<object?> writer, Func<TimeSpan, TimeSpan> shouldRetry )
+        public HandleAutoReconnect( ITimeUtilities timeUtilities, IMQTT3Client client, Action<object?> messageWriter, Func<TimeSpan, TimeSpan> shouldRetry )
         {
             _timeUtilities = timeUtilities;
             _client = client;
-            _writer = writer;
+            _messageWriter = messageWriter;
             _shouldRetry = shouldRetry;
         }
 
@@ -52,7 +52,7 @@ namespace CK.MQTT.Client.Middleware
         {
             while( true )
             {
-                await _writer.WriteAsync( new AutoReconnectAttempt() );
+                _messageWriter( new AutoReconnectAttempt() );
                 var now = _timeUtilities.UtcNow;
                 var res = await _client.ConnectAsync( false, _cts.Token );
                 if( res.Status == ConnectStatus.Successful ) break;

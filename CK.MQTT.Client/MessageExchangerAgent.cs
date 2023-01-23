@@ -65,7 +65,7 @@ namespace CK.MQTT.Client
     public async Task SynchronizeEventLoopAsync()
     {
         var tcs = new TaskCompletionSource();
-        await _messageWorker.MessageWriter.WriteAsync( new SynchronizationMessage( tcs ) );
+        _messageWorker.QueueMessage( new SynchronizationMessage( tcs ) );
         await tcs.Task;
     }
 

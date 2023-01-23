@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CK.MQTT.Pumps
 {
-    public class OutputProcessor : IAsyncDisposable
+    public class OutputProcessor : IDisposable
     {
         readonly ITimer _timer;
         readonly PipeWriter _pipeWriter;
@@ -104,6 +104,6 @@ namespace CK.MQTT.Pumps
             await outgoingPacket.WriteAsync( _pConfig.ProtocolLevel, _pipeWriter, cancellationToken );
         }
 
-        public ValueTask DisposeAsync() => _timer.DisposeAsync();
+        public void Dispose() => _timer.Dispose();
     }
 }

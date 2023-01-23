@@ -33,7 +33,7 @@ namespace CK.MQTT.Server
         )
         {
             var messageWorker = new MessageWorker();
-            var serverSink = new ServerClientMessageSink( messageWorker.MessageWriter );
+            var serverSink = new ServerClientMessageSink( messageWorker.QueueMessage );
             var exchanger = new ServerMessageExchanger(
                 clientId,
                 ProtocolConfiguration.FromProtocolLevel( connectInfo.ProtocolLevel ),

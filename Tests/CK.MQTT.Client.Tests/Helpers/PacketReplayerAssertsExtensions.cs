@@ -19,9 +19,9 @@ namespace CK.MQTT.Client.Tests.Helpers
         {
             var messageWorker = new MessageWorker();
             messageWorker.Middlewares.Add( new TesterMiddleware( replayer.Events.Writer ) );
-            var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
-            var client = new LowLevelMQTTClient( ProtocolConfiguration.MQTT3, config, sink, replayer.CreateChannel( messageWorker.MessageWriter ) );
-            if( withReconnect ) messageWorker.Middlewares.Add( new HandleAutoReconnect( config.TimeUtilities, client, messageWorker.MessageWriter, _ =>
+            var sink = new DefaultClientMessageSink( messageWorker.QueueMessage );
+            var client = new LowLevelMQTTClient( ProtocolConfiguration.MQTT3, config, sink, replayer.CreateChannel( messageWorker.QueueMessage ) );
+            if( withReconnect ) messageWorker.Middlewares.Add( new HandleAutoReconnect( config.TimeUtilities, client, messageWorker.QueueMessage, _ =>
             {
                 return TimeSpan.FromSeconds( 5 );
             } ));

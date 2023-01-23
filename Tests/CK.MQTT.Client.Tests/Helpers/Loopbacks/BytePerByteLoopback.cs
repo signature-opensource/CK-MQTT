@@ -129,7 +129,7 @@ namespace CK.MQTT.Client.Tests
             {
             }
         }
-        public BytePerByteLoopback( ChannelWriter<object?> writer ) : base( writer )
+        public BytePerByteLoopback( Action<object?> writer ) : base( writer )
         {
         }
 

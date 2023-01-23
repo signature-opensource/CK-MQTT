@@ -13,10 +13,13 @@ namespace ClientSample
             {
 
                 var messageWorker = new MessageWorker();
-                var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
+                var sink = new DefaultClientMessageSink( messageWorker.QueueMessage );
                 var client = new LowLevelMQTTClient(
                         ProtocolConfiguration.MQTT3,
-                        new MQTT3ClientConfiguration(),
+                        new MQTT3ClientConfiguration()
+                        {
+                            ClientId = "foobar"
+                        },
                         sink,
                         new TcpChannel( "localhost", 1883 )
                     );

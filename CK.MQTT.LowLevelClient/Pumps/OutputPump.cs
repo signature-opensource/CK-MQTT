@@ -84,6 +84,10 @@ namespace CK.MQTT.Pumps
                 if( _pipeWriter != null ) await _pipeWriter.CompleteAsync( e );
                 await SelfDisconnectAsync( DisconnectReason.InternalException );
             }
+            finally
+            {
+                OutputProcessor.Dispose();
+            }
         }
 
         public void TryQueueReflexMessage( IOutgoingPacket item )
