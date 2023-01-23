@@ -23,14 +23,14 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public delegate ValueTask<bool> ScenarioStep( IActivityMonitor m, PacketReplayer packetReplayer );
 
-        public IMQTTChannel CreateChannel()
+        public IMQTTChannel CreateChannel(ChannelWriter<object?> writer)
         {
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch
             {
-                "Default" => new DefaultLoopback( Events.Writer ),
-                "BytePerByte" => new BytePerByteLoopback( Events.Writer ),
-                "PipeReaderCop" => new PipeReaderCopLoopback( Events.Writer ),
+                "Default" => new DefaultLoopback( writer ),
+                "BytePerByte" => new BytePerByteLoopback( writer ),
+                "PipeReaderCop" => new PipeReaderCopLoopback( writer ),
                 _ => throw new InvalidOperationException( "Unknown channel type." )
             };
             return Channel;

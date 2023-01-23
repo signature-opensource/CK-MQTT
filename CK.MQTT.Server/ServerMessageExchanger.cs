@@ -40,6 +40,8 @@ namespace CK.MQTT.Server
             Reflex reflex = builder.Build( PumpsDisconnectAsync );
             InputPump = CreateInputPump( reflex );
             // Creating pumps. Need to be started.
+            RenewTokens();
+            outputProcessor.OutputPump = OutputPump;
             OutputPump.StartPumping( StopToken, CloseToken );
             InputPump.StartPumping( StopToken, CloseToken );
         }

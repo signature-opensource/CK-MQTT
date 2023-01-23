@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -19,7 +20,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             var messageWorker = new MessageWorker();
             messageWorker.Middlewares.Add( new TesterMiddleware( replayer.Events.Writer ) );
             var sink = new DefaultClientMessageSink( messageWorker.MessageWriter );
-            var client = new LowLevelMQTTClient( ProtocolConfiguration.MQTT3, config, sink, replayer.CreateChannel() );
+            var client = new LowLevelMQTTClient( ProtocolConfiguration.MQTT3, config, sink, replayer.CreateChannel( messageWorker.MessageWriter ) );
             if( withReconnect ) messageWorker.Middlewares.Add( new HandleAutoReconnect( config.TimeUtilities, client, messageWorker.MessageWriter, _ =>
             {
                 return TimeSpan.FromSeconds( 5 );

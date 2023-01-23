@@ -3,6 +3,7 @@ using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 
@@ -41,7 +42,7 @@ namespace CK.MQTT.Client.Tests
             await replayer.ShouldContainEventAsync<HandleAutoReconnect.AutoReconnectAttempt>();
             await replayer.ShouldContainEventAsync<LoopBackBase.StartedChannel>();
 
-            await replayer.AssertClientSentAsync( TestHelper.Monitor, "101600044d51545404020005000a434b4d71747454657374" );
+            await replayer.AssertClientSentAsync( TestHelper.Monitor, "101600044d5154540400" + Convert.ToHexString( BitConverter.GetBytes( replayer.Config.KeepAliveSeconds ).Reverse().ToArray() ) + "000a434b4d71747454657374" );
             await replayer.SendToClientAsync( TestHelper.Monitor, "20020000" );
             await Task.Delay( 100 );
             await replayer.ShouldContainEventAsync<DefaultClientMessageSink.Connected>();

@@ -115,9 +115,9 @@ namespace CK.MQTT.Server
                 securityManager = null;
                 await CreateClientAsync( m, connectHandler.ClientId, channelCopy, smCopy, localStore, remoteStore,
                    connectHandler, cancellationToken );
-                await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output,
+                await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channelCopy.DuplexPipe.Output,
                     cancellationToken );
-                await channel.DuplexPipe.Output.FlushAsync( cancellationToken );
+                await channelCopy.DuplexPipe.Output.FlushAsync( cancellationToken );
                 if( cancellationToken.IsCancellationRequested )
                 {
                     localStore.Dispose();
