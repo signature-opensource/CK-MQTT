@@ -1,4 +1,3 @@
-using CK.Core;
 using CK.MQTT.Client.ExtensionMethods;
 using CK.MQTT.Client.Middleware;
 using CK.MQTT.Packets;

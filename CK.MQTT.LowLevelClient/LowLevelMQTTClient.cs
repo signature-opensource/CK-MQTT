@@ -37,10 +37,10 @@ namespace CK.MQTT
 
         /// <inheritdoc/>
         public Task<ConnectResult> ConnectAsync( bool cleanSession, CancellationToken cancellationToken = default )
-            => ConnectAsync( cleanSession, null, cancellationToken );
+            => ConnectAsync( null, cleanSession, cancellationToken );
 
         /// <inheritdoc/>
-        public async Task<ConnectResult> ConnectAsync( bool cleanSession, OutgoingLastWill? lastWill, CancellationToken cancellationToken = default )
+        public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill, bool cleanSession, CancellationToken cancellationToken = default )
         {
 
             if( !StopToken.IsCancellationRequested ) throw new InvalidOperationException( "This client is already connected." );

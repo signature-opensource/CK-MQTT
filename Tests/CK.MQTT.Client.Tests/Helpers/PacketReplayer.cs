@@ -19,7 +19,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
         public TestTimeHandler TestTimeHandler { get; } = new();
         public string ChannelType { get; set; }
-        public MQTT3ClientConfiguration Config { get; internal set; }
+        public MQTT3ClientConfiguration Config { get; internal set; } = null!;
 
         public delegate ValueTask<bool> ScenarioStep( IActivityMonitor m, PacketReplayer packetReplayer );
 

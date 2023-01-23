@@ -1,10 +1,8 @@
 using CK.Core;
-using CK.MQTT.Client.Middleware;
 using CK.MQTT.LowLevelClient.Time;
 using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using static CK.MQTT.Client.MQTTMessageSink;
 

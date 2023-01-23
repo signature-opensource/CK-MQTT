@@ -1,10 +1,5 @@
 using CK.Core;
-using CK.MQTT.Client.Middleware;
 using CK.PerfectEvent;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using static CK.MQTT.Client.DefaultClientMessageSink;
 

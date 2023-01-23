@@ -1,10 +1,5 @@
-using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.Client.Middleware;
-using CK.MQTT.Server.Server;
 using CK.PerfectEvent;
-using System;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Server
 {

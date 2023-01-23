@@ -117,7 +117,7 @@ namespace CK.MQTT.Client.Tests
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
             await replayer.ConnectClientAsync( TestHelper.Monitor, client );
 
-            await await client.PublishAsync( new string( 'a', ushort.MaxValue ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
+            await await client.PublishAsync( new string( 'a', ushort.MaxValue ), Array.Empty<byte>(), QualityOfService.AtMostOnce, false );
         }
 
         [Test]
@@ -129,7 +129,7 @@ namespace CK.MQTT.Client.Tests
 
             try
             {
-                await await client.PublishAsync( new string( 'a', ushort.MaxValue + 1 ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
+                await await client.PublishAsync( new string( 'a', ushort.MaxValue + 1 ), Array.Empty<byte>(), QualityOfService.AtMostOnce, false );
                 Assert.Fail();
             }
             catch( Exception )

@@ -1,10 +1,6 @@
 using CK.Core;
 using CK.MQTT.Client.ExtensionMethods;
 using CK.PerfectEvent;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Middleware

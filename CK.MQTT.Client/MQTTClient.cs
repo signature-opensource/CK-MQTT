@@ -1,21 +1,16 @@
 using CK.MQTT.Client.Middleware;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {
     public static class MQTTClient
     {
+        public static MQTTClientBuilder Factory => new MQTTClientBuilder();
         public class MQTTClientBuilder
         {
             readonly bool _autoReconnect;
             readonly MQTT3ClientConfiguration _config;
-            public MQTTClientBuilder()
+            internal MQTTClientBuilder()
             {
                 _config = new();
                 _autoReconnect = false;
@@ -68,7 +63,8 @@ namespace CK.MQTT.Client
 
         static IMQTTChannel ChannelFromConnectionString( string connectionString )
         {
-            var split = connectionString.Split();
+            connectionString ??= "127.0.0.1";
+            var split = connectionString.Split( ':' );
             string protocol;
             string hostname;
             int port;

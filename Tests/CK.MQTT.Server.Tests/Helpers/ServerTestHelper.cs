@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.Client.Middleware;
 using FluentAssertions;
 using System;
 using System.Diagnostics;

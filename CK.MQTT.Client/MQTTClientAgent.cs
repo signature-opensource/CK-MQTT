@@ -1,7 +1,6 @@
 using CK.Core;
 using CK.MQTT.Client.Middleware;
 using CK.MQTT.Packets;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,13 +24,13 @@ namespace CK.MQTT.Client
 
         public Task<ConnectResult> ConnectAsync( bool cleanSession, CancellationToken cancellationToken = default )
             => ConnectAsync( cleanSession, true, null, cancellationToken );
-        public Task<ConnectResult> ConnectAsync( bool cleanSession, OutgoingLastWill? lastwill, CancellationToken cancellationToken = default )
+        public Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastwill, bool cleanSession, CancellationToken cancellationToken = default )
             => ConnectAsync( cleanSession, true, lastwill, cancellationToken );
 
 
 
         public Task<ConnectResult> ConnectAsync( bool cleanSession, bool waitForCompletion, OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
-            => _client.ConnectAsync( cleanSession, lastWill, cancellationToken );
+            => _client.ConnectAsync( lastWill, cleanSession, cancellationToken );
 
         public bool IsConnected { get; private set; }
 

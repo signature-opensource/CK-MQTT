@@ -29,6 +29,6 @@ namespace CK.MQTT.Client.Tests.Helpers
     static class ApplicationMessageExtensions
     {
         public static ValueTask<Task> PublishAsync( this MQTTClientAgent @this, ApplicationMessage message )
-            => @this.PublishAsync( message.Topic, message.QoS, message.Retain, message.Payload );
+            => @this.PublishAsync( message.Topic, message.Payload, message.QoS, message.Retain );
     }
 }

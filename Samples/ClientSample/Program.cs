@@ -1,7 +1,5 @@
 using CK.MQTT;
 using CK.MQTT.Client;
-using CK.MQTT.Client.Middleware;
-using Microsoft;
 
 namespace ClientSample
 {
@@ -9,22 +7,9 @@ namespace ClientSample
     {
         public static async Task Main( string[] args )
         {
-            for( int i = 0; i < 10000; i++ )
-            {
-
-                var messageWorker = new MessageWorker();
-                var sink = new DefaultClientMessageSink( messageWorker.QueueMessage );
-                var client = new LowLevelMQTTClient(
-                        ProtocolConfiguration.MQTT3,
-                        new MQTT3ClientConfiguration()
-                        {
-                            ClientId = "foobar"
-                        },
-                        sink,
-                        new TcpChannel( "localhost", 1883 )
-                    );
-                await client.ConnectAsync( true );
-            }
+            var client = MQTTClient.Factory.Build();
+            await client.ConnectAsync( cleanSession: true );
+            await client.PublishAsync( topic: "test", payload: Array.Empty<byte>(), qos: QualityOfService.AtLeastOnce, retain: false );
         }
     }
 }

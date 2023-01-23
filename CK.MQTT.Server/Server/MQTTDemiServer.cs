@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Client;
-using CK.MQTT.Client.Middleware;
 using CK.MQTT.Server.Server;
 using CK.MQTT.Stores;
 using CK.PerfectEvent;

@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Client.Middleware;
-using NUnit.Framework;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 

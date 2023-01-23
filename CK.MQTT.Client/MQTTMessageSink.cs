@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using System.IO.Pipelines;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client

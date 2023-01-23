@@ -1,6 +1,5 @@
 using CK.MQTT.Client;
 using System;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.Server
