@@ -2,7 +2,7 @@ using System;
 
 namespace CK.MQTT.Client
 {
-    public struct VolatileApplicationMessage : IDisposable
+    public readonly struct VolatileApplicationMessage : IDisposable
     {
         readonly IDisposable _disposable;
 

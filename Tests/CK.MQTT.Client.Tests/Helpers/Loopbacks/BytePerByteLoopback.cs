@@ -4,7 +4,6 @@ using System.Buffers;
 using System.IO;
 using System.IO.Pipelines;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
@@ -129,7 +128,7 @@ namespace CK.MQTT.Client.Tests
             {
             }
         }
-        public BytePerByteLoopback( ChannelWriter<object?> writer ) : base( writer )
+        public BytePerByteLoopback( Action<object?> writer ) : base( writer )
         {
         }
 

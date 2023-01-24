@@ -4,7 +4,6 @@ using CK.MQTT.Packets;
 using System;
 using System.Diagnostics;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -271,7 +270,6 @@ namespace CK.MQTT.Stores
             }
         }
 
-        [ThreadColor( "ReadLoop" )]
         public async ValueTask<IOutgoingPacket> OnQos2AckStep1Async( ushort packetId )
         {
             lock( _idStore )
@@ -295,7 +293,6 @@ namespace CK.MQTT.Stores
             return await OverwriteMessageAsync( LifecyclePacketV3.Pubrel( packetId ) );
         }
 
-        [ThreadColor( "ReadLoop" )]
         public void OnQos2AckStep2( ushort packetId )
         {
             lock( _idStore )
@@ -318,14 +315,11 @@ namespace CK.MQTT.Stores
             }
         }
 
-        [ThreadColor( "WriteLoop" )]
         protected abstract ValueTask<IOutgoingPacket> RestorePacketAsync( ushort packetId );
 
-        [ThreadColor( "WriteLoop" )]
         async ValueTask<(IOutgoingPacket?, TimeSpan)> RestorePacketInternalAsync( ushort packetId )
             => (await RestorePacketAsync( packetId ), TimeSpan.Zero);
 
-        [ThreadColor( "WriteLoop" )]
         public ValueTask<(IOutgoingPacket? outgoingPacket, TimeSpan timeUntilAnotherRetry)> GetPacketToResendAsync()
         {
             lock( _idStore )
@@ -363,15 +357,10 @@ namespace CK.MQTT.Stores
         {
             lock( _idStore )
             {
-                uint currId = _idStore._newestIdAllocated;
-                if( currId == 0 ) return;
-                ref var curr = ref _idStore._entries[currId];
-                do // We loop over all older packets.
+                for( int i = 1; i < _idStore._entries.Length+1; i++ )
                 {
-                    curr.Content._taskCompletionSource.TrySetCanceled();
-                    currId = curr.PreviousId;
-                    curr = ref _idStore._entries[currId];
-                } while( currId != _idStore._head );
+                    _idStore._entries[i].Content._taskCompletionSource.TrySetCanceled();
+                }
             }
         }
 

@@ -2,7 +2,7 @@ using System;
 
 namespace CK.MQTT.Stores
 {
-    public struct ArrayStartingAt1<T> //TODO: benchmark, it may be way faster to just not use the first slot of the array.
+    public readonly struct ArrayStartingAt1<T> //TODO: benchmark, it may be way faster to just not use the first slot of the array.
     {
         readonly T[] _array;
         public ArrayStartingAt1( T[] array ) => _array = array;

@@ -3,14 +3,9 @@ namespace CK.MQTT
     public enum ConnectStatus
     {
         /// <summary>
-        /// Connection was succesful.
+        /// Connection was successful.
         /// </summary>
         Successful = 0,
-        /// <summary>
-        /// Connection has been deffered to the AutoReconnect logic.
-        /// This will happen only if you configured as is.
-        /// </summary>
-        Deffered = 1,
         /// <summary>
         /// There was an error while trying to connect, the error may be transient (ie: connectivity issue).
         /// </summary>

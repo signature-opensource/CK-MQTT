@@ -12,6 +12,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         readonly object _lock = new();
         readonly List<WeakReference<TestStopwatch>> _stopwatches = new();
         readonly List<CTS> _cts = new();
+        readonly List<Delays> _delays = new();
         const BindingFlags _bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
         static readonly FieldInfo? _isDisposedField = typeof( CancellationTokenSource ).GetField( "_disposed", _bindingFlags );
         private readonly List<TestTimer> _timers = new();
@@ -39,9 +40,32 @@ namespace CK.MQTT.Client.Tests.Helpers
                     || (bool)_isDisposedField!.GetValue( s.CancellationTokenSource )!
                     || s.CancellationTokenSource.IsCancellationRequested
                 );
+                foreach( var delay in _delays )
+                {
+                    delay.TimeSpan -= timeSpan;
+                }
+                _delays.RemoveAll( delay =>
+                {
+                    if( delay.TimeSpan.TotalMilliseconds <= 0 )
+                    {
+                        delay.Tcs.TrySetResult();
+                        return true;
+                    }
+                    return false;
+                } );
             }
         }
+        class Delays
+        {
+            public TaskCompletionSource Tcs;
+            public TimeSpan TimeSpan;
 
+            public Delays( TaskCompletionSource tcs, TimeSpan timeSpan )
+            {
+                Tcs = tcs;
+                TimeSpan = timeSpan;
+            }
+        }
         class DelayTask
         {
             public readonly TaskCompletionSource TaskCompletionSource;
@@ -225,6 +249,13 @@ namespace CK.MQTT.Client.Tests.Helpers
             var timer = new TestTimer( timerCallback );
             _timers.Add( timer );
             return timer;
+        }
+
+        public Task Delay( TimeSpan timeSpan )
+        {
+            var tcs = new TaskCompletionSource();
+            _delays.Add( new Delays( tcs, timeSpan ) );
+            return tcs.Task;
         }
     }
 }

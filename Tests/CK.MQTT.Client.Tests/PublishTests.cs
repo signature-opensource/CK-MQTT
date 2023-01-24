@@ -117,7 +117,7 @@ namespace CK.MQTT.Client.Tests
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
             await replayer.ConnectClientAsync( TestHelper.Monitor, client );
 
-            await await client.PublishAsync( new string( 'a', ushort.MaxValue ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
+            await await client.PublishAsync( new string( 'a', ushort.MaxValue ), Array.Empty<byte>(), QualityOfService.AtMostOnce, false );
         }
 
         [Test]
@@ -129,7 +129,7 @@ namespace CK.MQTT.Client.Tests
 
             try
             {
-                await await client.PublishAsync( new string( 'a', ushort.MaxValue + 1 ), QualityOfService.AtMostOnce, false, Array.Empty<byte>() );
+                await await client.PublishAsync( new string( 'a', ushort.MaxValue + 1 ), Array.Empty<byte>(), QualityOfService.AtMostOnce, false );
                 Assert.Fail();
             }
             catch( Exception )
@@ -142,7 +142,7 @@ namespace CK.MQTT.Client.Tests
         public void publish_async_over_sync_does_not_deadlock()
         {
 #pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
-            (PacketReplayer replayer, TestMQTTClient client) = ConnectAsync().GetAwaiter().GetResult();
+            (PacketReplayer replayer, MQTTClientAgent client) = ConnectAsync().GetAwaiter().GetResult();
             for( int i = 0; i < 10000; i++ )
             {
                 var _ = client.PublishAsync( new ApplicationMessage(
@@ -162,7 +162,7 @@ namespace CK.MQTT.Client.Tests
 
 
 
-        async Task<(PacketReplayer, TestMQTTClient)> ConnectAsync()
+        async Task<(PacketReplayer, MQTTClientAgent)> ConnectAsync()
         {
             var replayer = new PacketReplayer( ClassCase );
             var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );

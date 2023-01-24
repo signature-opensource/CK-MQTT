@@ -126,7 +126,7 @@ namespace CodeCake.Abstractions
         /// <param name="pushes">Push details: defaults to the result of <see cref="GetPushListAsync"/>.</param>
         public async Task PushAsync( IEnumerable<ArtifactPush>? pushes = null )
         {
-            if( pushes == null ) pushes = await GetPushListAsync();
+            pushes ??= await GetPushListAsync();
             var tasks = pushes.GroupBy( p => p.Feed ).Select( g => g.Key.PushAsync( g ) ).ToArray();
             await Task.WhenAll( tasks );
         }

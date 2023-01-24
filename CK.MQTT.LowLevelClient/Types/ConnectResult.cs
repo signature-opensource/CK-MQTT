@@ -1,5 +1,11 @@
 using System;
-using System.Diagnostics.SymbolStore;
+using System.Buffers;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Pipelines;
+using System.Threading;
+using System.Threading.Tasks;
+using CK.MQTT.Client;
 
 namespace CK.MQTT
 {
@@ -39,8 +45,7 @@ namespace CK.MQTT
         /// This is default logic, it may not be correct for your use case.
         /// For example, <see cref="ProtocolConnectReturnCode.ServerUnavailable"/> is defined as <see cref="ConnectStatus.ErrorMaybeRecoverable"/>.
         /// </remarks>
-        public ConnectStatus Status => _deffered ? ConnectStatus.Deffered
-            : ProtocolReturnCode switch
+        public ConnectStatus Status => ProtocolReturnCode switch
             {
                 ProtocolConnectReturnCode.Accepted => ConnectStatus.Successful,
                 ProtocolConnectReturnCode.BadUserNameOrPassword => ConnectStatus.ErrorUnrecoverable,
@@ -50,17 +55,13 @@ namespace CK.MQTT
                 ProtocolConnectReturnCode.UnacceptableProtocolVersion => ConnectStatus.ErrorUnrecoverable,
                 ProtocolConnectReturnCode.Unknown => Error switch
                 {
-                    ConnectError.Connection_Cancelled => ConnectStatus.ErrorMaybeRecoverable,
+                    ConnectError.UserCancelled => ConnectStatus.ErrorMaybeRecoverable,
                     ConnectError.InternalException => ConnectStatus.ErrorUnknown,
                     ConnectError.None => throw new InvalidOperationException( "This code path should not be hit. 1" ),
                     ConnectError.SeeReturnCode => throw new InvalidOperationException( "This code path should not be hit. 2" ),
-                    ConnectError.ProtocolError_IncompleteResponse => ConnectStatus.ErrorMaybeRecoverable,
-                    ConnectError.ProtocolError_InvalidConnackState => ConnectStatus.ErrorMaybeRecoverable,
-                    ConnectError.ProtocolError_SessionNotFlushed => ConnectStatus.ErrorMaybeRecoverable,
-                    ConnectError.ProtocolError_UnexpectedConnectResponse => ConnectStatus.ErrorMaybeRecoverable,
-                    ConnectError.ProtocolError_UnknownReturnCode => ConnectStatus.ErrorMaybeRecoverable,
+                    ConnectError.ProtocolError => ConnectStatus.ErrorMaybeRecoverable,
                     ConnectError.Timeout => ConnectStatus.ErrorMaybeRecoverable,
-                    ConnectError.RemoteDisconnected => ConnectStatus.ErrorMaybeRecoverable,
+                    ConnectError.Disconnected => ConnectStatus.ErrorMaybeRecoverable,
                     _ => throw new InvalidOperationException( $"Invalid {nameof( Error )}:{Error}." )
                 },
                 _ => throw new InvalidOperationException( $"Invalid {nameof( ProtocolReturnCode )}:{ProtocolReturnCode}." )
@@ -74,6 +75,7 @@ namespace CK.MQTT
         /// <param name="connectError">The reason the client could not connect.</param>
         public ConnectResult( ConnectError connectError )
         {
+            Debug.Assert( connectError != ConnectError.SeeReturnCode );
             Error = connectError;
             Exception = null;
             SessionState = SessionState.Unknown;
@@ -145,5 +147,65 @@ namespace CK.MQTT
         /// <returns></returns>
         public override string ToString()
             => $"ConnectResult(Status:'{Status}' ReturnCode:'{ProtocolReturnCode}' Deffered:'{_deffered}' ConnectError:'{Error}' SessionState:'{SessionState}')";
+
+        internal static async ValueTask<ConnectResult> ReadAsync( PipeReader reader, IMQTT3Sink sink, CancellationToken cancellationToken )
+        {
+            try
+            {
+                byte header;
+                uint length;
+                while( true )
+                {
+                    var res = await reader.ReadAsync( cancellationToken );
+                    var status = MQTTTHelper.TryParsePacketHeader( res.Buffer, out header, out length, out var headerPos );
+                    if( status == OperationStatus.Done )
+                    {
+                        reader.AdvanceTo( headerPos );
+                        break;
+                    }
+                    if( cancellationToken.IsCancellationRequested || res.IsCanceled ) return new ConnectResult( ConnectError.UserCancelled );
+                    if( res.IsCompleted ) break;
+                    reader.AdvanceTo( res.Buffer.Start, headerPos );
+                }
+                if( header != (byte)PacketType.ConnectAck )
+                {
+                    return new ConnectResult( ConnectError.ProtocolError );
+                }
+                var read = await reader.ReadAtLeastAsync( 2, cancellationToken );
+                if( read.Buffer.Length < 2 ) return new ConnectResult( ConnectError.Disconnected );
+                Deserialize( read.Buffer, out byte state, out byte code, out SequencePosition position );
+                reader.AdvanceTo( position );
+                if( state > 1 )
+                {
+                    return new ConnectResult( ConnectError.ProtocolError );
+                }
+                if( code > 5 )
+                {
+                    return new ConnectResult( ConnectError.ProtocolError );
+                }
+                if( length > 2 )
+                {
+                    await reader.UnparsedExtraDataAsync( sink, 0, (ushort)(length - 2), cancellationToken );
+                }
+                return new ConnectResult( (SessionState)state, (ProtocolConnectReturnCode)code );
+            }
+            catch( EndOfStreamException )
+            {
+                return new ConnectResult( ConnectError.ProtocolError );
+            }
+            catch( Exception )
+            {
+                return new ConnectResult( ConnectError.InternalException );
+            }
+        }
+
+        static void Deserialize( ReadOnlySequence<byte> buffer, out byte state, out byte code, out SequencePosition position )
+        {
+            SequenceReader<byte> reader = new( buffer );
+            bool res = reader.TryRead( out state );
+            bool res2 = reader.TryRead( out code );
+            position = reader.Position;
+            Debug.Assert( res && res2 );
+        }
     }
 }

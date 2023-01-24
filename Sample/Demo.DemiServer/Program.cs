@@ -1,6 +1,5 @@
 using CK.Core;
 using CK.MQTT.Server;
-using CK.MQTT.Server.Server;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

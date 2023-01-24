@@ -1,6 +1,5 @@
 using CK.MQTT.Client;
 using CK.MQTT.Pumps;
-using CK.MQTT.Stores;
 using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
@@ -75,13 +74,13 @@ namespace CK.MQTT
             if( qos == QualityOfService.AtLeastOnce )
             {
                 await _exchanger.Sink.OnMessageAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
-                _exchanger.Pumps!.Left.TryQueueReflexMessage( LifecyclePacketV3.Puback( packetId ) );
+                _exchanger.OutputPump?.TryQueueReflexMessage( LifecyclePacketV3.Puback( packetId ) );
                 return (OperationStatus.Done, true);
             }
             if( qos != QualityOfService.ExactlyOnce ) throw new ProtocolViolationException();
             await _exchanger.RemotePacketStore.StoreIdAsync( packetId );
             await _exchanger.Sink.OnMessageAsync( topic, reader, packetLength - 2 - topic.MQTTSize(), qos, retain, cancellationToken );
-            _exchanger.Pumps!.Left.TryQueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) );
+            _exchanger.OutputPump?.TryQueueReflexMessage( LifecyclePacketV3.Pubrec( packetId ) );
             return (OperationStatus.Done, true);
         }
 

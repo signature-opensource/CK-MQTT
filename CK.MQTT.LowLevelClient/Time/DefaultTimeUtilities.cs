@@ -1,6 +1,7 @@
 using CK.MQTT.LowLevelClient.Time;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -31,6 +32,8 @@ namespace CK.MQTT
         public DateTime UtcNow => DateTime.UtcNow;
 
         public ITimer CreateTimer( TimerCallback timerCallback ) => new Timer( timerCallback );
+
+        public Task Delay( TimeSpan timeSpan ) => Task.Delay( timeSpan );
 #pragma warning restore RS0030 // Do not used banned APIs
     }
 }

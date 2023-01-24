@@ -1,24 +1,15 @@
-using CK.MQTT.Client;
 using CK.MQTT.Packets;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
-    public interface IMQTT3Client: IConnectedMessageSender
+    public interface IMQTT3Client : IConnectedMessageSender
     {
         /// <summary>
         /// Connect the <see cref="IConnectedMessageSender"/> to a Broker.
         /// </summary>
-        /// <param name="m">The logger used to log activities about the connection.</param>
-        /// <param name="credentials">
-        /// The credentials used to connect to the Server. See <see cref="MQTTClientCredentials" /> for more details on the credentials information.
-        /// If <see langword="null"/>, the client will attempt an anonymous connection (<a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc385349242">MQTT-3.1.3-6</a>).
-        /// </param>
         /// <param name="lastWill">
         /// The <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Will_Flag">
         /// last will message </a> that the Server will send if an unexpected Client disconnection occurs. 
@@ -31,7 +22,10 @@ namespace CK.MQTT
         /// See <a href="http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html#_Toc442180841">MQTT Connect</a>
         /// for more details about the connection protocol.
         /// </remarks>
-        Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default );
+        Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill, bool cleanSession = true, CancellationToken cancellationToken = default );
+
+        /// <inheritdoc cref="ConnectAsync(OutgoingLastWill?, bool, CancellationToken)"/>
+        Task<ConnectResult> ConnectAsync( bool cleanSession = true, CancellationToken cancellationToken = default );
 
         /// <summary>
         /// Unsubscribe the client from topics.

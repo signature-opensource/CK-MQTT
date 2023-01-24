@@ -1,6 +1,5 @@
 using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,78 +8,37 @@ namespace CK.MQTT
     /// <summary>
     /// Generalizes <see cref="InputPump"/> and <see cref="OutputPump"/>.
     /// </summary>
-    public abstract class PumpBase : IAsyncDisposable
+    public abstract class PumpBase
     {
-        readonly CancellationTokenSource _stopSource = new();
-        readonly CancellationTokenSource _closeSource = new();
-        protected readonly MessageExchanger MessageExchanger;
+        readonly Func<DisconnectReason, ValueTask> _closeHandler;
 
-        private protected PumpBase( MessageExchanger messageExchanger )
+        private protected PumpBase( Func<DisconnectReason, ValueTask> closeHandler)
         {
-            MessageExchanger = messageExchanger;
+            _closeHandler = closeHandler;
         }
-
-        Task _workLoopTask = null!; //Always set in constructor
 
         /// <summary>
         /// Must be called at the end of the specialized constructors.
         /// </summary>
         /// <param name="loop">The running loop.</param>
-        protected void SetRunningLoop( Task loop ) => _workLoopTask = loop;
+        [MemberNotNull( nameof( WorkTask ) )]
+        public void StartPumping(CancellationToken stopToken, CancellationToken closeToken)
+        {
+            WorkTask = WorkLoopAsync( stopToken, closeToken );
+        }
+
+        protected abstract Task WorkLoopAsync( CancellationToken stopToken, CancellationToken closeToken );
+
+        public Task? WorkTask { get; private set; }
 
         /// <summary>
-        /// Gets the token that drives the run of this pump.
-        /// When this Token is cancelled, the pump should complete it's work then close.
+        /// Called by the pump to trigger the client disconnection.
         /// </summary>
-        public CancellationToken StopToken => _stopSource.Token;
-
-        /// <summary>
-        /// Order to stop initiated from the user.
-        /// </summary>
+        /// <param name="disconnectedReason"></param>
         /// <returns></returns>
-        public async Task StopWorkAsync()
-        {
-            if( _initiatedClose ) return;
-            _stopSource.Cancel();
-            await _workLoopTask;
-            _closeSource.Cancel();
-        }
+        protected async ValueTask SelfDisconnectAsync( DisconnectReason disconnectedReason )
+            => await _closeHandler( disconnectedReason );
 
-        /// <summary>
-        /// Gets the token that close the pump.
-        /// When this Token is cancelled, the pump should stop ASAP and the task complete.
-        /// </summary>
-        public CancellationToken CloseToken => _closeSource.Token;
 
-        public virtual async Task CloseAsync()
-        {
-            CancelTokens();
-            await _workLoopTask;
-        }
-        bool _initiatedClose;
-        internal protected async ValueTask SelfCloseAsync( DisconnectReason disconnectedReason )
-        {
-            _initiatedClose = true;
-            CancelTokens();
-            await MessageExchanger.SelfDisconnectAsync( disconnectedReason );
-        }
-
-        /// <summary>
-        /// Return true when the shutdown has been initiated.
-        /// Return false when the shutdown is already in progress. It also mean this <see cref="PumpBase"/> is making the call to close.
-        /// </summary>
-        /// <returns></returns>
-        internal void CancelTokens()
-        {
-            _stopSource!.Cancel();
-            _closeSource.Cancel();
-        }
-        public virtual ValueTask DisposeAsync()
-        {
-            Debug.Assert( _workLoopTask.IsCompleted );
-            _closeSource.Dispose();
-            _stopSource.Dispose();
-            return new ValueTask();
-        }
     }
 }

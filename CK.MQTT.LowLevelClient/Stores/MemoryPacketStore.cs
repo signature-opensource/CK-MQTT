@@ -57,6 +57,7 @@ namespace CK.MQTT
             PipeWriter pipe = PipeWriter.Create( memOwner.Memory.AsStream() ); // And write their content to this memory.
             await packet.WriteAsync( _pConfig.ProtocolLevel, pipe, default );
             await pipe.FlushAsync();
+            await pipe.CompleteAsync();
             Memory<byte> slicedMem = memOwner.Memory.Slice( 0, (int)packetSize );
             base[packet.PacketId].Content.Storage = new StoredPacket( packet.Type, slicedMem, memOwner );
             return new FromMemoryOutgoingPacket( packet.Type, slicedMem, packet.Qos, packet.PacketId, packet.IsRemoteOwnedPacketId );

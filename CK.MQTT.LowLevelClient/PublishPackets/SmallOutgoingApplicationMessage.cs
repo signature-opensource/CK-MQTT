@@ -42,7 +42,7 @@ namespace CK.MQTT
 
     public static class SmallOutgoingApplicationMessageExtensions
     {
-        public static ValueTask<Task> PublishAsync( this IConnectedMessageSender sender, string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload )
+        public static ValueTask<Task> PublishAsync( this IConnectedMessageSender sender, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
         {
             return sender.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
         }

@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +6,9 @@ namespace CK.MQTT.LowLevelClient.Time
 {
     public interface ITimeUtilities
     {
+#pragma warning disable VSTHRD200 // .NET Type is named like this.
+        Task Delay( TimeSpan timeSpan );
+#pragma warning restore VSTHRD200
         IStopwatch CreateStopwatch();
 
 #pragma warning disable RS0030 // Do not used banned APIs

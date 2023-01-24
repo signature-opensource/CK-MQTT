@@ -1,6 +1,4 @@
 using CK.Core;
-using CK.MQTT.Client;
-using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
 using System.Threading;
@@ -109,24 +107,23 @@ namespace CK.MQTT.Server
                 (ILocalPacketStore localStore, IRemotePacketStore remoteStore) = await _storeFactory.CreateAsync(
                     ProtocolConfiguration.FromProtocolLevel( protocolLevel ), Config, connectHandler.ClientId,
                     connectHandler.CleanSession, cancellationToken );
-                await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channel.DuplexPipe.Output,
-                    cancellationToken );
-                await channel.DuplexPipe.Output.FlushAsync( cancellationToken );
-                if( cancellationToken.IsCancellationRequested )
-                {
-                    localStore.Dispose();
-                    remoteStore.Dispose();
-                    return;
-                }
-
-                // ownership of channel and security manager is now transfered to the CreateClientAsync implementation.
+                // ownership of channel and security manager is now transferred to the CreateClientAsync implementation.
                 var channelCopy =
                     channel; // We copy the reference so these objects are not cleaned if the cancellationToken is triggered.
                 var smCopy = securityManager;
                 channel = null;
                 securityManager = null;
                 await CreateClientAsync( m, connectHandler.ClientId, channelCopy, smCopy, localStore, remoteStore,
-                    connectHandler, cancellationToken );
+                   connectHandler, cancellationToken );
+                await new OutgoingConnectAck( false, returnCode ).WriteAsync( protocolLevel, channelCopy.DuplexPipe.Output,
+                    cancellationToken );
+                await channelCopy.DuplexPipe.Output.FlushAsync( cancellationToken );
+                if( cancellationToken.IsCancellationRequested )
+                {
+                    localStore.Dispose();
+                    remoteStore.Dispose();
+                    return;
+                }
             }
             finally
             {

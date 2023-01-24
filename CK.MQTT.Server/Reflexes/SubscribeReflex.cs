@@ -1,14 +1,10 @@
 using CK.MQTT.Client;
-using CK.MQTT.Packets;
 using CK.MQTT.Pumps;
 using CK.MQTT.Server.OutgoingPackets;
-using CK.MQTT.Stores;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 

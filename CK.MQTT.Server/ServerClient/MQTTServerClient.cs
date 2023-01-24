@@ -1,13 +1,10 @@
 using CK.Core;
-using CK.MQTT.Client;
 using CK.MQTT.Packets;
 using CK.MQTT.Stores;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Server.ServerClient
@@ -17,8 +14,6 @@ namespace CK.MQTT.Server.ServerClient
         public IMQTTServerSink Sink { get; set; }
         internal TaskCompletionSource<(IMQTTChannel channel, IAuthenticationProtocolHandler securityManager, ILocalPacketStore localPacketStore, IRemotePacketStore remotePacketStore, IConnectInfo connectInfo)>? _needClientTCS;
         ServerMessageExchanger? _wrapper;
-
-        public string? ClientId => _wrapper?.ClientId;
 
         public MQTTServerClient( MQTT3ConfigurationBase config, IMQTTServerSink sink, IMQTTChannelFactory channelFactory, IStoreFactory storeFactory, IAuthenticationProtocolHandlerFactory securityManagerFactory )
             : base( config, channelFactory, storeFactory, securityManagerFactory )
@@ -34,7 +29,10 @@ namespace CK.MQTT.Server.ServerClient
             return new ValueTask();
         }
 
-        public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill = null, CancellationToken cancellationToken = default )
+        public Task<ConnectResult> ConnectAsync( bool cleanSession, CancellationToken cancellationToken )
+            => ConnectAsync( null, cleanSession, cancellationToken );
+
+        public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill, bool cleanSession = true, CancellationToken cancellationToken = default )
         {
             if( lastWill != null ) throw new ArgumentException( "Last will is not supported by a P2P client." );
             if( _wrapper?.IsConnected ?? false ) throw new InvalidOperationException( "This client is already connected." );
