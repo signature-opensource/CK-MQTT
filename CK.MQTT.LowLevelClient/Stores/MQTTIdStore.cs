@@ -359,7 +359,7 @@ namespace CK.MQTT.Stores
             {
                 for( int i = 1; i < _idStore._entries.Length+1; i++ )
                 {
-                    _idStore._entries[i].Content._taskCompletionSource.TrySetCanceled();
+                    _idStore._entries[i].Content._taskCompletionSource?.TrySetCanceled();
                 }
             }
         }
