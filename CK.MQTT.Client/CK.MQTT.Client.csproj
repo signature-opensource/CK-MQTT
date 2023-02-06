@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="17.0.2--0009-develop" />
-    <PackageReference Include="CK.PerfectEvent" Version="18.0.2--0006-develop" />
+    <PackageReference Include="CK.PerfectEvent" Version="18.0.2--0007-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.LowLevelClient\CK.MQTT.LowLevelClient.csproj" />
