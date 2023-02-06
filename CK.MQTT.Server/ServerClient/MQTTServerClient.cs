@@ -77,5 +77,7 @@ namespace CK.MQTT.Server.ServerClient
                 await _wrapper.DisposeAsync();
             }
         }
+
+        public bool IsConnected => _wrapper?.IsConnected ?? false;
     }
 }

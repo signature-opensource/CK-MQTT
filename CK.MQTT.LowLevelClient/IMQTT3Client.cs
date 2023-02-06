@@ -75,5 +75,7 @@ namespace CK.MQTT
         /// for more details about the protocol subscription.
         /// </remarks>
         ValueTask<Task<SubscribeReturnCode>> SubscribeAsync( Subscription subscriptions );
+
+        bool IsConnected { get; }
     }
 }
