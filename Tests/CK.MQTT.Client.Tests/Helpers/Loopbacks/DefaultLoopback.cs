@@ -2,14 +2,13 @@ using CK.MQTT.Client.Tests.Helpers;
 using System;
 using System.IO.Pipelines;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests
 {
     public class DefaultLoopback : LoopBackBase
     {
-        public DefaultLoopback( ChannelWriter<object?> writer ) : base( writer )
+        public DefaultLoopback( Action<object?> writer ) : base( writer )
         {
         }
 

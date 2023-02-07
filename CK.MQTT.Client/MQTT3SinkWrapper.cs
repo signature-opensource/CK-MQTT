@@ -1,9 +1,5 @@
-using CK.MQTT.Packets;
-using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,10 +21,12 @@ namespace CK.MQTT.Client
 
         public virtual void OnQueueFullPacketDropped( ushort packetId, PacketType packetType ) => _sink.OnQueueFullPacketDropped( packetId, packetType );
 
-        public virtual bool OnUnattendedDisconnect( DisconnectReason reason ) => _sink.OnUnattendedDisconnect( reason );
+        public virtual void OnUnattendedDisconnect( DisconnectReason reason ) => _sink.OnUnattendedDisconnect( reason );
 
         public virtual void OnUnparsedExtraData( ushort packetId, ReadOnlySequence<byte> unparsedData ) => _sink.OnUnparsedExtraData( packetId, unparsedData );
 
         public virtual ValueTask OnMessageAsync( string topic, PipeReader reader, uint size, QualityOfService q, bool retain, CancellationToken cancellationToken ) => _sink.OnMessageAsync( topic, reader, size, q, retain, cancellationToken );
+
+        public void OnUserDisconnect( bool clearSession ) => _sink.OnUserDisconnect( clearSession );
     }
 }

@@ -1,11 +1,4 @@
-using CommunityToolkit.HighPerformance;
 using System;
-using System.Buffers;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CK.MQTT.Client
 {

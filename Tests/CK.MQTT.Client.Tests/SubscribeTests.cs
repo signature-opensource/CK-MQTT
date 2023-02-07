@@ -1,7 +1,6 @@
 using CK.MQTT.Client.Tests.Helpers;
 using FluentAssertions;
 using NUnit.Framework;
-using System.Text;
 using System.Threading.Tasks;
 using static CK.Testing.MonitorTestHelper;
 

@@ -20,7 +20,7 @@ namespace CK.MQTT
         /// <summary>
         /// The server closed the connection.
         /// </summary>
-        RemoteDisconnected,
+        Disconnected,
         /// <summary>
         /// Internal exception while trying to connect.
         /// </summary>
@@ -28,26 +28,10 @@ namespace CK.MQTT
         /// <summary>
         /// Connection has been cancelled by the provided <see cref="System.Threading.CancellationToken"/>.
         /// </summary>
-        Connection_Cancelled,
+        UserCancelled,
         /// <summary>
-        /// Protocol error: server responded with an invalid connect state.
+        /// Protocol error.
         /// </summary>
-        ProtocolError_InvalidConnackState,
-        /// <summary>
-        /// Protocol error: server responded with something else than ConnectAck.
-        /// </summary>
-        ProtocolError_UnexpectedConnectResponse,
-        /// <summary>
-        /// Protocol error: server responded an unknown return code.
-        /// </summary>
-        ProtocolError_UnknownReturnCode,
-        /// <summary>
-        /// Protocol error: we connected with CleanSession=true, but the server responded the session is present.
-        /// </summary>
-        ProtocolError_SessionNotFlushed,
-        /// <summary>
-        /// Protocol error: the server sended a part of the ConnectAck then the channel was closed.
-        /// </summary>
-        ProtocolError_IncompleteResponse
+        ProtocolError
     }
 }

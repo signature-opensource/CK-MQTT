@@ -40,7 +40,7 @@ namespace CodeCake.Abstractions
         /// </summary>
         /// <param name="obj">An object.</param>
         /// <returns>True the object is an Artifact that is equal to this one, false otherwise.</returns>
-        public override bool Equals( object? obj ) => obj is Artifact a ? Equals( a ) : false;
+        public override bool Equals( object? obj ) => obj is Artifact a && Equals( a );
 
         /// <summary>
         /// Overridden to combine <see cref="Type"/> and <see cref="Name"/>.

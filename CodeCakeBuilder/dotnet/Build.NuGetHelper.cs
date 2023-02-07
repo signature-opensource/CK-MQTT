@@ -9,7 +9,6 @@ using NuGet.Credentials;
 using NuGet.Packaging.Core;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
-using NuGet.Protocol.Plugins;
 using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
@@ -249,9 +248,7 @@ namespace CodeCake
                 {
                     if( this is VSTSFeed f )
                     {
-                        if( HttpHandlerResourceV3.CredentialService == null )
-                        {
-                            HttpHandlerResourceV3.CredentialService = new Lazy<ICredentialService>(
+                        HttpHandlerResourceV3.CredentialService ??= new Lazy<ICredentialService>(
                             () => new CredentialService(
                                 providers: new AsyncLazy<IEnumerable<ICredentialProvider>>(
                                     () => System.Threading.Tasks.Task.FromResult<IEnumerable<ICredentialProvider>>(
@@ -260,7 +257,6 @@ namespace CodeCake
                                 nonInteractive: true,
                                 handlesDefaultCredentials: true )
                             );
-                        }
                         _vstsFeeds.Add( f );
                     }
                 }

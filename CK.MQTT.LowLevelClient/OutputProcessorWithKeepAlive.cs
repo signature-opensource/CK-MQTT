@@ -10,15 +10,16 @@ namespace CK.MQTT.Client
 {
     class OutputProcessorWithKeepAlive : OutputProcessor, IReflexMiddleware
     {
-        readonly LowLevelMQTTClient _client;
-
+        readonly MQTT3ClientConfiguration _config;
+        readonly Func<DisconnectReason, ValueTask> _closeHandler;
         DateTime _lastPacketSent;
 
-        public OutputProcessorWithKeepAlive( LowLevelMQTTClient client )
-            : base( client )
+        public OutputProcessorWithKeepAlive( PipeWriter pipeWriter, ProtocolConfiguration pConfig, MQTT3ClientConfiguration config, ILocalPacketStore localPacketStore, Func<DisconnectReason, ValueTask> closeHandler )
+            : base(pipeWriter, pConfig, config, localPacketStore )
         {
-            _client = client;
-            _lastPacketSent = _client.Config.TimeUtilities.UtcNow;
+            _config = config;
+            _closeHandler = closeHandler;
+            _lastPacketSent = config.TimeUtilities.UtcNow;
         }
 
         public bool WaitingPingResp { get; set; }
@@ -27,19 +28,19 @@ namespace CK.MQTT.Client
         {
             if( WaitingPingResp )
             {
-                var now = _client.Config.TimeUtilities.UtcNow;
+                var now = _config.TimeUtilities.UtcNow;
                 var elapsed = now - _lastPacketSent;
 
-                if( elapsed.TotalMilliseconds > _client.Config.WaitTimeoutMilliseconds )
+                if( elapsed.TotalMilliseconds > _config.WaitTimeoutMilliseconds )
                 {
-                    await SelfDisconnectAsync( DisconnectReason.Timeout );
+                    await _closeHandler( DisconnectReason.Timeout );
                     return true;
                 }
             }
             var res = await base.SendPacketsAsync( cancellationToken );
             if( res )
             {
-                _lastPacketSent = _client.Config.TimeUtilities.UtcNow;
+                _lastPacketSent = _config.TimeUtilities.UtcNow;
             }
             return res;
         }
@@ -47,8 +48,8 @@ namespace CK.MQTT.Client
 
         protected override long GetTimeoutTime( long current )
         {
-            var sendTime = _lastPacketSent.AddSeconds( _client.ClientConfig.KeepAliveSeconds );
-            var timeUntilTimeout = sendTime - _client.Config.TimeUtilities.UtcNow;
+            var sendTime = _lastPacketSent.AddSeconds( _config.KeepAliveSeconds );
+            var timeUntilTimeout = sendTime - _config.TimeUtilities.UtcNow;
             var inMsFloored = Math.Max( (int)timeUntilTimeout.TotalMilliseconds, 0 );
             var baseVal = base.GetTimeoutTime( current );
             if( baseVal == Timeout.Infinite ) return inMsFloored;
@@ -71,9 +72,9 @@ namespace CK.MQTT.Client
                 return;
             }
             WaitingPingResp = true;
-            _lastPacketSent = MessageExchanger.Config.TimeUtilities.UtcNow;
-            MessageExchanger.Pumps!.Left.TryQueueMessage( OutgoingPingReq.Instance );
-            base.OnTimeout( MessageExchanger.Config.WaitTimeoutMilliseconds );
+            _lastPacketSent =_config.TimeUtilities.UtcNow;
+            OutputPump.TryQueueMessage( OutgoingPingReq.Instance );
+            base.OnTimeout( _config.WaitTimeoutMilliseconds );
         }
 
         public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync(

@@ -1,16 +1,15 @@
 using System;
 using System.IO.Pipelines;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace CK.MQTT.Client.Tests.Helpers
 {
     public abstract class LoopBackBase : IMQTTChannel
     {
-        readonly ChannelWriter<object?> _writer;
+        readonly Action<object?> _writer;
 
-        public LoopBackBase( ChannelWriter<object?> writer ) => _writer = writer;
+        public LoopBackBase( Action<object?> writer ) => _writer = writer;
 
         TaskCompletionSource<IDuplexPipe> _tcs = new();
         public Task<IDuplexPipe> GetTestDuplexPipeAsync() => _tcs.Task;
@@ -21,7 +20,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public async ValueTask StartAsync( CancellationToken cancellationToken )
         {
             IsConnected = true;
-            _writer.TryWrite( new StartedChannel() );
+            _writer( new StartedChannel() );
             _tcs.SetResult( await DoStartAsync( cancellationToken ) );
         }
 
@@ -41,7 +40,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             await DuplexPipe.Input.CompleteAsync();
             DuplexPipe = null;
             IsConnected = false;
-            _writer.TryWrite( new ClosedChannel() );
+            _writer( new ClosedChannel() );
 
             _tcs = new();
             DoClose();

@@ -20,7 +20,7 @@ namespace CodeCake
         {
             get
             {
-                if( _artifactType == null ) _artifactType = new NuGetArtifactType( _globalInfo, this );
+                _artifactType ??= new NuGetArtifactType( _globalInfo, this );
                 return _artifactType;
             }
         }
@@ -31,6 +31,8 @@ namespace CodeCake
             var settings = new DotNetCorePackSettings().AddVersionArguments( _globalInfo.BuildInfo, c =>
             {
                 c.NoBuild = true;
+                // Includes the .pdb in package.
+                c.IncludeSymbols = true;
                 c.Configuration = _globalInfo.BuildInfo.BuildConfiguration;
                 c.OutputDirectory = _globalInfo.ReleasesFolder.Path;
             } );

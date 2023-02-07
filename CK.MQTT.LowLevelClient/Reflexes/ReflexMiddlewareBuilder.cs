@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace CK.MQTT
 {
@@ -23,7 +22,7 @@ namespace CK.MQTT
         /// <returns>The <see cref="ReflexMiddleware"/> instance.</returns>
         public ReflexMiddlewareBuilder UseMiddleware( IReflexMiddleware reflex )
         {
-            if( _built ) throw new InvalidOperationException("UseMiddleware called after being built.");
+            if( _built ) throw new InvalidOperationException( "UseMiddleware called after being built." );
             _reflexes.Add( reflex );
             return this;
         }
@@ -33,10 +32,10 @@ namespace CK.MQTT
         /// </summary>
         /// <param name="lastReflex">The 'next' of the last <see cref="ReflexMiddleware"/> will be this delegate.</param>
         /// <returns>The middleware chain built as a <see cref="Reflex"/>.</returns>
-        public Reflex Build()
+        public Reflex Build( Func<DisconnectReason, ValueTask> closeHandler )
         {
             _built = true;
-            return new( _reflexes.ToArray() );
+            return new( closeHandler, _reflexes.ToArray() );
         }
     }
 }
