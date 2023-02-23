@@ -163,7 +163,8 @@ namespace CodeCake
         public bool CheckCommitMemoryKey( NormalizedPath key )
         {
             bool done = File.Exists( MemoryFilePath )
-                && Array.IndexOf( File.ReadAllLines( MemoryFilePath ), key.Path ) >= 0;
+                        ? Array.IndexOf( File.ReadAllLines( MemoryFilePath ), key.Path ) >= 0
+                        : false;
             if( done )
             {
                 if( !BuildInfo.IsValid() )
@@ -187,7 +188,7 @@ namespace CodeCake
         /// </summary>
         public Task PushArtifactsAsync( IEnumerable<ArtifactPush>? pushes = null )
         {
-            pushes ??= GetArtifactPushList();
+            if( pushes == null ) pushes = GetArtifactPushList();
             return Task.WhenAll( ArtifactTypes.Select( t => t.PushAsync( pushes.Where( a => a.Feed.ArtifactType == t ) ) ) );
         }
 
