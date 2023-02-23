@@ -2,8 +2,8 @@ using Cake.Common.Diagnostics;
 using Cake.Common.IO;
 using Cake.Common.Solution;
 using Cake.Common.Tools.DotNet;
-using Cake.Common.Tools.DotNetCore.Build;
-using Cake.Common.Tools.DotNetCore.Test;
+using Cake.Common.Tools.DotNet.Build;
+using Cake.Common.Tools.DotNet.Test;
 using Cake.Common.Tools.NUnit;
 using Cake.Core;
 using Cake.Core.IO;
@@ -74,7 +74,7 @@ namespace CodeCake
 
             var projects = sln
                 .Projects
-                .Where( p => p is not SolutionFolder
+                .Where( p => !(p is SolutionFolder)
                             && p.Name != "CodeCakeBuilder" )
                 .ToList();
             var projectsToPublish = projects.Where(
@@ -110,7 +110,7 @@ namespace CodeCake
                 var exclude = new List<string>( excludedProjectsName ) { "CodeCakeBuilder" };
                 tempSln.ExcludeProjectsFromBuild( exclude.ToArray() );
                 _globalInfo.Cake.DotNetBuild( tempSln.FullPath.FullPath,
-                    new DotNetCoreBuildSettings().AddVersionArguments( _globalInfo.BuildInfo, s =>
+                    new DotNetBuildSettings().AddVersionArguments( _globalInfo.BuildInfo, s =>
                     {
                         s.Configuration = _globalInfo.BuildInfo.BuildConfiguration;
                     } ) );
@@ -119,7 +119,10 @@ namespace CodeCake
 
         public void Test( IEnumerable<SolutionProject>? testProjects = null )
         {
-            testProjects ??= Projects.Where( p => p.Name.EndsWith( ".Tests" ) );
+            if( testProjects == null )
+            {
+                testProjects = Projects.Where( p => p.Name.EndsWith( ".Tests" ) );
+            }
 
             foreach( SolutionProject project in testProjects )
             {
@@ -135,7 +138,7 @@ namespace CodeCake
                 )
                 {
                     string framework = buildDir.LastPart;
-                    bool isNetFramework = framework.StartsWith( "net" ) && framework.Length == 6 && int.TryParse( framework.AsSpan( 3 ), out var _ );
+                    bool isNetFramework = framework.StartsWith( "net" ) && framework.Length == 6 && int.TryParse( framework.Substring( 3 ), out var _ );
                     string fileWithoutExtension = buildDir.AppendPart( project.Name );
                     string testBinariesPath = "";
                     if( isNunitLite )
@@ -169,7 +172,7 @@ namespace CodeCake
                         _globalInfo.Cake.Information( $"Testing via VSTest ({framework}): {testBinariesPath}" );
                         if( !_globalInfo.CheckCommitMemoryKey( testBinariesPath ) )
                         {
-                            var options = new DotNetCoreTestSettings()
+                            var options = new DotNetTestSettings()
                             {
                                 Configuration = _globalInfo.BuildInfo.BuildConfiguration,
                                 Framework = framework,

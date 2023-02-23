@@ -11,7 +11,7 @@ namespace CodeCake
         /// instead of using the default lookup to "Solution/Builder/bin/[Configuration]/[targetFramework]" folder.
         /// Check of this argument uses <see cref="StringComparer.OrdinalIgnoreCase"/>.
         /// </summary>
-        const string _solutionDirectoryIsCurrentDirectoryParameter = "SolutionDirectoryIsCurrentDirectory";
+        const string SolutionDirectoryIsCurrentDirectoryParameter = "SolutionDirectoryIsCurrentDirectory";
 
         /// <summary>
         /// CodeCakeBuilder entry point. This is a default, simple, implementation that can 
@@ -21,11 +21,11 @@ namespace CodeCake
         /// <returns>An error code (typically negative), 0 on success.</returns>
         static async Task<int> Main( string[] args )
         {
-            string? solutionDirectory = args.Contains( _solutionDirectoryIsCurrentDirectoryParameter, StringComparer.OrdinalIgnoreCase )
+            string? solutionDirectory = args.Contains( SolutionDirectoryIsCurrentDirectoryParameter, StringComparer.OrdinalIgnoreCase )
                                         ? Environment.CurrentDirectory
                                         : null;
             var app = new CodeCakeApplication( solutionDirectory );
-            RunResult result = await app.RunAsync( args.Where( a => !StringComparer.OrdinalIgnoreCase.Equals( a, _solutionDirectoryIsCurrentDirectoryParameter ) ) );
+            RunResult result = await app.RunAsync( args.Where( a => !StringComparer.OrdinalIgnoreCase.Equals( a, SolutionDirectoryIsCurrentDirectoryParameter ) ) );
             return result.ReturnCode;
         }
     }
