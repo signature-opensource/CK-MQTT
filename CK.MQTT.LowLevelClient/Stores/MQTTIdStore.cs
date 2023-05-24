@@ -4,6 +4,7 @@ using CK.MQTT.Packets;
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -332,23 +333,33 @@ namespace CK.MQTT.Stores
                 var currId = _idStore._head;
                 var nextId = currId;
                 TimeSpan oldest = TimeSpan.MaxValue;
+                IdStoreEntry<EntryContent> oldestEntry = default;
+
                 do
                 {
                     ref var curr = ref _idStore._entries[nextId];
                     currId = nextId;
+                    if( curr.Content._state.HasFlag( QoSState.UncertainDead ) ) continue;
                     // If there is a packet that reached the peremption time, or is marked as dropped.
-                    if( !curr.Content._state.HasFlag( QoSState.UncertainDead ) &&
-                        (curr.Content._lastEmissionTime + timeOut <= currentTime
-                        || curr.Content._state.HasFlag( QoSState.Dropped )) )
+                    if(curr.Content._lastEmissionTime + timeOut <= currentTime
+                        || curr.Content._state.HasFlag( QoSState.Dropped ))
                     {
                         return RestorePacketInternalAsync( currId );
                     }
-                    if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
+                    if( curr.Content._lastEmissionTime < oldest )
+                    {
+                        oldestEntry = curr;
+                        oldest = curr.Content._lastEmissionTime;
+                    }
                     nextId = curr.NextId;
                 } while( currId != _idStore._newestIdAllocated ); // We loop over all older packets.
                 TimeSpan timeUntilAnotherRetry = oldest + timeOut - currentTime;
 
                 Debug.Assert( timeUntilAnotherRetry.TotalMilliseconds > 0 );
+                if( timeUntilAnotherRetry.TotalMilliseconds < 0 )
+                {
+                    Console.WriteLine( "wtf" + oldestEntry );
+                }
                 return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeUntilAnotherRetry) );
             }
         }
@@ -357,7 +368,7 @@ namespace CK.MQTT.Stores
         {
             lock( _idStore )
             {
-                for( int i = 1; i < _idStore._entries.Length+1; i++ )
+                for( int i = 1; i < _idStore._entries.Length + 1; i++ )
                 {
                     _idStore._entries[i].Content._taskCompletionSource?.TrySetCanceled();
                 }
