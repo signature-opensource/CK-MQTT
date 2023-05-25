@@ -288,7 +288,7 @@ namespace CK.MQTT.Stores
                     // We don't have to keep count of the previous retries. The next ack in the process will allow us to know that there was no more packet in the pipe.
                     content._attemptInTransitOrLost = 0;
                     content._state |= QoSState.QoS2PubRecAcked;
-                    content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
+                    content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done.
                 }
             }
             return await OverwriteMessageAsync( LifecyclePacketV3.Pubrel( packetId ) );
@@ -356,10 +356,6 @@ namespace CK.MQTT.Stores
                 TimeSpan timeUntilAnotherRetry = oldest + timeOut - currentTime;
 
                 Debug.Assert( timeUntilAnotherRetry.TotalMilliseconds > 0 );
-                if( timeUntilAnotherRetry.TotalMilliseconds < 0 )
-                {
-                    Console.WriteLine( "wtf" + oldestEntry );
-                }
                 return new ValueTask<(IOutgoingPacket?, TimeSpan)>( (null, timeUntilAnotherRetry) );
             }
         }
