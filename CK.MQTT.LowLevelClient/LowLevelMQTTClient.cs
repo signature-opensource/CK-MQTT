@@ -42,8 +42,14 @@ namespace CK.MQTT
         /// <inheritdoc/>
         public async Task<ConnectResult> ConnectAsync( OutgoingLastWill? lastWill, bool cleanSession, CancellationToken cancellationToken = default )
         {
-
             if( !StopToken.IsCancellationRequested ) throw new InvalidOperationException( "This client is already connected." );
+            if( !CloseToken.IsCancellationRequested )
+            {
+                var tcs = new TaskCompletionSource();
+                CloseToken.Register( s => ((TaskCompletionSource)s!).TrySetResult(), tcs );
+                if( CloseToken.IsCancellationRequested ) tcs.TrySetResult();
+                await tcs.Task;
+            }
             Debug.Assert( CloseToken.IsCancellationRequested );
             try
             {

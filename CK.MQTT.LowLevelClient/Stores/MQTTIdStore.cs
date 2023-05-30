@@ -4,6 +4,7 @@ using CK.MQTT.Packets;
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -287,7 +288,7 @@ namespace CK.MQTT.Stores
                     // We don't have to keep count of the previous retries. The next ack in the process will allow us to know that there was no more packet in the pipe.
                     content._attemptInTransitOrLost = 0;
                     content._state |= QoSState.QoS2PubRecAcked;
-                    content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done..
+                    content._taskCompletionSource.SetResult( null ); // TODO: provide user a transaction window and remove packet when he is done.
                 }
             }
             return await OverwriteMessageAsync( LifecyclePacketV3.Pubrel( packetId ) );
@@ -332,18 +333,24 @@ namespace CK.MQTT.Stores
                 var currId = _idStore._head;
                 var nextId = currId;
                 TimeSpan oldest = TimeSpan.MaxValue;
+                IdStoreEntry<EntryContent> oldestEntry = default;
+
                 do
                 {
                     ref var curr = ref _idStore._entries[nextId];
                     currId = nextId;
+                    if( curr.Content._state.HasFlag( QoSState.UncertainDead ) ) continue;
                     // If there is a packet that reached the peremption time, or is marked as dropped.
-                    if( !curr.Content._state.HasFlag( QoSState.UncertainDead ) &&
-                        (curr.Content._lastEmissionTime + timeOut <= currentTime
-                        || curr.Content._state.HasFlag( QoSState.Dropped )) )
+                    if(curr.Content._lastEmissionTime + timeOut <= currentTime
+                        || curr.Content._state.HasFlag( QoSState.Dropped ))
                     {
                         return RestorePacketInternalAsync( currId );
                     }
-                    if( curr.Content._lastEmissionTime < oldest ) oldest = curr.Content._lastEmissionTime;
+                    if( curr.Content._lastEmissionTime < oldest )
+                    {
+                        oldestEntry = curr;
+                        oldest = curr.Content._lastEmissionTime;
+                    }
                     nextId = curr.NextId;
                 } while( currId != _idStore._newestIdAllocated ); // We loop over all older packets.
                 TimeSpan timeUntilAnotherRetry = oldest + timeOut - currentTime;
@@ -357,7 +364,7 @@ namespace CK.MQTT.Stores
         {
             lock( _idStore )
             {
-                for( int i = 1; i < _idStore._entries.Length+1; i++ )
+                for( int i = 1; i < _idStore._entries.Length + 1; i++ )
                 {
                     _idStore._entries[i].Content._taskCompletionSource?.TrySetCanceled();
                 }
