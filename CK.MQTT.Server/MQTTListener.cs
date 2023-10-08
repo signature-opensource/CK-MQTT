@@ -61,12 +61,12 @@ namespace CK.MQTT.Server
             while( !cancellationToken.IsCancellationRequested )
             {
                 (IMQTTChannel? channel, var connectionInfo) = await _channelFactory.CreateAsync( cancellationToken );
-                var token = m.CreateDependentToken();
+                var token = m.CreateToken();
                 _ = Task.Run( () => AcceptSingleClientAsync( token, channel, connectionInfo, cancellationToken ), cancellationToken );
             }
         }
 
-        async Task AcceptSingleClientAsync( ActivityMonitor.DependentToken token, IMQTTChannel channelIn, string connectionInfo,
+        async Task AcceptSingleClientAsync( ActivityMonitor.Token token, IMQTTChannel channelIn, string connectionInfo,
             CancellationToken cancellationToken )
         {
             var m = new ActivityMonitor();
