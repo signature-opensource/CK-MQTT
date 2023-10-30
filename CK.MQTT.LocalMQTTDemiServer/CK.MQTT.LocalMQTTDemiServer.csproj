@@ -6,7 +6,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
-    <PackageReference Include="CK.StObj.Model" Version="24.1.0" />
+    <PackageReference Include="CK.StObj.Model" Version="24.1.1--0005-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Server\CK.MQTT.Server.csproj" />
