@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Testing.Monitoring" Version="9.0.1--0010-develop" />
+    <PackageReference Include="CK.Testing.Monitoring" Version="9.0.1--0011-develop" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
     <PackageReference Include="NUnit" Version="4.1.0" />
