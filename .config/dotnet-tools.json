@@ -2,7 +2,7 @@
   "isRoot": true,
   "tools": {
     "cksetup": {
-      "version": "21.0.1--0004-develop",
+      "version": "21.0.1--0007-develop",
       "commands": [
         "cksetup"
       ]
