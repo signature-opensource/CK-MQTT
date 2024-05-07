@@ -7,7 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Monitoring.Hosting" Version="20.0.1--0012-develop" />
-    <PackageReference Include="CK.StObj.Model" Version="25.0.1--0151-develop" />
+    <PackageReference Include="CK.StObj.Model" Version="25.0.1--0155-develop" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
