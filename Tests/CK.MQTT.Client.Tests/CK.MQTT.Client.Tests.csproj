@@ -3,7 +3,6 @@
     <TargetFramework>net6</TargetFramework>
     <LangVersion>9</LangVersion>
     <IsPackable>false</IsPackable>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CK.Testing.Monitoring" Version="9.0.1--0018-develop" />

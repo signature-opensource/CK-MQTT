@@ -2,7 +2,6 @@
   <Import Project="..\Common\MQTT.props" />
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <Description>Concrete implementations of CK.MQTT.Abstractions.</Description>
   </PropertyGroup>
   <ItemGroup>
