@@ -1,3 +1,3 @@
 using CK.Setup;
 
-[assembly: IsModel]
+[assembly: IsModelDependent]

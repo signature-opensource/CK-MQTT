@@ -2,11 +2,10 @@
   <Import Project="..\Common\MQTT.props" />
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="20.0.0" />
-    <PackageReference Include="CK.PerfectEvent" Version="21.0.0" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="21.0.0" />
+    <PackageReference Include="CK.PerfectEvent" Version="22.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.LowLevelClient\CK.MQTT.LowLevelClient.csproj" />

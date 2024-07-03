@@ -6,6 +6,6 @@ image: Visual Studio 2022
 clone_folder: C:\CKli-World\IoT\CK-MQTT
 test: false
 on_finish:
-- ps: "'Get-ChildItem -Recurse *.log -exclude LastRun.log | % { Push-AppveyorArtifact $_.FullName }'"
+- ps: Get-ChildItem -Recurse *.log -exclude LastRun.log | % { Push-AppveyorArtifact $_.FullName }
 build_script:
 - dotnet run --project CodeCakeBuilder -nointeraction

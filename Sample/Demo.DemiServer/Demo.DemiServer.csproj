@@ -2,12 +2,11 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring.Hosting" Version="20.0.0" />
-    <PackageReference Include="CK.StObj.Model" Version="25.0.0" />
+    <PackageReference Include="CK.Monitoring.Hosting" Version="21.0.0" />
+    <PackageReference Include="CK.StObj.Model" Version="26.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
