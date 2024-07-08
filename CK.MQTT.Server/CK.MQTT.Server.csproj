@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Common\MQTT.props" />
   <PropertyGroup>
-    <TargetFramework>net6</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Description>MQTT server implementation (not yet available).</Description>
   </PropertyGroup>
   <ItemGroup>
