@@ -8,10 +8,10 @@
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NuGet.Credentials" Version="6.7.0" />
+    <PackageReference Include="NuGet.Credentials" Version="6.10.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Core" Version="19.0.0" />
-    <PackageReference Include="SimpleGitVersion.Cake" Version="9.0.0" />
+    <PackageReference Include="CK.Core" Version="20.0.0" />
+    <PackageReference Include="SimpleGitVersion.Cake" Version="10.0.0" />
   </ItemGroup>
 </Project>
