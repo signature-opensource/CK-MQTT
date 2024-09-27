@@ -35,7 +35,7 @@ namespace CK.MQTT.Client.Middleware
                     return false;
                 case UnattendedDisconnect disconnect:
                     if( disconnect.Reason == DisconnectReason.UserDisconnected ) return false;
-                    var isTimeout = await _autoReconnect.WaitAsync( 500 );
+                    var isTimeout = await _autoReconnect.WaitForTaskCompletionAsync( 500 );
                     Debug.Assert( isTimeout );
                     _autoReconnect = BackgroundConnectWithRetriesAsync();
                     return false; // We don't want to swallow the message here.

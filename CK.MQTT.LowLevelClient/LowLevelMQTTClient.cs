@@ -150,9 +150,9 @@ namespace CK.MQTT
         {
             MQTTBinaryWriter.ThrowIfInvalidMQTTString( subscriptions.TopicFilter );
             var sendTask = await SendPacketWithQoSAsync<SubscribeReturnCode[]>( new OutgoingSubscribe( new[] { subscriptions } ) );
-            return Send( sendTask! );
+            return SendAsync( sendTask! );
 
-            static async Task<SubscribeReturnCode> Send( Task<SubscribeReturnCode[]> task )
+            static async Task<SubscribeReturnCode> SendAsync( Task<SubscribeReturnCode[]> task )
             {
                 var res = await task;
                 return res?[0] ?? SubscribeReturnCode.Failure;
