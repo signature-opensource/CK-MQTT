@@ -3,33 +3,33 @@ using CK.MQTT.Client.Middleware;
 using CK.MQTT.Packets;
 using CK.PerfectEvent;
 using System.Threading.Tasks;
-namespace CK.MQTT.Client
+namespace CK.MQTT.Client;
+
+
+public class MessageExchangerAgent : IConnectedMessageSender
 {
 
-    public class MessageExchangerAgent : IConnectedMessageSender
+    readonly PerfectEventSender<ApplicationMessage> _onMessageSender = new();
+    readonly PerfectEventSender<RefCountingApplicationMessage> _refCountingMessageSender = new();
+    protected readonly PerfectEventSender<DisconnectReason> _onConnectionChangeSender = new();
+    readonly PerfectEventSender<ushort> _onStoreQueueFilling = new();
+    readonly MessageWorker _messageWorker;
+    readonly IConnectedMessageSender _sender;
+
+    public MessageExchangerAgent( IConnectedMessageSender connectedMessageSender, MessageWorker messageWorker )
     {
-
-        readonly PerfectEventSender<ApplicationMessage> _onMessageSender = new();
-        readonly PerfectEventSender<RefCountingApplicationMessage> _refCountingMessageSender = new();
-        protected readonly PerfectEventSender<DisconnectReason> _onConnectionChangeSender = new();
-        readonly PerfectEventSender<ushort> _onStoreQueueFilling = new();
-        readonly MessageWorker _messageWorker;
-        readonly IConnectedMessageSender _sender;
-
-        public MessageExchangerAgent( IConnectedMessageSender connectedMessageSender, MessageWorker messageWorker )
-        {
-            _messageWorker = messageWorker;
-            messageWorker.Middlewares.AddRange(
-                new IAgentMessageMiddleware[]
-                {
-                    new HandleDisconnect( _onConnectionChangeSender ),
-                    new HandlePublish( _onMessageSender, _refCountingMessageSender ),
-                    new MessageExchangerLoggingMiddleware(),
-                    new HandleSynchronize()
-                }
-            );
-            _sender = connectedMessageSender;
-        }
+        _messageWorker = messageWorker;
+        messageWorker.Middlewares.AddRange(
+            new IAgentMessageMiddleware[]
+            {
+                new HandleDisconnect( _onConnectionChangeSender ),
+                new HandlePublish( _onMessageSender, _refCountingMessageSender ),
+                new MessageExchangerLoggingMiddleware(),
+                new HandleSynchronize()
+            }
+        );
+        _sender = connectedMessageSender;
+    }
 
     public readonly ref struct EventTypeChoice
     {
@@ -76,5 +76,4 @@ namespace CK.MQTT.Client
         await _messageWorker.DisposeAsync();
         await task;
     }
-}
 }

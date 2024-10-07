@@ -7,67 +7,66 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Client
+namespace CK.MQTT.Client;
+
+public class MessageWorker : IAsyncDisposable
 {
-    public class MessageWorker : IAsyncDisposable
+    Task _workLoop = Task.CompletedTask;
+    int _deathCounter = 0;
+    readonly Channel<object?> _events = Channel.CreateUnbounded<object?>( new UnboundedChannelOptions()
     {
-        Task _workLoop = Task.CompletedTask;
-        int _deathCounter = 0;
-        readonly Channel<object?> _events = Channel.CreateUnbounded<object?>( new UnboundedChannelOptions()
+        SingleReader = true,
+        SingleWriter = false
+    } );
+
+    public List<IAgentMessageMiddleware> Middlewares { get; } = new List<IAgentMessageMiddleware>();
+
+
+    public void QueueMessage( object? message )
+    {
+        _events.Writer.TryWrite( message );
+        var inc = Interlocked.Increment( ref _deathCounter );
+        if( inc == 1 )
         {
-            SingleReader = true,
-            SingleWriter = false
-        } );
-
-        public List<IAgentMessageMiddleware> Middlewares { get; } = new List<IAgentMessageMiddleware>();
-
-
-        public void QueueMessage( object? message )
-        {
-            _events.Writer.TryWrite( message );
-            var inc = Interlocked.Increment( ref _deathCounter );
-            if( inc == 1 )
-            {
-                _workLoop = WorkLoopAsync();
-            }
+            _workLoop = WorkLoopAsync();
         }
+    }
 
-        public MessageWorker()
+    public MessageWorker()
+    {
+    }
+
+    readonly ActivityMonitor _m = new();
+
+    async Task WorkLoopAsync()
+    {
+        while( true )
         {
+            var res = _events.Reader.TryRead( out var item );
+            Debug.Assert( res );
+            await ProcessMessageAsync( _m, item );
+            var inc = Interlocked.Decrement( ref _deathCounter );
+            if( inc == 0 ) break;
         }
+    }
 
-        readonly ActivityMonitor _m = new();
-
-        async Task WorkLoopAsync()
+    async ValueTask ProcessMessageAsync( IActivityMonitor m, object? item )
+    {
+        foreach( var middleware in Middlewares )
         {
-            while( true )
-            {
-                var res = _events.Reader.TryRead( out var item );
-                Debug.Assert( res );
-                await ProcessMessageAsync( _m, item );
-                var inc = Interlocked.Decrement( ref _deathCounter );
-                if( inc == 0 ) break;
-            }
+            if( await middleware.HandleAsync( m, item ) ) return;
         }
+        m.Warn( $"No middleware has handled the agent message '{item}'" );
+    }
 
-        async ValueTask ProcessMessageAsync( IActivityMonitor m, object? item )
+
+    public async ValueTask DisposeAsync()
+    {
+        _events!.Writer.Complete();
+        await _workLoop!;
+        foreach( var middleware in Middlewares )
         {
-            foreach( var middleware in Middlewares )
-            {
-                if( await middleware.HandleAsync( m, item ) ) return;
-            }
-            m.Warn( $"No middleware has handled the agent message '{item}'" );
-        }
-
-
-        public async ValueTask DisposeAsync()
-        {
-            _events!.Writer.Complete();
-            await _workLoop!;
-            foreach( var middleware in Middlewares )
-            {
-                await middleware.DisposeAsync();
-            }
+            await middleware.DisposeAsync();
         }
     }
 }

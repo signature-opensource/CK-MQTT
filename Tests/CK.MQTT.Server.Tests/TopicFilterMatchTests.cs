@@ -1,19 +1,18 @@
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace CK.MQTT.Server.Tests
+namespace CK.MQTT.Server.Tests;
+
+public class TopicFilterMatchTests
 {
-    public class TopicFilterMatchTests
+    [TestCase( "foo/", "foo", false )]
+    [TestCase( "foo", "foo/", false )]
+    [TestCase( "/foo", "foo", false )]
+    [TestCase( "foo", "/foo", false )]
+    [TestCase( "foo", "foo", true )]
+    [TestCase( "foo/", "foo/#", true )]
+    public void trailing_slash_is_different_than_none( string topic, string filter, bool result )
     {
-        [TestCase("foo/", "foo", false)]
-        [TestCase("foo", "foo/", false)]
-        [TestCase("/foo", "foo", false)]
-        [TestCase("foo", "/foo", false)]
-        [TestCase( "foo", "foo", true)]
-        [TestCase( "foo/", "foo/#", true)]
-        public void trailing_slash_is_different_than_none( string topic, string filter, bool result)
-        {
-            MQTTTopicFilterComparer.IsMatch(topic, filter).Should().Be(result);
-        }
+        MQTTTopicFilterComparer.IsMatch( topic, filter ).Should().Be( result );
     }
 }

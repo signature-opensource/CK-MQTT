@@ -4,41 +4,40 @@ using CK.MQTT.Server.Server;
 using CK.PerfectEvent;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT.Server;
+
+class ServerHandler : IAgentMessageMiddleware
 {
-    class ServerHandler : IAgentMessageMiddleware
+    readonly PerfectEventSender<Subscription> _subscribeSender = new();
+    readonly PerfectEventSender<string> _unsubscribeSender = new();
+
+    public ServerHandler( PerfectEventSender<Subscription> subscribeSender, PerfectEventSender<string> unsubscribeSender )
     {
-        readonly PerfectEventSender<Subscription> _subscribeSender = new();
-        readonly PerfectEventSender<string> _unsubscribeSender = new();
+        _subscribeSender = subscribeSender;
+        _unsubscribeSender = unsubscribeSender;
+    }
 
-        public ServerHandler( PerfectEventSender<Subscription> subscribeSender, PerfectEventSender<string> unsubscribeSender )
+    public ValueTask DisposeAsync() => new ValueTask();
+
+    public async ValueTask<bool> HandleAsync( IActivityMonitor m, object? message )
+    {
+        switch( message )
         {
-            _subscribeSender = subscribeSender;
-            _unsubscribeSender = unsubscribeSender;
-        }
+            case ServerClientMessageSink.Subscribe subscribe:
+                foreach( var sub in subscribe.Subscriptions )
+                {
+                    await _subscribeSender.SafeRaiseAsync( m, sub );
+                }
+                return true;
 
-        public ValueTask DisposeAsync() => new ValueTask();
-
-        public async ValueTask<bool> HandleAsync( IActivityMonitor m, object? message )
-        {
-            switch( message )
-            {
-                case ServerClientMessageSink.Subscribe subscribe:
-                    foreach( var sub in subscribe.Subscriptions )
-                    {
-                        await _subscribeSender.SafeRaiseAsync( m, sub );
-                    }
-                    return true;
-
-                case ServerClientMessageSink.Unsubscribe unsubscribe:
-                    foreach( var topic in unsubscribe.Topics )
-                    {
-                        await _unsubscribeSender.SafeRaiseAsync( m, topic );
-                    }
-                    return true;
-                default:
-                    return false;
-            }
+            case ServerClientMessageSink.Unsubscribe unsubscribe:
+                foreach( var topic in unsubscribe.Topics )
+                {
+                    await _unsubscribeSender.SafeRaiseAsync( m, topic );
+                }
+                return true;
+            default:
+                return false;
         }
     }
 }

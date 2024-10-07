@@ -1,19 +1,18 @@
 using System;
 
-namespace CK.MQTT.Common.Stores
+namespace CK.MQTT.Common.Stores;
+
+public struct IdStoreEntry<T>
 {
-    public struct IdStoreEntry<T>
-    {
-        public ushort NextId;
-        public ushort PreviousId;
-        public T Content;
+    public ushort NextId;
+    public ushort PreviousId;
+    public T Content;
 
-        public override bool Equals( object? obj ) => throw new NotSupportedException();
+    public override bool Equals( object? obj ) => throw new NotSupportedException();
 
-        public override int GetHashCode() => throw new NotSupportedException();
+    public override int GetHashCode() => throw new NotSupportedException();
 
-        public static bool operator ==( IdStoreEntry<T> left, IdStoreEntry<T> right ) => throw new NotSupportedException();
+    public static bool operator ==( IdStoreEntry<T> left, IdStoreEntry<T> right ) => throw new NotSupportedException();
 
-        public static bool operator !=( IdStoreEntry<T> left, IdStoreEntry<T> right ) => throw new NotSupportedException();
-    }
+    public static bool operator !=( IdStoreEntry<T> left, IdStoreEntry<T> right ) => throw new NotSupportedException();
 }

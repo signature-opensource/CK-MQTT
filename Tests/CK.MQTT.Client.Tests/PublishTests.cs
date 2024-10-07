@@ -149,8 +149,8 @@ namespace CK.MQTT.Client.Tests
                "test topic", Encoding.UTF8.GetBytes( "test payload" ), QualityOfService.AtMostOnce, false )
                 ).AsTask().GetAwaiter().GetResult();
             }
-            Check().GetAwaiter().GetResult();
-            async Task Check()
+            CheckAsync().GetAwaiter().GetResult();
+            async Task CheckAsync()
             {
                 for( int i = 0; i < 1000; i++ )
                 {

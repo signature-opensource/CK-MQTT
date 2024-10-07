@@ -1,37 +1,36 @@
 using System;
 using System.Threading;
 
-namespace CK.MQTT.Client.ExtensionMethods
+namespace CK.MQTT.Client.ExtensionMethods;
+
+public class RefCountingApplicationMessage
 {
-    public class RefCountingApplicationMessage
+    readonly IDisposable _disposable;
+    int _counter = 1;
+    public RefCountingApplicationMessage( ApplicationMessage applicationMessage, IDisposable disposable )
     {
-        readonly IDisposable _disposable;
-        int _counter = 1;
-        public RefCountingApplicationMessage( ApplicationMessage applicationMessage, IDisposable disposable )
-        {
-            _disposable = disposable;
-            ApplicationMessage = applicationMessage;
-        }
+        _disposable = disposable;
+        ApplicationMessage = applicationMessage;
+    }
 
-        public ApplicationMessage ApplicationMessage { get; }
+    public ApplicationMessage ApplicationMessage { get; }
 
-        public void IncrementRef()
+    public void IncrementRef()
+    {
+        Interlocked.Increment( ref _counter );
+    }
+    public void DecrementRef()
+    {
+        var refCount = Interlocked.Decrement( ref _counter );
+        if( refCount == 0 )
         {
-            Interlocked.Increment( ref _counter );
+            Dispose();
         }
-        public void DecrementRef()
-        {
-            var refCount = Interlocked.Decrement( ref _counter );
-            if( refCount == 0 )
-            {
-                Dispose();
-            }
-        }
+    }
 
-        void Dispose()
-        {
-            ApplicationMessage.SetDisposed( typeof( RefCountingApplicationMessage ) );
-            _disposable.Dispose();
-        }
+    void Dispose()
+    {
+        ApplicationMessage.SetDisposed( typeof( RefCountingApplicationMessage ) );
+        _disposable.Dispose();
     }
 }

@@ -1,11 +1,10 @@
-namespace CK.MQTT
+namespace CK.MQTT;
+
+public enum ManualConnectBehavior
 {
-    public enum ManualConnectBehavior
-    {
-        TryOnce,
-        RetryUntilConnectedOrUnrecoverable,
-        RetryUntilConnected,
-        TryOnceThenRetryInBackground,
-        UseSinkBehavior
-    }
+    TryOnce,
+    RetryUntilConnectedOrUnrecoverable,
+    RetryUntilConnected,
+    TryOnceThenRetryInBackground,
+    UseSinkBehavior
 }

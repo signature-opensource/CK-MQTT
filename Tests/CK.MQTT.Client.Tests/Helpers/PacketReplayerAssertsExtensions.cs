@@ -23,7 +23,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             if( withReconnect ) messageWorker.Middlewares.Add( new HandleAutoReconnect( config.TimeUtilities, client, messageWorker.QueueMessage, _ =>
             {
                 return TimeSpan.FromSeconds( 5 );
-            } ));
+            } ) );
             replayer.Client = new MQTTClientAgent( client, messageWorker );
             replayer.Config = config;
             return replayer.Client;
