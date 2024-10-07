@@ -125,7 +125,9 @@ public abstract class MessageExchanger : IConnectedMessageSender
         lock( _stopTokenSource )
         {
             if( _stopTokenSource.IsCancellationRequested ) return false;
-            await _stopTokenSource.CancelAsync();
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
+            _stopTokenSource.Cancel();
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
         }
         LocalPacketStore.CancelAllAckTask(); //Cancel acks when we know no more work will come.
         await beforeDisconnect();
