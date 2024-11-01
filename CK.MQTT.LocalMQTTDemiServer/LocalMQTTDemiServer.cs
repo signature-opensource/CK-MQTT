@@ -21,7 +21,7 @@ public class LocalMQTTDemiServer : MQTTDemiServer, IHostedService, ISingletonAut
 
     class DynamicallyConfiguredConfig : MQTT3ConfigurationBase, IDisposable
     {
-        readonly IDisposable _disposable;
+        readonly IDisposable? _disposable;
         public DynamicallyConfiguredConfig( IOptionsMonitor<MQTTDemiServerConfig> config )
         {
             _disposable = config.OnChange( ApplyConfig );
@@ -29,7 +29,7 @@ public class LocalMQTTDemiServer : MQTTDemiServer, IHostedService, ISingletonAut
 
         public void Dispose()
         {
-            _disposable.Dispose();
+            _disposable?.Dispose();
         }
 
         void ApplyConfig( MQTTDemiServerConfig config )
