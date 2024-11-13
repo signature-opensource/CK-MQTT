@@ -9,10 +9,10 @@
     <Nullable>annotations</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NuGet.Credentials" Version="6.11.1" />
+    <PackageReference Include="NuGet.Credentials" Version="6.12.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CK.Core" Version="20.0.0" />
-    <PackageReference Include="SimpleGitVersion.Cake" Version="11.0.1" />
+    <PackageReference Include="CK.Core" Version="20.0.1" />
+    <PackageReference Include="SimpleGitVersion.Cake" Version="11.0.2" />
   </ItemGroup>
 </Project>
