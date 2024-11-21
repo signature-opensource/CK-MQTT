@@ -5,31 +5,30 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT;
+
+public class UnsubackReflex : IReflexMiddleware
 {
-    public class UnsubackReflex : IReflexMiddleware
+    readonly MessageExchanger _exchanger;
+
+    public UnsubackReflex( MessageExchanger exchanger )
     {
-        readonly MessageExchanger _exchanger;
+        _exchanger = exchanger;
+    }
 
-        public UnsubackReflex( MessageExchanger exchanger )
+    public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMQTT3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
+    {
+        if( PacketType.UnsubscribeAck != (PacketType)header )
         {
-            _exchanger = exchanger;
+            return (OperationStatus.Done, false);
         }
-
-        public async ValueTask<(OperationStatus, bool)> ProcessIncomingPacketAsync( IMQTT3Sink sink, InputPump sender, byte header, uint packetLength, PipeReader pipeReader, CancellationToken cancellationToken )
+        ushort? packetId = await pipeReader.ReadPacketIdPacketAsync( sink, packetLength, cancellationToken );
+        if( !packetId.HasValue ) return (OperationStatus.NeedMoreData, true);
+        bool detectedDrop = _exchanger.LocalPacketStore.OnQos1Ack( sink, packetId.Value, null );
+        if( detectedDrop )
         {
-            if( PacketType.UnsubscribeAck != (PacketType)header )
-            {
-                return (OperationStatus.Done, false);
-            }
-            ushort? packetId = await pipeReader.ReadPacketIdPacketAsync( sink, packetLength, cancellationToken );
-            if( !packetId.HasValue ) return (OperationStatus.NeedMoreData, true);
-            bool detectedDrop = _exchanger.LocalPacketStore.OnQos1Ack( sink, packetId.Value, null );
-            if( detectedDrop )
-            {
-                _exchanger.OutputPump?.UnblockWriteLoop();
-            }
-            return (OperationStatus.Done, true);
+            _exchanger.OutputPump?.UnblockWriteLoop();
         }
+        return (OperationStatus.Done, true);
     }
 }

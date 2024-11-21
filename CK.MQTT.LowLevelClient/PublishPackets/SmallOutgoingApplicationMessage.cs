@@ -5,46 +5,45 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT;
+
+public class SmallOutgoingApplicationMessage : OutgoingMessage
 {
-    public class SmallOutgoingApplicationMessage : OutgoingMessage
+    private readonly ReadOnlySequence<byte> _payload;
+
+    public SmallOutgoingApplicationMessage( string topic, QualityOfService qos, bool retain, ReadOnlySequence<byte> payload,
+        string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null )//properties
+        : base( topic, qos, retain, responseTopic, correlationDataSize, correlationDataWriter )
     {
-        private readonly ReadOnlySequence<byte> _payload;
-
-        public SmallOutgoingApplicationMessage( string topic, QualityOfService qos, bool retain, ReadOnlySequence<byte> payload,
-            string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null )//properties
-            : base( topic, qos, retain, responseTopic, correlationDataSize, correlationDataWriter )
-        {
-            if( payload.Length > 268_435_455 ) throw new ArgumentException( "The buffer exceeed the max allowed size.", nameof( payload ) );
-            _payload = payload;
-        }
-
-        public SmallOutgoingApplicationMessage( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload,
-            string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null )
-            : this( topic, qos, retain, new ReadOnlySequence<byte>( payload ), responseTopic, correlationDataSize, correlationDataWriter )
-        {
-        }
-
-        protected override uint PayloadSize => (uint)_payload.Length;
-
-        public override ValueTask DisposeAsync() => new();
-
-        protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
-        {
-            if( _payload.Length > 0 )
-            {
-                _payload.CopyTo( pw.GetSpan( (int)_payload.Length ) );
-                pw.Advance( (int)_payload.Length );
-            }
-            return new ValueTask();
-        }
+        if( payload.Length > 268_435_455 ) throw new ArgumentException( "The buffer exceeed the max allowed size.", nameof( payload ) );
+        _payload = payload;
     }
 
-    public static class SmallOutgoingApplicationMessageExtensions
+    public SmallOutgoingApplicationMessage( string topic, QualityOfService qos, bool retain, ReadOnlyMemory<byte> payload,
+        string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null )
+        : this( topic, qos, retain, new ReadOnlySequence<byte>( payload ), responseTopic, correlationDataSize, correlationDataWriter )
     {
-        public static ValueTask<Task> PublishAsync( this IConnectedMessageSender sender, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
+    }
+
+    protected override uint PayloadSize => (uint)_payload.Length;
+
+    public override ValueTask DisposeAsync() => new();
+
+    protected override ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+    {
+        if( _payload.Length > 0 )
         {
-            return sender.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
+            _payload.CopyTo( pw.GetSpan( (int)_payload.Length ) );
+            pw.Advance( (int)_payload.Length );
         }
+        return new ValueTask();
+    }
+}
+
+public static class SmallOutgoingApplicationMessageExtensions
+{
+    public static ValueTask<Task> PublishAsync( this IConnectedMessageSender sender, string topic, ReadOnlyMemory<byte> payload, QualityOfService qos, bool retain = false )
+    {
+        return sender.PublishAsync( new SmallOutgoingApplicationMessage( topic, qos, retain, payload ) );
     }
 }

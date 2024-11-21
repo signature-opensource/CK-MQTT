@@ -1,10 +1,9 @@
-namespace CK.MQTT.Client
+namespace CK.MQTT.Client;
+
+public interface IMQTT3ClientSink : IMQTT3Sink
 {
-    public interface IMQTT3ClientSink : IMQTT3Sink
-    {
-        /// <summary>
-        /// Called when the client is successfuly connected.
-        /// </summary>
-        void OnConnected();
-    }
+    /// <summary>
+    /// Called when the client is successfuly connected.
+    /// </summary>
+    void OnConnected();
 }

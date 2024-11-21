@@ -25,7 +25,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         }
 
         protected abstract ValueTask<IDuplexPipe> DoStartAsync( CancellationToken cancellationToken );
-        public async ValueTask CloseAsync(DisconnectReason reason)
+        public async ValueTask CloseAsync( DisconnectReason reason )
         {
             if( !IsConnected ) throw new InvalidOperationException( "Closing when not connected." );
             if( DuplexPipe == null ) throw new InvalidOperationException( "Not started." );

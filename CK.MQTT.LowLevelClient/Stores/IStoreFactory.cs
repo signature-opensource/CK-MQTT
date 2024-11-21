@@ -2,10 +2,9 @@ using CK.MQTT.Stores;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT
+namespace CK.MQTT;
+
+public interface IStoreFactory
 {
-    public interface IStoreFactory
-    {
-        ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken );
-    }
+    ValueTask<(ILocalPacketStore, IRemotePacketStore)> CreateAsync( ProtocolConfiguration pConfig, MQTT3ConfigurationBase config, string storeId, bool resetStore, CancellationToken cancellationToken );
 }

@@ -1,9 +1,8 @@
-namespace CK.MQTT.Server.ServerClient
+namespace CK.MQTT.Server.ServerClient;
+
+public class MQTTServerClientConfiguration : MQTT3ConfigurationBase
 {
-    public class MQTTServerClientConfiguration : MQTT3ConfigurationBase
+    public MQTTServerClientConfiguration()
     {
-        public MQTTServerClientConfiguration()
-        {
-        }
     }
 }

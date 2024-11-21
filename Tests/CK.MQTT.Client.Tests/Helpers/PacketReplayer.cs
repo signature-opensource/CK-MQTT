@@ -23,7 +23,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public delegate ValueTask<bool> ScenarioStep( IActivityMonitor m, PacketReplayer packetReplayer );
 
-        public IMQTTChannel CreateChannel(Action<object?> messageWriter)
+        public IMQTTChannel CreateChannel( Action<object?> messageWriter )
         {
             // This must be done after the wait. The work in the loop may use the channel.
             Channel = ChannelType switch

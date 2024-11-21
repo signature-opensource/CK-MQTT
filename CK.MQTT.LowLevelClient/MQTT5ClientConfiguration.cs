@@ -1,9 +1,8 @@
-namespace CK.MQTT
+namespace CK.MQTT;
+
+/// <summary>
+/// Configuration of a <see cref="IConnectedMessageSender"/>.
+/// </summary>
+public class MQTT5ClientConfiguration : MQTT3ClientConfiguration
 {
-    /// <summary>
-    /// Configuration of a <see cref="IConnectedMessageSender"/>.
-    /// </summary>
-    public class MQTT5ClientConfiguration : MQTT3ClientConfiguration
-    {
-    }
 }

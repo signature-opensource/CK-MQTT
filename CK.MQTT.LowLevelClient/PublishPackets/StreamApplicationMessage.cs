@@ -6,35 +6,34 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CK.MQTT.LowLevelClient.PublishPackets
+namespace CK.MQTT.LowLevelClient.PublishPackets;
+
+public class StreamApplicationMessage : OutgoingMessage
 {
-    public class StreamApplicationMessage : OutgoingMessage
+    readonly Stream _stream;
+    readonly uint _length;
+    readonly bool _leaveOpen;
+
+    public StreamApplicationMessage(
+        Stream knowLengthStream,
+        bool leaveOpen,
+        string topic, QualityOfService qos, bool retain, string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null ) : base( topic, qos, retain, responseTopic, correlationDataSize, correlationDataWriter )
     {
-        readonly Stream _stream;
-        readonly uint _length;
-        readonly bool _leaveOpen;
+        if( knowLengthStream.Length > 268_435_455 ) throw new ArgumentException( "The buffer exceeed the max allowed size.", nameof( knowLengthStream ) );
+        _stream = knowLengthStream;
+        _length = (uint)knowLengthStream.Length;
+        _leaveOpen = leaveOpen;
+    }
 
-        public StreamApplicationMessage(
-            Stream knowLengthStream,
-            bool leaveOpen,
-            string topic, QualityOfService qos, bool retain, string? responseTopic = null, ushort correlationDataSize = 0, SpanAction? correlationDataWriter = null ) : base( topic, qos, retain, responseTopic, correlationDataSize, correlationDataWriter )
-        {
-            if( knowLengthStream.Length > 268_435_455 ) throw new ArgumentException( "The buffer exceeed the max allowed size.", nameof( knowLengthStream ) );
-            _stream = knowLengthStream;
-            _length = (uint)knowLengthStream.Length;
-            _leaveOpen = leaveOpen;
-        }
+    protected override uint PayloadSize => _length;
 
-        protected override uint PayloadSize => _length;
+    public override async ValueTask DisposeAsync()
+    {
+        if( !_leaveOpen ) await _stream.DisposeAsync();
+    }
 
-        public override async ValueTask DisposeAsync()
-        {
-            if( !_leaveOpen ) await _stream.DisposeAsync();
-        }
-
-        protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
-        {
-            await _stream.CopyToAsync( pw, cancellationToken );
-        }
+    protected override async ValueTask WritePayloadAsync( PipeWriter pw, CancellationToken cancellationToken )
+    {
+        await _stream.CopyToAsync( pw, cancellationToken );
     }
 }

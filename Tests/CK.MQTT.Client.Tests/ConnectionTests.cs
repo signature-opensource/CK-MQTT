@@ -260,7 +260,7 @@ namespace CK.MQTT.Client.Tests
             {
                 TimeUtilities = replayer.TestTimeHandler,
                 KeepAliveSeconds = 0
-            });
+            } );
 
             var task = client.ConnectAsync( true );
 

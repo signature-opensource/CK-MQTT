@@ -23,7 +23,7 @@ namespace CK.MQTT.Client.Tests.Helpers
             if( withReconnect ) messageWorker.Middlewares.Add( new HandleAutoReconnect( config.TimeUtilities, client, messageWorker.QueueMessage, _ =>
             {
                 return TimeSpan.FromSeconds( 5 );
-            } ));
+            } ) );
             replayer.Client = new MQTTClientAgent( client, messageWorker );
             replayer.Config = config;
             return replayer.Client;
@@ -83,7 +83,7 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static async Task<T> ShouldContainEventAsync<T>( this ChannelReader<object> @this )
         {
             var task = @this.ReadAsync().AsTask();
-            if( !await task.WaitAsync( 60000 ) ) Assert.Fail( "The replayer didn't had any event." );
+            if( !await task.WaitForTaskCompletionAsync( 60000 ) ) Assert.Fail( "The replayer didn't had any event." );
             var res = await task;
             if( res is not T casted )
             {
@@ -97,13 +97,13 @@ namespace CK.MQTT.Client.Tests.Helpers
         public static async Task<(T1, T2)> ShouldContainEventsAsync<T1, T2>( this PacketReplayer @this )
         {
             var task1 = @this.Events.Reader.ReadAsync().AsTask();
-            if( !await task1.WaitAsync( 60000 ) )
+            if( !await task1.WaitForTaskCompletionAsync( 60000 ) )
             {
                 Assert.Fail( "The replayer didn't had any event." );
             }
 
             var task2 = @this.Events.Reader.ReadAsync().AsTask();
-            if( !await task2.WaitAsync( 60000 ) )
+            if( !await task2.WaitForTaskCompletionAsync( 60000 ) )
             {
                 Assert.Fail( "The replayer didn't had any event." );
             }

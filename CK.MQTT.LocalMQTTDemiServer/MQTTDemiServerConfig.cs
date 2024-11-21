@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 
-namespace CK.MQTT.Server
+namespace CK.MQTT.Server;
+
+public class MQTTDemiServerConfig
 {
-    public class MQTTDemiServerConfig
-    {
-        public HashSet<string>? ListenTo { get; set; } = null!;
-        public MQTT3ConfigurationBase ImplementationConfig { get; set; } = new();
-    }
+    public HashSet<string>? ListenTo { get; set; } = null!;
+    public MQTT3ConfigurationBase ImplementationConfig { get; set; } = new();
 }

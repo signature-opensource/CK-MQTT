@@ -25,7 +25,7 @@ namespace CK.MQTT.Client.Tests
 
         protected override void DoClose()
         {
-           
+
         }
     }
 }

@@ -38,7 +38,7 @@ namespace CK.MQTT.Client.Tests.Helpers
 
         public override void AdvanceTo( SequencePosition consumed )
         {
-            if( _lastReadResult.Buffer.Slice(0, consumed ).Length == 0 ) throw new InvalidOperationException( "Advancing of 0 bytes. You have a bug there." );
+            if( _lastReadResult.Buffer.Slice( 0, consumed ).Length == 0 ) throw new InvalidOperationException( "Advancing of 0 bytes. You have a bug there." );
             _pr.AdvanceTo( consumed );
         }
 
