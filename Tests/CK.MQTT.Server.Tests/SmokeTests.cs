@@ -1,5 +1,5 @@
 using CK.MQTT.Server.Tests.Helpers;
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.Threading.Tasks;
@@ -27,6 +27,6 @@ public class SmokeTests
         };
         await client.PublishAsync( new SmallOutgoingApplicationMessage( "test", QualityOfService.AtMostOnce, false, Array.Empty<byte>() ) );
         await tcs.Task.WaitAsync( TimeSpan.FromSeconds( 5 ) );
-        tcs.Task.IsCompleted.Should().BeTrue();
+        tcs.Task.IsCompleted.ShouldBeTrue();
     }
 }

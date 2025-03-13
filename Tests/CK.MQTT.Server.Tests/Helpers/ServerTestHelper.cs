@@ -1,6 +1,6 @@
 using CK.Core;
 using CK.MQTT.Client;
-using FluentAssertions;
+using Shouldly;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -47,7 +47,7 @@ class ServerTestHelper : IAsyncDisposable
         var agent = new MQTTClientAgent( client, messageWorker );
         var tcs = _tcs = new();
         var res = await agent.ConnectAsync( true );
-        res.Status.Should().Be( ConnectStatus.Successful ); ;
+        res.Status.ShouldBe( ConnectStatus.Successful ); ;
         var serverClient = await tcs.Task;
         return (client, serverClient);
     }
