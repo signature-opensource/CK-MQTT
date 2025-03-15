@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.0" />
-    <PackageReference Include="CK.StObj.Model" Version="28.1.1--0021-develop" />
+    <PackageReference Include="CK.StObj.Model" Version="28.1.1--0022-develop" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.Server\CK.MQTT.Server.csproj" />
