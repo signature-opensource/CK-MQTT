@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Shouldly;
 using NUnit.Framework;
 using System;
 using System.IO;
@@ -21,7 +21,7 @@ public class BCLAsserts
         Span<byte> memory1 = pw.GetSpan( 1 );
         memory1[0] = 42;
         Span<byte> memory2 = pw.GetSpan( 1 );
-        memory2[0].Should().Be( 42 );
+        memory2[0].ShouldBe( 42 );
     }
 
     [Test]
@@ -38,7 +38,7 @@ public class BCLAsserts
         MemoryStream mem = new();
         var piperReader = PipeReader.Create( mem );
         ValueTask<ReadResult> task = piperReader.ReadAtLeastAsync( 0 );
-        task.IsCompleted.Should().BeTrue();
+        task.IsCompleted.ShouldBeTrue();
     }
 
     //[Test]
@@ -47,6 +47,6 @@ public class BCLAsserts
     //    var pipe = new Pipe();
     //    var piperReader = pipe.Reader;
     //    ValueTask<ReadResult> task = piperReader.ReadAtLeastAsync( 0 );
-    //    task.IsCompleted.Should().BeTrue();
+    //    task.IsCompleted.ShouldBeTrue();
     //}
 }

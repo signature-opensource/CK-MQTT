@@ -1,45 +1,44 @@
-namespace CK.MQTT.Client.Tests.Helpers
+namespace CK.MQTT.Client.Tests.Helpers;
+
+static class TestConfigs
 {
-    static class TestConfigs
+    public static MQTT3ClientConfiguration DefaultTestConfig(
+        PacketReplayer packetReplayer,
+        int timeoutMs = 5_000 )
     {
-        public static MQTT3ClientConfiguration DefaultTestConfig(
-            PacketReplayer packetReplayer,
-            int timeoutMs = 5_000 )
+        _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
+        return new MQTT3ClientConfiguration()
         {
-            _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
-            return new MQTT3ClientConfiguration()
-            {
-                TimeUtilities = packetReplayer.TestTimeHandler,
-                WaitTimeoutMilliseconds = timeoutMs,
-                KeepAliveSeconds = 0,
-                ClientId = "CKMqttTest"
-            };
-        }
+            TimeUtilities = packetReplayer.TestTimeHandler,
+            WaitTimeoutMilliseconds = timeoutMs,
+            KeepAliveSeconds = 0,
+            ClientId = "CKMqttTest"
+        };
+    }
 
-        public static MQTT5ClientConfiguration MQTT5Config(
-            PacketReplayer packetReplayer,
-            int timeoutMs = 5_000 )
+    public static MQTT5ClientConfiguration MQTT5Config(
+        PacketReplayer packetReplayer,
+        int timeoutMs = 5_000 )
+    {
+        _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
+        return new MQTT5ClientConfiguration()
         {
-            _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
-            return new MQTT5ClientConfiguration()
-            {
-                TimeUtilities = packetReplayer.TestTimeHandler,
-                WaitTimeoutMilliseconds = timeoutMs,
-                KeepAliveSeconds = 0,
-                ClientId = "CKMqttTest"
-            };
-        }
+            TimeUtilities = packetReplayer.TestTimeHandler,
+            WaitTimeoutMilliseconds = timeoutMs,
+            KeepAliveSeconds = 0,
+            ClientId = "CKMqttTest"
+        };
+    }
 
-        public static MQTT3ClientConfiguration DefaultTestConfigWithKeepAlive( PacketReplayer packetReplayer, int timeoutMs = 5_000 )
+    public static MQTT3ClientConfiguration DefaultTestConfigWithKeepAlive( PacketReplayer packetReplayer, int timeoutMs = 5_000 )
+    {
+        _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
+        return new MQTT3ClientConfiguration()
         {
-            _ = Testing.MonitorTestHelper.TestHelper; // So the static will do GrandOutput.EnsureDefault.
-            return new MQTT3ClientConfiguration()
-            {
-                TimeUtilities = packetReplayer.TestTimeHandler,
-                WaitTimeoutMilliseconds = timeoutMs,
-                KeepAliveSeconds = 5,
-                ClientId = "CKMqttTest"
-            };
-        }
+            TimeUtilities = packetReplayer.TestTimeHandler,
+            WaitTimeoutMilliseconds = timeoutMs,
+            KeepAliveSeconds = 5,
+            ClientId = "CKMqttTest"
+        };
     }
 }
