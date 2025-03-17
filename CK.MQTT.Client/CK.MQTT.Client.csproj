@@ -4,8 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="22.1.1--0006-develop" />
-    <PackageReference Include="CK.PerfectEvent" Version="23.1.1--0015-develop" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="23.0.0" />
+    <PackageReference Include="CK.PerfectEvent" Version="24.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CK.MQTT.LowLevelClient\CK.MQTT.LowLevelClient.csproj" />
