@@ -1,0 +1,33 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".config/dotnet-tools.json" />
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path=".runsettings" />
+    <File Path="appveyor.yml" />
+    <File Path="Common/BannedSymbols.Common.txt" />
+    <File Path="Common/BannedSymbols.txt" />
+    <File Path="Common/Mqtt.props" />
+    <File Path="Directory.Build.props" />
+    <File Path="FodyWeavers.xml" />
+    <File Path="NuGet.config" />
+    <File Path="README.md" />
+    <File Path="stryker-config.abstractions.json" />
+    <File Path="stryker-config.client.json" />
+    <File Path="stryker-config.common.json" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <File Path="TestHelper.config" />
+    <Project Path="Tests/CK.MQTT.Basic.Tests/CK.MQTT.Basic.Tests.csproj" />
+    <Project Path="Tests/CK.MQTT.Client.Tests/CK.MQTT.Client.Tests.csproj" />
+    <Project Path="Tests/CK.MQTT.Server.Tests/CK.MQTT.Server.Tests.csproj" />
+  </Folder>
+  <Project Path="CK.MQTT.Client/CK.MQTT.Client.csproj" />
+  <Project Path="CK.MQTT.LocalMQTTDemiServer/CK.MQTT.LocalMQTTDemiServer.csproj" />
+  <Project Path="CK.MQTT.LowLevelClient/CK.MQTT.LowLevelClient.csproj" />
+  <Project Path="CK.MQTT.Server/CK.MQTT.Server.csproj" />
+</Solution>
