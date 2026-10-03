@@ -77,13 +77,13 @@ static class PacketReplayerAssertsExtensions
         await @this.ShouldContainEventAsync<DefaultClientMessageSink.Connected>();
     }
 
-    public static Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this )
-        => @this.Events.Reader!.ShouldContainEventAsync<T>();
+    public static Task<T> ShouldContainEventAsync<T>( this PacketReplayer @this, int timeoutMs = 60000 )
+        => @this.Events.Reader!.ShouldContainEventAsync<T>( timeoutMs );
 
-    public static async Task<T> ShouldContainEventAsync<T>( this ChannelReader<object> @this )
+    public static async Task<T> ShouldContainEventAsync<T>( this ChannelReader<object> @this, int timeoutMs = 60000 )
     {
         var task = @this.ReadAsync().AsTask();
-        if( !await task.WaitForTaskCompletionAsync( 60000 ) ) Assert.Fail( "The replayer didn't had any event." );
+        if( !await task.WaitForTaskCompletionAsync( timeoutMs ) ) Assert.Fail( "The replayer didn't had any event." );
         var res = await task;
         if( res is not T casted )
         {

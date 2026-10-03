@@ -38,7 +38,8 @@ public abstract class ParsingTests
         var client = replayer.CreateMQTT3Client( TestConfigs.DefaultTestConfig( replayer ) );
         await replayer.ConnectClientAsync( TestHelper.Monitor, client );
         await replayer.SendToClientAsync( TestHelper.Monitor, sb.ToString() );
-        await replayer.ShouldContainEventAsync<VolatileApplicationMessage>();
+        // One channel variant needs about 40 s for this 64 KB topic on an idle machine: a 60 s wait fails under load.
+        await replayer.ShouldContainEventAsync<VolatileApplicationMessage>( timeoutMs: 5 * 60 * 1000 );
     }
 
     [Test]
