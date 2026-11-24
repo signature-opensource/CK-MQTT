@@ -1,0 +1,1 @@
+MQTT server side: MQTTDemiServer accepts the connections of MQTT clients (TCP or WebSocket channels) and exposes each of them as an MQTTServerAgent; MQTTServer adds the routing of the published messages to the subscribed clients.
