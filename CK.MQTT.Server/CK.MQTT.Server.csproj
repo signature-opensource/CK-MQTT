@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\Common\MQTT.props" />
+  <Import Project="..\Common\Mqtt.props" />
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Description>MQTT server implementation (not yet available).</Description>
