@@ -8,7 +8,6 @@
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
     <File Path=".runsettings" />
-    <File Path="appveyor.yml" />
     <File Path="Common/BannedSymbols.Common.txt" />
     <File Path="Common/BannedSymbols.txt" />
     <File Path="Common/Mqtt.props" />
